@@ -59,7 +59,6 @@ async def list_models(task_type: str | None = None) -> list[dict[str, Any]]:
             "adapter_id":     a.adapter_id,
             "display_name":   a.display_name,
             "cfgpu_model_id": a.cfgpu_model_id,
-            "model_param":    a.adapter_id,    # recommended value for generate_* model= param
             "task_type":      a.task_type,
             "capabilities":   sorted(a.capabilities),
             "cost_tier":      a.cost_tier,

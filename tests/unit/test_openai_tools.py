@@ -7,8 +7,8 @@ from cfgpu_mcp.agent.openai_tools import get_openai_tools, openai_dispatch_tool
 
 # ── schema structure ─────────────────────────────────────────────────────────
 
-def test_no_filter_returns_all_six_tools():
-    assert len(get_openai_tools()) == 6
+def test_no_filter_returns_all_eight_tools():
+    assert len(get_openai_tools()) == 8
 
 
 def test_each_tool_has_type_function():

@@ -73,6 +73,14 @@ class GenerateVideoInput(BaseModel):
     )
 
 
+class PreviewGenerateImageInput(GenerateImageInput):
+    """Preview image generation: resolve the model and build the API payload without making the actual API call. Use this when the user wants to review or confirm parameters before committing to a costly generation."""
+
+
+class PreviewGenerateVideoInput(GenerateVideoInput):
+    """Preview video generation: resolve the model and build the API payload without making the actual API call. Use this when the user wants to review or confirm parameters before committing to a costly generation."""
+
+
 class TaskStatusInput(BaseModel):
     """Query the status of an async generation task."""
 
@@ -130,17 +138,21 @@ class NormalizedResult:
 # ── Tool Registry ────────────────────────────────────────────────────────────
 
 _REGISTRY: list[tuple[str, type[BaseModel]]] = [
-    ("generate_image", GenerateImageInput),
-    ("generate_video", GenerateVideoInput),
-    ("task_status",    TaskStatusInput),
-    ("task_wait",      TaskWaitInput),
-    ("list_models",    ListModelsInput),
-    ("get_model_card", GetModelCardInput),
+    ("generate_image",         GenerateImageInput),
+    ("preview_generate_image", PreviewGenerateImageInput),
+    ("generate_video",         GenerateVideoInput),
+    ("preview_generate_video", PreviewGenerateVideoInput),
+    ("task_status",            TaskStatusInput),
+    ("task_wait",              TaskWaitInput),
+    ("list_models",            ListModelsInput),
+    ("get_model_card",         GetModelCardInput),
 ]
 
 _TOOL_TASK_TYPE: dict[str, str] = {
-    "generate_image": "image",
-    "generate_video": "video",
+    "generate_image":         "image",
+    "preview_generate_image": "image",
+    "generate_video":         "video",
+    "preview_generate_video": "video",
 }
 
 

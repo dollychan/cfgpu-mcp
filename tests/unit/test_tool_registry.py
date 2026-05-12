@@ -2,9 +2,9 @@ import pytest
 from cfgpu_mcp.tool_registry import get_anthropic_tools, _REGISTRY
 
 
-def test_no_filter_returns_all_six_tools():
+def test_no_filter_returns_all_eight_tools():
     tools = get_anthropic_tools()
-    assert len(tools) == 6
+    assert len(tools) == 8
 
 
 def test_task_types_image_includes_generate_image():

@@ -464,6 +464,64 @@ done
 
 ---
 
+## Preview 工具（dry-run，不消耗 quota）
+
+`preview_generate_image` 和 `preview_generate_video` 接受与真实生成工具**完全相同的参数**，但只做模型路由和 payload 构建，不发送 API 请求，不消耗 quota。
+
+适用场景：
+- 让 Agent 在生成前向用户展示"将使用哪个模型、发送什么参数"，等待确认
+- 调试参数映射（查看真实 payload）
+- 估算费用档位和预计耗时
+
+### Mode A（MCP）/ Mode B（Agent SDK）调用方式
+
+与 `generate_image` / `generate_video` 完全相同，只改工具名即可：
+
+```python
+# Mode B — Anthropic SDK
+result = await dispatch_tool("preview_generate_image", {
+    "prompt": "a red panda in the snow",
+    "model": "auto",
+    "aspect_ratio": "16:9",
+    "resolution": "2K",
+})
+```
+
+### Preview 返回格式
+
+```json
+{
+  "dry_run": true,
+  "model": "doubao-seedream-5-0-lite",
+  "display_name": "Doubao Seedream 5.0 Lite",
+  "cost_tier": 1,
+  "speed_tier": 4,
+  "is_async": false,
+  "estimated_seconds": 0,
+  "payload": {
+    "model": "seedream-v3",
+    "prompt": "a red panda in the snow",
+    "ratio": "16:9",
+    "size": "2K",
+    ...
+  }
+}
+```
+
+`payload` 是会实际发送给 CFGPU API 的请求体，可用于验证参数映射是否正确。
+
+### 典型 HIL（Human-in-the-Loop）流程
+
+```python
+# 1. Agent 先调用 preview，展示给用户
+preview = await dispatch_tool("preview_generate_image", inputs)
+# 2. 展示 preview["model"]、preview["cost_tier"] 等，请用户确认
+# 3. 确认后调用真实工具
+result = await dispatch_tool("generate_image", inputs)
+```
+
+---
+
 ## 返回值格式
 
 所有模式的 service 层返回相同结构：

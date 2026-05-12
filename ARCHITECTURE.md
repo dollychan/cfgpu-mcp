@@ -335,13 +335,17 @@ src/cfgpu_mcp/
 │   ├── wan-2.0-fast/
 │   │   ├── adapter.yaml        只写差异，extends: wan-2.0
 │   │   └── card.md
-│   └── doubao-seedream-5-0-lite/
+│   ├── doubao-seedance-1.5-pro/
+│   ├── adapter.yaml            extends: wan-2.0, card_base: ~（不继承 card.md）
+│   └── card.md
+└── doubao-seedream-5-0-lite/
 │       ├── adapter.yaml
 │       └── card.md
 │
 ├── service/                    业务逻辑层（三种模式共享）
 │   ├── image.py                generate_image()
 │   ├── video.py                generate_video()
+│   ├── preview.py              preview_generate_image() / preview_generate_video()（dry-run）
 │   ├── task.py                 get_status() / wait_for_task()
 │   └── model.py                list_models() / get_model_card()
 │
@@ -461,6 +465,36 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 **第五步**：在 `cli/cmd_task.py` 中添加 CLI 命令（Mode C）。
 
 `get_openai_tools()` 和 `get_langgraph_tools()` 会自动从 `_REGISTRY` 读取，无需修改。
+
+---
+
+### Preview（dry-run）工具模式
+
+`preview_generate_image` / `preview_generate_video` 是"只解析、不调用"的 dry-run 工具。它们：
+
+1. 接受与真实工具**完全相同的参数**（schema 通过继承 `GenerateImageInput` / `GenerateVideoInput` 自动共享）
+2. 走完整的路由和 `build_payload()` 流程
+3. 不调用 `CFGPUClient`，直接返回摘要
+
+```python
+# service/preview.py 中的共享辅助函数
+def _resolve_adapter(req, model) -> ModelAdapter:
+    ...  # 复用 ModelRouter 逻辑
+
+def _build_preview(adapter, req) -> dict:
+    return {
+        "dry_run": True,
+        "model": adapter.adapter_id,
+        "display_name": adapter.display_name,
+        "cost_tier": adapter.cost_tier,
+        "speed_tier": adapter.speed_tier,
+        "is_async": adapter.is_async,
+        "estimated_seconds": adapter.estimate_poll_timeout(req),
+        "payload": adapter.build_payload(req),  # 真实的 API payload
+    }
+```
+
+扩展时遵循同一模式：新 Pydantic 类继承现有输入模型（只改 `__doc__`），对应的 service 函数调用 `_build_preview`。
 
 ---
 
