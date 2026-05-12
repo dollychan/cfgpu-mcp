@@ -1,0 +1,17 @@
+adapter_id: doubao-seedream-5-0-lite
+display_name: "Doubao Seedream 5.0 lite"
+cfgpu_model_id: doubao-seedream-5-0-260128
+task_type: image
+endpoint: /userapi/v1/images/generations
+is_async: false
+poll_endpoint: ~
+
+capabilities:
+  - text_to_image
+  - image_to_image
+  - multi_image_fusion
+  - multi_image_group
+  - web_search
+
+cost_tier: 2
+speed_tier: 3

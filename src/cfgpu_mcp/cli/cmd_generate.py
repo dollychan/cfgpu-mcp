@@ -1,0 +1,172 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import sys
+
+import click
+
+from cfgpu_mcp.cli.output import print_error, print_result, run_with_progress
+
+
+def _parse_model_specific(value: str | None) -> dict | None:
+    if not value:
+        return None
+    try:
+        parsed = json.loads(value)
+        if not isinstance(parsed, dict):
+            raise click.BadParameter("must be a JSON object")
+        return parsed
+    except json.JSONDecodeError as e:
+        raise click.BadParameter(f"invalid JSON: {e}")
+
+
+def _run(coro) -> dict:
+    async def _wrapper():
+        try:
+            return await coro
+        finally:
+            from cfgpu_mcp.config import close
+            await close()
+
+    return asyncio.run(_wrapper())
+
+
+@click.group()
+def generate() -> None:
+    """Generate images or videos."""
+
+
+@generate.command("image")
+@click.argument("prompt")
+@click.option("--model", "-m", default="auto", show_default=True,
+              help="adapter_id, cfgpu_model_id, or 'auto'")
+@click.option("--aspect-ratio", "-a",
+              type=click.Choice(["1:1", "16:9", "9:16", "4:3", "3:4"]),
+              default="1:1", show_default=True)
+@click.option("--resolution", "-r",
+              type=click.Choice(["1K", "2K", "4K"]),
+              default="1K", show_default=True)
+@click.option("--reference-images", multiple=True, metavar="URL",
+              help="Reference image URL (repeat for multiple)")
+@click.option("--quality-tier", "-q",
+              type=click.Choice(["fast", "balanced", "best"]),
+              default="balanced", show_default=True)
+@click.option("--no-wait", is_flag=True,
+              help="Return task_id immediately without waiting for completion")
+@click.option("--timeout", type=int, default=None,
+              help="Max wait seconds (default: model estimate)")
+@click.option("--metadata", is_flag=True,
+              help="Include seed, model_used, cost_tokens in output")
+@click.option("--json", "json_mode", is_flag=True,
+              help="Output raw JSON")
+@click.option("--model-specific", default=None, metavar="JSON",
+              help='Extra API params as JSON object, e.g. \'{"watermark":false}\'')
+def image_cmd(
+    prompt, model, aspect_ratio, resolution, reference_images,
+    quality_tier, no_wait, timeout, metadata, json_mode, model_specific,
+) -> None:
+    """Generate an image from PROMPT."""
+    from cfgpu_mcp.service import image as svc
+    extra = _parse_model_specific(model_specific)
+
+    async def _go():
+        return await svc.generate_image(
+            prompt=prompt,
+            model=model,
+            aspect_ratio=aspect_ratio,
+            resolution=resolution,
+            reference_images=list(reference_images) or None,
+            quality_tier=quality_tier,
+            wait=not no_wait,
+            timeout=timeout,
+            return_metadata=metadata,
+            model_specific=extra,
+        )
+
+    try:
+        if no_wait:
+            result = _run(_go())
+        else:
+            result = _run(run_with_progress(_go(), "Generating image"))
+        print_result(result, json_mode)
+    except Exception as e:
+        print_error(e, json_mode)
+        sys.exit(1)
+
+
+@generate.command("video")
+@click.argument("prompt")
+@click.option("--model", "-m", default="auto", show_default=True,
+              help="adapter_id, cfgpu_model_id, or 'auto'")
+@click.option("--first-frame", default=None, metavar="URL",
+              help="First frame image URL")
+@click.option("--last-frame", default=None, metavar="URL",
+              help="Last frame image URL (use with --first-frame)")
+@click.option("--reference-images", multiple=True, metavar="URL",
+              help="Reference image URL (mutually exclusive with --first-frame)")
+@click.option("--reference-videos", multiple=True, metavar="URL",
+              help="Reference video URL (repeat for multiple, max 3)")
+@click.option("--reference-audios", multiple=True, metavar="URL",
+              help="Reference audio URL (repeat for multiple, max 3)")
+@click.option("--duration", "-d", "duration_seconds", type=int, default=5,
+              show_default=True, help="Duration in seconds (4-15)")
+@click.option("--aspect-ratio", "-a",
+              type=click.Choice(["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"]),
+              default="adaptive", show_default=True)
+@click.option("--resolution", "-r",
+              type=click.Choice(["480p", "720p"]),
+              default="720p", show_default=True)
+@click.option("--no-audio", is_flag=True,
+              help="Disable audio generation")
+@click.option("--quality-tier", "-q",
+              type=click.Choice(["fast", "balanced", "best"]),
+              default="balanced", show_default=True)
+@click.option("--no-wait", is_flag=True,
+              help="Return task_id immediately without waiting for completion")
+@click.option("--timeout", type=int, default=None,
+              help="Max wait seconds (default: model estimate)")
+@click.option("--metadata", is_flag=True,
+              help="Include seed, model_used, cost_tokens in output")
+@click.option("--json", "json_mode", is_flag=True,
+              help="Output raw JSON")
+@click.option("--model-specific", default=None, metavar="JSON",
+              help='Extra API params as JSON object')
+def video_cmd(
+    prompt, model, first_frame, last_frame, reference_images, reference_videos,
+    reference_audios, duration_seconds, aspect_ratio, resolution, no_audio,
+    quality_tier, no_wait, timeout, metadata, json_mode, model_specific,
+) -> None:
+    """Generate a video from PROMPT."""
+    from cfgpu_mcp.service import video as svc
+    extra = _parse_model_specific(model_specific)
+
+    async def _go():
+        return await svc.generate_video(
+            prompt=prompt,
+            model=model,
+            first_frame=first_frame,
+            last_frame=last_frame,
+            reference_images=list(reference_images) or None,
+            reference_videos=list(reference_videos) or None,
+            reference_audios=list(reference_audios) or None,
+            duration_seconds=duration_seconds,
+            aspect_ratio=aspect_ratio,
+            resolution=resolution,
+            with_audio=not no_audio,
+            quality_tier=quality_tier,
+            wait=not no_wait,
+            timeout=timeout,
+            return_metadata=metadata,
+            model_specific=extra,
+        )
+
+    try:
+        if no_wait:
+            result = _run(_go())
+        else:
+            result = _run(run_with_progress(_go(), "Generating video"))
+        print_result(result, json_mode)
+    except Exception as e:
+        print_error(e, json_mode)
+        sys.exit(1)

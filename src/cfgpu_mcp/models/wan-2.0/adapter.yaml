@@ -1,0 +1,26 @@
+adapter_id: wan-2.0
+display_name: "WAN 2.0 (Seedance 2.0)"
+cfgpu_model_id: wan-video
+task_type: video
+endpoint: /userapi/v1/contents/generations/tasks
+is_async: true
+poll_endpoint: /userapi/v1/contents/generations/tasks/{task_id}
+
+capabilities:
+  - text_to_video
+  - image_to_video
+  - first_last_frame
+  - multi_modal_reference
+  - video_edit
+  - video_extend
+  - audio_generate
+  - web_search
+
+cost_tier: 3
+speed_tier: 2
+
+poll_config:
+  base_interval: 5
+  max_interval: 20
+  backoff_factor: 1.3
+  default_timeout: 600

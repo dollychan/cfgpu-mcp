@@ -1,0 +1,19 @@
+extends: wan-2.0
+card_base: ~
+
+adapter_id: doubao-seedance-1.5-pro
+display_name: "Doubao Seedance 1.5 Pro"
+cfgpu_model_id: doubao-seedance-1-5-pro-251215
+
+capabilities:
+  - text_to_video
+  - image_to_video
+  - first_last_frame
+  - audio_generate
+  - sample_mode
+
+cost_tier: 2
+speed_tier: 3
+
+poll_config:
+  default_timeout: 400
