@@ -20,6 +20,17 @@ ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
 
 _TERMINAL_STATUSES = {"succeeded", "failed", "completed"}
 
+_STATUS_MAP = {
+    "completed": "succeeded",
+    "succeed": "succeeded",
+    "succeeded": "succeeded",
+    "failed": "failed",
+    "error": "failed",
+    "running": "running",
+    "pending": "pending",
+    "processing": "running",
+}
+
 
 class Task:
     def __init__(self, row: dict) -> None:
@@ -80,18 +91,7 @@ class TaskManager:
         resp = await self._client.get(path)
 
         cfgpu_status: str = adapter.extract_status(resp)
-        # Normalize CFGPU status to our internal vocabulary
-        status_map = {
-            "completed": "succeeded",
-            "succeed": "succeeded",
-            "succeeded": "succeeded",
-            "failed": "failed",
-            "error": "failed",
-            "running": "running",
-            "pending": "pending",
-            "processing": "running",
-        }
-        status = status_map.get(cfgpu_status, "running")
+        status = _STATUS_MAP.get(cfgpu_status, "running")
 
         result_dict: dict | None = None
         error_msg: str | None = None

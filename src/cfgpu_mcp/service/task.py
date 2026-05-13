@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 async def get_status(task_id: str) -> dict[str, Any]:
@@ -26,8 +29,8 @@ async def get_status(task_id: str) -> dict[str, Any]:
         try:
             adapter = registry.get(task.adapter_id)
             task = await tm.poll(task, adapter)
-        except Exception:
-            pass  # fall back to stale DB result
+        except Exception as e:
+            logger.debug("Re-poll failed for task %s (%s), using stale DB result: %s", task_id, task.adapter_id, e)
 
     return task.to_dict()
 

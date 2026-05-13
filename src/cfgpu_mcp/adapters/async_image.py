@@ -35,6 +35,13 @@ class _AsyncImageBase(ModelAdapter):
             cost_tokens=None,
         )
 
+    def _finalize_payload(self, payload: dict, req: GenerateImageInput) -> dict:
+        if req.reference_images:
+            payload["reference_images"] = req.reference_images
+        if req.model_specific:
+            payload.update(req.model_specific)
+        return payload
+
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         raise NotImplementedError
 
@@ -51,16 +58,10 @@ class GptImage2Adapter(_AsyncImageBase):
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)
-        payload: dict = {
-            "model": self.cfgpu_model_id,
-            "prompt": req.prompt,
-            "aspect_ratio": req.aspect_ratio,
-        }
-        if req.reference_images:
-            payload["reference_images"] = req.reference_images
-        if req.model_specific:
-            payload.update(req.model_specific)
-        return payload
+        return self._finalize_payload(
+            {"model": self.cfgpu_model_id, "prompt": req.prompt, "aspect_ratio": req.aspect_ratio},
+            req,
+        )
 
 
 @register_python_adapter
@@ -76,14 +77,7 @@ class NanoBananaAdapter(_AsyncImageBase):
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)
-        payload: dict = {
-            "model": self.cfgpu_model_id,
-            "prompt": req.prompt,
-            "image_size": req.resolution,
-            "aspect_ratio": req.aspect_ratio,
-        }
-        if req.reference_images:
-            payload["reference_images"] = req.reference_images
-        if req.model_specific:
-            payload.update(req.model_specific)
-        return payload
+        return self._finalize_payload(
+            {"model": self.cfgpu_model_id, "prompt": req.prompt, "image_size": req.resolution, "aspect_ratio": req.aspect_ratio},
+            req,
+        )
