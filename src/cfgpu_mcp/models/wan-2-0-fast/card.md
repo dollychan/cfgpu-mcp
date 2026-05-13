@@ -151,6 +151,45 @@
 
 与 `wan-2-0` 一致，详见 [wan-2-0/card.md](../wan-2-0/card.md)。
 
+## 响应结构
+
+与 `wan-2-0` 响应格式一致，`content.videoUrl` 为视频下载链接。
+
+`wan-video-fast` 查询结果示例：
+
+```json
+{
+  "id": "cgt-20260513110708-8c5wf",
+  "model": "wan-video-fast",
+  "status": "succeeded",
+  "error": null,
+  "createdAt": 1778641628,
+  "updatedAt": 1778641776,
+  "content": {
+    "videoUrl": "https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/...",
+    "lastFrameUrl": null
+  },
+  "seed": 15233,
+  "resolution": "720p",
+  "ratio": "9:16",
+  "duration": 5,
+  "frames": null,
+  "framesPerSecond": 24,
+  "generateAudio": false,
+  "draft": false,
+  "draftTaskId": null,
+  "usage": {
+    "completionTokens": 108900,
+    "totalTokens": 108900
+  },
+  "completionTokens": null,
+  "totalTokens": null
+}
+```
+
+关键区别：`model` 字段为 `wan-video-fast`。其余字段结构与 `wan-2-0` 完全一致。
+
+
 ## 与统一 Schema 的映射
 
 与 `wan-2-0` 映射一致，详见 [wan-2-0/card.md](../wan-2-0/card.md)。

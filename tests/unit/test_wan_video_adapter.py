@@ -100,16 +100,51 @@ def test_model_specific_merged():
 
 def test_parse_response_missing_seed_is_none():
     adapter = _make_adapter()
-    resp = {"id": "t1", "model": "wan-video", "output": {"video_url": "https://cdn/v.mp4"}, "status": "completed"}
+    resp = {"id": "t1", "model": "wan-video", "content": {"videoUrl": "https://cdn/v.mp4"}, "status": "completed"}
     result = adapter.parse_response(resp)
     assert result.seed is None
 
 
 def test_parse_response_expires_at_set():
     adapter = _make_adapter()
-    resp = {"output": {"video_url": "https://cdn/v.mp4"}}
+    resp = {"content": {"videoUrl": "https://cdn/v.mp4"}}
     result = adapter.parse_response(resp)
     assert result.expires_at is not None
+
+
+def test_parse_response_real_api_result():
+    """Validate parse_response against real CFGPU API response (from card.md)."""
+    adapter = _make_adapter(cfgpu_model_id="wan-video-fast")
+    resp = {
+        "id": "cgt-20260513110708-8c5wf",
+        "model": "wan-video-fast",
+        "status": "succeeded",
+        "error": None,
+        "createdAt": 1778641628,
+        "updatedAt": 1778641776,
+        "content": {
+            "videoUrl": "https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-2-0-fast/02177864162835200000000000000000000ffffac18010234a352.mp4?X-Tos-Algorithm=TOS4-HMAC-SHA256",
+            "lastFrameUrl": None,
+        },
+        "seed": 15233,
+        "resolution": "720p",
+        "ratio": "9:16",
+        "duration": 5,
+        "frames": None,
+        "framesPerSecond": 24,
+        "generateAudio": False,
+        "draft": False,
+        "draftTaskId": None,
+        "usage": {"completionTokens": 108900, "totalTokens": 108900},
+        "completionTokens": None,
+        "totalTokens": None,
+    }
+    result = adapter.parse_response(resp)
+    assert result.urls == ["https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-2-0-fast/02177864162835200000000000000000000ffffac18010234a352.mp4?X-Tos-Algorithm=TOS4-HMAC-SHA256"]
+    assert result.task_id == "cgt-20260513110708-8c5wf"
+    assert result.model_used == "wan-video-fast"
+    assert result.seed == 15233
+    assert result.cost_tokens == 108900
 
 
 def test_supports_rejects_last_frame_without_first_frame():

@@ -455,26 +455,48 @@ Seedance 为异步接口，需轮询查询状态：
 
 ## 响应结构
 
+查询任务结果 GET `/video/tasks/{task_id}` 返回：
+
 ```json
 {
-  "id": "cgt-2026****hzc2z",
-  "status": "completed",
+  "id": "cgt-xxx-8c5wf",
   "model": "wan-video",
-  "output": {
-    "video_url": "https://...",
-    "duration": 5,
-    "ratio": "16:9",
-    "resolution": "720p"
+  "status": "succeeded",
+  "error": null,
+  "createdAt": 1778641628,
+  "updatedAt": 1778641776,
+  "content": {
+    "videoUrl": "https://...",
+    "lastFrameUrl": null
   },
+  "seed": 15233,
+  "resolution": "720p",
+  "ratio": "9:16",
+  "duration": 5,
+  "frames": null,
+  "framesPerSecond": 24,
+  "generateAudio": false,
+  "draft": false,
+  "draftTaskId": null,
   "usage": {
-    "completion_tokens": xxx,
-    "total_tokens": xxx,
-    "tool_usage": {
-      "web_search": 1
-    }
-  }
+    "completionTokens": 108900,
+    "totalTokens": 108900
+  },
+  "completionTokens": null,
+  "totalTokens": null
 }
 ```
+
+**关键字段说明：**
+| 字段 | 说明 |
+|------|------|
+| `id` | 任务 ID |
+| `status` | 任务状态：`pending` / `running` / `succeeded` / `failed` |
+| `content.videoUrl` | 生成的视频 URL（24 小时有效） |
+| `content.lastFrameUrl` | 尾帧 URL（如有） |
+| `seed` | 生成种子 |
+| `resolution` / `ratio` / `duration` | 实际输出参数 |
+| `usage.totalTokens` | Token 消耗 |
 
 ## 错误处理
 
