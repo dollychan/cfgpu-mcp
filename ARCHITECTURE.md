@@ -306,11 +306,15 @@ CFGPUError.from_http_response(status, body)
 
 `retryable` 字段由 `_RETRYABLE` 集合决定（`rate_limit`、`model_unavailable`、`unknown`），调用方可据此决定是否重试。目前系统内部没有自动重试，该字段供外部调用方使用。
 
+### card.md 提示机制
+
+当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，`service/image.py` 和 `service/video.py` 会把 `adapter.adapter_id` 写入 `CFGPUError.adapter_id`。`to_tool_result_dict()` 在 `message` 中追加提示：`"请调用 get_model_card 获取模型 {adapter_id} 的详细参数说明和使用示例。"`, 同时在 dict 中添加 `adapter_id` 字段，方便 LLM 直接用该值调用 `get_model_card`。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
+
 ### 错误在各层的展示方式
 
 | 层 | 展示方式 |
 |----|---------|
-| MCP tools（`tools/`） | 工具内部 try/except → 返回 `{"error": True, "error_type": ..., "message": ..., "retryable": ...}` dict，LLM 可直接读取 |
+| MCP tools（`tools/`） | 工具内部 try/except → 返回 `{"error": True, "error_type": ..., "message": ..., "retryable": ..., "adapter_id": ...}` dict，LLM 可直接读取 |
 | agent/dispatcher | `dispatch_tool()` 内部 try/except → 返回同上 error dict（`ValueError` 除外，编程错误继续上抛）|
 | CLI | `print_error()` 打印到 stderr，`sys.exit(1)` |
 

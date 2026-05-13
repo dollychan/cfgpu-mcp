@@ -17,6 +17,8 @@ ErrorType = Literal[
 
 _RETRYABLE: set[ErrorType] = {"rate_limit", "model_unavailable", "unknown"}
 
+_CARD_HINT_TYPES: set[ErrorType] = {"invalid_params", "model_unavailable", "content_blocked"}
+
 _HTTP_STATUS_MAP: dict[int, ErrorType] = {
     401: "auth",
     403: "auth",
@@ -43,12 +45,14 @@ class CFGPUError(Exception):
         user_message: str,
         original: dict | None = None,
         retryable: bool | None = None,
+        adapter_id: str | None = None,
     ) -> None:
         super().__init__(user_message)
         self.error_type: ErrorType = error_type
         self.user_message = user_message
         self.original: dict = original or {}
         self.retryable: bool = retryable if retryable is not None else error_type in _RETRYABLE
+        self.adapter_id: str | None = adapter_id
 
     def __repr__(self) -> str:
         return f"CFGPUError(type={self.error_type!r}, retryable={self.retryable}, msg={self.user_message!r})"
@@ -90,12 +94,18 @@ class CFGPUError(Exception):
         )
 
     def to_tool_result_dict(self) -> dict:
-        return {
+        message = self.user_message
+        if self.adapter_id and self.error_type in _CARD_HINT_TYPES:
+            message += f" 请调用 get_model_card 获取模型 {self.adapter_id} 的详细参数说明和使用示例。"
+        result: dict = {
             "error": True,
             "error_type": self.error_type,
-            "message": self.user_message,
+            "message": message,
             "retryable": self.retryable,
         }
+        if self.adapter_id:
+            result["adapter_id"] = self.adapter_id
+        return result
 
     @staticmethod
     def timeout(task_id: str, elapsed: int) -> "CFGPUError":

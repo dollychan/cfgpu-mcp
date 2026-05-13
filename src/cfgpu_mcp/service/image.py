@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import GenerateImageInput
 
 
@@ -42,12 +43,20 @@ async def generate_image(
     db = await get_db()
     tm = TaskManager(client, db)
 
-    task = await tm.create(adapter, req)
+    try:
+        task = await tm.create(adapter, req)
+    except CFGPUError as e:
+        e.adapter_id = adapter.adapter_id
+        raise
 
     if not wait:
         return {"task_id": task.id, "status": task.status}
 
-    task = await tm.wait(task, adapter, req, timeout=timeout)
+    try:
+        task = await tm.wait(task, adapter, req, timeout=timeout)
+    except CFGPUError as e:
+        e.adapter_id = adapter.adapter_id
+        raise
 
     if task.result is None:
         return {"task_id": task.id, "status": task.status}

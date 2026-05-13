@@ -574,10 +574,13 @@ result = await dispatch_tool("generate_image", inputs)
 {
   "error": true,
   "error_type": "invalid_params",
-  "message": "请求参数错误：image size must be at least 3686400 pixels",
-  "retryable": false
+  "message": "请求参数错误：image size must be at least 3686400 pixels 请调用 get_model_card 获取模型 gpt-image-2 的详细参数说明和使用示例。",
+  "retryable": false,
+  "adapter_id": "gpt-image-2"
 }
 ```
+
+当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加 `get_model_card` 提示，`adapter_id` 字段也会出现在 dict 中。LLM 可直接用 `adapter_id` 值调用 `get_model_card` 获取该模型的完整参数说明。
 
 `error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
 
