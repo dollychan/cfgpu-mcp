@@ -9,7 +9,7 @@ async def generate_image(
     prompt: str,
     model: str = "auto",
     aspect_ratio: str = "1:1",
-    resolution: str = "1K",
+    resolution: str = "2K",
     reference_images: list[str] | None = None,
     quality_tier: str = "balanced",
     wait: bool = True,

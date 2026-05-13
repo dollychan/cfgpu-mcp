@@ -5,7 +5,7 @@ from cfgpu_mcp.tool_registry import GenerateVideoInput
 
 def _make_adapter(cfgpu_model_id: str = "wan-video") -> WanVideoAdapter:
     config = {
-        "adapter_id": "wan-2.0",
+        "adapter_id": "wan-2-0",
         "display_name": "WAN 2.0",
         "cfgpu_model_id": cfgpu_model_id,
         "task_type": "video",

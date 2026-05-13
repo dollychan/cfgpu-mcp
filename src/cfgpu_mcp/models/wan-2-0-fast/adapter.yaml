@@ -1,7 +1,7 @@
-# Inherits all config from wan-2.0; only differences listed here
-extends: wan-2.0
+# Inherits all config from wan-2-0; only differences listed here
+extends: wan-2-0
 
-adapter_id: wan-2.0-fast
+adapter_id: wan-2-0-fast
 display_name: "WAN 2.0 Fast (Seedance 2.0 fast)"
 cfgpu_model_id: wan-video-fast
 cost_tier: 2

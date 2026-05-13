@@ -19,6 +19,16 @@ async def get_status(task_id: str) -> dict[str, Any]:
             user_message=f"Task {task_id!r} not found.",
             original={"task_id": task_id},
         ) from e
+
+    # Re-poll from API if task succeeded but result has no URLs (e.g. stale DB record)
+    if task.status == "succeeded" and not (task.result or {}).get("urls"):
+        registry = get_registry()
+        try:
+            adapter = registry.get(task.adapter_id)
+            task = await tm.poll(task, adapter)
+        except Exception:
+            pass  # fall back to stale DB result
+
     return task.to_dict()
 
 

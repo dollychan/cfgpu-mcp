@@ -40,9 +40,9 @@
 
 ## 参数说明
 
-**参数与 `wan-2.0` 完全一致。**
+**参数与 `wan-2-0` 完全一致。**
 
-详细参数说明请参考 [wan-2.0/card.md](../wan-2.0/card.md)。
+详细参数说明请参考 [wan-2-0/card.md](../wan-2-0/card.md)。
 
 ## 示例
 
@@ -149,8 +149,8 @@
 
 ## 约束与限制
 
-与 `wan-2.0` 一致，详见 [wan-2.0/card.md](../wan-2.0/card.md)。
+与 `wan-2-0` 一致，详见 [wan-2-0/card.md](../wan-2-0/card.md)。
 
 ## 与统一 Schema 的映射
 
-与 `wan-2.0` 映射一致，详见 [wan-2.0/card.md](../wan-2.0/card.md)。
+与 `wan-2-0` 映射一致，详见 [wan-2-0/card.md](../wan-2-0/card.md)。

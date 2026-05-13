@@ -28,10 +28,10 @@
 | 最大时长 | 15 秒 | 12 秒 | 12 秒 |
 
 **推荐场景：**
-- 需要 1080p 高清分辨率 → 使用 `doubao-seedance-1.5-pro`
-- 需要样片模式（快速预览）→ 使用 `doubao-seedance-1.5-pro`
-- 需要多模态参考/视频编辑/延长 → 使用 `wan-2.0`
-- 追求最高质量全功能 → 使用 `wan-2.0`
+- 需要 1080p 高清分辨率 → 使用 `doubao-seedance-1-5-pro`
+- 需要样片模式（快速预览）→ 使用 `doubao-seedance-1-5-pro`
+- 需要多模态参考/视频编辑/延长 → 使用 `wan-2-0`
+- 追求最高质量全功能 → 使用 `wan-2-0`
 
 ## 能力说明
 
@@ -47,14 +47,14 @@
 
 ### 核心参数
 
-API 请求结构与 `wan-2.0` 一致（详见 [wan-2.0/card.md](../wan-2.0/card.md)），以下列出差异点。
+API 请求结构与 `wan-2-0` 一致（详见 [wan-2-0/card.md](../wan-2-0/card.md)），以下列出差异点。
 
 ### 视频输出参数（差异）
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | resolution | string | - | 720p | 分辨率：480p、720p 或 **1080p** |
-| ratio | string | - | adaptive | 宽高比（与 wan-2.0 一致） |
+| ratio | string | - | adaptive | 宽高比（与 wan-2-0 一致） |
 | duration | integer | - | 5 | 时长（秒）：[4, 12] 或 -1（智能）|
 | generate_audio | boolean | - | true | 是否生成有声视频 |
 
@@ -87,7 +87,7 @@ API 请求结构与 `wan-2.0` 一致（详见 [wan-2.0/card.md](../wan-2.0/card.
 
 ### 不支持的参数
 
-以下 `wan-2.0` 支持的输入类型在 1.5 Pro 中**不可使用**：
+以下 `wan-2-0` 支持的输入类型在 1.5 Pro 中**不可使用**：
 - `video_url`（reference_video）
 - `audio_url`（reference_audio）
 - `tools.type: web_search`

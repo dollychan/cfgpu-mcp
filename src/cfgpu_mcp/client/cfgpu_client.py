@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
+import logging
 import os
 import aiohttp
+
+logger = logging.getLogger(__name__)
 
 from cfgpu_mcp.errors import CFGPUError
 
@@ -50,8 +54,12 @@ class CFGPUClient:
                 except Exception:
                     body = {"message": await resp.text()}
 
-                if not resp.ok:
+                if not isinstance(body, dict):
+                    body = {"_raw": body}
+
+                if not resp.ok or (isinstance(body.get("error"), dict) and body["error"]):
                     raise CFGPUError.from_http_response(resp.status, body)
+                logger.debug("CFGPU response [%s %s]: %s", method, url, json.dumps(body, ensure_ascii=False))
                 return body
         except CFGPUError:
             raise

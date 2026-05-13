@@ -89,6 +89,14 @@ class CFGPUError(Exception):
             original=body,
         )
 
+    def to_tool_result_dict(self) -> dict:
+        return {
+            "error": True,
+            "error_type": self.error_type,
+            "message": self.user_message,
+            "retryable": self.retryable,
+        }
+
     @staticmethod
     def timeout(task_id: str, elapsed: int) -> "CFGPUError":
         return CFGPUError(
@@ -97,3 +105,14 @@ class CFGPUError(Exception):
             original={"task_id": task_id, "elapsed": elapsed},
             retryable=False,
         )
+
+
+def tool_error_dict(e: Exception) -> dict:
+    """Convert any exception to a structured dict suitable as a tool result.
+
+    Returning an error dict (instead of raising) ensures the LLM always sees
+    the failure reason in the tool result content rather than an opaque protocol error.
+    """
+    if isinstance(e, CFGPUError):
+        return e.to_tool_result_dict()
+    return {"error": True, "message": str(e)}

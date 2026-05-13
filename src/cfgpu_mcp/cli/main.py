@@ -15,7 +15,7 @@ def cli() -> None:
     \b
     Quick start:
       cfgpu generate image "a red panda in the snow"
-      cfgpu generate video "waves crashing on a beach" --model wan-2.0-fast
+      cfgpu generate video "waves crashing on a beach" --model wan-2-0-fast
       cfgpu models list
     """
 

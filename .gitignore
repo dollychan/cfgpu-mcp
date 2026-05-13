@@ -5,6 +5,8 @@
 # User-specific ignore targets
 docs/
 test-cfgpu.sh
+test-tasks
+run.sh
 
 # Python
 __pycache__/

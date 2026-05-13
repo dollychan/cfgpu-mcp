@@ -448,8 +448,8 @@ data:image/<格式>;base64,<Base64编码>
 
 Seedance 为异步接口，需轮询查询状态：
 
-1. **创建任务**：POST `/contents/generations/tasks`，返回 `task_id`
-2. **查询状态**：GET `/contents/generations/tasks/{task_id}`
+1. **创建任务**：POST `/video/generations`，返回 `task_id`
+2. **查询状态**：GET `/video/tasks/{task_id}`
 3. **轮询等待**：任务 `running` 时持续查询
 4. **获取结果**：任务完成后返回视频 URL，24 小时内下载
 

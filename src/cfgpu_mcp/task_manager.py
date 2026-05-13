@@ -67,7 +67,7 @@ class TaskManager:
 
         # Async model: POST → get task_id from CFGPU → write pending
         resp = await self._client.post(adapter.endpoint, payload)
-        cfgpu_task_id: str = resp.get("id") or resp.get("task_id") or task_id
+        cfgpu_task_id: str = adapter.extract_task_id(resp) or task_id
         await db_ops.insert_task(self._db, cfgpu_task_id, adapter.adapter_id, "pending", payload)
         row = await db_ops.get_task(self._db, cfgpu_task_id)
         return Task(row)  # type: ignore[arg-type]
@@ -79,7 +79,7 @@ class TaskManager:
         path = adapter.poll_endpoint.replace("{task_id}", task.id)
         resp = await self._client.get(path)
 
-        cfgpu_status: str = resp.get("status", "running")
+        cfgpu_status: str = adapter.extract_status(resp)
         # Normalize CFGPU status to our internal vocabulary
         status_map = {
             "completed": "succeeded",

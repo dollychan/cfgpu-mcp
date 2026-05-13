@@ -45,8 +45,8 @@ def generate() -> None:
               type=click.Choice(["1:1", "16:9", "9:16", "4:3", "3:4"]),
               default="1:1", show_default=True)
 @click.option("--resolution", "-r",
-              type=click.Choice(["1K", "2K", "4K"]),
-              default="1K", show_default=True)
+              type=click.Choice(["2K", "3K", "4K"]),
+              default="2K", show_default=True)
 @click.option("--reference-images", multiple=True, metavar="URL",
               help="Reference image URL (repeat for multiple)")
 @click.option("--quality-tier", "-q",

@@ -31,20 +31,20 @@ def _load(enabled_models=None, env_value=None) -> int:
 
 
 def test_env_var_parsed_by_comma():
-    count = _load(env_value="wan-2.0,wan-2.0-fast")
+    count = _load(env_value="wan-2-0,wan-2-0-fast")
     assert count == 2
 
 
 def test_code_arg_overrides_env_var():
-    count = _load(enabled_models=["doubao-seedream-5-0-lite"], env_value="wan-2.0")
+    count = _load(enabled_models=["doubao-seedream-5-0-lite"], env_value="wan-2-0")
     assert count == 1
 
 
 def test_no_config_loads_all_models():
     count = _load()
-    assert count == 4
+    assert count == 9
 
 
 def test_empty_env_var_loads_all_models():
     count = _load(env_value="")
-    assert count == 4
+    assert count == 9

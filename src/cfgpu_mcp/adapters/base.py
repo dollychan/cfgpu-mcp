@@ -103,6 +103,14 @@ class ModelAdapter(ABC):
             return False, f"{self.adapter_id} is an image model"
         return True, ""
 
+    def extract_task_id(self, resp: dict) -> str | None:
+        """Extract task_id from POST response. Override for non-standard response shapes."""
+        return resp.get("id") or resp.get("task_id")
+
+    def extract_status(self, resp: dict) -> str:
+        """Extract status string from poll response. Override for non-standard response shapes."""
+        return resp.get("status", "running")
+
     def estimate_poll_timeout(
         self, req: "GenerateImageInput | GenerateVideoInput"
     ) -> int:

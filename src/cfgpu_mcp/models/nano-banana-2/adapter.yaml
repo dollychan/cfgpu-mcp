@@ -1,0 +1,7 @@
+extends: gpt-image-2
+card_base: ~
+adapter_id: nano-banana-2
+display_name: "Nano Banana 2"
+cfgpu_model_id: nano2
+cost_tier: 4
+speed_tier: 3

@@ -41,7 +41,7 @@ def _sync_adapter():
 
 def _async_adapter(task_id: str = "cfgpu-task-1"):
     adapter = MagicMock()
-    adapter.adapter_id = "wan-2.0"
+    adapter.adapter_id = "wan-2-0"
     adapter.is_async = True
     adapter.endpoint = "/v1/video/tasks"
     adapter.poll_endpoint = "/v1/video/tasks/{task_id}"
@@ -50,6 +50,8 @@ def _async_adapter(task_id: str = "cfgpu-task-1"):
         base_interval=0.01, max_interval=0.1, backoff_factor=1.1, default_timeout=5
     )
     adapter.estimate_poll_timeout.return_value = 5
+    adapter.extract_task_id.side_effect = lambda r: r.get("id") or r.get("task_id") or task_id
+    adapter.extract_status.side_effect = lambda r: r.get("status", "running")
     return adapter
 
 

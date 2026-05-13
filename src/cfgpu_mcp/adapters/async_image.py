@@ -1,0 +1,89 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
+
+from cfgpu_mcp.adapters.base import ModelAdapter, register_python_adapter
+from cfgpu_mcp.tool_registry import GenerateImageInput, NormalizedResult
+
+if TYPE_CHECKING:
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+
+
+class _AsyncImageBase(ModelAdapter):
+    """Shared response handling for image models that wrap responses under a 'data' key.
+
+    POST /images/generations → {"code":200,"data":{"task_id":"...","status":"pending"}}
+    GET  /images/tasks/{id}  → {"code":200,"data":{"status":"completed","result":{"images":[...]}}}
+    """
+
+    def extract_task_id(self, resp: dict) -> str | None:
+        return (resp.get("data") or {}).get("task_id")
+
+    def extract_status(self, resp: dict) -> str:
+        return (resp.get("data") or {}).get("status", "running")
+
+    def parse_response(self, resp: dict) -> NormalizedResult:
+        data = resp.get("data") or {}
+        images: list[str] = (data.get("result") or {}).get("images") or []
+        return NormalizedResult(
+            urls=images,
+            expires_at=datetime.now(UTC) + timedelta(hours=24),
+            task_id=data.get("task_id"),
+            model_used=None,
+            seed=None,
+            cost_tokens=None,
+        )
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
+        raise NotImplementedError
+
+
+@register_python_adapter
+class GptImage2Adapter(_AsyncImageBase):
+    """Adapter for GPT Image 2.
+
+    Payload: model + prompt + aspect_ratio + reference_images (optional).
+    Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16.
+    """
+
+    adapter_id = "gpt-image-2"
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
+        assert isinstance(req, GenerateImageInput)
+        payload: dict = {
+            "model": self.cfgpu_model_id,
+            "prompt": req.prompt,
+            "aspect_ratio": req.aspect_ratio,
+        }
+        if req.reference_images:
+            payload["reference_images"] = req.reference_images
+        if req.model_specific:
+            payload.update(req.model_specific)
+        return payload
+
+
+@register_python_adapter
+class NanoBananaAdapter(_AsyncImageBase):
+    """Adapter for Nano Banana 2 and Nano Banana Pro.
+
+    Payload: model + prompt + image_size + aspect_ratio + reference_images (optional).
+    image_size maps from resolution (1K/2K/4K).
+    Nano Pro reuses this class via YAML extends: nano-banana-2.
+    """
+
+    adapter_id = "nano-banana-2"
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
+        assert isinstance(req, GenerateImageInput)
+        payload: dict = {
+            "model": self.cfgpu_model_id,
+            "prompt": req.prompt,
+            "image_size": req.resolution,
+            "aspect_ratio": req.aspect_ratio,
+        }
+        if req.reference_images:
+            payload["reference_images"] = req.reference_images
+        if req.model_specific:
+            payload.update(req.model_specific)
+        return payload

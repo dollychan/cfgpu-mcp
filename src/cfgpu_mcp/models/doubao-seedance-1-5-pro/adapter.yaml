@@ -1,7 +1,7 @@
-extends: wan-2.0
+extends: wan-2-0
 card_base: ~
 
-adapter_id: doubao-seedance-1.5-pro
+adapter_id: doubao-seedance-1-5-pro
 display_name: "Doubao Seedance 1.5 Pro"
 cfgpu_model_id: doubao-seedance-1-5-pro-251215
 

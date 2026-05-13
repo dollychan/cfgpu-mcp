@@ -22,7 +22,7 @@ BASE_CARD = """# WAN 2.0
 """
 
 VARIANT_CARD = """---
-card_base: wan-2.0
+card_base: wan-2-0
 ---
 
 # WAN 2.0 Fast

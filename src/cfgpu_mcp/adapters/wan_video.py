@@ -19,7 +19,7 @@ class WanVideoAdapter(ModelAdapter):
     no separate wan_video_fast.py needed.
     """
 
-    adapter_id = "wan-2.0"
+    adapter_id = "wan-2-0"
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
@@ -82,15 +82,15 @@ class WanVideoAdapter(ModelAdapter):
         return payload
 
     def parse_response(self, resp: dict) -> NormalizedResult:
-        output = resp.get("output", {})
-        video_url = output.get("video_url")
+        content = resp.get("content") or {}
+        video_url = content.get("videoUrl")
         return NormalizedResult(
             urls=[video_url] if video_url else [],
             expires_at=datetime.now(UTC) + timedelta(hours=24),
             task_id=resp.get("id"),
             model_used=resp.get("model"),
-            seed=None,
-            cost_tokens=(resp.get("usage") or {}).get("total_tokens"),
+            seed=resp.get("seed"),
+            cost_tokens=(resp.get("usage") or {}).get("totalTokens"),
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

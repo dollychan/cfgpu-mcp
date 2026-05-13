@@ -1,10 +1,10 @@
-adapter_id: wan-2.0
+adapter_id: wan-2-0
 display_name: "WAN 2.0 (Seedance 2.0)"
 cfgpu_model_id: wan-video
 task_type: video
-endpoint: /userapi/v1/contents/generations/tasks
+endpoint: /video/generations
 is_async: true
-poll_endpoint: /userapi/v1/contents/generations/tasks/{task_id}
+poll_endpoint: /video/tasks/{task_id}
 
 capabilities:
   - text_to_video

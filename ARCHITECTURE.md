@@ -80,7 +80,7 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 | 名称 | 示例 | 用途 |
 |------|------|------|
-| `adapter_id` | `wan-2.0-fast` | 目录名、registry key、用户传入的 `model=` 参数、日志 |
+| `adapter_id` | `wan-2-0-fast` | 目录名、registry key、用户传入的 `model=` 参数、日志 |
 | `display_name` | `WAN 2.0 Fast (...)` | 仅 `list_models()` 返回值中展示 |
 | `cfgpu_model_id` | `wan-video-fast` | **仅在** `build_payload()` 里写入 API 请求体 |
 
@@ -182,7 +182,7 @@ ModelAdapter (ABC, adapters/base.py)
     │       └── 通过 payload_mapping DSL 把 req 字段映射到 API 字段
     │
     ├── WanVideoAdapter         手写 Python，处理复杂 content 数组构建
-    │       └── 同时服务 wan-2.0 和 wan-2.0-fast（通过 extends 链）
+    │       └── 同时服务 wan-2-0 和 wan-2-0-fast（通过 extends 链）
     │
     └── SeedreamAdapter         手写 Python，处理 resolution×ratio → size 映射
 ```
@@ -194,12 +194,12 @@ ModelAdapter (ABC, adapters/base.py)
 
 ### 5.2 YAML extends 继承
 
-`wan-2.0-fast` 的 YAML 只需要写和父模型的**差异**：
+`wan-2-0-fast` 的 YAML 只需要写和父模型的**差异**：
 
 ```yaml
-# wan-2.0-fast/adapter.yaml
-extends: wan-2.0
-adapter_id: wan-2.0-fast
+# wan-2-0-fast/adapter.yaml
+extends: wan-2-0
+adapter_id: wan-2-0-fast
 cfgpu_model_id: wan-video-fast
 cost_tier: 2
 speed_tier: 4
@@ -216,9 +216,9 @@ poll_config:
 
 ```python
 # adapters/wan_video.py
-@register_python_adapter        # 把 WanVideoAdapter 注册到 _PYTHON_ADAPTERS["wan-2.0"]
+@register_python_adapter        # 把 WanVideoAdapter 注册到 _PYTHON_ADAPTERS["wan-2-0"]
 class WanVideoAdapter(ModelAdapter):
-    adapter_id = "wan-2.0"
+    adapter_id = "wan-2-0"
     ...
 ```
 
@@ -228,11 +228,11 @@ from cfgpu_mcp.adapters import wan_video, seedream  # 触发 @register_python_ad
 ```
 
 `_instantiate()` 的查找顺序：
-1. 在 `_PYTHON_ADAPTERS` 中查找 `adapter_id`（e.g. `wan-2.0-fast`）→ 未找到
-2. 查找 `extends` 指向的父 ID（`wan-2.0`）→ 找到 `WanVideoAdapter`
+1. 在 `_PYTHON_ADAPTERS` 中查找 `adapter_id`（e.g. `wan-2-0-fast`）→ 未找到
+2. 查找 `extends` 指向的父 ID（`wan-2-0`）→ 找到 `WanVideoAdapter`
 3. 用 `WanVideoAdapter.from_config(merged_config)` 实例化，此时实例的 `adapter_id`、`cfgpu_model_id` 等已被 merged config 覆盖
 
-这就是 `wan-2.0-fast` 如何复用 `WanVideoAdapter` 的全部逻辑，不需要 `wan_video_fast.py`。
+这就是 `wan-2-0-fast` 如何复用 `WanVideoAdapter` 的全部逻辑，不需要 `wan_video_fast.py`。
 
 ### 5.4 Model Card 合并
 
@@ -302,9 +302,14 @@ CFGPUError.from_http_response(status, body)
 
 | 层 | 展示方式 |
 |----|---------|
-| MCP tools | FastMCP 自动捕获 exception → 返回 MCP error 响应 |
-| agent/dispatcher | 调用方接收 Python 异常，自行处理 |
+| MCP tools（`tools/`） | 工具内部 try/except → 返回 `{"error": True, "error_type": ..., "message": ..., "retryable": ...}` dict，LLM 可直接读取 |
+| agent/dispatcher | `dispatch_tool()` 内部 try/except → 返回同上 error dict（`ValueError` 除外，编程错误继续上抛）|
 | CLI | `print_error()` 打印到 stderr，`sys.exit(1)` |
+
+**为什么 MCP tools 不依赖 FastMCP 的异常捕获？**  
+FastMCP 捕获异常后设置 `isError: true`，但 MCP 客户端是否将其内容暴露给 LLM 取决于具体实现，行为不一致。主动返回 error dict 可确保错误消息始终出现在 tool result 内容中，LLM 一定能看到并推理。
+
+`tool_error_dict(e)` 定义在 `errors.py`，`tools/` 层和 `dispatcher.py` 均通过 import 共用它。
 
 ---
 
@@ -329,17 +334,23 @@ src/cfgpu_mcp/
 │   └── __init__.py             导入 wan_video、seedream 触发注册
 │
 ├── models/
-│   ├── wan-2.0/
+│   ├── wan-2-0/
 │   │   ├── adapter.yaml        完整配置
 │   │   └── card.md             模型说明
-│   ├── wan-2.0-fast/
-│   │   ├── adapter.yaml        只写差异，extends: wan-2.0
+│   ├── wan-2-0-fast/
+│   │   ├── adapter.yaml        只写差异，extends: wan-2-0
 │   │   └── card.md
-│   ├── doubao-seedance-1.5-pro/
-│   ├── adapter.yaml            extends: wan-2.0, card_base: ~（不继承 card.md）
-│   └── card.md
-└── doubao-seedream-5-0-lite/
-│       ├── adapter.yaml
+│   ├── doubao-seedance-1-5-pro/
+│   │   ├── adapter.yaml        extends: wan-2-0, card_base: ~（不继承 card.md）
+│   │   └── card.md
+│   ├── doubao-seedream-5-0-lite/
+│   │   ├── adapter.yaml
+│   │   └── card.md
+│   ├── doubao-seedream-4-5/
+│   │   ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~
+│   │   └── card.md
+│   └── doubao-seedream-4-0/
+│       ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~
 │       └── card.md
 │
 ├── service/                    业务逻辑层（三种模式共享）
@@ -380,13 +391,13 @@ src/cfgpu_mcp/
 适用场景：新模型和已有模型 payload 结构相同，只有 `cfgpu_model_id`、速度、费用不同。
 
 ```bash
-mkdir src/cfgpu_mcp/models/wan-2.0-turbo
+mkdir src/cfgpu_mcp/models/wan-2-0-turbo
 ```
 
 `adapter.yaml`:
 ```yaml
-extends: wan-2.0
-adapter_id: wan-2.0-turbo
+extends: wan-2-0
+adapter_id: wan-2-0-turbo
 display_name: "WAN 2.0 Turbo"
 cfgpu_model_id: wan-video-turbo
 cost_tier: 4
@@ -397,7 +408,7 @@ poll_config:
 
 `card.md`（可选，只写差异，空文件也可以）
 
-无需写 Python 代码。重启后自动加载，`wan-2.0-turbo` 会复用 `WanVideoAdapter`。
+无需写 Python 代码。重启后自动加载，`wan-2-0-turbo` 会复用 `WanVideoAdapter`。
 
 ---
 
@@ -546,7 +557,7 @@ FastMCP 0.x 通过函数签名内省来生成 JSON Schema，不支持以 Pydanti
 CLI 的异步工作流：`cfgpu generate video ... --no-wait` 拿到 task_id，进程退出；几分钟后 `cfgpu task wait <task_id>` 需要恢复状态。进程间共享状态必须持久化。SQLite 无需额外服务，满足单机场景。
 
 **为什么 `_merge_extends()` 要在合并后的 dict 里保留 `extends` 字段？**
-`_instantiate()` 分两步工作：先用 `adapter_id` 在 `_PYTHON_ADAPTERS` 里查找 Python 类，找不到时退而查 `extends` 指向的父 ID。如果 `extends` 被清除，variant 模型（如 `wan-2.0-fast`）就找不到对应的 `WanVideoAdapter`，会 fallback 到 `GenericAdapter`，导致视频 payload 构建错误。
+`_instantiate()` 分两步工作：先用 `adapter_id` 在 `_PYTHON_ADAPTERS` 里查找 Python 类，找不到时退而查 `extends` 指向的父 ID。如果 `extends` 被清除，variant 模型（如 `wan-2-0-fast`）就找不到对应的 `WanVideoAdapter`，会 fallback 到 `GenericAdapter`，导致视频 payload 构建错误。
 
 **为什么 `cfgpu_model_id` 只允许在 `build_payload()` 里出现？**
 防止 `cfgpu_model_id` 污染到用户界面或日志。用户只需要知道 `adapter_id`（人类可读、稳定），`cfgpu_model_id` 是 CFGPU API 内部实现细节，会随版本更迭变化。

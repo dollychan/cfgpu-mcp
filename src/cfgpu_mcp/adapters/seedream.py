@@ -11,11 +11,6 @@ if TYPE_CHECKING:
 
 # Resolution × aspect_ratio → exact pixel size string
 _SIZE_MAP: dict[tuple[str, str], str] = {
-    ("1K", "1:1"):  "1024x1024",
-    ("1K", "4:3"):  "1152x864",
-    ("1K", "3:4"):  "864x1152",
-    ("1K", "16:9"): "1424x800",
-    ("1K", "9:16"): "800x1424",
     ("2K", "1:1"):  "2048x2048",
     ("2K", "4:3"):  "2304x1728",
     ("2K", "3:4"):  "1728x2304",
@@ -41,7 +36,7 @@ class SeedreamAdapter(ModelAdapter):
 
         size = _SIZE_MAP.get(
             (req.resolution, req.aspect_ratio),
-            _SIZE_MAP.get((req.resolution, "1:1"), "2048x2048"),
+            _SIZE_MAP.get((req.resolution, "1:1"), "2048x2048"),  # fallback: 2K 1:1
         )
         payload: dict = {
             "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used

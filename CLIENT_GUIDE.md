@@ -58,7 +58,7 @@ export CFGPU_API_TOKEN=sk-...
 {
   "env": {
     "CFGPU_API_TOKEN": "sk-...",
-    "CFGPU_ENABLED_MODELS": "wan-2.0-fast,doubao-seedream-5-0-lite"
+    "CFGPU_ENABLED_MODELS": "wan-2-0-fast,doubao-seedream-5-0-lite"
   }
 }
 ```
@@ -160,7 +160,7 @@ tools = get_anthropic_tools(tools=["generate_image", "list_models"])
 from cfgpu_mcp.config import get_registry
 
 # 只加载两个模型（影响 auto 路由和 list_models 结果）
-get_registry(enabled_models=["wan-2.0-fast", "doubao-seedream-5-0-lite"])
+get_registry(enabled_models=["wan-2-0-fast", "doubao-seedream-5-0-lite"])
 ```
 
 ### 直接调用 service 层（不经过 Agent）
@@ -189,7 +189,7 @@ async def main():
     # 生成视频，不等待（异步任务）
     task = await video_svc.generate_video(
         prompt="waves crashing on a beach",
-        model="wan-2.0-fast",
+        model="wan-2-0-fast",
         duration_seconds=5,
         aspect_ratio="16:9",
         resolution="720p",
@@ -391,7 +391,7 @@ cfgpu generate image "..." --metadata --json
 
 ```bash
 # 基础用法
-cfgpu generate video "waves crashing on a beach" --model wan-2.0-fast
+cfgpu generate video "waves crashing on a beach" --model wan-2-0-fast
 
 # 指定时长和分辨率
 cfgpu generate video "..." -d 8 -r 480p --no-audio
@@ -441,7 +441,7 @@ cfgpu models list --task-type video
 cfgpu models list --json
 
 # 查看某个模型的详细说明（markdown）
-cfgpu models card wan-2.0-fast
+cfgpu models card wan-2-0-fast
 cfgpu models card doubao-seedream-5-0-lite
 ```
 
@@ -559,7 +559,20 @@ result = await dispatch_tool("generate_image", inputs)
 
 ### 错误
 
-所有模式均抛出 `CFGPUError`，包含：
+**Mode A（MCP）和 Mode B（Agent SDK）**：工具层捕获所有错误，返回结构化 dict，确保 LLM 能读取错误原因：
+
+```json
+{
+  "error": true,
+  "error_type": "invalid_params",
+  "message": "请求参数错误：image size must be at least 3686400 pixels",
+  "retryable": false
+}
+```
+
+`error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
+
+**Mode B service 层直接调用**：service 函数抛出 `CFGPUError`，需自行捕获：
 
 ```python
 from cfgpu_mcp.errors import CFGPUError
@@ -567,12 +580,13 @@ from cfgpu_mcp.errors import CFGPUError
 try:
     result = await image_svc.generate_image(...)
 except CFGPUError as e:
-    print(e.error_type)    # "auth" | "invalid_params" | "api_error" | "timeout" | "unknown"
+    print(e.error_type)    # "auth" | "invalid_params" | ...
     print(e.user_message)  # 人类可读的错误描述
+    print(e.retryable)     # True 表示可重试
     print(e.original)      # 原始 HTTP 响应体
 ```
 
-CLI 模式下错误输出到 stderr，exit code 为 1：
+**Mode C（CLI）**：错误输出到 stderr，exit code 为 1：
 
 ```
 Error [auth]: CFGPU_API_TOKEN 未设置，请在环境变量中配置 API Token。

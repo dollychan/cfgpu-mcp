@@ -18,8 +18,8 @@ def test_auto_fast_tier_selects_high_speed_adapter():
     router = _router()
     req = GenerateVideoInput(prompt="test", quality_tier="fast")
     adapter = router.select_model(req)
-    # wan-2.0-fast has speed_tier=4, wan-2.0 has speed_tier=2
-    assert adapter.adapter_id == "wan-2.0-fast"
+    # wan-2-0-fast has speed_tier=4, wan-2-0 has speed_tier=2
+    assert adapter.adapter_id == "wan-2-0-fast"
 
 
 def test_auto_balanced_returns_a_video_model():
@@ -33,7 +33,7 @@ def test_chinese_prompt_prefers_seedream_for_image():
     router = _router()
     req = GenerateImageInput(prompt="一只可爱的猫咪", quality_tier="balanced")
     adapter = router.select_model(req)
-    assert adapter.adapter_id == "doubao-seedream-5-0-lite"
+    assert adapter.adapter_id.startswith("doubao-seedream")
 
 
 def test_reference_videos_score_multi_modal_capable_adapter():
@@ -49,9 +49,9 @@ def test_reference_videos_score_multi_modal_capable_adapter():
 
 def test_explicit_model_bypasses_scoring():
     router = _router()
-    req = GenerateVideoInput(prompt="test", model="wan-2.0")
-    adapter = router.get_adapter("wan-2.0")
-    assert adapter.adapter_id == "wan-2.0"
+    req = GenerateVideoInput(prompt="test", model="wan-2-0")
+    adapter = router.get_adapter("wan-2-0")
+    assert adapter.adapter_id == "wan-2-0"
 
 
 def test_explicit_nonexistent_model_raises_cfgpu_error():

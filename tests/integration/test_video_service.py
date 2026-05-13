@@ -7,7 +7,7 @@ from cfgpu_mcp.service import video as video_service
 async def test_text_to_video_returns_url_and_expires_at():
     result = await video_service.generate_video(
         prompt="a white ball bouncing slowly",
-        model="wan-2.0-fast",
+        model="wan-2-0-fast",
         duration_seconds=4,
         resolution="480p",
         with_audio=False,
@@ -20,7 +20,7 @@ async def test_text_to_video_returns_url_and_expires_at():
 async def test_wait_false_returns_task_id():
     result = await video_service.generate_video(
         prompt="a simple scene",
-        model="wan-2.0-fast",
+        model="wan-2-0-fast",
         duration_seconds=4,
         wait=False,
     )
@@ -32,7 +32,7 @@ async def test_wait_false_returns_task_id():
 async def test_first_frame_image_to_video():
     result = await video_service.generate_video(
         prompt="the ball slowly moves to the right",
-        model="wan-2.0-fast",
+        model="wan-2-0-fast",
         first_frame="https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/280px-PNG_transparency_demonstration_1.png",
         duration_seconds=4,
         resolution="480p",
@@ -45,7 +45,7 @@ async def test_first_frame_image_to_video():
 async def test_reference_videos_multimodal():
     result = await video_service.generate_video(
         prompt="continue this motion",
-        model="wan-2.0-fast",
+        model="wan-2-0-fast",
         reference_videos=["https://www.w3schools.com/html/mov_bbb.mp4"],
         duration_seconds=4,
         resolution="480p",

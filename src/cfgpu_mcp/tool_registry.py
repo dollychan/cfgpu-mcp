@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ── Input Models (single source of truth for all tool schemas) ─────────────
@@ -18,8 +18,8 @@ class GenerateImageInput(BaseModel):
         default="auto",
         description="Use adapter_id (e.g. 'doubao-seedream-5-0-lite'), cfgpu_model_id, or 'auto' for automatic selection",
     )
-    aspect_ratio: Literal["1:1", "16:9", "9:16", "4:3", "3:4"] = Field(default="1:1")
-    resolution: Literal["1K", "2K", "4K"] = Field(default="1K")
+    aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
+    resolution: Literal["1K", "2K", "3K", "4K"] = Field(default="2K")
     reference_images: Optional[list[str]] = Field(
         default=None,
         description="List of public image URLs to use as reference",
@@ -40,7 +40,7 @@ class GenerateVideoInput(BaseModel):
     prompt: str = Field(description="Text description of the video to generate")
     model: str = Field(
         default="auto",
-        description="Use adapter_id (e.g. 'wan-2.0'), cfgpu_model_id, or 'auto' for automatic selection",
+        description="Use adapter_id (e.g. 'wan-2-0'), cfgpu_model_id, or 'auto' for automatic selection",
     )
     first_frame: Optional[str] = Field(default=None, description="First frame image URL (public)")
     last_frame: Optional[str] = Field(default=None, description="Last frame image URL (public), use with first_frame")
@@ -56,7 +56,21 @@ class GenerateVideoInput(BaseModel):
         default=None,
         description="Reference audio URLs (role=reference_audio), max 3",
     )
-    duration_seconds: int = Field(default=5, ge=4, le=15, description="Video duration in seconds (4-15)")
+    duration_seconds: int = Field(
+        default=5,
+        description="Video duration in seconds. All current video models (WAN 2.0, WAN 2.0 Fast, Doubao Seedance 1.5 Pro) require 4–15 seconds.",
+    )
+
+    @field_validator("duration_seconds")
+    @classmethod
+    def _validate_duration(cls, v: int) -> int:
+        if not (4 <= v <= 15):
+            raise ValueError(
+                f"duration_seconds={v} is out of range. All current video models (WAN 2.0, "
+                f"WAN 2.0 Fast, Doubao Seedance 1.5 Pro) support 4–15 seconds only. "
+                f"Please retry with a value between 4 and 15."
+            )
+        return v
     aspect_ratio: Literal["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"] = Field(
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",

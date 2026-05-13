@@ -16,29 +16,29 @@ def _load(enabled_models=None) -> AdapterRegistry:
 
 def test_all_models_registered():
     registry = _load()
-    assert len(registry) == 4
+    assert len(registry) == 9
 
 
 def test_lookup_by_adapter_id():
     registry = _load()
-    adapter = registry.get("wan-2.0")
-    assert adapter.adapter_id == "wan-2.0"
+    adapter = registry.get("wan-2-0")
+    assert adapter.adapter_id == "wan-2-0"
 
 
 def test_lookup_by_cfgpu_model_id():
     registry = _load()
     adapter = registry.get("wan-video")
-    assert adapter.adapter_id == "wan-2.0"
+    assert adapter.adapter_id == "wan-2-0"
 
 
 def test_lookup_by_display_name():
     registry = _load()
     adapter = registry.get("WAN 2.0 (Seedance 2.0)")
-    assert adapter.adapter_id == "wan-2.0"
+    assert adapter.adapter_id == "wan-2-0"
 
 
 def test_enabled_models_allowlist_by_adapter_id():
-    registry = _load(enabled_models=["wan-2.0", "wan-2.0-fast"])
+    registry = _load(enabled_models=["wan-2-0", "wan-2-0-fast"])
     assert len(registry) == 2
     with pytest.raises(KeyError):
         registry.get("doubao-seedream-5-0-lite")
@@ -53,32 +53,32 @@ def test_enabled_models_allowlist_by_cfgpu_model_id():
 
 def test_enabled_models_none_registers_all():
     registry = _load(enabled_models=None)
-    assert len(registry) == 4
+    assert len(registry) == 9
 
 
 def test_wan_fast_uses_wan_video_adapter_class():
     registry = _load()
-    adapter = registry.get("wan-2.0-fast")
+    adapter = registry.get("wan-2-0-fast")
     assert isinstance(adapter, WanVideoAdapter)
 
 
 def test_wan_fast_cfgpu_model_id_is_fast():
     registry = _load()
-    adapter = registry.get("wan-2.0-fast")
+    adapter = registry.get("wan-2-0-fast")
     assert adapter.cfgpu_model_id == "wan-video-fast"
 
 
 def test_wan_fast_cost_tier_overrides_parent():
     registry = _load()
-    wan = registry.get("wan-2.0")
-    fast = registry.get("wan-2.0-fast")
+    wan = registry.get("wan-2-0")
+    fast = registry.get("wan-2-0-fast")
     assert fast.cost_tier < wan.cost_tier
 
 
 def test_wan_fast_poll_config_merged():
     registry = _load()
-    wan = registry.get("wan-2.0")
-    fast = registry.get("wan-2.0-fast")
+    wan = registry.get("wan-2-0")
+    fast = registry.get("wan-2-0-fast")
     # default_timeout overridden in child
     assert fast.poll_config.default_timeout < wan.poll_config.default_timeout
     # base_interval inherited from parent

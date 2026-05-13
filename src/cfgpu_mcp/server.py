@@ -15,6 +15,11 @@ models.register(mcp)
 def main() -> None:
     import asyncio
     import atexit
+    import logging
+    import os
+
+    log_level = os.getenv("CFGPU_LOG_LEVEL", "WARNING").upper()
+    logging.basicConfig(level=getattr(logging, log_level, logging.WARNING))
 
     atexit.register(lambda: asyncio.get_event_loop().run_until_complete(config.close()))
     mcp.run(transport="stdio")
