@@ -36,6 +36,10 @@
 }
 ```
 
+## 响应结构
+
+与 `gpt-image-2` 一致，详见 [gpt-image-2/card.md](../gpt-image-2/card.md)。
+
 ## 约束与限制
 
 - 异步接口，提交后需轮询获取结果

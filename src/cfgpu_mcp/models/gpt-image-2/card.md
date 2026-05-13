@@ -44,6 +44,39 @@
 }
 ```
 
+## 响应结构
+
+图片创建结果
+```json
+{
+  "code":200,
+  "data":{
+    "task_id":"xxx",
+    "status":"pending"
+  },
+  "message":"success"
+}
+```
+
+图片查询结果
+```json
+{
+  "code":200,
+  "message":"success",
+  "data":{
+    "task_id":"xxx",
+    "task_type":"gpt_image_generation",
+    "status":"completed",
+    "result":{
+      "images":["https://..."]
+    },
+    "created_at":"2026-05-13T13:48:01.000Z",
+    "updated_at":"2026-05-13T13:48:35.000Z"
+  }
+}
+```
+
+
 ## 约束与限制
 
 - 异步接口，提交后需轮询获取结果

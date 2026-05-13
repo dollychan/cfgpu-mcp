@@ -166,7 +166,7 @@
   "createdAt": 1778641628,
   "updatedAt": 1778641776,
   "content": {
-    "videoUrl": "https://ark-acg-cn-beijing.tos-cn-beijing.volces.com/...",
+    "videoUrl": "https://...",
     "lastFrameUrl": null
   },
   "seed": 15233,
