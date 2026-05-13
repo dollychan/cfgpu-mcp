@@ -371,12 +371,21 @@ pip install "cfgpu-mcp[cli]"
 # 基础用法（自动选模型，等待完成，URL 输出到 stdout）
 cfgpu generate image "a red panda in the snow"
 
-# 指定模型和参数
+# 指定模型和参数（同步模型 — Seedream 系列）
 cfgpu generate image "富士山日出" \
   --model doubao-seedream-5-0-lite \
   --aspect-ratio 16:9 \
   --resolution 2K \
   --quality-tier best
+
+# 异步模型 — GPT Image 2 / Nano Banana（轮询返回结果）
+cfgpu generate image "cyberpunk cityscape" \
+  --model gpt-image-2 \
+  --aspect-ratio 16:9
+
+cfgpu generate image "watercolor landscape" \
+  --model nano-banana-2 \
+  --resolution 2K
 
 # 使用参考图
 cfgpu generate image "same style portrait" \

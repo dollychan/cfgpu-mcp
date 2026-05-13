@@ -92,7 +92,7 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 | | 同步（`is_async: false`） | 异步（`is_async: true`） |
 |-|--------------------------|--------------------------|
-| 代表模型 | Seedream（图片） | WAN 2.0（视频） |
+| 代表模型 | Seedream（图片） | WAN 2.0（视频）、GPT Image 2、Nano Banana（图片） |
 | POST 响应 | 直接包含图片 URL | 包含 `task_id`，需轮询 |
 | `TaskManager.create()` | 立即写 `succeeded` 到 DB | 写 `pending`，等待轮询 |
 | `TaskManager.wait()` | 立即返回（no-op） | 指数退避轮询直到完成 |
@@ -181,6 +181,10 @@ ModelAdapter (ABC, adapters/base.py)
     ├── GenericAdapter          YAML 驱动，适合 payload 结构简单的模型
     │       └── 通过 payload_mapping DSL 把 req 字段映射到 API 字段
     │
+    ├── _AsyncImageBase         共享 data-wrapped 响应处理 + _finalize_payload()
+    │       ├── GptImage2Adapter      gpt-image-2
+    │       └── NanoBananaAdapter     nano-banana-2 / nano-banana-pro（extends 链）
+    │
     ├── WanVideoAdapter         手写 Python，处理复杂 content 数组构建
     │       └── 同时服务 wan-2-0 和 wan-2-0-fast（通过 extends 链）
     │
@@ -224,7 +228,7 @@ class WanVideoAdapter(ModelAdapter):
 
 ```python
 # adapters/__init__.py
-from cfgpu_mcp.adapters import wan_video, seedream  # 触发 @register_python_adapter
+from cfgpu_mcp.adapters import wan_video, seedream, async_image  # 触发 @register_python_adapter
 ```
 
 `_instantiate()` 的查找顺序：
@@ -268,7 +272,11 @@ tasks (
 
 DB 的作用：`cfgpu task status <task_id>` 和 `cfgpu task wait <task_id>` 需要在进程重启后仍能查询和恢复任务。如果只在内存中存储，CLI 的异步工作流（`--no-wait` 后稍后查询）就无法工作。
 
+`service/task.py` 的 `get_status()` 在返回已成功但 result 中无 URL 的任务时，会尝试重新轮询 API 获取最新结果。轮询失败时以 `logger.debug()` 记录，不会阻断返回——此时返回 DB 中的 stale result。
+
 ### 指数退避轮询
+
+`_STATUS_MAP`（模块级常量）将 CFGPU API 返回的原始状态映射到内部状态（`succeeded` / `failed` / `running` / `pending`），避免每次 `poll()` 调用重建 dict。
 
 ```python
 interval = base_interval                        # 默认 5s
@@ -331,7 +339,8 @@ src/cfgpu_mcp/
 │   ├── generic.py              YAML DSL 驱动的通用 adapter
 │   ├── wan_video.py            WAN 2.0 / WAN 2.0 Fast 的 Python Adapter
 │   ├── seedream.py             Seedream 的 Python Adapter（同步模型）
-│   └── __init__.py             导入 wan_video、seedream 触发注册
+│   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
+│   └── __init__.py             导入 wan_video、seedream、async_image 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -352,6 +361,15 @@ src/cfgpu_mcp/
 │   └── doubao-seedream-4-0/
 │       ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~
 │       └── card.md
+│   ├── gpt-image-2/
+│   │   ├── adapter.yaml
+│   │   └── card.md
+│   ├── nano-banana-2/
+│   │   ├── adapter.yaml
+│   │   └── card.md
+│   ├── nano-banana-pro/
+│   │   ├── adapter.yaml        extends: nano-banana-2
+│   │   └── card.md
 │
 ├── service/                    业务逻辑层（三种模式共享）
 │   ├── image.py                generate_image()
