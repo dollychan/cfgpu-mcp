@@ -5,7 +5,7 @@ from mcp.server.fastmcp import FastMCP
 from cfgpu_mcp import config
 from cfgpu_mcp.tools import generate, models, tasks
 
-mcp = FastMCP("cfgpu-mcp")
+mcp = FastMCP("cfgpu")
 
 generate.register(mcp)
 tasks.register(mcp)
@@ -19,7 +19,8 @@ def main() -> None:
     import os
 
     log_level = os.getenv("CFGPU_LOG_LEVEL", "WARNING").upper()
-    logging.basicConfig(level=getattr(logging, log_level, logging.WARNING))
+    level = getattr(logging, log_level, logging.WARNING)
+    logging.basicConfig(level=level, force=True)
 
     atexit.register(lambda: asyncio.get_event_loop().run_until_complete(config.close()))
     mcp.run(transport="stdio")

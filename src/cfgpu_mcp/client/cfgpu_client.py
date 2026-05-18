@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import json as _json
 import logging
 import os
 import aiohttp
@@ -30,6 +30,10 @@ class CFGPUClient:
         self._base_url = (base_url or os.getenv("CFGPU_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
         self._session: aiohttp.ClientSession | None = None
 
+    @property
+    def base_url(self) -> str:
+        return self._base_url
+
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(
@@ -38,6 +42,9 @@ class CFGPUClient:
         return self._session
 
     async def post(self, path: str, json: dict) -> dict:
+        if os.getenv("CFGPU_DRY_RUN"):
+            url = f"{self._base_url}/{path.lstrip('/')}"
+            logger.info("DRY-RUN POST %s\n%s", url, _json.dumps(json, ensure_ascii=False, indent=2))
         return await self._request("POST", path, json=json)
 
     async def get(self, path: str) -> dict:
@@ -59,7 +66,7 @@ class CFGPUClient:
 
                 if not resp.ok or (isinstance(body.get("error"), dict) and body["error"]):
                     raise CFGPUError.from_http_response(resp.status, body)
-                logger.debug("CFGPU response [%s %s]: %s", method, url, json.dumps(body, ensure_ascii=False))
+                logger.debug("CFGPU response [%s %s]: %s", method, url, _json.dumps(body, ensure_ascii=False))
                 return body
         except CFGPUError:
             raise

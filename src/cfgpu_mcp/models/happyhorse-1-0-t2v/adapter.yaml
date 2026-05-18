@@ -1,0 +1,21 @@
+adapter_id: happyhorse-1-0-t2v
+display_name: "happyhorse-1.0-t2v"
+cfgpu_model_id: happyhorse-1.0-t2v
+task_type: video
+endpoint: /video/generations
+is_async: true
+poll_endpoint: /video/tasks/{task_id}
+
+capabilities:
+  - text_to_video
+  - image_to_video
+  - multi_modal_reference
+
+cost_tier: 2
+speed_tier: 3
+
+poll_config:
+  base_interval: 5
+  max_interval: 20
+  backoff_factor: 1.3
+  default_timeout: 300

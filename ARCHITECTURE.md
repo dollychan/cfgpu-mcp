@@ -56,6 +56,8 @@
 
 `tools/generate.py`（及 `tools/tasks.py`、`tools/models.py`）的存在是 FastMCP 的限制：FastMCP 通过函数签名来生成 JSON Schema，不支持直接传入 Pydantic 模型。因此 `tools/` 层必须把所有参数显式重声明一遍，然后原样转发给 `service/`。**这一层不含任何逻辑，修改时只需同步参数列表。**
 
+**MCP 工具名与 Mode B 的一致性**：`server.py` 将 FastMCP server 命名为 `cfgpu`（`FastMCP("cfgpu")`）。某些 MCP 客户端（如 `langchain-mcp-adapters`）加载工具时会自动拼接 `{server_name}_{tool_name}`，即 `cfgpu_generate_image`、`cfgpu_generate_video` 等。Mode B 的 `get_langgraph_tools()` 返回的 `StructuredTool` 名称为原始的 `generate_image`，不含前缀。如需通过 MCP 协议接入 LangGraph，需注意这一命名差异。
+
 ### Mode B — 工具 schema 的单一来源
 
 `tool_registry.py` 是 Mode B 的核心：它定义了所有工具的 Pydantic 输入模型，并提供：
@@ -178,17 +180,20 @@ service 返回 dict → 访问层格式化 → 用户
 ```
 ModelAdapter (ABC, adapters/base.py)
     │
-    ├── GenericAdapter          YAML 驱动，适合 payload 结构简单的模型
+    ├── GenericAdapter            YAML 驱动，适合 payload 结构简单的模型
     │       └── 通过 payload_mapping DSL 把 req 字段映射到 API 字段
     │
-    ├── _AsyncImageBase         共享 data-wrapped 响应处理 + _finalize_payload()
+    ├── _AsyncImageBase           共享 data-wrapped 响应处理 + _finalize_payload()
     │       ├── GptImage2Adapter      gpt-image-2
     │       └── NanoBananaAdapter     nano-banana-2 / nano-banana-pro（extends 链）
     │
-    ├── WanVideoAdapter         手写 Python，处理复杂 content 数组构建
+    ├── WanVideoAdapter           手写 Python，处理复杂 content 数组构建
     │       └── 同时服务 wan-2-0 和 wan-2-0-fast（通过 extends 链）
     │
-    └── SeedreamAdapter         手写 Python，处理 resolution×ratio → size 映射
+    ├── SeedreamAdapter           手写 Python，处理 resolution×ratio → size 映射
+    │
+    └── HappyHorseVideoAdapter    手写 Python，DashScope 风格嵌套 payload
+            └── input.media 数组 + parameters 对象；大写状态码归一化
 ```
 
 **选择 GenericAdapter 还是 Python Adapter？**
@@ -228,7 +233,7 @@ class WanVideoAdapter(ModelAdapter):
 
 ```python
 # adapters/__init__.py
-from cfgpu_mcp.adapters import wan_video, seedream, async_image  # 触发 @register_python_adapter
+from cfgpu_mcp.adapters import wan_video, seedream, async_image, happyhorse_video  # 触发 @register_python_adapter
 ```
 
 `_instantiate()` 的查找顺序：
@@ -344,7 +349,8 @@ src/cfgpu_mcp/
 │   ├── wan_video.py            WAN 2.0 / WAN 2.0 Fast 的 Python Adapter
 │   ├── seedream.py             Seedream 的 Python Adapter（同步模型）
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
-│   └── __init__.py             导入 wan_video、seedream、async_image 触发注册
+│   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
+│   └── __init__.py             导入 wan_video、seedream、async_image、happyhorse_video 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -365,6 +371,9 @@ src/cfgpu_mcp/
 │   └── doubao-seedream-4-0/
 │       ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~
 │       └── card.md
+│   ├── happyhorse-1-0-t2v/
+│   │   ├── adapter.yaml        DashScope 风格异步视频模型
+│   │   └── card.md
 │   ├── gpt-image-2/
 │   │   ├── adapter.yaml
 │   │   └── card.md
@@ -378,7 +387,6 @@ src/cfgpu_mcp/
 ├── service/                    业务逻辑层（三种模式共享）
 │   ├── image.py                generate_image()
 │   ├── video.py                generate_video()
-│   ├── preview.py              preview_generate_image() / preview_generate_video()（dry-run）
 │   ├── task.py                 get_status() / wait_for_task()
 │   └── model.py                list_models() / get_model_card()
 │
@@ -400,7 +408,7 @@ src/cfgpu_mcp/
 │   └── output.py               print_result() / run_with_progress() / print_error()
 │
 └── client/
-    ├── cfgpu_client.py         aiohttp HTTP 客户端（最底层）
+    ├── cfgpu_client.py         aiohttp HTTP 客户端（最底层）；CFGPU_DRY_RUN=1 时记录请求日志不发送
     └── db.py                   SQLite CRUD（insert/update/get/list）
 ```
 
@@ -501,36 +509,6 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
 ---
 
-### Preview（dry-run）工具模式
-
-`preview_generate_image` / `preview_generate_video` 是"只解析、不调用"的 dry-run 工具。它们：
-
-1. 接受与真实工具**完全相同的参数**（schema 通过继承 `GenerateImageInput` / `GenerateVideoInput` 自动共享）
-2. 走完整的路由和 `build_payload()` 流程
-3. 不调用 `CFGPUClient`，直接返回摘要
-
-```python
-# service/preview.py 中的共享辅助函数
-def _resolve_adapter(req, model) -> ModelAdapter:
-    ...  # 复用 ModelRouter 逻辑
-
-def _build_preview(adapter, req) -> dict:
-    return {
-        "dry_run": True,
-        "model": adapter.adapter_id,
-        "display_name": adapter.display_name,
-        "cost_tier": adapter.cost_tier,
-        "speed_tier": adapter.speed_tier,
-        "is_async": adapter.is_async,
-        "estimated_seconds": adapter.estimate_poll_timeout(req),
-        "payload": adapter.build_payload(req),  # 真实的 API payload
-    }
-```
-
-扩展时遵循同一模式：新 Pydantic 类继承现有输入模型（只改 `__doc__`），对应的 service 函数调用 `_build_preview`。
-
----
-
 ### 修改工具参数
 
 工具参数定义在**两处**，需同步修改：
@@ -550,9 +528,24 @@ npx -y @modelcontextprotocol/inspector --env CFGPU_API_TOKEN=sk-... cfgpu-mcp
 
 # 建议测试顺序：
 # 1. initialize      确认握手
-# 2. tools/list      确认工具注册
+# 2. tools/list      确认工具注册（工具名为 generate_image 等原始名称）
 # 3. list_models {}  不消耗 API quota，快速验证 registry
 # 4. generate_image {"prompt":"test","wait":false}  验证 API 连通性
+```
+
+### 记录完整 HTTP 请求（dry-run 模式）
+
+```bash
+# 启动时设置 CFGPU_DRY_RUN=1，所有 POST 请求都会在 INFO 日志中打印完整 URL 和 payload，
+# 然后照常发送。配合 CFGPU_LOG_LEVEL=INFO 查看输出。
+CFGPU_DRY_RUN=1 CFGPU_LOG_LEVEL=INFO cfgpu generate image "test"
+# stderr 输出示例：
+# INFO cfgpu_mcp.client.cfgpu_client - DRY-RUN POST https://www.cfgpu.com/userapi/v1/v1/images/generations
+# {
+#   "model": "seedream-v3",
+#   "prompt": "test",
+#   ...
+# }
 ```
 
 ### 运行测试

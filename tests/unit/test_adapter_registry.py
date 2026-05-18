@@ -16,7 +16,7 @@ def _load(enabled_models=None) -> AdapterRegistry:
 
 def test_all_models_registered():
     registry = _load()
-    assert len(registry) == 9
+    assert len(registry) == 10
 
 
 def test_lookup_by_adapter_id():
@@ -53,7 +53,7 @@ def test_enabled_models_allowlist_by_cfgpu_model_id():
 
 def test_enabled_models_none_registers_all():
     registry = _load(enabled_models=None)
-    assert len(registry) == 9
+    assert len(registry) == 10
 
 
 def test_wan_fast_uses_wan_video_adapter_class():

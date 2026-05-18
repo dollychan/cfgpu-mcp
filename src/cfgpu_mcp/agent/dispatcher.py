@@ -5,7 +5,6 @@ from typing import Any
 from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import model as model_service
-from cfgpu_mcp.service import preview as preview_service
 from cfgpu_mcp.service import task as task_service
 from cfgpu_mcp.service import video as video_service
 
@@ -20,12 +19,8 @@ async def dispatch_tool(name: str, inputs: dict[str, Any]) -> Any:
         match name:
             case "generate_image":
                 return await image_service.generate_image(**inputs)
-            case "preview_generate_image":
-                return await preview_service.preview_generate_image(**inputs)
             case "generate_video":
                 return await video_service.generate_video(**inputs)
-            case "preview_generate_video":
-                return await preview_service.preview_generate_video(**inputs)
             case "task_status":
                 return await task_service.get_status(**inputs)
             case "task_wait":

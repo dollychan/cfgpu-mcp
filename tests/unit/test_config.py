@@ -42,9 +42,9 @@ def test_code_arg_overrides_env_var():
 
 def test_no_config_loads_all_models():
     count = _load()
-    assert count == 9
+    assert count == 10
 
 
 def test_empty_env_var_loads_all_models():
     count = _load(env_value="")
-    assert count == 9
+    assert count == 10

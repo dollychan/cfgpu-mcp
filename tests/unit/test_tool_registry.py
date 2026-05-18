@@ -2,9 +2,9 @@ import pytest
 from cfgpu_mcp.tool_registry import get_anthropic_tools, _REGISTRY
 
 
-def test_no_filter_returns_all_eight_tools():
+def test_no_filter_returns_all_six_tools():
     tools = get_anthropic_tools()
-    assert len(tools) == 8
+    assert len(tools) == 6
 
 
 def test_task_types_image_includes_generate_image():
@@ -72,3 +72,5 @@ def test_generate_video_schema_has_model_specific():
     tools = get_anthropic_tools(tools=["generate_video"])
     props = tools[0]["input_schema"]["properties"]
     assert "model_specific" in props
+
+

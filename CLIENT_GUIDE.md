@@ -14,6 +14,16 @@ CFGPU 提供三种访问模式，共享同一套 service 层：
 export CFGPU_API_TOKEN=sk-...
 ```
 
+### 可选环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `CFGPU_ENABLED_MODELS` | 逗号分隔的 `adapter_id` 列表，限制加载的模型；缺省加载全部 |
+| `CFGPU_BASE_URL` | 覆盖 API 基础 URL |
+| `CFGPU_DB_PATH` | SQLite 路径，默认 `~/.cfgpu/tasks.db` |
+| `CFGPU_LOG_LEVEL` | 日志级别（`DEBUG` / `INFO` / `WARNING`），默认 `WARNING` |
+| `CFGPU_DRY_RUN` | 设为任意非空值时，每次 POST 请求前在 INFO 日志中打印完整 URL 和 payload，然后照常发送 |
+
 ---
 
 ## Mode A — MCP Server（stdio）
@@ -51,6 +61,8 @@ export CFGPU_API_TOKEN=sk-...
 ```
 
 配置后重启 Claude Desktop，即可在对话中使用 `generate_image`、`generate_video` 等工具。
+
+> **MCP 工具命名**：MCP server 内部名称为 `cfgpu`。Claude Desktop 等 MCP Host 直接以原始名称展示工具（`generate_image` 等）。如果使用 `langchain-mcp-adapters` 之类的第三方 MCP 客户端加载工具，客户端通常会自动拼接 server 名作为前缀，工具名变为 `cfgpu_generate_image`、`cfgpu_generate_video` 等。若需与 Mode B 的 `get_langgraph_tools()` 保持命名一致，建议直接使用 Mode B3，跳过 MCP 协议层。
 
 ### 可选：限制加载的模型
 
@@ -287,7 +299,7 @@ tools = get_openai_tools(tools=["generate_image", "list_models"])
 
 ## Mode B3 — LangGraph
 
-使用 `get_langgraph_tools()` 返回 `StructuredTool` 列表，`args_schema` 直接复用 `tool_registry.py` 中的 Pydantic 模型，schema 定义保持单一来源。
+使用 `get_langgraph_tools()` 返回 `StructuredTool` 列表，`args_schema` 直接复用 `tool_registry.py` 中的 Pydantic 模型，schema 定义保持单一来源。工具名为原始名称（`generate_image` 等），**不含** MCP server 前缀，与 Mode B / Mode B2 保持一致。
 
 ### 安装
 
@@ -419,6 +431,12 @@ cfgpu generate video "..." \
   --reference-videos https://example.com/ref.mp4 \
   --reference-audios https://example.com/bgm.mp3
 
+# HappyHorse — 多参考图生视频（multi_modal_reference）
+cfgpu generate video "身着旗袍的女性，低角度仰拍" \
+  --model happyhorse-1-0-t2v \
+  --reference-images https://example.com/ref1.jpg \
+  --reference-images https://example.com/ref2.jpg
+
 # 传入模型特有参数
 cfgpu generate video "..." --model-specific '{"watermark": false}'
 ```
@@ -473,67 +491,20 @@ done
 
 ---
 
-## Preview 工具（dry-run，不消耗 quota）
-
-`preview_generate_image` 和 `preview_generate_video` 接受与真实生成工具**完全相同的参数**，但只做模型路由和 payload 构建，不发送 API 请求，不消耗 quota。
-
-适用场景：
-- 让 Agent 在生成前向用户展示"将使用哪个模型、发送什么参数"，等待确认
-- 调试参数映射（查看真实 payload）
-- 估算费用档位和预计耗时
-
-### Mode A（MCP）/ Mode B（Agent SDK）调用方式
-
-与 `generate_image` / `generate_video` 完全相同，只改工具名即可：
-
-```python
-# Mode B — Anthropic SDK
-result = await dispatch_tool("preview_generate_image", {
-    "prompt": "a red panda in the snow",
-    "model": "auto",
-    "aspect_ratio": "16:9",
-    "resolution": "2K",
-})
-```
-
-### Preview 返回格式
-
-```json
-{
-  "dry_run": true,
-  "model": "doubao-seedream-5-0-lite",
-  "display_name": "Doubao Seedream 5.0 Lite",
-  "cost_tier": 1,
-  "speed_tier": 4,
-  "is_async": false,
-  "estimated_seconds": 0,
-  "payload": {
-    "model": "seedream-v3",
-    "prompt": "a red panda in the snow",
-    "ratio": "16:9",
-    "size": "2K",
-    ...
-  }
-}
-```
-
-`payload` 是会实际发送给 CFGPU API 的请求体，可用于验证参数映射是否正确。
-
-### 典型 HIL（Human-in-the-Loop）流程
-
-```python
-# 1. Agent 先调用 preview，展示给用户
-preview = await dispatch_tool("preview_generate_image", inputs)
-# 2. 展示 preview["model"]、preview["cost_tier"] 等，请用户确认
-# 3. 确认后调用真实工具
-result = await dispatch_tool("generate_image", inputs)
-```
-
----
-
 ## 返回值格式
 
-所有模式的 service 层返回相同结构：
+所有模型（图片/视频、同步/异步）的生成结果都经过 `NormalizedResult` 统一化，无论底层 API 响应格式如何，最终返回结构一致。
+
+| 字段 | 类型 | 默认返回 | 说明 |
+|------|------|:--------:|------|
+| `urls` | `list[str]` | ✓ | 生成的资源 URL 列表 |
+| `expires_at` | `str \| null` | ✓ | URL 过期时间（ISO 8601），通常 24 小时后失效 |
+| `task_id` | `str \| null` | | 任务 ID；同步模型为 `null` |
+| `model_used` | `str \| null` | | API 返回的实际模型标识符 |
+| `seed` | `int \| null` | | 部分模型返回的种子值 |
+| `cost_tokens` | `int \| null` | | 部分模型返回的消耗 token 数 |
+
+未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
 
 ### 等待完成（`wait=True`）
 
@@ -544,7 +515,7 @@ result = await dispatch_tool("generate_image", inputs)
 }
 ```
 
-加上 `return_metadata=True` / `--metadata`：
+加上 `return_metadata=True` / `--metadata`，返回全部字段：
 
 ```json
 {

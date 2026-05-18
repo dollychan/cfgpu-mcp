@@ -9,8 +9,6 @@ from cfgpu_mcp.agent.langgraph_tools import get_langgraph_tools
 from cfgpu_mcp.tool_registry import (
     GenerateImageInput,
     GenerateVideoInput,
-    PreviewGenerateImageInput,
-    PreviewGenerateVideoInput,
     TaskStatusInput,
     TaskWaitInput,
     ListModelsInput,
@@ -19,21 +17,19 @@ from cfgpu_mcp.tool_registry import (
 
 
 _EXPECTED_SCHEMAS = {
-    "generate_image":         GenerateImageInput,
-    "preview_generate_image": PreviewGenerateImageInput,
-    "generate_video":         GenerateVideoInput,
-    "preview_generate_video": PreviewGenerateVideoInput,
-    "task_status":            TaskStatusInput,
-    "task_wait":              TaskWaitInput,
-    "list_models":            ListModelsInput,
-    "get_model_card":         GetModelCardInput,
+    "generate_image": GenerateImageInput,
+    "generate_video": GenerateVideoInput,
+    "task_status":    TaskStatusInput,
+    "task_wait":      TaskWaitInput,
+    "list_models":    ListModelsInput,
+    "get_model_card": GetModelCardInput,
 }
 
 
 # ── return type and count ─────────────────────────────────────────────────────
 
-def test_no_filter_returns_all_eight_tools():
-    assert len(get_langgraph_tools()) == 8
+def test_no_filter_returns_all_six_tools():
+    assert len(get_langgraph_tools()) == 6
 
 
 def test_returns_structured_tool_instances():
@@ -108,22 +104,10 @@ def test_generate_image_coroutine_is_image_service():
     assert tool.coroutine is svc.generate_image
 
 
-def test_preview_generate_image_coroutine_is_preview_service():
-    from cfgpu_mcp.service import preview as svc
-    tool = next(t for t in get_langgraph_tools() if t.name == "preview_generate_image")
-    assert tool.coroutine is svc.preview_generate_image
-
-
 def test_generate_video_coroutine_is_video_service():
     from cfgpu_mcp.service import video as svc
     tool = next(t for t in get_langgraph_tools() if t.name == "generate_video")
     assert tool.coroutine is svc.generate_video
-
-
-def test_preview_generate_video_coroutine_is_preview_service():
-    from cfgpu_mcp.service import preview as svc
-    tool = next(t for t in get_langgraph_tools() if t.name == "preview_generate_video")
-    assert tool.coroutine is svc.preview_generate_video
 
 
 def test_task_status_coroutine_is_task_get_status():
