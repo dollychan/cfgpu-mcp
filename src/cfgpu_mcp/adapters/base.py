@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
@@ -10,6 +11,10 @@ if TYPE_CHECKING:
         GenerateVideoInput,
         NormalizedResult,
     )
+
+def _default_expires_at() -> datetime:
+    return datetime.now(UTC) + timedelta(hours=24)
+
 
 # Global registry: adapter_id → Python Adapter class (Method B)
 _PYTHON_ADAPTERS: dict[str, type["ModelAdapter"]] = {}

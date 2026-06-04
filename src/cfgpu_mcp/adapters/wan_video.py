@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from cfgpu_mcp.adapters.base import ModelAdapter, register_python_adapter
+from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -77,6 +76,8 @@ class WanVideoAdapter(ModelAdapter):
             "resolution": req.resolution,
             "generate_audio": req.with_audio,
         }
+        if req.watermark is not None:
+            payload["watermark"] = req.watermark
         if req.model_specific:
             payload.update(req.model_specific)
         return payload
@@ -86,7 +87,7 @@ class WanVideoAdapter(ModelAdapter):
         video_url = content.get("videoUrl")
         return NormalizedResult(
             urls=[video_url] if video_url else [],
-            expires_at=datetime.now(UTC) + timedelta(hours=24),
+            expires_at=_default_expires_at(),
             task_id=resp.get("id"),
             model_used=resp.get("model"),
             seed=resp.get("seed"),

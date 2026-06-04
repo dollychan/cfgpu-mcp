@@ -62,6 +62,49 @@ def test_explicit_nonexistent_model_raises_cfgpu_error():
     assert exc_info.value.error_type == "invalid_params"
 
 
+def test_model_list_restricts_candidates_and_picks_best():
+    router = _router()
+    # Restrict to the two WAN variants; fast tier should pick the fast one.
+    req = GenerateVideoInput(
+        prompt="test", model=["wan-2-0", "wan-2-0-fast"], quality_tier="fast"
+    )
+    adapter = router.resolve(req)
+    assert adapter.adapter_id == "wan-2-0-fast"
+
+
+def test_model_list_excludes_unlisted_models():
+    router = _router()
+    # Only the slow variant is allowed, so even fast tier must return it.
+    req = GenerateVideoInput(
+        prompt="test", model=["wan-2-0"], quality_tier="fast"
+    )
+    adapter = router.resolve(req)
+    assert adapter.adapter_id == "wan-2-0"
+
+
+def test_model_list_with_unknown_id_raises_cfgpu_error():
+    from cfgpu_mcp.errors import CFGPUError
+    router = _router()
+    req = GenerateVideoInput(prompt="test", model=["wan-2-0", "nope-model"])
+    with pytest.raises(CFGPUError) as exc_info:
+        router.resolve(req)
+    assert exc_info.value.error_type == "invalid_params"
+
+
+def test_resolve_single_model_bypasses_scoring():
+    router = _router()
+    req = GenerateVideoInput(prompt="test", model="wan-2-0")
+    adapter = router.resolve(req)
+    assert adapter.adapter_id == "wan-2-0"
+
+
+def test_resolve_auto_selects_from_all():
+    router = _router()
+    req = GenerateVideoInput(prompt="test", model="auto", quality_tier="fast")
+    adapter = router.resolve(req)
+    assert adapter.adapter_id == "wan-2-0-fast"
+
+
 def test_no_candidates_raises_cfgpu_error():
     from cfgpu_mcp.errors import CFGPUError
     # Registry with only image model, requesting video

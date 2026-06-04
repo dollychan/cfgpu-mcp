@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from cfgpu_mcp.adapters.base import ModelAdapter, register_python_adapter
+from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateImageInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -28,7 +27,7 @@ class _AsyncImageBase(ModelAdapter):
         images: list[str] = (data.get("result") or {}).get("images") or []
         return NormalizedResult(
             urls=images,
-            expires_at=datetime.now(UTC) + timedelta(hours=24),
+            expires_at=_default_expires_at(),
             task_id=data.get("task_id"),
             model_used=None,
             seed=None,

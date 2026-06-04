@@ -14,14 +14,15 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def generate_image(
         prompt: str,
-        model: str = "auto",
+        model: str | list[str] = "auto",
         aspect_ratio: str = "1:1",
         resolution: str = "2K",
         reference_images: Optional[list[str]] = None,
         quality_tier: str = "balanced",
+        watermark: Optional[bool] = None,
         wait: bool = True,
         timeout: Optional[int] = None,
-        return_metadata: bool = False,
+        return_metadata: bool = True,
         model_specific: Optional[dict] = None,
     ) -> dict:
         """Generate image from text prompt using CFGPU models."""
@@ -33,6 +34,7 @@ def register(mcp: FastMCP) -> None:
                 resolution=resolution,
                 reference_images=reference_images,
                 quality_tier=quality_tier,
+                watermark=watermark,
                 wait=wait,
                 timeout=timeout,
                 return_metadata=return_metadata,
@@ -44,7 +46,7 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def generate_video(
         prompt: str,
-        model: str = "auto",
+        model: str | list[str] = "auto",
         first_frame: Optional[str] = None,
         last_frame: Optional[str] = None,
         reference_images: Optional[list[str]] = None,
@@ -55,9 +57,10 @@ def register(mcp: FastMCP) -> None:
         resolution: str = "720p",
         with_audio: bool = True,
         quality_tier: str = "balanced",
+        watermark: Optional[bool] = None,
         wait: bool = True,
         timeout: Optional[int] = None,
-        return_metadata: bool = False,
+        return_metadata: bool = True,
         model_specific: Optional[dict] = None,
     ) -> dict:
         """Generate video from text prompt, image, or multimodal references using CFGPU models."""
@@ -75,6 +78,7 @@ def register(mcp: FastMCP) -> None:
                 resolution=resolution,
                 with_audio=with_audio,
                 quality_tier=quality_tier,
+                watermark=watermark,
                 wait=wait,
                 timeout=timeout,
                 return_metadata=return_metadata,

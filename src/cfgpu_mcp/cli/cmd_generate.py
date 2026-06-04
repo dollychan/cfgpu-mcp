@@ -52,6 +52,8 @@ def generate() -> None:
 @click.option("--quality-tier", "-q",
               type=click.Choice(["fast", "balanced", "best"]),
               default="balanced", show_default=True)
+@click.option("--watermark/--no-watermark", default=None,
+              help="Add/remove watermark (default: model's own default)")
 @click.option("--no-wait", is_flag=True,
               help="Return task_id immediately without waiting for completion")
 @click.option("--timeout", type=int, default=None,
@@ -61,10 +63,10 @@ def generate() -> None:
 @click.option("--json", "json_mode", is_flag=True,
               help="Output raw JSON")
 @click.option("--model-specific", default=None, metavar="JSON",
-              help='Extra API params as JSON object, e.g. \'{"watermark":false}\'')
+              help='Extra API params as JSON object, e.g. \'{"tools":[{"type":"web_search"}]}\'')
 def image_cmd(
     prompt, model, aspect_ratio, resolution, reference_images,
-    quality_tier, no_wait, timeout, metadata, json_mode, model_specific,
+    quality_tier, watermark, no_wait, timeout, metadata, json_mode, model_specific,
 ) -> None:
     """Generate an image from PROMPT."""
     from cfgpu_mcp.service import image as svc
@@ -78,6 +80,7 @@ def image_cmd(
             resolution=resolution,
             reference_images=list(reference_images) or None,
             quality_tier=quality_tier,
+            watermark=watermark,
             wait=not no_wait,
             timeout=timeout,
             return_metadata=metadata,
@@ -122,6 +125,8 @@ def image_cmd(
 @click.option("--quality-tier", "-q",
               type=click.Choice(["fast", "balanced", "best"]),
               default="balanced", show_default=True)
+@click.option("--watermark/--no-watermark", default=None,
+              help="Add/remove watermark (default: model's own default)")
 @click.option("--no-wait", is_flag=True,
               help="Return task_id immediately without waiting for completion")
 @click.option("--timeout", type=int, default=None,
@@ -135,7 +140,7 @@ def image_cmd(
 def video_cmd(
     prompt, model, first_frame, last_frame, reference_images, reference_videos,
     reference_audios, duration_seconds, aspect_ratio, resolution, no_audio,
-    quality_tier, no_wait, timeout, metadata, json_mode, model_specific,
+    quality_tier, watermark, no_wait, timeout, metadata, json_mode, model_specific,
 ) -> None:
     """Generate a video from PROMPT."""
     from cfgpu_mcp.service import video as svc
@@ -155,6 +160,7 @@ def video_cmd(
             resolution=resolution,
             with_audio=not no_audio,
             quality_tier=quality_tier,
+            watermark=watermark,
             wait=not no_wait,
             timeout=timeout,
             return_metadata=metadata,

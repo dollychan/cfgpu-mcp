@@ -6,7 +6,31 @@ build-backend = "hatchling.build"
 name = "cfgpu-mcp"
 version = "0.1.0"
 description = "MCP Server for CFGPU image and video generation models"
+readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "dollychan", email = "dollychan0115@gmail.com" },
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "image-generation",
+    "video-generation",
+    "cfgpu",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
 dependencies = [
     "mcp>=1.0",
     "aiohttp>=3.9",
@@ -24,6 +48,11 @@ dev = [
 cli = [
     "click>=8.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/dollychan/cfgpu-mcp"
+Repository = "https://github.com/dollychan/cfgpu-mcp"
+Issues = "https://github.com/dollychan/cfgpu-mcp/issues"
 
 [project.scripts]
 cfgpu-mcp = "cfgpu_mcp.server:main"

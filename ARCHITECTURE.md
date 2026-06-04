@@ -102,9 +102,19 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 两类模型对调用方（service 层）完全透明，`TaskManager` 内部已处理差异。
 
-### 3.3 `model="auto"` 的路由逻辑
+### 3.3 `model` 参数与路由逻辑
 
-`ModelRouter.select_model()` 对所有候选模型打分，最高分获选：
+`model` 接受三种形态，由 `ModelRouter.resolve(req)` 统一分发：
+
+| 取值 | 例子 | 行为 |
+|---|---|---|
+| 单个 id（str） | `"wan-2-0"` | `get_adapter()` 精确取该模型，跳过打分 |
+| id 列表（list[str]） | `["wan-2-0", "wan-2-0-fast"]` | `select_model(allowed=...)` 仅在该候选范围内打分选最优 |
+| `"auto"`（str，默认） | `"auto"` | `select_model()` 在全部模型中打分选最优 |
+
+列表与 `"auto"` 都只产出**一个** task / 一个结果，区别仅是候选池大小；列表里若含未知或与当前任务类型不符的 id，`select_model()` 抛 `invalid_params`。
+
+`ModelRouter.select_model()` 对候选模型打分，最高分获选：
 
 ```
 基础分（quality_tier）:
@@ -139,10 +149,10 @@ service/image.py::generate_image()
     ├─ config.get_registry()
     │      └─ AdapterRegistry（YAML + Python 类，已加载）
     │
-    ├─ ModelRouter.get_adapter(model)   model 非 "auto"
-    │   或
-    │  ModelRouter.select_model(req)    model == "auto"
-    │      └─ adapter.supports(req) + _score(adapter, req)
+    ├─ ModelRouter.resolve(req)         按 req.model 形态分发：
+    │      ├─ get_adapter(model)            model 为单个 id
+    │      └─ select_model(req, allowed)    model 为列表（受限候选）或 "auto"（全部）
+    │          └─ adapter.supports(req) + _score(adapter, req)
     │
     ├─ config.get_client()             CFGPUClient（单例）
     ├─ config.get_db()                 aiosqlite 连接（单例）
@@ -276,6 +286,8 @@ tasks (
 ```
 
 DB 的作用：`cfgpu task status <task_id>` 和 `cfgpu task wait <task_id>` 需要在进程重启后仍能查询和恢复任务。如果只在内存中存储，CLI 的异步工作流（`--no-wait` 后稍后查询）就无法工作。
+
+**多进程共享**：stdio 模式下，每个连接到 MCP server 的 agent 都会 spawn 一个独立的 server 进程，但它们全部指向同一个 SQLite 文件（`~/.cfgpu/tasks.db`）。`get_db()` 在打开连接时会执行 `PRAGMA journal_mode=WAL`，开启 WAL 模式以支持并发读 + 单写，避免默认 DELETE journal 在多进程并发写入时产生 "database is locked" 错误。如需进程间完全隔离，为每个 agent 设置不同的 `CFGPU_DB_PATH` 即可。
 
 `service/task.py` 的 `get_status()` 在返回已成功但 result 中无 URL 的任务时，会尝试重新轮询 API 获取最新结果。轮询失败时以 `logger.debug()` 记录，不会阻断返回——此时返回 DB 中的 stale result。
 
@@ -511,12 +523,23 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
 ### 修改工具参数
 
-工具参数定义在**两处**，需同步修改：
+工具参数定义在**四处**，需同步修改：
 
 1. `tool_registry.py` 中的 Pydantic 模型（Mode B + schema 生成的来源）
 2. `tools/*.py` 中的函数签名（Mode A，FastMCP 限制）
 3. `service/*.py` 中的函数签名（实际实现）
 4. `cli/cmd_*.py` 中的 click options（Mode C）
+
+若该参数还要进入 API 请求体，则需第 5 处：相关 adapter 的 `build_payload()`。
+
+#### 通用参数 vs `model_specific`
+
+跨多数模型、用户高频调整的开关应做成**通用参数**（typed field），而不是埋在 free-form 的 `model_specific` 里。已有两个范例：
+
+- `with_audio`：视频音频开关，`WanVideoAdapter` 映射为 `generate_audio`。
+- `watermark`：水印开关。类型为 `Optional[bool]`，**默认 `None` 表示不写入 payload、沿用各模型 API 自身默认**（避免覆盖 Seedream 4.5 的 `false` 等差异化默认）。支持的 adapter（`wan_video`、`seedream`、`happyhorse`）在 `payload.update(req.model_specific)` **之前**写入 `payload["watermark"]`，因此 `model_specific` 仍可覆盖它；不支持的 adapter（`async_image` 下的 gpt-image-2 / nano-banana）不读取该字段，传入即被忽略。
+
+> 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark` 作为通用参数列在支持模型的顶层 args（gpt/nano 不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`sequential_image_generation` 等）。新增/调整参数时同步该文件。
 
 ---
 
@@ -569,7 +592,7 @@ CFGPU_API_TOKEN=sk-... pytest tests/integration/ -v
 FastMCP 0.x 通过函数签名内省来生成 JSON Schema，不支持以 Pydantic 模型作为参数类型。未来 FastMCP 版本若支持，tools/ 层可以大幅简化。
 
 **为什么 DB 用 SQLite 而不是内存 dict？**
-CLI 的异步工作流：`cfgpu generate video ... --no-wait` 拿到 task_id，进程退出；几分钟后 `cfgpu task wait <task_id>` 需要恢复状态。进程间共享状态必须持久化。SQLite 无需额外服务，满足单机场景。
+CLI 的异步工作流：`cfgpu generate video ... --no-wait` 拿到 task_id，进程退出；几分钟后 `cfgpu task wait <task_id>` 需要恢复状态。进程间共享状态必须持久化。SQLite 无需额外服务，满足单机场景。多 agent 并发访问同一文件时，WAL 模式（`PRAGMA journal_mode=WAL`）保证并发读写安全；如需完全隔离，各 agent 使用不同的 `CFGPU_DB_PATH`。
 
 **为什么 `_merge_extends()` 要在合并后的 dict 里保留 `extends` 字段？**
 `_instantiate()` 分两步工作：先用 `adapter_id` 在 `_PYTHON_ADAPTERS` 里查找 Python 类，找不到时退而查 `extends` 指向的父 ID。如果 `extends` 被清除，variant 模型（如 `wan-2-0-fast`）就找不到对应的 `WanVideoAdapter`，会 fallback 到 `GenericAdapter`，导致视频 payload 构建错误。

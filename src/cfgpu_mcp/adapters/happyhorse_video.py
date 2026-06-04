@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from cfgpu_mcp.adapters.base import ModelAdapter, register_python_adapter
+from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -12,13 +11,10 @@ if TYPE_CHECKING:
 
 @register_python_adapter
 class HappyHorseVideoAdapter(ModelAdapter):
-    """Python Adapter for HappyHorse video models.
-
-    Uses DashScope-style payload (input.prompt + input.media[]) and response
-    (output.task_id, output.task_status with uppercase status values).
-    """
-
     adapter_id = "happyhorse-1-0-t2v"
+
+    def _output(self, resp: dict) -> dict:
+        return resp.get("output") or {}
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
@@ -47,28 +43,29 @@ class HappyHorseVideoAdapter(ModelAdapter):
         }
         if parameters:
             payload["parameters"] = parameters
+        if req.watermark is not None:
+            payload["watermark"] = req.watermark
         if req.model_specific:
             payload.update(req.model_specific)
         return payload
 
     def extract_task_id(self, resp: dict) -> str | None:
-        return (resp.get("output") or {}).get("task_id")
+        return self._output(resp).get("task_id")
 
     def extract_status(self, resp: dict) -> str:
-        # Status values are uppercase (PENDING, RUNNING, SUCCEEDED, FAILED, CANCELED, UNKNOWN)
-        status = (resp.get("output") or {}).get("task_status", "running").lower()
-        # Map terminal non-success statuses not in task_manager._STATUS_MAP
+        status = self._output(resp).get("task_status", "running").lower()
+        # "canceled" and "unknown" aren't in task_manager's STATUS_MAP; collapse to failed
         if status in ("canceled", "unknown"):
             return "failed"
         return status
 
     def parse_response(self, resp: dict) -> NormalizedResult:
-        output = resp.get("output") or {}
+        output = self._output(resp)
         video_url = output.get("video_url")
         usage = resp.get("usage") or {}
         return NormalizedResult(
             urls=[video_url] if video_url else [],
-            expires_at=datetime.now(UTC) + timedelta(hours=24),
+            expires_at=_default_expires_at(),
             task_id=output.get("task_id"),
             model_used=resp.get("model"),
             seed=output.get("seed"),
@@ -81,13 +78,13 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if req.last_frame:
-            return False, "happyhorse-1-0-t2v does not support last_frame"
+            return False, f"{self.adapter_id} does not support last_frame"
         if req.reference_videos:
-            return False, "happyhorse-1-0-t2v does not support reference_videos"
+            return False, f"{self.adapter_id} does not support reference_videos"
         if req.reference_audios:
-            return False, "happyhorse-1-0-t2v does not support reference_audios"
+            return False, f"{self.adapter_id} does not support reference_audios"
         if req.resolution == "480p":
-            return False, "happyhorse-1-0-t2v minimum resolution is 720p"
+            return False, f"{self.adapter_id} minimum resolution is 720p"
         if req.first_frame and req.reference_images:
             return False, "first_frame and reference_images are mutually exclusive"
         return True, ""

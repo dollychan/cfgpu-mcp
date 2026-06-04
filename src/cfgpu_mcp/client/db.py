@@ -33,6 +33,7 @@ def _db_path() -> Path:
 async def get_db() -> aiosqlite.Connection:
     db = await aiosqlite.connect(_db_path())
     db.row_factory = aiosqlite.Row
+    await db.execute("PRAGMA journal_mode=WAL")
     await db.execute(_CREATE_TABLE)
     await db.commit()
     return db

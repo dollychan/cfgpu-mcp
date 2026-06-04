@@ -29,11 +29,45 @@ class ModelRouter:
                 original={"model": name},
             ) from e
 
-    def select_model(
+    def resolve(
         self, req: GenerateImageInput | GenerateVideoInput
+    ) -> "ModelAdapter":
+        """Resolve req.model (single id, candidate list, or 'auto') to one adapter."""
+        model = req.model
+        if isinstance(model, list):
+            return self.select_model(req, allowed=model)
+        if model == "auto":
+            return self.select_model(req)
+        return self.get_adapter(model)
+
+    def select_model(
+        self,
+        req: GenerateImageInput | GenerateVideoInput,
+        allowed: list[str] | None = None,
     ) -> "ModelAdapter":
         task_type = "image" if isinstance(req, GenerateImageInput) else "video"
         candidates: list["ModelAdapter"] = self._registry.list_all(task_type=task_type)
+
+        if allowed:
+            allowed_set = set(allowed)
+            known = {a.adapter_id for a in candidates} | {
+                a.cfgpu_model_id for a in candidates
+            }
+            unknown = allowed_set - known
+            if unknown:
+                raise CFGPUError(
+                    error_type="invalid_params",
+                    user_message=(
+                        f"未知或不支持当前任务类型({task_type})的 model: "
+                        f"{sorted(unknown)}。请使用 list_models 查看可用 adapter_id。"
+                    ),
+                    original={"model": allowed},
+                )
+            candidates = [
+                a
+                for a in candidates
+                if a.adapter_id in allowed_set or a.cfgpu_model_id in allowed_set
+            ]
 
         scored: list[tuple[int, "ModelAdapter"]] = []
         for adapter in candidates:

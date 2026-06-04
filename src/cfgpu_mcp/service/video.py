@@ -8,7 +8,7 @@ from cfgpu_mcp.tool_registry import GenerateVideoInput
 
 async def generate_video(
     prompt: str,
-    model: str = "auto",
+    model: str | list[str] = "auto",
     first_frame: str | None = None,
     last_frame: str | None = None,
     reference_images: list[str] | None = None,
@@ -19,6 +19,7 @@ async def generate_video(
     resolution: str = "720p",
     with_audio: bool = True,
     quality_tier: str = "balanced",
+    watermark: bool | None = None,
     wait: bool = True,
     timeout: int | None = None,
     return_metadata: bool = False,
@@ -41,6 +42,7 @@ async def generate_video(
         resolution=resolution,
         with_audio=with_audio,
         quality_tier=quality_tier,
+        watermark=watermark,
         wait=wait,
         timeout=timeout,
         return_metadata=return_metadata,
@@ -49,7 +51,7 @@ async def generate_video(
 
     registry = get_registry()
     router = ModelRouter(registry)
-    adapter = router.get_adapter(model) if model != "auto" else router.select_model(req)
+    adapter = router.resolve(req)
 
     client = get_client()
     db = await get_db()

@@ -42,9 +42,6 @@ class CFGPUClient:
         return self._session
 
     async def post(self, path: str, json: dict) -> dict:
-        if os.getenv("CFGPU_DRY_RUN"):
-            url = f"{self._base_url}/{path.lstrip('/')}"
-            logger.info("DRY-RUN POST %s\n%s", url, _json.dumps(json, ensure_ascii=False, indent=2))
         return await self._request("POST", path, json=json)
 
     async def get(self, path: str) -> dict:
@@ -52,6 +49,8 @@ class CFGPUClient:
 
     async def _request(self, method: str, path: str, **kwargs) -> dict:
         url = f"{self._base_url}/{path.lstrip('/')}"
+        if method == "POST" and os.getenv("CFGPU_DRY_RUN"):
+            logger.info("DRY-RUN POST %s\n%s", url, _json.dumps(kwargs.get("json", {}), ensure_ascii=False, indent=2))
         session = await self._get_session()
         try:
             async with session.request(method, url, **kwargs) as resp:

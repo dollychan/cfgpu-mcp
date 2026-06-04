@@ -14,9 +14,11 @@ class GenerateImageInput(BaseModel):
     """Generate image from text prompt using CFGPU models."""
 
     prompt: str = Field(description="Text description of the image to generate")
-    model: str = Field(
+    model: str | list[str] = Field(
         default="auto",
-        description="Use adapter_id (e.g. 'doubao-seedream-5-0-lite'), cfgpu_model_id, or 'auto' for automatic selection",
+        description="A single adapter_id/cfgpu_model_id (e.g. 'doubao-seedream-5-0-lite'), "
+        "a list of ids to restrict automatic selection to those candidates "
+        "(e.g. ['doubao-seedream-5-0-lite', 'seedream']), or 'auto' to choose from all models",
     )
     aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
     resolution: Literal["1K", "2K", "3K", "4K"] = Field(default="2K")
@@ -25,12 +27,18 @@ class GenerateImageInput(BaseModel):
         description="List of public image URLs to use as reference",
     )
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    watermark: Optional[bool] = Field(
+        default=None,
+        description="Add an 'AI generated' watermark. None keeps each model's own default. "
+        "Not supported by gpt-image-2 / nano-banana models (ignored there).",
+    )
     wait: bool = Field(default=True, description="Wait for task completion before returning")
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
-    return_metadata: bool = Field(default=False, description="Include seed, model_used, cost_tokens in response")
+    return_metadata: bool = Field(default=True, description="Include seed, model_used, cost_tokens in response")
     model_specific: Optional[dict] = Field(
         default=None,
-        description="Model-specific parameters passed directly to API, e.g. {'watermark': false, 'tools': [{'type': 'web_search'}]}",
+        description="Model-specific parameters passed directly to API, e.g. {'tools': [{'type': 'web_search'}]}. "
+        "Merged last, so it overrides typed fields like watermark.",
     )
 
 
@@ -38,9 +46,11 @@ class GenerateVideoInput(BaseModel):
     """Generate video from text prompt, image, or multimodal references using CFGPU models."""
 
     prompt: str = Field(description="Text description of the video to generate")
-    model: str = Field(
+    model: str | list[str] = Field(
         default="auto",
-        description="Use adapter_id (e.g. 'wan-2-0'), cfgpu_model_id, or 'auto' for automatic selection",
+        description="A single adapter_id/cfgpu_model_id (e.g. 'wan-2-0'), "
+        "a list of ids to restrict automatic selection to those candidates "
+        "(e.g. ['wan-2-0', 'wan-2-0-fast']), or 'auto' to choose from all models",
     )
     first_frame: Optional[str] = Field(default=None, description="First frame image URL (public)")
     last_frame: Optional[str] = Field(default=None, description="Last frame image URL (public), use with first_frame")
@@ -78,12 +88,17 @@ class GenerateVideoInput(BaseModel):
     resolution: Literal["480p", "720p"] = Field(default="720p")
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    watermark: Optional[bool] = Field(
+        default=None,
+        description="Add a watermark. None keeps each model's own default. Supported by all video models.",
+    )
     wait: bool = Field(default=True, description="Wait for task completion before returning")
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
-    return_metadata: bool = Field(default=False)
+    return_metadata: bool = Field(default=True, description="Include seed, model_used, cost_tokens in response")
     model_specific: Optional[dict] = Field(
         default=None,
-        description="Model-specific parameters, e.g. {'watermark': false, 'tools': [{'type': 'web_search'}]}",
+        description="Model-specific parameters, e.g. {'tools': [{'type': 'web_search'}]}. "
+        "Merged last, so it overrides typed fields like watermark.",
     )
 
 

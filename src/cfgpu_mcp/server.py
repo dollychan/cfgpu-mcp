@@ -22,7 +22,7 @@ def main() -> None:
     level = getattr(logging, log_level, logging.WARNING)
     logging.basicConfig(level=level, force=True)
 
-    atexit.register(lambda: asyncio.get_event_loop().run_until_complete(config.close()))
+    atexit.register(lambda: asyncio.run(config.close()))
     mcp.run(transport="stdio")
 
 

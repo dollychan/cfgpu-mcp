@@ -8,11 +8,12 @@ from cfgpu_mcp.tool_registry import GenerateImageInput
 
 async def generate_image(
     prompt: str,
-    model: str = "auto",
+    model: str | list[str] = "auto",
     aspect_ratio: str = "1:1",
     resolution: str = "2K",
     reference_images: list[str] | None = None,
     quality_tier: str = "balanced",
+    watermark: bool | None = None,
     wait: bool = True,
     timeout: int | None = None,
     return_metadata: bool = False,
@@ -29,6 +30,7 @@ async def generate_image(
         resolution=resolution,
         reference_images=reference_images,
         quality_tier=quality_tier,
+        watermark=watermark,
         wait=wait,
         timeout=timeout,
         return_metadata=return_metadata,
@@ -37,7 +39,7 @@ async def generate_image(
 
     registry = get_registry()
     router = ModelRouter(registry)
-    adapter = router.get_adapter(model) if model != "auto" else router.select_model(req)
+    adapter = router.resolve(req)
 
     client = get_client()
     db = await get_db()

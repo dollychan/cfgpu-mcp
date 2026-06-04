@@ -20,7 +20,7 @@ export CFGPU_API_TOKEN=sk-...
 |------|------|
 | `CFGPU_ENABLED_MODELS` | 逗号分隔的 `adapter_id` 列表，限制加载的模型；缺省加载全部 |
 | `CFGPU_BASE_URL` | 覆盖 API 基础 URL |
-| `CFGPU_DB_PATH` | SQLite 路径，默认 `~/.cfgpu/tasks.db` |
+| `CFGPU_DB_PATH` | SQLite 路径，默认 `~/.cfgpu/tasks.db`。多个 agent 同时通过 stdio 启动 MCP server 时共享同一文件（WAL 模式保证并发安全）；如需进程间完全隔离，为每个 agent 设置不同路径 |
 | `CFGPU_LOG_LEVEL` | 日志级别（`DEBUG` / `INFO` / `WARNING`），默认 `WARNING` |
 | `CFGPU_DRY_RUN` | 设为任意非空值时，每次 POST 请求前在 INFO 日志中打印完整 URL 和 payload，然后照常发送 |
 
@@ -188,7 +188,7 @@ async def main():
     # 生成图片，等待完成
     result = await image_svc.generate_image(
         prompt="a red panda in the snow",
-        model="auto",           # 或 "doubao-seedream-5-0-lite"
+        model="auto",           # 单个 id "doubao-seedream-5-0-lite"，或候选列表 ["doubao-seedream-5-0-lite", "seedream"] 在范围内选优
         aspect_ratio="16:9",
         resolution="2K",
         quality_tier="balanced",
@@ -206,6 +206,7 @@ async def main():
         aspect_ratio="16:9",
         resolution="720p",
         with_audio=True,
+        watermark=False,        # None=模型默认；gpt-image-2 / nano-banana 不支持(忽略)
         wait=False,             # 立即返回 task_id
     )
     print(task["task_id"])      # 'task-abc123'
@@ -437,9 +438,18 @@ cfgpu generate video "身着旗袍的女性，低角度仰拍" \
   --reference-images https://example.com/ref1.jpg \
   --reference-images https://example.com/ref2.jpg
 
-# 传入模型特有参数
-cfgpu generate video "..." --model-specific '{"watermark": false}'
+# 去除水印（watermark 已是一等公民参数，无需走 model_specific）
+cfgpu generate video "..." --no-watermark
+cfgpu generate image "..." --no-watermark      # gpt-image-2 / nano-banana 不支持，忽略
+
+# 传入其它模型特有参数
+cfgpu generate video "..." --model-specific '{"tools": [{"type": "web_search"}]}'
 ```
+
+> `watermark` 现已提升为通用参数（`--watermark/--no-watermark`，service 层 `watermark=True/False`）。
+> 不传时（`None`）沿用各模型自身的默认值（多数为开启，Seedream 4.5 为关闭）。
+> `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
+> 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
 
 ### 异步工作流（--no-wait）
 

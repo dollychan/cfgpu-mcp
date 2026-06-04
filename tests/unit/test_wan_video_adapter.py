@@ -98,6 +98,27 @@ def test_model_specific_merged():
     assert payload["watermark"] is False
 
 
+def test_watermark_omitted_when_none():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x")
+    payload = adapter.build_payload(req)
+    assert "watermark" not in payload
+
+
+def test_watermark_typed_field_emitted():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", watermark=False)
+    payload = adapter.build_payload(req)
+    assert payload["watermark"] is False
+
+
+def test_model_specific_overrides_typed_watermark():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", watermark=True, model_specific={"watermark": False})
+    payload = adapter.build_payload(req)
+    assert payload["watermark"] is False
+
+
 def test_parse_response_missing_seed_is_none():
     adapter = _make_adapter()
     resp = {"id": "t1", "model": "wan-video", "content": {"videoUrl": "https://cdn/v.mp4"}, "status": "completed"}
