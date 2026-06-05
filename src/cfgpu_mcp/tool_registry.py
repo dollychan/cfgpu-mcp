@@ -26,6 +26,21 @@ class GenerateImageInput(BaseModel):
         default=None,
         description="List of public image URLs to use as reference",
     )
+    n: int = Field(
+        default=1,
+        description="Number of images to generate as a related group (组图 / sequential image "
+        "generation). 1–15. Only doubao-seedream-* models support n>1; other image models "
+        "generate a single image and reject n>1.",
+    )
+
+    @field_validator("n")
+    @classmethod
+    def _validate_n(cls, v: int) -> int:
+        if not (1 <= v <= 15):
+            raise ValueError(
+                f"n={v} is out of range. Image group size must be between 1 and 15."
+            )
+        return v
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
     watermark: Optional[bool] = Field(
         default=None,
@@ -68,24 +83,31 @@ class GenerateVideoInput(BaseModel):
     )
     duration_seconds: int = Field(
         default=5,
-        description="Video duration in seconds. All current video models (WAN 2.0, WAN 2.0 Fast, Doubao Seedance 1.5 Pro) require 4–15 seconds.",
+        description="Video duration in seconds: 4–15 (WAN 2.0, WAN 2.0 Fast, HappyHorse) or "
+        "4–12 (Doubao Seedance 1.5 Pro). Use -1 for a model-chosen 'smart' duration "
+        "(supported by WAN 2.0 and Doubao Seedance 1.5 Pro).",
     )
 
     @field_validator("duration_seconds")
     @classmethod
     def _validate_duration(cls, v: int) -> int:
-        if not (4 <= v <= 15):
+        if v != -1 and not (4 <= v <= 15):
             raise ValueError(
-                f"duration_seconds={v} is out of range. All current video models (WAN 2.0, "
-                f"WAN 2.0 Fast, Doubao Seedance 1.5 Pro) support 4–15 seconds only. "
-                f"Please retry with a value between 4 and 15."
+                f"duration_seconds={v} is out of range. Use 4–15 seconds, or -1 for a "
+                f"model-chosen 'smart' duration (WAN 2.0 / Doubao Seedance 1.5 Pro). "
+                f"Note Doubao Seedance 1.5 Pro caps explicit durations at 12 seconds."
             )
         return v
     aspect_ratio: Literal["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"] = Field(
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",
     )
-    resolution: Literal["480p", "720p"] = Field(default="720p")
+    resolution: Literal["480p", "720p", "1080p"] = Field(
+        default="720p",
+        description="Video resolution. 1080p is supported by all current video models "
+        "(WAN 2.0, WAN 2.0 Fast, Doubao Seedance 1.5 Pro, HappyHorse — HappyHorse's own "
+        "default is 1080p). HappyHorse does not support 480p (minimum 720p).",
+    )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
     watermark: Optional[bool] = Field(
@@ -171,6 +193,23 @@ _TOOL_TASK_TYPE: dict[str, str] = {
     "generate_image": "image",
     "generate_video": "video",
 }
+
+
+def get_field_descriptions(tool_name: str) -> dict[str, str]:
+    """Return {param_name: description} for a tool, sourced from its Pydantic model.
+
+    Single source of truth for per-parameter docs. Consumers that build schemas from
+    bare function signatures (e.g. the FastMCP wrappers, which carry no param docs) can
+    inject these instead of duplicating the text.
+    """
+    for name, model in _REGISTRY:
+        if name == tool_name:
+            return {
+                fname: field.description
+                for fname, field in model.model_fields.items()
+                if field.description
+            }
+    return {}
 
 
 def get_anthropic_tools(

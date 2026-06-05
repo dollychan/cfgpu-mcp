@@ -211,3 +211,11 @@ def test_supports_accepts_reference_images():
     req = GenerateVideoInput(prompt="x", reference_images=["https://example.com/r.jpg"])
     ok, _ = adapter.supports(req)
     assert ok is True
+
+
+def test_supports_rejects_smart_duration():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", duration_seconds=-1)
+    ok, reason = adapter.supports(req)
+    assert ok is False
+    assert "explicit duration" in reason

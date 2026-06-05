@@ -49,6 +49,8 @@ def generate() -> None:
               default="2K", show_default=True)
 @click.option("--reference-images", multiple=True, metavar="URL",
               help="Reference image URL (repeat for multiple)")
+@click.option("-n", "n", type=int, default=1, show_default=True,
+              help="Number of group images to generate (1-15; doubao-seedream-* only)")
 @click.option("--quality-tier", "-q",
               type=click.Choice(["fast", "balanced", "best"]),
               default="balanced", show_default=True)
@@ -65,7 +67,7 @@ def generate() -> None:
 @click.option("--model-specific", default=None, metavar="JSON",
               help='Extra API params as JSON object, e.g. \'{"tools":[{"type":"web_search"}]}\'')
 def image_cmd(
-    prompt, model, aspect_ratio, resolution, reference_images,
+    prompt, model, aspect_ratio, resolution, reference_images, n,
     quality_tier, watermark, no_wait, timeout, metadata, json_mode, model_specific,
 ) -> None:
     """Generate an image from PROMPT."""
@@ -79,6 +81,7 @@ def image_cmd(
             aspect_ratio=aspect_ratio,
             resolution=resolution,
             reference_images=list(reference_images) or None,
+            n=n,
             quality_tier=quality_tier,
             watermark=watermark,
             wait=not no_wait,
@@ -113,12 +116,12 @@ def image_cmd(
 @click.option("--reference-audios", multiple=True, metavar="URL",
               help="Reference audio URL (repeat for multiple, max 3)")
 @click.option("--duration", "-d", "duration_seconds", type=int, default=5,
-              show_default=True, help="Duration in seconds (4-15)")
+              show_default=True, help="Duration in seconds (4-15; -1 = smart/auto, WAN 2.0 & Seedance only)")
 @click.option("--aspect-ratio", "-a",
               type=click.Choice(["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"]),
               default="adaptive", show_default=True)
 @click.option("--resolution", "-r",
-              type=click.Choice(["480p", "720p"]),
+              type=click.Choice(["480p", "720p", "1080p"]),
               default="720p", show_default=True)
 @click.option("--no-audio", is_flag=True,
               help="Disable audio generation")

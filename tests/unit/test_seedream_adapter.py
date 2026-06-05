@@ -94,3 +94,19 @@ def test_parse_response_expires_at_set():
     resp = {"data": [{"url": "https://cdn/img.jpg"}]}
     result = adapter.parse_response(resp)
     assert result.expires_at is not None
+
+
+def test_n_greater_than_one_enables_group_generation():
+    adapter = _make_adapter()
+    req = GenerateImageInput(prompt="x", n=4)
+    payload = adapter.build_payload(req)
+    assert payload["sequential_image_generation"] == "auto"
+    assert payload["sequential_image_generation_options"] == {"max_images": 4}
+
+
+def test_n_equals_one_omits_group_fields():
+    adapter = _make_adapter()
+    req = GenerateImageInput(prompt="x")
+    payload = adapter.build_payload(req)
+    assert "sequential_image_generation" not in payload
+    assert "sequential_image_generation_options" not in payload

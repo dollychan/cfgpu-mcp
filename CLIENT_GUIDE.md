@@ -405,6 +405,9 @@ cfgpu generate image "same style portrait" \
   --reference-images https://example.com/ref1.jpg \
   --reference-images https://example.com/ref2.jpg
 
+# 组图（一次生成多张关联图片，仅 doubao-seedream-* 支持，1-15 张）
+cfgpu generate image "四格漫画分镜" --model doubao-seedream-5-0-lite -n 4
+
 # 输出完整 JSON（含元数据）
 cfgpu generate image "..." --metadata --json
 ```
@@ -415,8 +418,8 @@ cfgpu generate image "..." --metadata --json
 # 基础用法
 cfgpu generate video "waves crashing on a beach" --model wan-2-0-fast
 
-# 指定时长和分辨率
-cfgpu generate video "..." -d 8 -r 480p --no-audio
+# 指定时长和分辨率（所有视频模型均支持 1080p；-d -1 = 智能时长，仅 WAN 2.0 / Seedance）
+cfgpu generate video "..." -d 8 -r 1080p --no-audio
 
 # 图生视频（指定首帧）
 cfgpu generate video "zoom out slowly" \
@@ -450,6 +453,11 @@ cfgpu generate video "..." --model-specific '{"tools": [{"type": "web_search"}]}
 > 不传时（`None`）沿用各模型自身的默认值（多数为开启，Seedream 4.5 为关闭）。
 > `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
+
+> `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。仅 `doubao-seedream-*`
+> 支持 `n>1`（自动设置 `sequential_image_generation=auto` + `max_images=n`）；`gpt-image-2`、
+> `nano-banana-*` 传 `n>1` 会被拒绝。`resolution` 现已开放 `1080p`（全部视频模型支持，
+> HappyHorse 会自动大写为 `1080P`），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
 
 ### 异步工作流（--no-wait）
 

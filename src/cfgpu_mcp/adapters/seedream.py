@@ -50,6 +50,10 @@ class SeedreamAdapter(ModelAdapter):
                 if len(req.reference_images) == 1
                 else req.reference_images
             )
+        if req.n and req.n > 1:
+            # Group images (组图): 输入参考图数量 + 生成数量 ≤ 15
+            payload["sequential_image_generation"] = "auto"
+            payload["sequential_image_generation_options"] = {"max_images": req.n}
         if req.watermark is not None:
             payload["watermark"] = req.watermark
         if req.model_specific:

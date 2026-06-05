@@ -85,6 +85,8 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} does not support reference_audios"
         if req.resolution == "480p":
             return False, f"{self.adapter_id} minimum resolution is 720p"
+        if req.duration_seconds == -1:
+            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         if req.first_frame and req.reference_images:
             return False, "first_frame and reference_images are mutually exclusive"
         return True, ""

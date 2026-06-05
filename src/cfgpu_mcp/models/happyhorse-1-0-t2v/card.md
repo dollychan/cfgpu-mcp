@@ -34,7 +34,7 @@
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `resolution` | string | `1080P` | 分辨率：`720P`（对应 unified schema `720p`）或 `1080P`（via model_specific） |
+| `resolution` | string | `1080P` | 分辨率：`720P` 或 `1080P`，均可经 unified schema `resolution`（`720p` / `1080p`）传入，adapter 自动大写 |
 | `aspect_ratio` | string | `16:9` | 宽高比，见下方表格；`adaptive` 将被忽略，使用 API 默认值 |
 | `duration_seconds` | integer | 5 | 视频时长（秒） |
 | `model_specific.watermark` | boolean | `true` | 是否添加水印 |

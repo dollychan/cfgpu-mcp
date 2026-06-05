@@ -10,8 +10,8 @@
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "enum", "options": ["auto", "wan-2-0", "wan-2-0-fast", "doubao-seedance-1-5-pro", "happyhorse-1-0-t2v"], "default": "auto", "writable": "true" },
         "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"], "default": "adaptive", "writable": "true" },
-        "resolution": { "type": "enum", "options": ["480p", "720p"], "default": "720p", "writable": "true" },
-        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true" },
+        "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true" },
+        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "-1 = smart/auto duration (WAN 2.0 / Doubao Seedance 1.5 Pro); Seedance caps explicit durations at 12; HappyHorse requires explicit 4-15" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
         "first_frame": { "type": "url", "writable": "true" },
         "last_frame": { "type": "url", "writable": "true" },
@@ -117,8 +117,8 @@
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1-0-t2v", "writable": "false" },
         "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "21:9 and adaptive NOT supported; 4:5 and 5:4 available only via model_specific" },
-        "resolution": { "type": "enum", "options": ["720p"], "default": "720p", "writable": "true", "note": "480p NOT supported; 1080P available only via model_specific" },
-        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "model-specific range undocumented; unified validator enforces 4-15" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "480p NOT supported (adapter rejects); value is uppercased to 720P/1080P for the API" },
+        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
         "first_frame": { "type": "url", "writable": "true" },
         "reference_images": { "type": "url_array", "maxItems": 9, "writable": "true" },
         "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (true)" },
@@ -127,7 +127,7 @@
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
           "type": "object",
-          "note": "1080P resolution and 4:5 / 5:4 aspect ratios can only be set here",
+          "note": "4:5 / 5:4 aspect ratios can only be set here (1080P is now reachable via the unified resolution arg)",
           "fields": {
             "seed": { "type": "integer", "min": 0, "max": 2147483647 }
           }
@@ -147,6 +147,7 @@
         "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true" },
         "resolution": { "type": "enum", "options": ["1K", "2K", "3K", "4K"], "default": "2K", "writable": "true" },
         "reference_images": { "type": "url_array", "writable": "true" },
+        "n": { "type": "integer", "min": 1, "max": 15, "default": 1, "writable": "true", "note": "group/sequential image count (组图); only doubao-seedream-* support n>1, other image models generate 1" },
         "quality_tier": { "type": "enum", "options": ["fast", "balanced", "best"], "default": "balanced", "writable": "true", "note": "router selection preference; no effect once a specific model is chosen" },
         "watermark": { "type": "boolean", "writable": "true", "note": "null = use resolved model's default; ignored by gpt-image-2 / nano-banana" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
@@ -165,6 +166,7 @@
         "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
         "resolution": { "type": "enum", "options": ["2K", "3K", "4K"], "default": "2K", "writable": "true" },
         "reference_images": { "type": "url_array", "maxItems": 14, "writable": "true" },
+        "n": { "type": "integer", "min": 1, "max": 15, "default": 1, "writable": "true", "note": "group/sequential image count (组图); drives sequential_image_generation; input ref images + generated <= 15" },
         "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (true); adds an \"AI generated\" watermark" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
@@ -172,8 +174,6 @@
         "model_specific": {
           "type": "object",
           "fields": {
-            "sequential_image_generation": { "type": "enum", "options": ["auto", "disabled"], "default": "disabled", "note": "group/sequential image mode" },
-            "sequential_image_generation_options.max_images": { "type": "integer", "min": 1, "max": 15, "default": 15, "note": "input ref images + generated <= 15" },
             "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
             "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
             "stream": { "type": "boolean", "default": false },
@@ -193,6 +193,7 @@
         "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
         "resolution": { "type": "enum", "options": ["2K", "3K", "4K"], "default": "2K", "writable": "true" },
         "reference_images": { "type": "url_array", "maxItems": 14, "writable": "true" },
+        "n": { "type": "integer", "min": 1, "max": 15, "default": 1, "writable": "true", "note": "group/sequential image count (组图); drives sequential_image_generation; input ref images + generated <= 15" },
         "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (true); adds an \"AI generated\" watermark" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
@@ -200,8 +201,6 @@
         "model_specific": {
           "type": "object",
           "fields": {
-            "sequential_image_generation": { "type": "enum", "options": ["auto", "disabled"], "default": "disabled", "note": "group/sequential image mode" },
-            "sequential_image_generation_options.max_images": { "type": "integer", "min": 1, "max": 15, "default": 15, "note": "input ref images + generated <= 15" },
             "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
             "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
             "stream": { "type": "boolean", "default": false },
@@ -221,6 +220,7 @@
         "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
         "resolution": { "type": "enum", "options": ["2K", "3K", "4K"], "default": "2K", "writable": "true" },
         "reference_images": { "type": "url_array", "maxItems": 14, "writable": "true" },
+        "n": { "type": "integer", "min": 1, "max": 15, "default": 1, "writable": "true", "note": "group/sequential image count (组图); drives sequential_image_generation; input ref images + generated <= 15" },
         "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (false); adds an \"AI generated\" watermark" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
@@ -228,8 +228,6 @@
         "model_specific": {
           "type": "object",
           "fields": {
-            "sequential_image_generation": { "type": "enum", "options": ["auto", "disabled"], "default": "disabled", "note": "group/sequential image mode" },
-            "sequential_image_generation_options.max_images": { "type": "integer", "min": 1, "max": 15, "default": 15, "note": "input ref images + generated <= 15" },
             "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
             "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
             "stream": { "type": "boolean", "default": false },

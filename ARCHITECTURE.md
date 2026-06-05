@@ -56,6 +56,8 @@
 
 `tools/generate.py`（及 `tools/tasks.py`、`tools/models.py`）的存在是 FastMCP 的限制：FastMCP 通过函数签名来生成 JSON Schema，不支持直接传入 Pydantic 模型。因此 `tools/` 层必须把所有参数显式重声明一遍，然后原样转发给 `service/`。**这一层不含任何逻辑，修改时只需同步参数列表。**
 
+**参数描述不重复声明**：FastMCP 从裸函数签名生成的 schema 不带任何 per-parameter 描述（只有 docstring 作为工具级描述）。为避免在 wrapper 里重抄一份 `Field(description=...)`，`server.py` 在注册完所有工具后调用 `_inject_param_descriptions(mcp)`，从 `tool_registry.get_field_descriptions(tool_name)`（描述的单一来源）回填到每个 FastMCP 工具的 `parameters.properties[*].description`。因此 MCP client 看到的 per-param 描述与 Mode B / OpenAI / LangGraph 完全一致，且只维护 `tool_registry.py` 一处。`test_schema_consistency.py` 中的 `test_mcp_schema_carries_pydantic_descriptions` 守住这一致性。
+
 **MCP 工具名与 Mode B 的一致性**：`server.py` 将 FastMCP server 命名为 `cfgpu`（`FastMCP("cfgpu")`）。某些 MCP 客户端（如 `langchain-mcp-adapters`）加载工具时会自动拼接 `{server_name}_{tool_name}`，即 `cfgpu_generate_image`、`cfgpu_generate_video` 等。Mode B 的 `get_langgraph_tools()` 返回的 `StructuredTool` 名称为原始的 `generate_image`，不含前缀。如需通过 MCP 协议接入 LangGraph，需注意这一命名差异。
 
 ### Mode B — 工具 schema 的单一来源
@@ -538,8 +540,11 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
 - `with_audio`：视频音频开关，`WanVideoAdapter` 映射为 `generate_audio`。
 - `watermark`：水印开关。类型为 `Optional[bool]`，**默认 `None` 表示不写入 payload、沿用各模型 API 自身默认**（避免覆盖 Seedream 4.5 的 `false` 等差异化默认）。支持的 adapter（`wan_video`、`seedream`、`happyhorse`）在 `payload.update(req.model_specific)` **之前**写入 `payload["watermark"]`，因此 `model_specific` 仍可覆盖它；不支持的 adapter（`async_image` 下的 gpt-image-2 / nano-banana）不读取该字段，传入即被忽略。
+- `n`：图片组图数量（1-15），默认 1。仅 `SeedreamAdapter` 支持 `n>1`——会自动写入 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`async_image`（gpt-image-2 / nano-banana）的 `supports()` 对 `n>1` 直接拒绝。
+- `resolution`（视频）：开放 `1080p`，全部视频模型均支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。
+- `duration_seconds`（视频）：允许 `-1`（智能时长，`WanVideoAdapter` 直接透传）。`WanVideoAdapter.supports()` 对 `doubao-seedance-1-5-pro` 额外限制显式时长 ≤12s；`happyhorse` 拒绝 `-1`。
 
-> 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark` 作为通用参数列在支持模型的顶层 args（gpt/nano 不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`sequential_image_generation` 等）。新增/调整参数时同步该文件。
+> 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark`、`n` 作为通用参数列在支持模型的顶层 args（`n` 仅列在 seedream 系；gpt/nano 均不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`response_format` 等）。新增/调整参数时同步该文件。
 
 ---
 

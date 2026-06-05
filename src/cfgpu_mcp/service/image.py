@@ -12,11 +12,12 @@ async def generate_image(
     aspect_ratio: str = "1:1",
     resolution: str = "2K",
     reference_images: list[str] | None = None,
+    n: int = 1,
     quality_tier: str = "balanced",
     watermark: bool | None = None,
     wait: bool = True,
     timeout: int | None = None,
-    return_metadata: bool = False,
+    return_metadata: bool = True,
     model_specific: dict | None = None,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import get_client, get_db, get_registry
@@ -29,6 +30,7 @@ async def generate_image(
         aspect_ratio=aspect_ratio,
         resolution=resolution,
         reference_images=reference_images,
+        n=n,
         quality_tier=quality_tier,
         watermark=watermark,
         wait=wait,

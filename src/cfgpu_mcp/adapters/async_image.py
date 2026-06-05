@@ -41,6 +41,18 @@ class _AsyncImageBase(ModelAdapter):
             payload.update(req.model_specific)
         return payload
 
+    def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
+        ok, reason = super().supports(req)
+        if not ok:
+            return False, reason
+        assert isinstance(req, GenerateImageInput)
+        if req.n and req.n > 1:
+            return False, (
+                f"{self.adapter_id} generates a single image; n>1 (组图 / group image "
+                f"generation) is only supported by doubao-seedream-* models"
+            )
+        return True, ""
+
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         raise NotImplementedError
 

@@ -186,3 +186,61 @@ def test_supports_rejects_mixed_first_frame_and_reference_images():
     ok, reason = adapter.supports(req)
     assert ok is False
     assert "mutually exclusive" in reason
+
+
+def test_resolution_1080p_passthrough():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", resolution="1080p")
+    payload = adapter.build_payload(req)
+    assert payload["resolution"] == "1080p"
+
+
+def test_smart_duration_passthrough():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", duration_seconds=-1)
+    payload = adapter.build_payload(req)
+    assert payload["duration"] == -1
+
+
+def test_wan_accepts_15s_duration():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", duration_seconds=15)
+    ok, _ = adapter.supports(req)
+    assert ok is True
+
+
+def test_seedance_rejects_duration_over_12():
+    config = {
+        "adapter_id": "doubao-seedance-1-5-pro",
+        "display_name": "Doubao Seedance 1.5 Pro",
+        "cfgpu_model_id": "doubao-seedance-1-5-pro-251215",
+        "task_type": "video",
+        "endpoint": "/v1/video/tasks",
+        "is_async": True,
+        "poll_endpoint": "/v1/video/tasks/{task_id}",
+        "capabilities": {"text_to_video"},
+        "cost_tier": 2,
+        "speed_tier": 3,
+    }
+    adapter = WanVideoAdapter.from_config(config)
+    ok, reason = adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=15))
+    assert ok is False
+    assert "4–12" in reason
+
+
+def test_seedance_accepts_smart_duration():
+    config = {
+        "adapter_id": "doubao-seedance-1-5-pro",
+        "display_name": "Doubao Seedance 1.5 Pro",
+        "cfgpu_model_id": "doubao-seedance-1-5-pro-251215",
+        "task_type": "video",
+        "endpoint": "/v1/video/tasks",
+        "is_async": True,
+        "poll_endpoint": "/v1/video/tasks/{task_id}",
+        "capabilities": {"text_to_video"},
+        "cost_tier": 2,
+        "speed_tier": 3,
+    }
+    adapter = WanVideoAdapter.from_config(config)
+    ok, _ = adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=-1))
+    assert ok is True

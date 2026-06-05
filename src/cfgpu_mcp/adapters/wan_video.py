@@ -106,6 +106,16 @@ class WanVideoAdapter(ModelAdapter):
             return False, "first/last_frame and reference_images are mutually exclusive"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
+        # Doubao Seedance 1.5 Pro caps explicit durations at 12s (WAN 2.0 allows up to 15).
+        if (
+            self.adapter_id == "doubao-seedance-1-5-pro"
+            and req.duration_seconds != -1
+            and req.duration_seconds > 12
+        ):
+            return False, (
+                f"{self.adapter_id} supports explicit durations of 4–12 seconds "
+                f"(or -1 for a model-chosen smart duration)"
+            )
         return True, ""
 
     def estimate_poll_timeout(self, req: "GenerateImageInput | GenerateVideoInput") -> int:

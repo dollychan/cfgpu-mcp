@@ -22,7 +22,7 @@ async def generate_video(
     watermark: bool | None = None,
     wait: bool = True,
     timeout: int | None = None,
-    return_metadata: bool = False,
+    return_metadata: bool = True,
     model_specific: dict | None = None,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import get_client, get_db, get_registry

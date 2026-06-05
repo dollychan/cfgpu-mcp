@@ -74,3 +74,46 @@ def test_generate_video_schema_has_model_specific():
     assert "model_specific" in props
 
 
+
+
+# ── Schema validation for newly-exposed capabilities ──────────────────────────
+
+def test_video_duration_accepts_smart_minus_one():
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+    req = GenerateVideoInput(prompt="x", duration_seconds=-1)
+    assert req.duration_seconds == -1
+
+
+def test_video_duration_rejects_out_of_range():
+    from pydantic import ValidationError
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+    with pytest.raises(ValidationError):
+        GenerateVideoInput(prompt="x", duration_seconds=16)
+    with pytest.raises(ValidationError):
+        GenerateVideoInput(prompt="x", duration_seconds=2)
+
+
+def test_video_resolution_accepts_1080p():
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+    req = GenerateVideoInput(prompt="x", resolution="1080p")
+    assert req.resolution == "1080p"
+
+
+def test_image_n_accepts_group_size():
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+    req = GenerateImageInput(prompt="x", n=15)
+    assert req.n == 15
+
+
+def test_image_n_rejects_out_of_range():
+    from pydantic import ValidationError
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+    with pytest.raises(ValidationError):
+        GenerateImageInput(prompt="x", n=0)
+    with pytest.raises(ValidationError):
+        GenerateImageInput(prompt="x", n=16)
+
+
+def test_image_schema_exposes_n():
+    schema = next(t for t in get_anthropic_tools() if t["name"] == "generate_image")
+    assert "n" in schema["input_schema"]["properties"]
