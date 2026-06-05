@@ -80,6 +80,23 @@ async def test_async_model_create_returns_pending():
 
 
 @pytest.mark.asyncio
+async def test_async_create_raises_when_no_task_id():
+    from cfgpu_mcp.errors import CFGPUError
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    # Simulate an unexpected response shape: extract_task_id finds nothing.
+    adapter.extract_task_id.side_effect = lambda r: None
+    tm._client.post = AsyncMock(return_value={"unexpected": "shape"})
+    req = GenerateVideoInput(prompt="x")
+    with pytest.raises(CFGPUError) as exc_info:
+        await tm.create(adapter, req)
+    assert exc_info.value.error_type == "unknown"
+    # No bogus pending row should have been written.
+    assert await tm.list_running() == []
+    await db.close()
+
+
+@pytest.mark.asyncio
 async def test_poll_updates_status():
     tm, db = await _make_tm()
     adapter = _async_adapter()

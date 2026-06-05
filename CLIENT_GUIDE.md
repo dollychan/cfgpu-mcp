@@ -20,6 +20,8 @@ export CFGPU_API_TOKEN=sk-...
 |------|------|
 | `CFGPU_ENABLED_MODELS` | 逗号分隔的 `adapter_id` 列表，限制加载的模型；缺省加载全部 |
 | `CFGPU_BASE_URL` | 覆盖 API 基础 URL |
+| `CFGPU_HTTP_TIMEOUT` | 单次请求总超时秒数，默认 `120`。同步图像模型在 POST 响应中直接返回结果，故默认值较宽松 |
+| `CFGPU_CONNECT_TIMEOUT` | 建立连接超时秒数，默认 `10` |
 | `CFGPU_DB_PATH` | SQLite 路径，默认 `~/.cfgpu/tasks.db`。多个 agent 同时通过 stdio 启动 MCP server 时共享同一文件（WAL 模式保证并发安全）；如需进程间完全隔离，为每个 agent 设置不同路径 |
 | `CFGPU_LOG_LEVEL` | 日志级别（`DEBUG` / `INFO` / `WARNING`），默认 `WARNING` |
 | `CFGPU_DRY_RUN` | 设为任意非空值时，每次 POST 请求前在 INFO 日志中打印完整 URL 和 payload，然后照常发送 |

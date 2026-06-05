@@ -47,6 +47,32 @@ def test_reference_videos_score_multi_modal_capable_adapter():
     assert "multi_modal_reference" in adapter.capabilities
 
 
+def test_best_tier_prefers_higher_cost_tier():
+    router = _router()
+    # "best" uses cost_tier as a quality proxy: among image models nano-banana-2
+    # has the highest cost_tier (4), so it should win — whereas "balanced"
+    # (speed - cost) would penalize it. Use an English prompt to avoid the
+    # Chinese→Seedream bias.
+    best = router.select_model(GenerateImageInput(prompt="a cat", quality_tier="best"))
+    balanced = router.select_model(GenerateImageInput(prompt="a cat", quality_tier="balanced"))
+    assert best.adapter_id == "nano-banana-2"
+    assert balanced.adapter_id != "nano-banana-2"
+
+
+def test_image_reference_bonus_uses_real_capability():
+    router = _router()
+    # Seedream declares multi_image_fusion/multi_image_group; with reference_images
+    # it should win the +3 reference bonus over models lacking those capabilities.
+    req = GenerateImageInput(
+        prompt="cat",
+        reference_images=["https://example.com/a.png", "https://example.com/b.png"],
+        quality_tier="balanced",
+    )
+    adapter = router.select_model(req)
+    caps = adapter.capabilities
+    assert "multi_image_fusion" in caps or "multi_image_group" in caps
+
+
 def test_explicit_model_bypasses_scoring():
     router = _router()
     req = GenerateVideoInput(prompt="test", model="wan-2-0")

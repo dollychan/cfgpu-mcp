@@ -18,7 +18,9 @@ if TYPE_CHECKING:
 
 ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
 
-_TERMINAL_STATUSES = {"succeeded", "failed", "completed"}
+# Internal (already normalized via _STATUS_MAP) terminal statuses. Raw API
+# values like "completed" never reach here — they map to "succeeded" first.
+_TERMINAL_STATUSES = {"succeeded", "failed"}
 
 _STATUS_MAP = {
     "completed": "succeeded",
@@ -78,7 +80,18 @@ class TaskManager:
 
         # Async model: POST → get task_id from CFGPU → write pending
         resp = await self._client.post(adapter.endpoint, payload)
-        cfgpu_task_id: str = adapter.extract_task_id(resp) or task_id
+        cfgpu_task_id = adapter.extract_task_id(resp)
+        if not cfgpu_task_id:
+            # Without a real task_id we'd poll a bogus URL until timeout and
+            # report a misleading "timeout" error. Fail loudly with the raw
+            # response so the response-shape change is diagnosable.
+            raise CFGPUError(
+                error_type="unknown",
+                user_message=(
+                    "提交任务成功但未能从响应中解析出 task_id，可能是 API 响应结构变化。"
+                ),
+                original={"adapter_id": adapter.adapter_id, "response": resp},
+            )
         await db_ops.insert_task(self._db, cfgpu_task_id, adapter.adapter_id, "pending", payload)
         row = await db_ops.get_task(self._db, cfgpu_task_id)
         return Task(row)  # type: ignore[arg-type]

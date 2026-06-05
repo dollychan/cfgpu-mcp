@@ -23,12 +23,14 @@ async def get_status(task_id: str) -> dict[str, Any]:
             original={"task_id": task_id},
         ) from e
 
-    # Re-poll from API if task succeeded but result has no URLs (e.g. stale DB record)
+    # Re-poll from API if an async task succeeded but its result has no URLs
+    # (e.g. stale DB record). Sync models have no poll_endpoint, so skip them.
     if task.status == "succeeded" and not (task.result or {}).get("urls"):
         registry = get_registry()
         try:
             adapter = registry.get(task.adapter_id)
-            task = await tm.poll(task, adapter)
+            if adapter.is_async:
+                task = await tm.poll(task, adapter)
         except Exception as e:
             logger.debug("Re-poll failed for task %s (%s), using stale DB result: %s", task_id, task.adapter_id, e)
 

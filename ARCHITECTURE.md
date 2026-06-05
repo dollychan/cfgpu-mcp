@@ -121,11 +121,12 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 ```
 基础分（quality_tier）:
   fast   → speed_tier × 2 - cost_tier
-  best   → +5（如有 best_quality 能力）+ speed_tier - cost_tier
+  best   → cost_tier × 2 + speed_tier - cost_tier（以 cost_tier 作质量代理：越贵≈越优）
   balanced → speed_tier - cost_tier
 
 加分项:
-  请求有 reference_images/videos/audios 且模型支持 → +3
+  图像请求有 reference_images 且模型支持 multi_image_fusion/multi_image_group → +3
+  视频请求有 reference_images/videos/audios 且模型支持 multi_modal_reference → +3
   中文 prompt 且模型是 doubao-seedream-* → +2
 ```
 
@@ -165,7 +166,7 @@ TaskManager.create(adapter, req)
     ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式
     │
     ├─ [is_async=false] CFGPUClient.post() → adapter.parse_response() → DB 写 succeeded
-    └─ [is_async=true]  CFGPUClient.post() → 取 task_id → DB 写 pending
+    └─ [is_async=true]  CFGPUClient.post() → 取 task_id（取不到则抛 CFGPUError）→ DB 写 pending
     │
     ▼ （wait=True 时继续）
 TaskManager.wait(task, adapter, req)
@@ -181,7 +182,7 @@ service 返回 dict → 访问层格式化 → 用户
 
 `get_registry()` / `get_client()` / `get_db()` 均为模块级单例，首次调用时初始化，后续调用直接返回已有实例。这避免了每次请求重新建立 HTTP 连接或重新解析 YAML。
 
-程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 `aiosqlite.Connection`。各访问层（CLI 的 `_run()`、MCP server 的 `atexit`）各自负责调用。
+程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 `aiosqlite.Connection`。各访问层各自负责调用：CLI 在 `_run()` 的 `finally` 中调用；MCP server 通过 FastMCP 的 `lifespan` 上下文在关闭阶段调用。**不能用 `atexit` + `asyncio.run()`**——那会新建事件循环去关闭绑定在 server 原循环上的 `ClientSession`，触发 "Event loop is closed" 告警；lifespan 在 server 自身的事件循环内退出，确保 session 在它被创建的同一循环上关闭。
 
 ---
 
@@ -291,7 +292,7 @@ DB 的作用：`cfgpu task status <task_id>` 和 `cfgpu task wait <task_id>` 需
 
 **多进程共享**：stdio 模式下，每个连接到 MCP server 的 agent 都会 spawn 一个独立的 server 进程，但它们全部指向同一个 SQLite 文件（`~/.cfgpu/tasks.db`）。`get_db()` 在打开连接时会执行 `PRAGMA journal_mode=WAL`，开启 WAL 模式以支持并发读 + 单写，避免默认 DELETE journal 在多进程并发写入时产生 "database is locked" 错误。如需进程间完全隔离，为每个 agent 设置不同的 `CFGPU_DB_PATH` 即可。
 
-`service/task.py` 的 `get_status()` 在返回已成功但 result 中无 URL 的任务时，会尝试重新轮询 API 获取最新结果。轮询失败时以 `logger.debug()` 记录，不会阻断返回——此时返回 DB 中的 stale result。
+`service/task.py` 的 `get_status()` 在返回已成功但 result 中无 URL 的任务时，会尝试重新轮询 API 获取最新结果。仅对异步模型（`adapter.is_async`）执行——同步模型没有 `poll_endpoint`，直接跳过。轮询失败时以 `logger.debug()` 记录，不会阻断返回——此时返回 DB 中的 stale result。
 
 ### 指数退避轮询
 

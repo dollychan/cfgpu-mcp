@@ -63,13 +63,13 @@ Every model has three identifiers that must not be mixed up:
 
 | Name | Example | Used where |
 |---|---|---|
-| `adapter_id` | `wan-2.0-fast` | Directory name, registry keys, user-facing everywhere |
+| `adapter_id` | `wan-2-0-fast` | Directory name, registry keys, user-facing everywhere |
 | `display_name` | `WAN 2.0 Fast` | `list_models()` output only |
 | `cfgpu_model_id` | `wan-video-fast` | **Only** inside `build_payload()` |
 
 ### Model configs (`src/cfgpu_mcp/models/`)
 
-Each model lives in its own directory with `adapter.yaml` and `card.md`. Variant models (e.g. `wan-2.0-fast`) use `extends: wan-2.0` in their YAML to inherit all fields — only differences need to be listed. Deep merge applies field-level for dict fields like `poll_config`.
+Each model lives in its own directory with `adapter.yaml` and `card.md`. Variant models (e.g. `wan-2-0-fast`) use `extends: wan-2-0` in their YAML to inherit all fields — only differences need to be listed. Deep merge applies field-level for dict fields like `poll_config`.
 
 **Critical**: `AdapterRegistry._merge_extends()` preserves `extends` in the merged dict so `_instantiate()` can follow the chain to find the parent's Python Adapter class. Removing this breaks variant model dispatch.
 
@@ -77,7 +77,7 @@ Each model lives in its own directory with `adapter.yaml` and `card.md`. Variant
 
 `adapters/base.py` holds a global `_PYTHON_ADAPTERS: dict[str, type]`. The `@register_python_adapter` decorator populates it at import time, keyed by `cls.adapter_id`. `adapters/__init__.py` imports `wan_video` and `seedream` to trigger registration before the registry loads.
 
-`_instantiate()` in the registry looks up `adapter_id` first, then follows `extends` to find the parent's class — this is how `wan-2.0-fast` reuses `WanVideoAdapter` with its own `cfgpu_model_id`.
+`_instantiate()` in the registry looks up `adapter_id` first, then follows `extends` to find the parent's class — this is how `wan-2-0-fast` reuses `WanVideoAdapter` with its own `cfgpu_model_id`.
 
 ### Tool schema single source of truth
 
@@ -114,4 +114,6 @@ MCP tool wrappers in `tools/` re-declare parameters explicitly (FastMCP limitati
 - `CFGPU_API_TOKEN` — Required. Bearer token for CFGPU API
 - `CFGPU_ENABLED_MODELS` — Comma-separated `adapter_id` or `cfgpu_model_id` list to restrict loaded models; omit to load all
 - `CFGPU_BASE_URL` — Override API base URL (default in client)
+- `CFGPU_HTTP_TIMEOUT` — Per-request total timeout in seconds (default 120)
+- `CFGPU_CONNECT_TIMEOUT` — Connection timeout in seconds (default 10)
 - `CFGPU_DB_PATH` — SQLite path for task persistence (default `~/.cfgpu/tasks.db`)

@@ -96,14 +96,19 @@ class ModelRouter:
         if req.quality_tier == "fast":
             score += adapter.speed_tier * 2 - adapter.cost_tier
         elif req.quality_tier == "best":
-            score += 5 if "best_quality" in adapter.capabilities else 0
+            # No model declares an explicit quality flag, so use cost_tier as a
+            # proxy: pricier models tend to be the higher-quality flagships.
+            score += adapter.cost_tier * 2
             score += adapter.speed_tier - adapter.cost_tier
         else:  # balanced
             score += adapter.speed_tier - adapter.cost_tier
 
         # Reference media capability bonus
         if isinstance(req, GenerateImageInput):
-            if req.reference_images and "multi_ref" in adapter.capabilities:
+            if req.reference_images and (
+                "multi_image_fusion" in adapter.capabilities
+                or "multi_image_group" in adapter.capabilities
+            ):
                 score += 3
         elif isinstance(req, GenerateVideoInput):
             if req.reference_images and "multi_modal_reference" in adapter.capabilities:

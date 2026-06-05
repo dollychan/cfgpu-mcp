@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json as _json
 import logging
 import os
@@ -9,7 +10,25 @@ logger = logging.getLogger(__name__)
 
 from cfgpu_mcp.errors import CFGPUError
 
+
+def _env_float(name: str, default: float) -> float:
+    """Read a positive float from env; fall back to default on missing/invalid."""
+    raw = os.getenv(name)
+    if not raw:
+        return default
+    try:
+        val = float(raw)
+        return val if val > 0 else default
+    except ValueError:
+        return default
+
 DEFAULT_BASE_URL = "https://www.cfgpu.com/userapi/v1"
+
+# Total seconds a single request may take before aiohttp aborts it. Sync image
+# models return the generated result in the POST body, so this must be generous;
+# async POST and poll GET both complete well within it. Override via env.
+DEFAULT_HTTP_TIMEOUT = 120.0
+DEFAULT_CONNECT_TIMEOUT = 10.0
 
 
 class CFGPUClient:
@@ -28,6 +47,10 @@ class CFGPUClient:
             )
         self._token = token
         self._base_url = (base_url or os.getenv("CFGPU_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
+        self._timeout = aiohttp.ClientTimeout(
+            total=_env_float("CFGPU_HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT),
+            connect=_env_float("CFGPU_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
+        )
         self._session: aiohttp.ClientSession | None = None
 
     @property
@@ -38,6 +61,7 @@ class CFGPUClient:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(
                 headers={"Authorization": f"Bearer {self._token}"},
+                timeout=self._timeout,
             )
         return self._session
 
@@ -69,6 +93,13 @@ class CFGPUClient:
                 return body
         except CFGPUError:
             raise
+        except asyncio.TimeoutError as e:
+            raise CFGPUError(
+                error_type="timeout",
+                user_message=f"请求超时（{self._timeout.total}s），请稍后重试或增大 CFGPU_HTTP_TIMEOUT。",
+                original={"url": url, "timeout": self._timeout.total},
+                retryable=True,
+            ) from e
         except aiohttp.ClientError as e:
             raise CFGPUError(
                 error_type="unknown",
