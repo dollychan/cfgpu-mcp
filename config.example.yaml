@@ -21,6 +21,8 @@ cfgpu_api:
 task_db:
   url: sqlite:///~/.cfgpu/tasks.db
   # url: postgresql://user:pass@host:5432/cfgpu   # multi-instance horizontal scaling
+  pool_min: 1                  # Postgres connection pool (ignored by SQLite)
+  pool_max: 10
 
 enabled_models:                # whitelist override; omit / null = load all models
   # - wan-2-0-fast

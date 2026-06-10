@@ -48,6 +48,9 @@ dev = [
 cli = [
     "click>=8.0",
 ]
+postgres = [
+    "asyncpg>=0.29",
+]
 
 [project.urls]
 Homepage = "https://github.com/dollychan/cfgpu-mcp"

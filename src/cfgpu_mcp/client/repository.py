@@ -86,13 +86,17 @@ def _sqlite_path(url: str) -> str:
     return rest
 
 
-async def create_task_repository(url: str) -> TaskRepository:
-    """Instantiate the repository backend named by the URL scheme."""
+async def create_task_repository(url: str, *, pool_min: int = 1, pool_max: int = 10) -> TaskRepository:
+    """Instantiate the repository backend named by the URL scheme.
+
+    ``pool_min`` / ``pool_max`` apply to the Postgres connection pool; SQLite
+    ignores them.
+    """
     scheme = urlparse(url).scheme or "sqlite"
     if scheme == "sqlite":
         return await SqliteTaskRepository.connect(url)
     if scheme.startswith("postgres"):
-        raise NotImplementedError(
-            "PostgresTaskRepository 尚未实现(见设计文档第四步)。请暂用 sqlite:// task_db.url。"
-        )
+        from cfgpu_mcp.client.postgres_repo import PostgresTaskRepository
+
+        return await PostgresTaskRepository.connect(url, pool_min=pool_min, pool_max=pool_max)
     raise ValueError(f"unsupported task_db scheme: {scheme!r} (url={url!r})")

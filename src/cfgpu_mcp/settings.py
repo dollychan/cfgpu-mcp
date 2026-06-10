@@ -38,6 +38,8 @@ class Settings:
     http_timeout: float = 120.0
     connect_timeout: float = 10.0
     task_db_url: str = _DEFAULT_TASK_DB_URL
+    task_db_pool_min: int = 1   # Postgres connection pool (ignored by SQLite)
+    task_db_pool_max: int = 10
     enabled_models: list[str] | None = None  # None / [] = load all (whitelist override)
 
 
@@ -84,6 +86,8 @@ def load_settings() -> Settings:
 
         task_db = data.get("task_db") or {}
         s.task_db_url = task_db.get("url", s.task_db_url)
+        s.task_db_pool_min = int(task_db.get("pool_min", s.task_db_pool_min))
+        s.task_db_pool_max = int(task_db.get("pool_max", s.task_db_pool_max))
 
         enabled = data.get("enabled_models")
         s.enabled_models = enabled or None  # [] / null → load all

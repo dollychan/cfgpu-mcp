@@ -78,7 +78,12 @@ async def get_task_repository() -> TaskRepository:
     """
     global _repo
     if _repo is None:
-        _repo = await create_task_repository(get_settings().task_db_url)
+        s = get_settings()
+        _repo = await create_task_repository(
+            s.task_db_url,
+            pool_min=s.task_db_pool_min,
+            pool_max=s.task_db_pool_max,
+        )
     return _repo
 
 
