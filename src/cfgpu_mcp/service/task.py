@@ -40,9 +40,19 @@ async def get_status(task_id: str) -> dict[str, Any]:
             original={"task_id": task_id},
         ) from e
 
-    # Re-poll from API if an async task succeeded but its result has no URLs
-    # (e.g. stale DB record). Sync models have no poll_endpoint, so skip them.
-    if task.status == "succeeded" and not (task.result or {}).get("urls"):
+    # Client-driven polling: each task_status call carries the caller's token,
+    # so we do ONE live upstream poll to advance the task — this is what lets a
+    # wait=False submitter (or a reconnecting client) drive an async task to
+    # completion without the server holding a connection open.
+    #
+    # Re-poll when (a) the task is still in flight (pending/running), or
+    # (b) it reads succeeded but the DB result has no URLs (stale record).
+    # Sync models have no poll_endpoint, so skip them.
+    _TERMINAL = {"succeeded", "failed"}
+    needs_repoll = task.status not in _TERMINAL or (
+        task.status == "succeeded" and not (task.result or {}).get("urls")
+    )
+    if needs_repoll:
         registry = get_registry()
         try:
             adapter = registry.get(task.adapter_id)

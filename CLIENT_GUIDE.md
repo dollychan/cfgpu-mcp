@@ -8,24 +8,47 @@ CFGPU 提供三种访问模式，共享同一套 service 层：
 | **Mode B — Anthropic SDK Direct** | 自建 Agent，直接用 Anthropic SDK 驱动工具调用 |
 | **Mode C — CLI** | 命令行脚本、Shell 管道、终端快速测试 |
 
-所有模式都需要设置环境变量：
+所有模式都需要设置 API Token（**唯一的 secret，始终走环境变量**）：
 
 ```bash
 export CFGPU_API_TOKEN=sk-...
 ```
 
-### 可选环境变量
+### 配置：config.yaml
+
+除 `CFGPU_API_TOKEN` 外，其余配置集中到 **config.yaml**。从 `config.example.yaml` 复制一份；用 `CFGPU_CONFIG` 指定路径，否则取当前目录的 `config.yaml`。缺文件时全部回退默认值（stdio 零配置可用）。优先级：**环境变量 override > config.yaml > 内置默认**。
+
+```yaml
+transport: stdio              # stdio | streamable-http
+http: {host: 0.0.0.0, port: 8080, stateless: true}   # 仅 streamable-http 用
+cfgpu_api: {base_url: https://www.cfgpu.com/userapi/v1, http_timeout: 120, connect_timeout: 10}
+task_db:
+  url: sqlite:///~/.cfgpu/tasks.db        # 或 postgresql://user:pass@host:5432/cfgpu
+  pool_min: 1                              # Postgres 连接池（SQLite 忽略）
+  pool_max: 10
+enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
+```
+
+### 仅读环境变量的两个入口
 
 | 变量 | 说明 |
 |------|------|
-| `CFGPU_ENABLED_MODELS` | 逗号分隔的 `adapter_id` 列表，限制加载的模型；缺省加载全部 |
-| `CFGPU_BASE_URL` | 覆盖 API 基础 URL |
-| `CFGPU_HTTP_TIMEOUT` | 单次请求总超时秒数，默认 `120`。同步图像模型在 POST 响应中直接返回结果，故默认值较宽松 |
-| `CFGPU_CONNECT_TIMEOUT` | 建立连接超时秒数，默认 `10` |
-| `CFGPU_DB_PATH` | SQLite 路径，默认 `~/.cfgpu/tasks.db`。多个 agent 同时通过 stdio 启动 MCP server 时共享同一文件（WAL 模式保证并发安全）；如需进程间完全隔离，为每个 agent 设置不同路径 |
-| `CFGPU_LOG_LEVEL` | 日志级别（`DEBUG` / `INFO` / `WARNING`），默认 `WARNING` |
-| `CFGPU_DRY_RUN` | 设为任意非空值时，每次 POST 请求前在 INFO 日志中打印完整 URL 和 payload，然后照常发送 |
-| `CFGPU_LOG_RESPONSES` | 设为任意非空值时，每次 HTTP 响应（POST 及轮询 GET）的完整响应体以缩进 JSON 在 INFO 日志中打印，便于核对 adapter / card.md 与真实 API 是否一致。未设置时该响应仍在 DEBUG 级别记录 |
+| `CFGPU_API_TOKEN` | 唯一 secret。stdio / HTTP 未带 `Authorization` 头时的回退 token |
+| `CFGPU_CONFIG` | config.yaml 路径（否则取 `./config.yaml`） |
+
+### 其余环境变量（可选 override，正式归宿是 config.yaml）
+
+| 变量 | 对应 config.yaml | 说明 |
+|------|------|------|
+| `CFGPU_ENABLED_MODELS` | `enabled_models` | 逗号分隔 `adapter_id`，白名单覆盖；缺省全量 |
+| `CFGPU_BASE_URL` | `cfgpu_api.base_url` | 覆盖 API 基础 URL |
+| `CFGPU_HTTP_TIMEOUT` | `cfgpu_api.http_timeout` | 单次请求总超时秒数，默认 `120` |
+| `CFGPU_CONNECT_TIMEOUT` | `cfgpu_api.connect_timeout` | 建立连接超时秒数，默认 `10` |
+| `CFGPU_TASK_DB_URL` / `CFGPU_DB_PATH` | `task_db.url` | task 存储 URL；旧 `CFGPU_DB_PATH` 会拼成 `sqlite:///<path>` |
+| `CFGPU_TRANSPORT` | `transport` | `stdio` / `streamable-http` |
+| `CFGPU_LOG_LEVEL` | — | 日志级别（`DEBUG`/`INFO`/`WARNING`），默认 `WARNING` |
+| `CFGPU_DRY_RUN` | — | 非空时每次 POST 前在 INFO 日志打印 URL 和 payload，然后照常发送 |
+| `CFGPU_LOG_RESPONSES` | — | 非空时每次 HTTP 响应体以缩进 JSON 在 INFO 日志打印，便于核对 adapter / card.md |
 
 ---
 
@@ -89,6 +112,28 @@ npx -y @modelcontextprotocol/inspector --env CFGPU_API_TOKEN=sk-... cfgpu-mcp
 1. `initialize` — 确认握手成功
 2. `tools/list` — 查看所有可用工具
 3. 选择工具并填写参数，直接调用
+
+### streamable-http（多租户、可水平扩展）
+
+把 config.yaml 的 `transport` 设为 `streamable-http`，server 改用 HTTP 传输，可放在 LB 后跑多个实例：
+
+```yaml
+transport: streamable-http
+http: {host: 0.0.0.0, port: 8080, stateless: true}
+task_db:
+  url: postgresql://user:pass@host:5432/cfgpu   # 多实例必须用共享 DB（Postgres）
+```
+
+```bash
+pip install -e ".[postgres]"        # Postgres 后端需要
+CFGPU_CONFIG=./config.yaml cfgpu-mcp # 监听 http://0.0.0.0:8080/mcp
+```
+
+**逐请求 token**：HTTP 模式下，每个 MCP 请求用自己的 `Authorization: Bearer <token>` 头携带各自的 CFGPU Token——不再全局共用 `CFGPU_API_TOKEN`。未带头时回退到 `CFGPU_API_TOKEN` 环境变量。
+
+**断点续查**：`wait=false` 提交后立即返回 `task_id`；客户端周期性调 `task_status(task_id)`（每次都带 token），服务端借此实时推进任务。**异步模型**（视频等）即使客户端断开，凭 `task_id` 重连仍可查到结果；**同步模型**（Seedream 图片）结果只在该次响应返回，不可断点续查。
+
+> 多实例水平扩展必须用 Postgres：本地 SQLite 文件无法跨实例共享。单实例 HTTP 用 SQLite 亦可。详见 `docs/streamable/http-mcp-servers.md`。
 
 ---
 
@@ -572,6 +617,8 @@ done
 ```json
 { "task_id": "task-abc123", "status": "running" }
 ```
+
+> `task_status` 对**非终态的异步任务**会做一次实时上游轮询再返回，所以反复调用它即可把 `wait=false` 提交的任务驱动到完成（客户端驱动轮询）；`task_wait` 则阻塞轮询直到终态或超时。
 
 失败时信封带 `error`（`task_wait` 失败则抛出 / 返回 error dict）：
 

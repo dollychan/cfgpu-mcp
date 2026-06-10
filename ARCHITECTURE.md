@@ -60,6 +60,13 @@
 
 **MCP 工具名与 Mode B 的一致性**：`server.py` 将 FastMCP server 命名为 `cfgpu`（`FastMCP("cfgpu")`）。某些 MCP 客户端（如 `langchain-mcp-adapters`）加载工具时会自动拼接 `{server_name}_{tool_name}`，即 `cfgpu_generate_image`、`cfgpu_generate_video` 等。Mode B 的 `get_langgraph_tools()` 返回的 `StructuredTool` 名称为原始的 `generate_image`，不含前缀。如需通过 MCP 协议接入 LangGraph，需注意这一命名差异。
 
+**Mode A 的两种传输：stdio 与 streamable-http**。`server.main()` 按 `settings.transport`（config.yaml）分发：
+
+- `stdio`（默认）：单进程单用户，桌面端 MCP Host。token 取 `CFGPU_API_TOKEN` 环境变量。
+- `streamable-http`：多租户、可水平扩展。`http_app.py` 自建 uvicorn + 一层纯 ASGI `RequestContextMiddleware`，把每个请求的 `Authorization: Bearer <token>` 绑定到请求级 ContextVar（`context.py`），底层 `CFGPUClient` 逐请求注入该 token——共享连接池服务所有租户，不再全局共用一个 token。配 `stateless_http=True` 时每请求独立,可放在 LB 后跑 N 个实例。
+
+两种传输共用同一套 `service/`，唯一的有状态点是 task 存储（见 §6，可配置 SQLite / Postgres）。详见 `docs/streamable/http-mcp-servers.md`。
+
 ### Mode B — 工具 schema 的单一来源
 
 `tool_registry.py` 是 Mode B 的核心：它定义了所有工具的 Pydantic 输入模型，并提供：
@@ -180,9 +187,15 @@ service 返回 dict → 访问层格式化 → 用户
 
 ### 单例资源（`config.py`）
 
-`get_registry()` / `get_client()` / `get_db()` 均为模块级单例，首次调用时初始化，后续调用直接返回已有实例。这避免了每次请求重新建立 HTTP 连接或重新解析 YAML。
+`get_settings()` / `get_registry()` / `get_client()` / `get_task_repository()` 均为模块级单例，首次调用时初始化，后续调用直接返回已有实例。这避免了每次请求重新建立 HTTP 连接、重新解析 YAML 或重开数据库。
 
-程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 `aiosqlite.Connection`。各访问层各自负责调用：CLI 在 `_run()` 的 `finally` 中调用；MCP server 通过 FastMCP 的 `lifespan` 上下文在关闭阶段调用。**不能用 `atexit` + `asyncio.run()`**——那会新建事件循环去关闭绑定在 server 原循环上的 `ClientSession`，触发 "Event loop is closed" 告警；lifespan 在 server 自身的事件循环内退出，确保 session 在它被创建的同一循环上关闭。
+- `get_settings()` 从 config.yaml（+ env override）加载配置（`settings.py`）。
+- `get_client()` 构造的 `CFGPUClient` **不再持有 token**——共享连接池，token 逐请求从 ContextVar 解析；`base_url`/超时来自 settings。
+- `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。
+
+程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 task 仓库（SQLite 连接 / Postgres 连接池）。各访问层各自负责调用：CLI 在 `_run()` 的 `finally` 中调用；stdio MCP server 通过 FastMCP 的 `lifespan` 上下文在关闭阶段调用。**不能用 `atexit` + `asyncio.run()`**——那会新建事件循环去关闭绑定在 server 原循环上的 `ClientSession`，触发 "Event loop is closed" 告警；lifespan 在 server 自身的事件循环内退出，确保 session 在它被创建的同一循环上关闭。
+
+**streamable-http 下的清理差异**：`streamable_http_app()` 用 session manager 的 lifespan 覆盖了构造器 lifespan，且后者在 stateless 模式下每请求运行一次——因此共享单例**不能**在 `server._lifespan` 里关（已加 `transport == "stdio"` 门控）。HTTP 进程级清理由 `http_app.RequestContextMiddleware` 拦截 ASGI `lifespan.shutdown.complete` 时统一 `config.close()` 一次。
 
 ---
 
@@ -273,7 +286,14 @@ pending → running → succeeded
 
 同步模型（Seedream）直接从 `pending` 跳到 `succeeded`，不经过 `running`。
 
-### DB schema（SQLite）
+### Task 存储：可配置仓库（SQLite / Postgres）
+
+task 状态通过 `TaskRepository` 接口持久化（`client/repository.py`），后端由 config.yaml 的 `task_db.url` 的 scheme 决定：
+
+- `sqlite:///path` → `SqliteTaskRepository`（单实例 / stdio / CLI，WAL 模式）
+- `postgresql://...` → `PostgresTaskRepository`（asyncpg 连接池；多实例水平扩展，`client/postgres_repo.py`，需 `[postgres]` 可选依赖）
+
+两个后端返回**完全一致的行结构**（JSON 列存 text，读时 `json.loads`），上层 `Task` / `_present` 对后端无感。
 
 ```sql
 tasks (
@@ -283,16 +303,17 @@ tasks (
     payload     TEXT,               -- JSON，原始 API 请求体
     result      TEXT,               -- JSON，NormalizedResult.to_dict()
     error       TEXT,               -- 失败原因
-    created_at  REAL,
-    updated_at  REAL
+    created_at  REAL / DOUBLE PRECISION,
+    updated_at  REAL / DOUBLE PRECISION
 )
+-- Postgres 额外建索引 idx_tasks_status_created(status, created_at)
 ```
 
-DB 的作用：`cfgpu task status <task_id>` 和 `cfgpu task wait <task_id>` 需要在进程重启后仍能查询和恢复任务。如果只在内存中存储，CLI 的异步工作流（`--no-wait` 后稍后查询）就无法工作。
+DB 的作用：`task status <task_id>` / `task wait <task_id>` 需要在进程重启后仍能查询和恢复任务。如果只在内存中存储，异步工作流（`--no-wait` / `wait=false` 后稍后查询）就无法工作。
 
-**多进程共享**：stdio 模式下，每个连接到 MCP server 的 agent 都会 spawn 一个独立的 server 进程，但它们全部指向同一个 SQLite 文件（`~/.cfgpu/tasks.db`）。`get_db()` 在打开连接时会执行 `PRAGMA journal_mode=WAL`，开启 WAL 模式以支持并发读 + 单写，避免默认 DELETE journal 在多进程并发写入时产生 "database is locked" 错误。如需进程间完全隔离，为每个 agent 设置不同的 `CFGPU_DB_PATH` 即可。
+**多进程 / 多实例共享**：stdio 下每个 agent spawn 独立 server 进程，但共指同一 SQLite 文件（`~/.cfgpu/tasks.db`，WAL 支持并发读 + 单写）；需进程隔离则各设不同 `task_db.url`。streamable-http 多实例水平扩展时改用 Postgres，所有实例共指同一库——本地 SQLite 文件无法跨实例共享。
 
-`service/task.py` 的 `get_status()` 在返回已成功但 result 中无 URL 的任务时，会尝试重新轮询 API 获取最新结果。仅对异步模型（`adapter.is_async`）执行——同步模型没有 `poll_endpoint`，直接跳过。轮询失败时以 `logger.debug()` 记录，不会阻断返回——此时返回 DB 中的 stale result。
+**客户端驱动轮询**：`service/task.py` 的 `get_status()` 对**非终态的异步任务**（pending/running）或「已成功但 result 无 URL」的任务，做**一次**实时上游轮询并落库。这是 `wait=false` 客户端驱动模型的关键——每次 `task_status` 调用都带着调用方 token，服务端借它把异步任务往前推一步，无需为此挂住连接；客户端断开后凭 task_id 重连即可继续。仅对异步模型（`adapter.is_async`）执行——同步模型无 `poll_endpoint`，跳过；轮询失败以 `logger.debug()` 记录、返回 DB 中的 stale 值，不阻断。
 
 ### 指数退避轮询
 
@@ -358,8 +379,11 @@ MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在�
 ```
 src/cfgpu_mcp/
 │
-├── server.py                   Mode A 入口，注册工具，启动 stdio
-├── config.py                   单例资源管理（registry / client / db）
+├── server.py                   Mode A 入口，注册工具，按 settings.transport 启动 stdio / streamable-http
+├── settings.py                 config.yaml 加载（env override）→ Settings
+├── context.py                  请求级 token ContextVar（streamable-http 多租户）
+├── http_app.py                 RequestContextMiddleware（token + 清理）+ build_http_app()
+├── config.py                   单例资源管理（settings / registry / client / task_repository）
 ├── tool_registry.py            Pydantic 输入模型 + get_anthropic_tools() + NormalizedResult
 ├── router.py                   model="auto" 评分选模型
 ├── task_manager.py             同步/异步任务创建、轮询、等待
@@ -431,9 +455,13 @@ src/cfgpu_mcp/
 │   └── output.py               print_result() / run_with_progress() / print_error()
 │
 └── client/
-    ├── cfgpu_client.py         aiohttp HTTP 客户端（最底层）；CFGPU_DRY_RUN=1 时记录请求日志不发送
-    └── db.py                   SQLite CRUD（insert/update/get/list）
+    ├── cfgpu_client.py         aiohttp HTTP 客户端（最底层）；token 逐请求注入；CFGPU_DRY_RUN=1 时记录请求日志不发送
+    ├── repository.py           TaskRepository 接口 + SqliteTaskRepository + create_task_repository() 工厂
+    ├── postgres_repo.py        PostgresTaskRepository（asyncpg 连接池，[postgres] 可选依赖）
+    └── db.py                   SQLite CRUD（insert/update/get/list）+ open_db(path)
 ```
+
+> 项目根另有 `config.example.yaml`（配置模板，运行时 `config.yaml` 被 gitignore）。streamable-http 多租户/扩展设计详见 `docs/streamable/http-mcp-servers.md`。
 
 ---
 

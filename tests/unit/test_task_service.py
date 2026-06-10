@@ -18,6 +18,15 @@ async def _db_with_succeeded_task(adapter_id: str) -> aiosqlite.Connection:
     return db
 
 
+async def _db_with_pending_task(adapter_id: str) -> aiosqlite.Connection:
+    db = await aiosqlite.connect(":memory:")
+    db.row_factory = aiosqlite.Row
+    await db.execute(_CREATE_TABLE)
+    await db.commit()
+    await db_ops.insert_task(db, "task-1", adapter_id, "pending", {"prompt": "x"})
+    return db
+
+
 def _adapter(is_async: bool):
     adapter = MagicMock()
     adapter.adapter_id = "m"
@@ -73,4 +82,29 @@ async def test_get_status_async_model_repolls():
     # Flattened to match generate_*: urls live at the top level, not under "result"
     assert result["urls"] == ["https://cdn/v.mp4"]
     assert "result" not in result
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_repolls_pending_async_task():
+    """Client-driven polling: a still-pending async task gets one live upstream
+    poll on each get_status, so a wait=False client can drive it to completion."""
+    db = await _db_with_pending_task("wan-2-0")
+    client = MagicMock()
+    client.get = AsyncMock(return_value={"status": "succeeded", "output": {}})
+    adapter = _adapter(is_async=True)
+    from datetime import UTC, datetime, timedelta
+
+    from cfgpu_mcp.tool_registry import NormalizedResult
+    adapter.extract_status.return_value = "succeeded"
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/v.mp4"],
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        task_id="task-1", model_used="wan-video", seed=None, cost_tokens=None,
+    )
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+    client.get.assert_awaited_once()         # advanced via one upstream poll
+    assert result["urls"] == ["https://cdn/v.mp4"]
     await db.close()
