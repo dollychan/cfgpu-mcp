@@ -25,6 +25,7 @@ export CFGPU_API_TOKEN=sk-...
 | `CFGPU_DB_PATH` | SQLite 路径，默认 `~/.cfgpu/tasks.db`。多个 agent 同时通过 stdio 启动 MCP server 时共享同一文件（WAL 模式保证并发安全）；如需进程间完全隔离，为每个 agent 设置不同路径 |
 | `CFGPU_LOG_LEVEL` | 日志级别（`DEBUG` / `INFO` / `WARNING`），默认 `WARNING` |
 | `CFGPU_DRY_RUN` | 设为任意非空值时，每次 POST 请求前在 INFO 日志中打印完整 URL 和 payload，然后照常发送 |
+| `CFGPU_LOG_RESPONSES` | 设为任意非空值时，每次 HTTP 响应（POST 及轮询 GET）的完整响应体以缩进 JSON 在 INFO 日志中打印，便于核对 adapter / card.md 与真实 API 是否一致。未设置时该响应仍在 DEBUG 级别记录 |
 
 ---
 
@@ -224,11 +225,15 @@ asyncio.run(main())
 from cfgpu_mcp.service import task as task_svc
 
 async def poll():
-    # 查询状态
+    # 查询状态：未完成时返回 {task_id, status[, error]} 信封；
+    # 一旦成功，返回与 generate_* 完全一致的扁平结果（顶层 urls/expires_at/...）
     status = await task_svc.get_status("task-abc123")
-    print(status["status"])   # 'pending' | 'succeeded' | 'failed'
+    if "urls" in status:
+        print(status["urls"])             # 已成功
+    else:
+        print(status["status"])           # 'pending' | 'running' | 'failed'
 
-    # 等待完成（内置指数退避轮询）
+    # 等待完成（内置指数退避轮询）→ 成功时直接是扁平结果，结构同 generate_*
     result = await task_svc.wait_for_task("task-abc123", timeout=300)
     print(result["urls"])
 ```
@@ -520,18 +525,21 @@ done
 | `urls` | `list[str]` | ✓ | 生成的资源 URL 列表 |
 | `expires_at` | `str \| null` | ✓ | URL 过期时间（ISO 8601），通常 24 小时后失效 |
 | `task_id` | `str \| null` | | 任务 ID；同步模型为 `null` |
-| `model_used` | `str \| null` | | API 返回的实际模型标识符 |
+| `model_used` | `str \| null` | | 实际使用的模型标识符。优先取 API 返回的 `model` 字段；若 API 未回传，则兜底为所选 adapter 的 `cfgpu_model_id`。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
 | `cost_tokens` | `int \| null` | | 部分模型返回的消耗 token 数 |
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
+
+> **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`task_status`、`task_wait` 这四个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。四个工具成功时都返回同一套扁平结构（顶层 `urls`），无 URL 的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。
 
 ### 等待完成（`wait=True`）
 
 ```json
 {
   "urls": ["https://cdn.cfgpu.com/..."],
-  "expires_at": "2026-05-13T10:00:00Z"
+  "expires_at": "2026-05-13T10:00:00Z",
+  "artifact": true
 }
 ```
 
@@ -555,6 +563,20 @@ done
   "task_id": "task-abc123",
   "status": "pending"
 }
+```
+
+### 异步任务查询（`task_status` / `task_wait`）
+
+与 `generate_*` 保持一致：**任务成功后返回上方的扁平结果**（顶层 `urls` / `expires_at` / 元数据，外加 `artifact: true`），不再嵌套在 `result` 里。任务尚未完成时返回信封：
+
+```json
+{ "task_id": "task-abc123", "status": "running" }
+```
+
+失败时信封带 `error`（`task_wait` 失败则抛出 / 返回 error dict）：
+
+```json
+{ "task_id": "task-abc123", "status": "failed", "error": "..." }
 ```
 
 ### 错误

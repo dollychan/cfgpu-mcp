@@ -42,3 +42,5 @@ htmlcov/
 # Task database (local runtime data)
 ~/.cfgpu/
 cfgpu
+result_structure.json
+bugs-todo.md

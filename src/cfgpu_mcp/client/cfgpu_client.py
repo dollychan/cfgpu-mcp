@@ -89,7 +89,15 @@ class CFGPUClient:
 
                 if not resp.ok or (isinstance(body.get("error"), dict) and body["error"]):
                     raise CFGPUError.from_http_response(resp.status, body)
-                logger.debug("CFGPU response [%s %s]: %s", method, url, _json.dumps(body, ensure_ascii=False))
+                # Full response logging — DEBUG by default; INFO (pretty-printed)
+                # when CFGPU_LOG_RESPONSES is set, to verify adapter / card.md.
+                if os.getenv("CFGPU_LOG_RESPONSES"):
+                    logger.info(
+                        "CFGPU response [%s %s]:\n%s",
+                        method, url, _json.dumps(body, ensure_ascii=False, indent=2),
+                    )
+                else:
+                    logger.debug("CFGPU response [%s %s]: %s", method, url, _json.dumps(body, ensure_ascii=False))
                 return body
         except CFGPUError:
             raise

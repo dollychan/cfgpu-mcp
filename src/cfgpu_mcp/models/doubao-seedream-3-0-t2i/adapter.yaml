@@ -1,0 +1,12 @@
+extends: doubao-seedream-5-0-lite
+card_base: ~
+
+adapter_id: doubao-seedream-3-0-t2i
+display_name: "Doubao-Seedream-3.0-t2i"
+cfgpu_model_id: doubao-seedream-3-0-t2i-250415
+
+capabilities:
+  - text_to_image
+
+cost_tier: 2
+speed_tier: 3

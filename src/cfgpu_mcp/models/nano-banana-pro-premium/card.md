@@ -1,20 +1,21 @@
-# Nano Banana Pro
+# Nano Banana Pro绘画模型-premium
 
 ## 基本信息
 
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | image |
-| CFGPU 模型 ID | `nano-pro` |
-| 成本档位 | 3/5 |
+| CFGPU 模型 ID | `nano-pro-premium` |
+| 能力标签 | text_to_image, image_to_image |
+| 成本档位 | 4/5 |
 | 速度档位 | 3/5 |
 
 ## 价格
 
 | 分辨率范围 | 单价 |
 |-----------|------|
-| (0, 2K] | 0.21 元 / 张 |
-| (2K, 无限] | 0.315 元 / 张 |
+| (0, 2K] | 0.525 元 / 张 |
+| (2K, 无限] | 0.785 元 / 张 |
 
 ## 能力
 
@@ -26,25 +27,31 @@
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `prompt` | string | 必填 | 图片描述 |
-| `model` | string | - | 使用 `nano-banana-pro` |
-| `resolution` | string | `2K` | 图片分辨率：1K（默认）、2K、4K（映射为 image_size） |
+| `model` | string | - | 使用 `nano-pro-premium` |
+| `resolution` | string | `2K` | 图片分辨率：1K、2K、4K |
 | `aspect_ratio` | string | `1:1` | 1:1、3:4、4:3、9:16、16:9、21:9 |
 | `reference_images` | list[url] | 可选 | 参考图 URL 数组 |
 | `model_specific` | dict | 可选 | 透传到 API 的额外参数 |
 
 ## 使用示例
 
-**文生图**
-```json
-{
-  "prompt": "一只可爱的猫咪，写实风格",
-  "model": "nano-banana-pro"
-}
+**图片创建**
+```bash
+curl -X POST "https://www.cfgpu.com/userapi/v1/images/generations" \
+  -H "Authorization: Bearer <API-TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "prompt": "一只可爱的猫咪",
+  "model": "nano-pro-premium"
+}'
 ```
 
-## 响应结构
-
-与 `gpt-image-2` 一致，详见 [gpt-image-2/card.md](../gpt-image-2/card.md)。
+**图片查询**
+```bash
+curl --location 'https://www.cfgpu.com/userapi/v1/images/tasks/<TASK_ID>' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer <API_TOKEN>'
+```
 
 ## 约束与限制
 

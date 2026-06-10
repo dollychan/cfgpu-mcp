@@ -343,6 +343,14 @@ FastMCP 捕获异常后设置 `isError: true`，但 MCP 客户端是否将其内
 
 `tool_error_dict(e)` 定义在 `errors.py`，`tools/` 层和 `dispatcher.py` 均通过 import 共用它。
 
+### 工具结果的 artifact 标记
+
+MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在结果顶层追加 `"artifact": True`，与 error dict 的 `"error": True` 顶层布尔标记对称，供 MCP 客户端快速判断"本次结果含可渲染产物"。
+
+`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且有 URL 时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成 / 失败时返回 `{task_id, status[, error]}` 信封（对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。
+
+`tool_registry.annotate_artifact(result)` 是单一实现：当 `result` 含非空 `urls`（顶层；并保留对嵌套 `result.urls` 的兼容判断作兜底）时打标记；无 URL 的结果（`wait=False` 的 pending、轮询中的 running、error dict）原样返回。`tools/generate.py`、`tools/tasks.py` 在各工具 `return` 处包一层调用。该标记只在 MCP 工具层加，service / dispatcher / CLI 的原始返回不受影响。
+
 ---
 
 ## 8. 文件结构速查
@@ -484,11 +492,13 @@ class MyModelAdapter(ModelAdapter):
             urls=[resp["result"]["url"]],
             expires_at=None,
             task_id=resp.get("id"),
-            model_used=resp.get("model"),
+            model_used=resp.get("model"),  # 可为 None；见下方兜底说明
             seed=None,
             cost_tokens=None,
         )
 ```
+
+> **`model_used` 兜底**：`model_used` 取自 API 响应里的 `resp.get("model")`，但 CFGPU 并不保证回传该字段（异步视频的轮询响应通常没有）。因此 `TaskManager` 在 `create()`（同步）和 `poll()`（异步）中，于 `parse_response()` 之后统一兜底：`if not result.model_used: result.model_used = adapter.cfgpu_model_id`。这对 `model="auto"` 尤为关键——调用方唯一能得知 router 实际选中哪个模型的渠道就是 `model_used`，否则它会是 null。
 
 3. 在 `adapters/__init__.py` 中导入（触发注册）：
 
@@ -574,6 +584,22 @@ CFGPU_DRY_RUN=1 CFGPU_LOG_LEVEL=INFO cfgpu generate image "test"
 #   "model": "seedream-v3",
 #   "prompt": "test",
 #   ...
+# }
+```
+
+### 记录完整 API 响应（验证 adapter / card.md）
+
+```bash
+# 设置 CFGPU_LOG_RESPONSES=1，每次 HTTP 响应（POST 和轮询 GET）的完整响应体
+# 都会以缩进 JSON 在 INFO 日志中打印，便于核对 adapter.parse_response 的取值路径
+# 和 card.md 里描述的响应结构是否与真实 API 一致。配合 CFGPU_LOG_LEVEL=INFO 查看。
+# （未设置该变量时，完整响应仍在 DEBUG 级别记录。）
+CFGPU_LOG_RESPONSES=1 CFGPU_LOG_LEVEL=INFO cfgpu generate image "test"
+# stderr 输出示例：
+# INFO cfgpu_mcp.client.cfgpu_client - CFGPU response [POST https://.../v1/images/generations]:
+# {
+#   "data": [{"url": "https://cdn.cfgpu.com/img-abc.png"}],
+#   "usage": {"total_tokens": 100}
 # }
 ```
 

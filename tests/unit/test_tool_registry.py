@@ -117,3 +117,35 @@ def test_image_n_rejects_out_of_range():
 def test_image_schema_exposes_n():
     schema = next(t for t in get_anthropic_tools() if t["name"] == "generate_image")
     assert "n" in schema["input_schema"]["properties"]
+
+
+def test_annotate_artifact_flags_top_level_urls():
+    from cfgpu_mcp.tool_registry import annotate_artifact
+    out = annotate_artifact({"urls": ["https://x"], "expires_at": None})
+    assert out["artifact"] is True
+
+
+def test_annotate_artifact_flags_nested_task_result():
+    from cfgpu_mcp.tool_registry import annotate_artifact
+    out = annotate_artifact(
+        {"task_id": "t", "status": "succeeded", "result": {"urls": ["https://y"]}, "error": None}
+    )
+    assert out["artifact"] is True
+
+
+def test_annotate_artifact_skips_results_without_urls():
+    from cfgpu_mcp.tool_registry import annotate_artifact
+    # empty urls, pending no-wait, running task, and error dicts get no flag
+    for d in (
+        {"urls": [], "expires_at": None},
+        {"task_id": "t", "status": "pending"},
+        {"task_id": "t", "status": "running", "result": None, "error": None},
+        {"error": True, "message": "oops"},
+    ):
+        assert "artifact" not in annotate_artifact(d)
+
+
+def test_annotate_artifact_passes_through_non_dict():
+    from cfgpu_mcp.tool_registry import annotate_artifact
+    assert annotate_artifact("not a dict") == "not a dict"
+    assert annotate_artifact(None) is None

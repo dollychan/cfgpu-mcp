@@ -178,6 +178,27 @@ class NormalizedResult:
         return base
 
 
+# ── Artifact flagging ────────────────────────────────────────────────────────
+
+def annotate_artifact(result: Any) -> Any:
+    """Stamp ``"artifact": True`` on a tool result that carries generated media.
+
+    A result is considered to hold an artifact when it contains a non-empty
+    ``urls`` list — either at the top level (generate_* results) or nested under
+    ``result`` (task_status / task_wait results). Error dicts and pending/no-wait
+    results (which have no urls yet) are left untouched.
+    """
+    if not isinstance(result, dict):
+        return result
+    if result.get("urls"):
+        result["artifact"] = True
+    else:
+        nested = result.get("result")
+        if isinstance(nested, dict) and nested.get("urls"):
+            result["artifact"] = True
+    return result
+
+
 # ── Tool Registry ────────────────────────────────────────────────────────────
 
 _REGISTRY: list[tuple[str, type[BaseModel]]] = [

@@ -68,5 +68,7 @@ async def test_get_status_async_model_repolls():
     with p_db, p_client, p_reg:
         result = await task_service.get_status("task-1")
     client.get.assert_awaited_once()
-    assert result["result"]["urls"] == ["https://cdn/v.mp4"]
+    # Flattened to match generate_*: urls live at the top level, not under "result"
+    assert result["urls"] == ["https://cdn/v.mp4"]
+    assert "result" not in result
     await db.close()

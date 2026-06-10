@@ -73,6 +73,8 @@ class TaskManager:
             # Synchronous model: POST → parse response immediately
             resp = await self._client.post(adapter.endpoint, payload)
             result: NormalizedResult = adapter.parse_response(resp)
+            if not result.model_used:
+                result.model_used = adapter.cfgpu_model_id
             await db_ops.insert_task(self._db, task_id, adapter.adapter_id, "succeeded", payload)
             await db_ops.update_task(self._db, task_id, "succeeded", result=result.to_dict(return_metadata=True))
             row = await db_ops.get_task(self._db, task_id)
@@ -111,6 +113,8 @@ class TaskManager:
 
         if status == "succeeded":
             result: NormalizedResult = adapter.parse_response(resp)
+            if not result.model_used:
+                result.model_used = adapter.cfgpu_model_id
             result_dict = result.to_dict(return_metadata=True)
         elif status == "failed":
             error_msg = resp.get("error", {}).get("message") or "Task failed"

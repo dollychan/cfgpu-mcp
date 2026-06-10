@@ -23,6 +23,7 @@ async def _make_tm() -> tuple[TaskManager, aiosqlite.Connection]:
 def _sync_adapter():
     adapter = MagicMock()
     adapter.adapter_id = "doubao-seedream-5-0-lite"
+    adapter.cfgpu_model_id = "doubao-seedream-5-0-lite-api"
     adapter.is_async = False
     adapter.endpoint = "/v1/images/generations"
     adapter.build_payload.return_value = {"model": "test", "prompt": "x"}
@@ -42,6 +43,7 @@ def _sync_adapter():
 def _async_adapter(task_id: str = "cfgpu-task-1"):
     adapter = MagicMock()
     adapter.adapter_id = "wan-2-0"
+    adapter.cfgpu_model_id = "wan-video"
     adapter.is_async = True
     adapter.endpoint = "/v1/video/tasks"
     adapter.poll_endpoint = "/v1/video/tasks/{task_id}"
@@ -64,6 +66,57 @@ async def test_sync_model_create_returns_succeeded():
     task = await tm.create(adapter, req)
     assert task.status == "succeeded"
     assert task.result is not None
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_sync_create_falls_back_to_cfgpu_model_id():
+    """When the API response omits `model`, model_used falls back to the
+    adapter's cfgpu_model_id — critical for model='auto' where the caller has
+    no other way to learn which model ran."""
+    from cfgpu_mcp.tool_registry import NormalizedResult
+    from datetime import datetime, UTC, timedelta
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/img.jpg"],
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        task_id=None,
+        model_used=None,  # API didn't echo back "model"
+        seed=None,
+        cost_tokens=10,
+    )
+    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    req = GenerateImageInput(prompt="x")
+    task = await tm.create(adapter, req)
+    assert task.result["model_used"] == "doubao-seedream-5-0-lite-api"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_falls_back_to_cfgpu_model_id():
+    from cfgpu_mcp.tool_registry import NormalizedResult
+    from datetime import datetime, UTC, timedelta
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    req = GenerateVideoInput(prompt="x")
+    task = await tm.create(adapter, req)
+
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/v.mp4"],
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        task_id="task-abc",
+        model_used=None,  # poll response carries no "model" field
+        seed=None,
+        cost_tokens=None,
+    )
+    tm._client.get = AsyncMock(return_value={
+        "id": "task-abc", "status": "completed",
+        "content": {"videoUrl": "https://cdn/v.mp4"},
+    })
+    task = await tm.poll(task, adapter)
+    assert task.result["model_used"] == "wan-video"
     await db.close()
 
 

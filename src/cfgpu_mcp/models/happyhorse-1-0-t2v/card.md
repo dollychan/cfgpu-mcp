@@ -37,7 +37,7 @@
 | `resolution` | string | `1080P` | 分辨率：`720P` 或 `1080P`，均可经 unified schema `resolution`（`720p` / `1080p`）传入，adapter 自动大写 |
 | `aspect_ratio` | string | `16:9` | 宽高比，见下方表格；`adaptive` 将被忽略，使用 API 默认值 |
 | `duration_seconds` | integer | 5 | 视频时长（秒） |
-| `model_specific.watermark` | boolean | `true` | 是否添加水印 |
+| `watermark` | boolean | `true` | 是否添加水印（统一 schema 参数，直接传入） |
 | `model_specific.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |
 
 **支持的宽高比：**
@@ -54,12 +54,12 @@
 
 注意：unified schema 中的 `21:9` 和 `adaptive` 不在 HappyHorse 支持列表中。`adaptive` 会被忽略（API 默认 `16:9`）；`21:9` 会直接透传，API 可能返回参数错误。
 
-## 定价
+## 价格
 
-| 分辨率 | 价格 |
-|--------|------|
-| 720P | 0.046 元 / K tokens |
-| 1080P | 0.05 元 / K tokens |
+| 分辨率范围 | 单价 |
+|-----------|------|
+| (0, 720P] | 0.945 元 / 秒 |
+| (720P, 无限] | 1.68 元 / 秒 |
 
 ## 示例
 
@@ -172,6 +172,7 @@
 | `resolution` | `parameters.resolution` | `720p` → `720P`（uppercase） |
 | `aspect_ratio` | `parameters.ratio` | `adaptive` 时不传，API 默认 `16:9` |
 | `duration_seconds` | `parameters.duration` | 视频时长（秒） |
-| `model_specific` | `parameters.*` 或顶层 | 可传 `watermark`、`seed` 等 |
+| `watermark` | 顶层 `watermark` | 统一 schema 参数，直接映射到 payload 顶层 |
+| `model_specific` | `parameters.*` 或顶层 | 可传 `seed` 等额外参数 |
 
 **不支持的统一 Schema 字段：** `last_frame`、`reference_videos`、`reference_audios`、`with_audio`（无音频控制）。

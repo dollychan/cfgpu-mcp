@@ -1,0 +1,12 @@
+extends: happyhorse-1-0-t2v
+card_base: ~
+
+adapter_id: happyhorse-1-0-i2v
+display_name: "happyhorse-1.0-i2v"
+cfgpu_model_id: happyhorse-1.0-i2v
+
+capabilities:
+  - image_to_video
+
+cost_tier: 2
+speed_tier: 3
