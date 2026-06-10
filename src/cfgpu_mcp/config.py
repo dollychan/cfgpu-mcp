@@ -54,10 +54,20 @@ def get_registry(enabled_models: list[str] | None = None) -> AdapterRegistry:
 
 
 def get_client() -> CFGPUClient:
-    """Return module-level singleton HTTP client."""
+    """Return module-level singleton HTTP client.
+
+    Shared connection pool, no baked-in token — the token is resolved per
+    request from the ContextVar (see cfgpu_mcp.context). base_url/timeouts come
+    from settings (config.yaml); the token stays out of config entirely.
+    """
     global _client
     if _client is None:
-        _client = CFGPUClient()
+        s = get_settings()
+        _client = CFGPUClient(
+            base_url=s.base_url,
+            http_timeout=s.http_timeout,
+            connect_timeout=s.connect_timeout,
+        )
     return _client
 
 

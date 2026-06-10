@@ -36,20 +36,16 @@ class CFGPUClient:
         self,
         api_token: str | None = None,
         base_url: str | None = None,
+        http_timeout: float | None = None,
+        connect_timeout: float | None = None,
     ) -> None:
-        token = api_token or os.environ.get("CFGPU_API_TOKEN")
-        if not token:
-            from cfgpu_mcp.errors import CFGPUError
-            raise CFGPUError(
-                error_type="auth",
-                user_message="CFGPU_API_TOKEN 未设置，请在环境变量中配置 API Token。",
-                original={},
-            )
-        self._token = token
+        # No raise here: in HTTP multi-tenant mode the token arrives per request
+        # (ContextVar). ``api_token`` is only a fallback (stdio / direct use).
+        self._token = api_token or os.environ.get("CFGPU_API_TOKEN")
         self._base_url = (base_url or os.getenv("CFGPU_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
         self._timeout = aiohttp.ClientTimeout(
-            total=_env_float("CFGPU_HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT),
-            connect=_env_float("CFGPU_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
+            total=http_timeout if http_timeout else _env_float("CFGPU_HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT),
+            connect=connect_timeout if connect_timeout else _env_float("CFGPU_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
         )
         self._session: aiohttp.ClientSession | None = None
 
@@ -57,12 +53,26 @@ class CFGPUClient:
     def base_url(self) -> str:
         return self._base_url
 
+    def _resolve_token(self) -> str:
+        """Token precedence: request ContextVar > constructor/env fallback.
+
+        The shared session carries no auth header, so the token is injected per
+        request — one connection pool serves every tenant.
+        """
+        from cfgpu_mcp.context import get_request_token
+
+        token = get_request_token() or self._token
+        if not token:
+            raise CFGPUError(
+                error_type="auth",
+                user_message="缺少 CFGPU API Token：请在请求头携带 Authorization，或设置 CFGPU_API_TOKEN。",
+                original={},
+            )
+        return token
+
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession(
-                headers={"Authorization": f"Bearer {self._token}"},
-                timeout=self._timeout,
-            )
+            self._session = aiohttp.ClientSession(timeout=self._timeout)
         return self._session
 
     async def post(self, path: str, json: dict) -> dict:
@@ -75,9 +85,10 @@ class CFGPUClient:
         url = f"{self._base_url}/{path.lstrip('/')}"
         if method == "POST" and os.getenv("CFGPU_DRY_RUN"):
             logger.info("DRY-RUN POST %s\n%s", url, _json.dumps(kwargs.get("json", {}), ensure_ascii=False, indent=2))
+        headers = {"Authorization": f"Bearer {self._resolve_token()}"}
         session = await self._get_session()
         try:
-            async with session.request(method, url, **kwargs) as resp:
+            async with session.request(method, url, headers=headers, **kwargs) as resp:
                 body: dict = {}
                 try:
                     body = await resp.json(content_type=None)
