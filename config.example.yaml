@@ -1,0 +1,27 @@
+# cfgpu-mcp configuration template.
+#
+# Copy to `config.yaml` and edit. The runtime `config.yaml` is gitignored.
+# The ONLY secret is CFGPU_API_TOKEN — keep it in the environment, not here.
+#
+# Precedence: environment override > config.yaml > built-in defaults.
+# Point at this file with the CFGPU_CONFIG env var, or place config.yaml in CWD.
+
+transport: stdio              # stdio | streamable-http
+
+http:                          # only used when transport=streamable-http
+  host: 0.0.0.0
+  port: 8080
+  stateless: true              # stateless mode → horizontally scalable behind a LB
+
+cfgpu_api:
+  base_url: https://www.cfgpu.com/userapi/v1
+  http_timeout: 120            # per-request total timeout (seconds)
+  connect_timeout: 10
+
+task_db:
+  url: sqlite:///~/.cfgpu/tasks.db
+  # url: postgresql://user:pass@host:5432/cfgpu   # multi-instance horizontal scaling
+
+enabled_models:                # whitelist override; omit / null = load all models
+  # - wan-2-0-fast
+  # - doubao-seedream-5-0-lite

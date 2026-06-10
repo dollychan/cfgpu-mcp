@@ -2,6 +2,9 @@
 .env
 *.env
 
+# Runtime config (copy from config.example.yaml; may hold deployment-specific URLs)
+config.yaml
+
 # User-specific ignore targets
 docs/
 test-cfgpu.sh

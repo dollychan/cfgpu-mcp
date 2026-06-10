@@ -20,7 +20,7 @@ async def generate_image(
     return_metadata: bool = True,
     model_specific: dict | None = None,
 ) -> dict[str, Any]:
-    from cfgpu_mcp.config import get_client, get_db, get_registry
+    from cfgpu_mcp.config import get_client, get_task_repository, get_registry
     from cfgpu_mcp.router import ModelRouter
     from cfgpu_mcp.task_manager import TaskManager
 
@@ -44,8 +44,8 @@ async def generate_image(
     adapter = router.resolve(req)
 
     client = get_client()
-    db = await get_db()
-    tm = TaskManager(client, db)
+    repo = await get_task_repository()
+    tm = TaskManager(client, repo)
 
     try:
         task = await tm.create(adapter, req)

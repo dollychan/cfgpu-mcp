@@ -5,10 +5,8 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
-import aiosqlite
-
-from cfgpu_mcp.client import db as db_ops
 from cfgpu_mcp.client.cfgpu_client import CFGPUClient
+from cfgpu_mcp.client.repository import TaskRepository
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import NormalizedResult
 
@@ -55,9 +53,9 @@ class Task:
 
 
 class TaskManager:
-    def __init__(self, client: CFGPUClient, db: aiosqlite.Connection) -> None:
+    def __init__(self, client: CFGPUClient, repo: TaskRepository) -> None:
         self._client = client
-        self._db = db
+        self._repo = repo
 
     # ── Create ───────────────────────────────────────────────────────────────
 
@@ -75,9 +73,9 @@ class TaskManager:
             result: NormalizedResult = adapter.parse_response(resp)
             if not result.model_used:
                 result.model_used = adapter.cfgpu_model_id
-            await db_ops.insert_task(self._db, task_id, adapter.adapter_id, "succeeded", payload)
-            await db_ops.update_task(self._db, task_id, "succeeded", result=result.to_dict(return_metadata=True))
-            row = await db_ops.get_task(self._db, task_id)
+            await self._repo.insert_task(task_id, adapter.adapter_id, "succeeded", payload)
+            await self._repo.update_task(task_id, "succeeded", result=result.to_dict(return_metadata=True))
+            row = await self._repo.get_task(task_id)
             return Task(row)  # type: ignore[arg-type]
 
         # Async model: POST → get task_id from CFGPU → write pending
@@ -94,8 +92,8 @@ class TaskManager:
                 ),
                 original={"adapter_id": adapter.adapter_id, "response": resp},
             )
-        await db_ops.insert_task(self._db, cfgpu_task_id, adapter.adapter_id, "pending", payload)
-        row = await db_ops.get_task(self._db, cfgpu_task_id)
+        await self._repo.insert_task(cfgpu_task_id, adapter.adapter_id, "pending", payload)
+        row = await self._repo.get_task(cfgpu_task_id)
         return Task(row)  # type: ignore[arg-type]
 
     # ── Poll ─────────────────────────────────────────────────────────────────
@@ -119,8 +117,8 @@ class TaskManager:
         elif status == "failed":
             error_msg = resp.get("error", {}).get("message") or "Task failed"
 
-        await db_ops.update_task(self._db, task.id, status, result=result_dict, error=error_msg)
-        row = await db_ops.get_task(self._db, task.id)
+        await self._repo.update_task(task.id, status, result=result_dict, error=error_msg)
+        row = await self._repo.get_task(task.id)
         return Task(row)  # type: ignore[arg-type]
 
     # ── Wait ─────────────────────────────────────────────────────────────────
@@ -175,11 +173,11 @@ class TaskManager:
     # ── Query ────────────────────────────────────────────────────────────────
 
     async def status(self, task_id: str) -> Task:
-        row = await db_ops.get_task(self._db, task_id)
+        row = await self._repo.get_task(task_id)
         if row is None:
             raise KeyError(f"Task {task_id!r} not found")
         return Task(row)
 
     async def list_running(self) -> list[Task]:
-        rows = await db_ops.list_running_tasks(self._db)
+        rows = await self._repo.list_running_tasks()
         return [Task(r) for r in rows]

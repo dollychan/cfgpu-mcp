@@ -8,16 +8,14 @@ from cfgpu_mcp.tool_registry import GenerateVideoInput, GenerateImageInput
 
 
 async def _make_tm() -> tuple[TaskManager, aiosqlite.Connection]:
-    from cfgpu_mcp.client.db import get_db
-    import os
-    os.environ.setdefault("CFGPU_DB_PATH", ":memory:")
     db = await aiosqlite.connect(":memory:")
     db.row_factory = aiosqlite.Row
     from cfgpu_mcp.client.db import _CREATE_TABLE
     await db.execute(_CREATE_TABLE)
     await db.commit()
     client = AsyncMock()
-    return TaskManager(client, db), db
+    from cfgpu_mcp.client.repository import SqliteTaskRepository
+    return TaskManager(client, SqliteTaskRepository(db)), db
 
 
 def _sync_adapter():

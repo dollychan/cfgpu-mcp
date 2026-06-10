@@ -25,18 +25,30 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 def _db_path() -> Path:
     raw = os.getenv("CFGPU_DB_PATH", _DEFAULT_DB_PATH)
+    return _resolve_path(raw)
+
+
+def _resolve_path(raw: str) -> Path:
+    """Expand ``~`` and ensure the parent dir exists (``:memory:`` passes through)."""
+    if raw == ":memory:":
+        return Path(raw)
     p = Path(raw).expanduser()
     p.parent.mkdir(parents=True, exist_ok=True)
     return p
 
 
-async def get_db() -> aiosqlite.Connection:
-    db = await aiosqlite.connect(_db_path())
+async def open_db(path: str | Path) -> aiosqlite.Connection:
+    """Open an aiosqlite connection at ``path``, WAL-enabled, with the schema applied."""
+    db = await aiosqlite.connect(str(path))
     db.row_factory = aiosqlite.Row
     await db.execute("PRAGMA journal_mode=WAL")
     await db.execute(_CREATE_TABLE)
     await db.commit()
     return db
+
+
+async def get_db() -> aiosqlite.Connection:
+    return await open_db(_db_path())
 
 
 async def insert_task(

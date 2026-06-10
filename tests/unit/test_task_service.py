@@ -29,8 +29,10 @@ def _adapter(is_async: bool):
 def _patch_config(db, client, adapter):
     registry = MagicMock()
     registry.get.return_value = adapter
+    from cfgpu_mcp.client.repository import SqliteTaskRepository
+    repo = SqliteTaskRepository(db)
     return (
-        patch("cfgpu_mcp.config.get_db", AsyncMock(return_value=db)),
+        patch("cfgpu_mcp.config.get_task_repository", AsyncMock(return_value=repo)),
         patch("cfgpu_mcp.config.get_client", MagicMock(return_value=client)),
         patch("cfgpu_mcp.config.get_registry", MagicMock(return_value=registry)),
     )

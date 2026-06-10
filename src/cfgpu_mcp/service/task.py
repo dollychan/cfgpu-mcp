@@ -24,12 +24,12 @@ def _present(task: Any) -> dict[str, Any]:
 
 
 async def get_status(task_id: str) -> dict[str, Any]:
-    from cfgpu_mcp.config import get_client, get_db, get_registry
+    from cfgpu_mcp.config import get_client, get_task_repository, get_registry
     from cfgpu_mcp.task_manager import TaskManager
 
-    db = await get_db()
+    repo = await get_task_repository()
     client = get_client()
-    tm = TaskManager(client, db)
+    tm = TaskManager(client, repo)
     try:
         task = await tm.status(task_id)
     except KeyError as e:
@@ -58,14 +58,14 @@ async def wait_for_task(
     task_id: str,
     timeout: int | None = None,
 ) -> dict[str, Any]:
-    from cfgpu_mcp.config import get_client, get_db, get_registry
+    from cfgpu_mcp.config import get_client, get_task_repository, get_registry
     from cfgpu_mcp.errors import CFGPUError
     from cfgpu_mcp.task_manager import TaskManager
 
-    db = await get_db()
+    repo = await get_task_repository()
     client = get_client()
     registry = get_registry()
-    tm = TaskManager(client, db)
+    tm = TaskManager(client, repo)
 
     try:
         task = await tm.status(task_id)
