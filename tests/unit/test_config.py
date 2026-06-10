@@ -6,6 +6,11 @@ from cfgpu_mcp.config import load_registry
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
 
 
+def _expected_model_count() -> int:
+    """Derive from the model dirs so the count never goes stale when models grow."""
+    return sum(1 for p in MODELS_DIR.iterdir() if (p / "adapter.yaml").exists())
+
+
 def _load(enabled_models=None, env_value=None) -> int:
     original = os.environ.get("CFGPU_ENABLED_MODELS")
     try:
@@ -42,9 +47,9 @@ def test_code_arg_overrides_env_var():
 
 def test_no_config_loads_all_models():
     count = _load()
-    assert count == 10
+    assert count == _expected_model_count()
 
 
 def test_empty_env_var_loads_all_models():
     count = _load(env_value="")
-    assert count == 10
+    assert count == _expected_model_count()

@@ -7,6 +7,12 @@ from cfgpu_mcp.adapters.seedream import SeedreamAdapter
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
 
 
+def _expected_model_count() -> int:
+    """Every model dir (one with an adapter.yaml) should register — derive the
+    count from the directory so it never goes stale when models are added."""
+    return sum(1 for p in MODELS_DIR.iterdir() if (p / "adapter.yaml").exists())
+
+
 def _load(enabled_models=None) -> AdapterRegistry:
     import cfgpu_mcp.adapters  # trigger registration
     registry = AdapterRegistry(model_dir=MODELS_DIR, enabled_models=enabled_models)
@@ -16,7 +22,7 @@ def _load(enabled_models=None) -> AdapterRegistry:
 
 def test_all_models_registered():
     registry = _load()
-    assert len(registry) == 10
+    assert len(registry) == _expected_model_count()
 
 
 def test_lookup_by_adapter_id():
@@ -53,7 +59,7 @@ def test_enabled_models_allowlist_by_cfgpu_model_id():
 
 def test_enabled_models_none_registers_all():
     registry = _load(enabled_models=None)
-    assert len(registry) == 10
+    assert len(registry) == _expected_model_count()
 
 
 def test_wan_fast_uses_wan_video_adapter_class():
