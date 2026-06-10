@@ -14,6 +14,8 @@ import json
 import time
 from typing import TYPE_CHECKING
 
+# Single source for the backend-agnostic row contract — must stay identical to SQLite.
+from cfgpu_mcp.client.db import _row_to_dict
 from cfgpu_mcp.client.repository import TaskRepository
 
 if TYPE_CHECKING:
@@ -34,13 +36,6 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 # Drives list_running_tasks(); also speeds a future background reconciler.
 _CREATE_INDEX = "CREATE INDEX IF NOT EXISTS idx_tasks_status_created ON tasks(status, created_at)"
-
-
-def _row_to_dict(row: "asyncpg.Record") -> dict:
-    d = dict(row)
-    d["payload"] = json.loads(d["payload"]) if d["payload"] else {}
-    d["result"] = json.loads(d["result"]) if d["result"] else None
-    return d
 
 
 class PostgresTaskRepository(TaskRepository):

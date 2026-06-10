@@ -49,8 +49,8 @@ class SqliteTaskRepository(TaskRepository):
 
     @classmethod
     async def connect(cls, url: str) -> "SqliteTaskRepository":
-        conn = await db_ops.open_db(db_ops._resolve_path(_sqlite_path(url)))
-        return cls(conn)
+        # open_db normalizes the path (~ expansion, parent mkdir, :memory: passthrough).
+        return cls(await db_ops.open_db(_sqlite_path(url)))
 
     async def insert_task(self, task_id: str, adapter_id: str, status: str, payload: dict) -> None:
         await db_ops.insert_task(self._db, task_id, adapter_id, status, payload)
@@ -75,15 +75,15 @@ def _sqlite_path(url: str) -> str:
     ``sqlite:////abs/path``         → ``/abs/path``        (absolute)
     ``sqlite:///:memory:``          → ``:memory:``
     A bare path with no scheme is returned as-is.
+
+    Stripping exactly one leading slash yields the right path for both the
+    3-slash (home-relative) and 4-slash (absolute) forms; open_db's expanduser
+    handles ``~``.
     """
     if "://" not in url:
         return url
     rest = url[len("sqlite://"):]
-    if rest.startswith("//"):      # 4-slash form → absolute, keep one leading slash
-        return rest[1:]
-    if rest.startswith("/"):       # 3-slash form → home-relative, drop the slash
-        return rest[1:]
-    return rest
+    return rest[1:] if rest.startswith("/") else rest
 
 
 async def create_task_repository(url: str, *, pool_min: int = 1, pool_max: int = 10) -> TaskRepository:

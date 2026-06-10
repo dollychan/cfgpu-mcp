@@ -52,8 +52,8 @@ def _config_path() -> Path | None:
     return default if default.exists() else None
 
 
-def _float(raw: str | None, fallback: float) -> float:
-    """Parse a positive float; fall back on missing/invalid (mirrors client._env_float)."""
+def parse_positive_float(raw: str | None, fallback: float) -> float:
+    """Parse a positive float; fall back on missing/invalid. Shared by client._env_float."""
     if not raw:
         return fallback
     try:
@@ -72,12 +72,9 @@ def load_settings() -> Settings:
         data = yaml.safe_load(path.read_text()) or {}
         s.transport = data.get("transport", s.transport)
 
-        http = data.get("http") or {}
-        s.http = HttpSettings(
-            host=http.get("host", HttpSettings.host),
-            port=http.get("port", HttpSettings.port),
-            stateless=http.get("stateless", HttpSettings.stateless),
-        )
+        for key, value in (data.get("http") or {}).items():
+            if hasattr(s.http, key):
+                setattr(s.http, key, value)
 
         api = data.get("cfgpu_api") or {}
         s.base_url = api.get("base_url", s.base_url)
@@ -95,8 +92,8 @@ def load_settings() -> Settings:
     # ── Environment overrides (backward compatibility) ────────────────────────
     s.transport = os.getenv("CFGPU_TRANSPORT", s.transport)
     s.base_url = os.getenv("CFGPU_BASE_URL", s.base_url)
-    s.http_timeout = _float(os.getenv("CFGPU_HTTP_TIMEOUT"), s.http_timeout)
-    s.connect_timeout = _float(os.getenv("CFGPU_CONNECT_TIMEOUT"), s.connect_timeout)
+    s.http_timeout = parse_positive_float(os.getenv("CFGPU_HTTP_TIMEOUT"), s.http_timeout)
+    s.connect_timeout = parse_positive_float(os.getenv("CFGPU_CONNECT_TIMEOUT"), s.connect_timeout)
 
     # task_db: explicit URL wins; else legacy CFGPU_DB_PATH → sqlite URL
     db_url = os.getenv("CFGPU_TASK_DB_URL")

@@ -8,19 +8,14 @@ import aiohttp
 
 logger = logging.getLogger(__name__)
 
+from cfgpu_mcp.context import get_request_token
 from cfgpu_mcp.errors import CFGPUError
+from cfgpu_mcp.settings import parse_positive_float
 
 
 def _env_float(name: str, default: float) -> float:
     """Read a positive float from env; fall back to default on missing/invalid."""
-    raw = os.getenv(name)
-    if not raw:
-        return default
-    try:
-        val = float(raw)
-        return val if val > 0 else default
-    except ValueError:
-        return default
+    return parse_positive_float(os.getenv(name), default)
 
 DEFAULT_BASE_URL = "https://www.cfgpu.com/userapi/v1"
 
@@ -59,8 +54,6 @@ class CFGPUClient:
         The shared session carries no auth header, so the token is injected per
         request — one connection pool serves every tenant.
         """
-        from cfgpu_mcp.context import get_request_token
-
         token = get_request_token() or self._token
         if not token:
             raise CFGPUError(

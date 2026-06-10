@@ -48,9 +48,9 @@ async def get_status(task_id: str) -> dict[str, Any]:
     # Re-poll when (a) the task is still in flight (pending/running), or
     # (b) it reads succeeded but the DB result has no URLs (stale record).
     # Sync models have no poll_endpoint, so skip them.
-    _TERMINAL = {"succeeded", "failed"}
-    needs_repoll = task.status not in _TERMINAL or (
-        task.status == "succeeded" and not (task.result or {}).get("urls")
+    # Re-poll unless the task is "failed", or "succeeded" *with* URLs in hand.
+    needs_repoll = task.status != "failed" and not (
+        task.status == "succeeded" and (task.result or {}).get("urls")
     )
     if needs_repoll:
         registry = get_registry()
