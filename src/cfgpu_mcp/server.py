@@ -18,11 +18,17 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
     closed on the same loop it was created on. Closing it from an atexit
     callback via asyncio.run() would spin up a new loop and trip
     "Event loop is closed" warnings at exit.
+
+    Only stdio (one session per process) closes here. Under streamable-http this
+    lifespan runs per session — per request in stateless mode — so the shared
+    singletons must outlive it; HTTP cleanup is done once by
+    RequestContextMiddleware on process shutdown.
     """
     try:
         yield
     finally:
-        await config.close()
+        if config.get_settings().transport == "stdio":
+            await config.close()
 
 
 mcp = FastMCP("cfgpu", lifespan=_lifespan)
@@ -56,7 +62,21 @@ def main() -> None:
     level = getattr(logging, log_level, logging.WARNING)
     logging.basicConfig(level=level, force=True)
 
-    mcp.run(transport="stdio")
+    settings = config.get_settings()
+    if settings.transport == "streamable-http":
+        import uvicorn
+
+        from cfgpu_mcp.http_app import build_http_app
+
+        app = build_http_app(mcp, settings)
+        uvicorn.run(
+            app,
+            host=settings.http.host,
+            port=settings.http.port,
+            log_level=log_level.lower(),
+        )
+    else:
+        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
