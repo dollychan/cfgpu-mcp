@@ -295,6 +295,8 @@ task 状态通过 `TaskRepository` 接口持久化（`client/repository.py`）�
 
 `task_db.url` 支持 `$VAR` / `${VAR}` 形式从环境变量读取（`settings._expand_env`），便于把带密码的 DB URL 移出 config.yaml；引用的变量未设置时启动即报错，而非把字面量 `"$DATABASE_URL"` 传给驱动。
 
+`load_settings()` 开头会调用 `_load_dotenv()`：若当前目录（或 `CFGPU_DOTENV` 指定路径）存在 `.env`，用 python-dotenv 注入环境，`override=False` 保证真实环境变量仍优先（`env > .env > config.yaml`）。python-dotenv 缺失时静默跳过，stdio 仍可零配置运行。`.env` 已在 `.gitignore` 中。
+
 两个后端返回**完全一致的行结构**（JSON 列存 text，读时 `json.loads`），上层 `Task` / `_present` 对后端无感。
 
 ```sql

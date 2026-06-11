@@ -49,6 +49,9 @@ enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
 | `CFGPU_LOG_LEVEL` | — | 日志级别（`DEBUG`/`INFO`/`WARNING`），默认 `WARNING` |
 | `CFGPU_DRY_RUN` | — | 非空时每次 POST 前在 INFO 日志打印 URL 和 payload，然后照常发送 |
 | `CFGPU_LOG_RESPONSES` | — | 非空时每次 HTTP 响应体以缩进 JSON 在 INFO 日志打印，便于核对 adapter / card.md |
+| `CFGPU_DOTENV` | — | 自定义 `.env` 路径，默认 `./.env` |
+
+> **`.env` 自动加载**：启动时若当前目录存在 `.env`（或 `CFGPU_DOTENV` 指定的文件），其中的变量会被自动注入环境——免去每次手动 `export`。已存在的真实环境变量优先，不会被 `.env` 覆盖（`env > .env > config.yaml`）。`.env` 常含密钥（`CFGPU_API_TOKEN`、`$DATABASE_URL` 指向的 DB URL），已在 `.gitignore` 中，切勿提交。
 
 ---
 

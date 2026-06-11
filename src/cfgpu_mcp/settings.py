@@ -86,8 +86,28 @@ def parse_positive_float(raw: str | None, fallback: float) -> float:
         return fallback
 
 
+def _load_dotenv() -> None:
+    """Load a local ``.env`` into the process environment, if present.
+
+    Lets secrets (CFGPU_API_TOKEN, the DB URL referenced by ``$DATABASE_URL``)
+    live in a gitignored ``.env`` instead of being exported by hand each run.
+    ``override=False`` keeps the real environment authoritative, so an explicitly
+    exported var still wins over ``.env`` — matching our precedence (env > yaml).
+    A missing python-dotenv degrades silently: ``.env`` is a convenience, not a
+    requirement, and stdio must still work zero-config.
+    """
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    path = Path(os.getenv("CFGPU_DOTENV", ".env")).expanduser()
+    if path.exists():
+        load_dotenv(path, override=False)
+
+
 def load_settings() -> Settings:
     """Build Settings from defaults < config.yaml < environment overrides."""
+    _load_dotenv()
     s = Settings()
 
     path = _config_path()

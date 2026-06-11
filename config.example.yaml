@@ -5,6 +5,10 @@
 #
 # Precedence: environment override > config.yaml > built-in defaults.
 # Point at this file with the CFGPU_CONFIG env var, or place config.yaml in CWD.
+#
+# A gitignored `.env` in CWD (or CFGPU_DOTENV path) is auto-loaded at startup,
+# so secrets like CFGPU_API_TOKEN or the DB URL behind `$DATABASE_URL` below can
+# live there instead of being exported by hand. Real env vars still take priority.
 
 transport: stdio              # stdio | streamable-http
 
