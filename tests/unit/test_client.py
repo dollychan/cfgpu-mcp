@@ -22,17 +22,11 @@ def test_default_timeout_applied():
     assert client._timeout.connect == DEFAULT_CONNECT_TIMEOUT
 
 
-def test_timeout_overridable_via_env():
-    with patch.dict(os.environ, {"CFGPU_HTTP_TIMEOUT": "5", "CFGPU_CONNECT_TIMEOUT": "2"}):
-        client = _client()
+def test_timeout_overridable_via_constructor():
+    client = CFGPUClient(api_token="t", base_url="https://api.example.com",
+                         http_timeout=5.0, connect_timeout=2.0)
     assert client._timeout.total == 5.0
     assert client._timeout.connect == 2.0
-
-
-def test_invalid_timeout_env_falls_back_to_default():
-    with patch.dict(os.environ, {"CFGPU_HTTP_TIMEOUT": "not-a-number"}):
-        client = _client()
-    assert client._timeout.total == DEFAULT_HTTP_TIMEOUT
 
 
 @pytest.mark.asyncio

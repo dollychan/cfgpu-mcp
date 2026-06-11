@@ -10,18 +10,13 @@ logger = logging.getLogger(__name__)
 
 from cfgpu_mcp.context import get_request_token
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.settings import parse_positive_float
-
-
-def _env_float(name: str, default: float) -> float:
-    """Read a positive float from env; fall back to default on missing/invalid."""
-    return parse_positive_float(os.getenv(name), default)
 
 DEFAULT_BASE_URL = "https://www.cfgpu.com/userapi/v1"
 
 # Total seconds a single request may take before aiohttp aborts it. Sync image
 # models return the generated result in the POST body, so this must be generous;
-# async POST and poll GET both complete well within it. Override via env.
+# async POST and poll GET both complete well within it. Set via config.yaml
+# (cfgpu_api.http_timeout); the server passes it through get_client().
 DEFAULT_HTTP_TIMEOUT = 120.0
 DEFAULT_CONNECT_TIMEOUT = 10.0
 
@@ -37,12 +32,12 @@ class CFGPUClient:
         # No raise here: in HTTP multi-tenant mode the token arrives per request
         # (ContextVar). ``api_token`` is only a fallback (stdio / direct use).
         self._token = api_token or os.environ.get("CFGPU_API_TOKEN")
-        self._base_url = (base_url or os.getenv("CFGPU_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
+        self._base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
         # Distinguish "not supplied" (None) from a caller-provided value. settings
         # has already validated its values as positive, so we don't re-coerce 0 here.
         self._timeout = aiohttp.ClientTimeout(
-            total=http_timeout if http_timeout is not None else _env_float("CFGPU_HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT),
-            connect=connect_timeout if connect_timeout is not None else _env_float("CFGPU_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
+            total=http_timeout if http_timeout is not None else DEFAULT_HTTP_TIMEOUT,
+            connect=connect_timeout if connect_timeout is not None else DEFAULT_CONNECT_TIMEOUT,
         )
         self._session: aiohttp.ClientSession | None = None
 
@@ -110,7 +105,7 @@ class CFGPUClient:
         except asyncio.TimeoutError as e:
             raise CFGPUError(
                 error_type="timeout",
-                user_message=f"请求超时（{self._timeout.total}s），请稍后重试或增大 CFGPU_HTTP_TIMEOUT。",
+                user_message=f"请求超时（{self._timeout.total}s），请稍后重试或在 config.yaml 增大 cfgpu_api.http_timeout。",
                 original={"url": url, "timeout": self._timeout.total},
                 retryable=True,
             ) from e

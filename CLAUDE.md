@@ -102,18 +102,20 @@ MCP tool wrappers in `tools/` re-declare parameters explicitly (FastMCP limitati
 - `tool_registry.py` — Pydantic schemas + `get_anthropic_tools()` + `NormalizedResult`
 - `adapters/base.py` — `ModelAdapter` ABC + `@register_python_adapter` decorator
 - `adapters/registry.py` — YAML loading, `extends` merge, Python class resolution
-- `config.py` — Singleton registry/client/DB; `load_registry()` respects `CFGPU_ENABLED_MODELS` env var
+- `config.py` — Singleton registry/client/DB; `load_registry()` reads `enabled_models` from config.yaml
 - `router.py` — Scores adapters for `model="auto"` requests; Chinese prompts bias toward Seedream
 - `task_manager.py` — Sync/async dispatch, exponential backoff polling, DB persistence
 - `agent/dispatcher.py` — `dispatch_tool(name, inputs)` entry point for Mode B (Anthropic SDK)
 - `agent/openai_tools.py` — `get_openai_tools()` + `openai_dispatch_tool()` for OpenAI SDK
 - `agent/langgraph_tools.py` — `get_langgraph_tools()` returning `StructuredTool` list for LangGraph
 
-### Environment variables
+### Configuration
 
-- `CFGPU_API_TOKEN` — Required. Bearer token for CFGPU API
-- `CFGPU_ENABLED_MODELS` — Comma-separated `adapter_id` or `cfgpu_model_id` list to restrict loaded models; omit to load all
-- `CFGPU_BASE_URL` — Override API base URL (default in client)
-- `CFGPU_HTTP_TIMEOUT` — Per-request total timeout in seconds (default 120)
-- `CFGPU_CONNECT_TIMEOUT` — Connection timeout in seconds (default 10)
-- `CFGPU_DB_PATH` — SQLite path for task persistence (default `~/.cfgpu/tasks.db`)
+Non-secret config lives **only** in `config.yaml` (single source — see `config.example.yaml`): `transport`, `http.*`, `cfgpu_api.*` (base_url, http_timeout, connect_timeout), `task_db.*`, `enabled_models`. There are no per-field environment overrides. `task_db.url` may reference the environment via `$VAR` / `${VAR}` (e.g. `url: $DATABASE_URL`).
+
+Environment variables (no config.yaml equivalent):
+
+- `CFGPU_API_TOKEN` — Required. Bearer token for CFGPU API (the only secret; never in config.yaml). In stdio it's the token; in streamable-http it's the fallback when a request omits `Authorization`.
+- `CFGPU_CONFIG` — Path to config.yaml (default `./config.yaml`)
+- `CFGPU_DOTENV` — Path to a `.env` auto-loaded at startup (default `./.env`)
+- `CFGPU_LOG_LEVEL` / `CFGPU_DRY_RUN` / `CFGPU_LOG_RESPONSES` — Logging/debug toggles

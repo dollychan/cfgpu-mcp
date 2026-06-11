@@ -16,7 +16,7 @@ export CFGPU_API_TOKEN=sk-...
 
 ### 配置：config.yaml
 
-除 `CFGPU_API_TOKEN` 外，其余配置集中到 **config.yaml**。从 `config.example.yaml` 复制一份；用 `CFGPU_CONFIG` 指定路径，否则取当前目录的 `config.yaml`。缺文件时全部回退默认值（stdio 零配置可用）。优先级：**环境变量 override > config.yaml > 内置默认**。
+除 `CFGPU_API_TOKEN` 外，其余配置集中到 **config.yaml**——它是这些字段的唯一来源，每项只在一处设置。从 `config.example.yaml` 复制一份；用 `CFGPU_CONFIG` 指定路径，否则取当前目录的 `config.yaml`。缺文件时全部回退默认值（stdio 零配置可用）。优先级：**config.yaml > 内置默认**。
 
 ```yaml
 transport: stdio              # stdio | streamable-http
@@ -36,20 +36,16 @@ enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
 | `CFGPU_API_TOKEN` | 唯一 secret。stdio / HTTP 未带 `Authorization` 头时的回退 token |
 | `CFGPU_CONFIG` | config.yaml 路径（否则取 `./config.yaml`） |
 
-### 其余环境变量（可选 override，正式归宿是 config.yaml）
+> `transport` / `http` / `cfgpu_api.*`（base_url、http_timeout、connect_timeout）/ `task_db.*` / `enabled_models` **只在 config.yaml 配置**，不再有对应的环境变量 override，避免多处设置。需要从环境读 DB URL 时，在 `task_db.url` 写 `$DATABASE_URL` / `${VAR}`（见上文）。
 
-| 变量 | 对应 config.yaml | 说明 |
-|------|------|------|
-| `CFGPU_ENABLED_MODELS` | `enabled_models` | 逗号分隔 `adapter_id`，白名单覆盖；缺省全量 |
-| `CFGPU_BASE_URL` | `cfgpu_api.base_url` | 覆盖 API 基础 URL |
-| `CFGPU_HTTP_TIMEOUT` | `cfgpu_api.http_timeout` | 单次请求总超时秒数，默认 `120` |
-| `CFGPU_CONNECT_TIMEOUT` | `cfgpu_api.connect_timeout` | 建立连接超时秒数，默认 `10` |
-| `CFGPU_TASK_DB_URL` / `CFGPU_DB_PATH` | `task_db.url` | task 存储 URL；旧 `CFGPU_DB_PATH` 会拼成 `sqlite:///<path>` |
-| `CFGPU_TRANSPORT` | `transport` | `stdio` / `streamable-http` |
-| `CFGPU_LOG_LEVEL` | — | 日志级别（`DEBUG`/`INFO`/`WARNING`），默认 `WARNING` |
-| `CFGPU_DRY_RUN` | — | 非空时每次 POST 前在 INFO 日志打印 URL 和 payload，然后照常发送 |
-| `CFGPU_LOG_RESPONSES` | — | 非空时每次 HTTP 响应体以缩进 JSON 在 INFO 日志打印，便于核对 adapter / card.md |
-| `CFGPU_DOTENV` | — | 自定义 `.env` 路径，默认 `./.env` |
+### 仅环境变量（无 config.yaml 对应项）
+
+| 变量 | 说明 |
+|------|------|
+| `CFGPU_LOG_LEVEL` | 日志级别（`DEBUG`/`INFO`/`WARNING`），默认 `WARNING` |
+| `CFGPU_DRY_RUN` | 非空时每次 POST 前在 INFO 日志打印 URL 和 payload，然后照常发送 |
+| `CFGPU_LOG_RESPONSES` | 非空时每次 HTTP 响应体以缩进 JSON 在 INFO 日志打印，便于核对 adapter / card.md |
+| `CFGPU_DOTENV` | 自定义 `.env` 路径，默认 `./.env` |
 
 > **`.env` 自动加载**：启动时若当前目录存在 `.env`（或 `CFGPU_DOTENV` 指定的文件），其中的变量会被自动注入环境——免去每次手动 `export`。已存在的真实环境变量优先，不会被 `.env` 覆盖（`env > .env > config.yaml`）。`.env` 常含密钥（`CFGPU_API_TOKEN`、`$DATABASE_URL` 指向的 DB URL），已在 `.gitignore` 中，切勿提交。
 
@@ -95,13 +91,12 @@ enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
 
 ### 可选：限制加载的模型
 
-```json
-{
-  "env": {
-    "CFGPU_API_TOKEN": "sk-...",
-    "CFGPU_ENABLED_MODELS": "wan-2-0-fast,doubao-seedream-5-0-lite"
-  }
-}
+在 config.yaml 的 `enabled_models` 白名单里列出要加载的 `adapter_id`（省略 / 留空 = 全量）：
+
+```yaml
+enabled_models:
+  - wan-2-0-fast
+  - doubao-seedream-5-0-lite
 ```
 
 ### 使用 MCP Inspector 调试
@@ -218,7 +213,7 @@ tools = get_anthropic_tools(tools=["generate_image", "list_models"])
 
 ### 只加载部分模型
 
-通过 `CFGPU_ENABLED_MODELS` 环境变量，或在代码中提前初始化 registry：
+在 config.yaml 的 `enabled_models` 白名单里指定，或在代码中提前初始化 registry：
 
 ```python
 from cfgpu_mcp.config import get_registry

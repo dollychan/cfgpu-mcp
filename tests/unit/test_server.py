@@ -3,6 +3,7 @@ import asyncio
 import pytest
 
 from cfgpu_mcp import server
+from cfgpu_mcp.settings import Settings
 
 
 def test_lifespan_is_wired_to_mcp():
@@ -17,7 +18,10 @@ async def test_lifespan_closes_resources_on_exit(monkeypatch):
     async def fake_close():
         closed_on.append(asyncio.get_running_loop())
 
+    # _lifespan only closes shared resources under stdio (HTTP cleans up
+    # elsewhere). Pin stdio so the ambient config.yaml's transport can't leak in.
     monkeypatch.setattr("cfgpu_mcp.config.close", fake_close)
+    monkeypatch.setattr("cfgpu_mcp.config.get_settings", lambda: Settings(transport="stdio"))
 
     async with server._lifespan(server.mcp):
         body_loop = asyncio.get_running_loop()

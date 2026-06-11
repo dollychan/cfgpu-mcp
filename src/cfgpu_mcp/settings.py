@@ -1,11 +1,12 @@
 """Central configuration for cfgpu-mcp.
 
-All non-secret configuration lives in ``config.yaml``; the only value that stays
-in the environment is the secret ``CFGPU_API_TOKEN`` (and ``CFGPU_CONFIG``, which
-points at the config file itself). Legacy environment variables remain honored as
-per-field *overrides* for backward compatibility.
+All non-secret configuration lives in ``config.yaml`` — it is the single source,
+so each field has exactly one place to be set. The only values read from the
+environment are the secret ``CFGPU_API_TOKEN`` and ``CFGPU_CONFIG`` /
+``CFGPU_DOTENV`` (which point at the config and .env files themselves). The DB
+URL can still come from the environment via the ``$VAR`` form on ``task_db.url``.
 
-Precedence:  environment override  >  config.yaml  >  built-in defaults.
+Precedence:  config.yaml  >  built-in defaults.
 
 A missing config file is fine — everything falls back to defaults so stdio works
 zero-config.
@@ -142,21 +143,8 @@ def load_settings() -> Settings:
             )
         s.enabled_models = enabled or None  # [] / null → load all
 
-    # ── Environment overrides (backward compatibility) ────────────────────────
-    s.transport = os.getenv("CFGPU_TRANSPORT", s.transport)
-    s.base_url = os.getenv("CFGPU_BASE_URL", s.base_url)
-    s.http_timeout = parse_positive_float(os.getenv("CFGPU_HTTP_TIMEOUT"), s.http_timeout)
-    s.connect_timeout = parse_positive_float(os.getenv("CFGPU_CONNECT_TIMEOUT"), s.connect_timeout)
-
-    # task_db: explicit URL wins; else legacy CFGPU_DB_PATH → sqlite URL
-    db_url = os.getenv("CFGPU_TASK_DB_URL")
-    if db_url:
-        s.task_db_url = db_url
-    elif os.getenv("CFGPU_DB_PATH"):
-        s.task_db_url = f"sqlite:///{os.environ['CFGPU_DB_PATH']}"
-
-    env_models = os.getenv("CFGPU_ENABLED_MODELS", "").strip()
-    if env_models:
-        s.enabled_models = [m.strip() for m in env_models.split(",") if m.strip()]
-
+    # config.yaml is the single source for these fields — no env overrides, so
+    # there is exactly one place to set them. The secret CFGPU_API_TOKEN stays in
+    # the environment (never in config), and the DB URL can still be pulled from
+    # the environment via the `$VAR` form on task_db.url (see _expand_env).
     return s

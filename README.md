@@ -74,11 +74,12 @@ pip install "cfgpu-mcp[cli]"
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
-| `CFGPU_API_TOKEN` | ✅ | CFGPU API 的 Bearer token |
-| `CFGPU_ENABLED_MODELS` | | 逗号分隔的 `adapter_id` / `cfgpu_model_id`，限制加载的模型；缺省加载全部 |
-| `CFGPU_BASE_URL` | | 覆盖 API base URL |
-| `CFGPU_DB_PATH` | | 任务持久化的 SQLite 路径（默认 `~/.cfgpu/tasks.db`） |
+| `CFGPU_API_TOKEN` | ✅ | CFGPU API 的 Bearer token（唯一 secret） |
+| `CFGPU_CONFIG` | | config.yaml 路径（默认 `./config.yaml`） |
+| `CFGPU_DOTENV` | | 启动时自动加载的 `.env` 路径（默认 `./.env`） |
 | `CFGPU_DRY_RUN` | | 置 1 时记录请求但仍发送，用于调试 |
+
+> 模型白名单（`enabled_models`）、API base URL、超时、`task_db.url`、`transport` 等均只在 **config.yaml** 配置（见 `config.example.yaml`），不再有环境变量 override。需要从环境读 DB URL 时，在 `task_db.url` 写 `$DATABASE_URL`。
 
 ## CLI 用法
 

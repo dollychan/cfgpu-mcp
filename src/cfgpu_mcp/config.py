@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
@@ -28,17 +27,13 @@ def get_settings() -> Settings:
 def load_registry(enabled_models: list[str] | None = None) -> AdapterRegistry:
     """Create and load an AdapterRegistry.
 
-    Priority: code argument > CFGPU_ENABLED_MODELS env var > config.yaml > all models.
+    Priority: code argument > config.yaml (enabled_models) > all models.
     """
     # Importing adapters package triggers @register_python_adapter decorators
     import cfgpu_mcp.adapters  # noqa: F401
 
     if enabled_models is None:
-        raw = os.getenv("CFGPU_ENABLED_MODELS", "").strip()
-        if raw:
-            enabled_models = [m.strip() for m in raw.split(",") if m.strip()]
-        else:
-            enabled_models = get_settings().enabled_models
+        enabled_models = get_settings().enabled_models
 
     registry = AdapterRegistry(model_dir=_MODELS_DIR, enabled_models=enabled_models)
     registry.load()
