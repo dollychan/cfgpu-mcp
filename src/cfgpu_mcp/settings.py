@@ -78,8 +78,12 @@ def load_settings() -> Settings:
 
         api = data.get("cfgpu_api") or {}
         s.base_url = api.get("base_url", s.base_url)
-        s.http_timeout = float(api.get("http_timeout", s.http_timeout))
-        s.connect_timeout = float(api.get("connect_timeout", s.connect_timeout))
+        # Route through parse_positive_float so a non-positive yaml value (e.g. 0)
+        # falls back to the default instead of being silently dropped downstream.
+        if "http_timeout" in api:
+            s.http_timeout = parse_positive_float(str(api["http_timeout"]), s.http_timeout)
+        if "connect_timeout" in api:
+            s.connect_timeout = parse_positive_float(str(api["connect_timeout"]), s.connect_timeout)
 
         task_db = data.get("task_db") or {}
         s.task_db_url = task_db.get("url", s.task_db_url)
@@ -87,6 +91,12 @@ def load_settings() -> Settings:
         s.task_db_pool_max = int(task_db.get("pool_max", s.task_db_pool_max))
 
         enabled = data.get("enabled_models")
+        if isinstance(enabled, str):
+            enabled = [enabled]  # tolerate a scalar (forgot YAML list syntax)
+        elif enabled is not None and not isinstance(enabled, list):
+            raise ValueError(
+                f"enabled_models must be a string or list, got {type(enabled).__name__}"
+            )
         s.enabled_models = enabled or None  # [] / null → load all
 
     # ── Environment overrides (backward compatibility) ────────────────────────

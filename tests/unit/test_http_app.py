@@ -15,6 +15,13 @@ def test_token_from_scope_bare_value_and_missing():
     assert _token_from_scope({"headers": []}) is None
 
 
+def test_token_from_scope_empty_bearer_is_none():
+    # "Bearer " (trailing space) and "Bearer" (no value) must not parse to the
+    # literal "Bearer" — they fall back to None so env/auth-error handling kicks in.
+    assert _token_from_scope({"headers": [(b"authorization", b"Bearer ")]}) is None
+    assert _token_from_scope({"headers": [(b"authorization", b"Bearer")]}) is None
+
+
 @pytest.mark.asyncio
 async def test_middleware_binds_token_during_http_call_and_resets_after():
     seen = {}
@@ -62,3 +69,12 @@ async def test_middleware_closes_resources_on_lifespan_shutdown(monkeypatch):
 
     assert calls["n"] == 1                              # cleanup ran once
     assert sent == [{"type": "lifespan.shutdown.complete"}]  # and was forwarded
+
+
+def test_build_http_app_rejects_stateful_mode():
+    from cfgpu_mcp.http_app import build_http_app
+    from cfgpu_mcp.settings import Settings, HttpSettings
+
+    settings = Settings(http=HttpSettings(stateless=False))
+    with pytest.raises(ValueError, match="stateless"):
+        build_http_app(object(), settings)  # mcp arg never touched before the guard

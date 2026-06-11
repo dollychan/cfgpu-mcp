@@ -62,26 +62,19 @@ async def test_get_status_sync_model_skips_repoll():
 
 
 @pytest.mark.asyncio
-async def test_get_status_async_model_repolls():
+async def test_get_status_succeeded_async_task_is_terminal():
+    """A task already persisted as 'succeeded' is terminal: get_status does NOT
+    re-poll upstream (poll() converges a urls-less success to 'failed' at write
+    time, so a stale succeeded record is never re-fetched on every read)."""
     db = await _db_with_succeeded_task("wan-2-0")
     client = MagicMock()
     client.get = AsyncMock(return_value={"status": "succeeded", "output": {}})
     adapter = _adapter(is_async=True)
-    from cfgpu_mcp.tool_registry import NormalizedResult
-    from datetime import datetime, UTC, timedelta
-    adapter.extract_status.return_value = "succeeded"
-    adapter.parse_response.return_value = NormalizedResult(
-        urls=["https://cdn/v.mp4"],
-        expires_at=datetime.now(UTC) + timedelta(hours=24),
-        task_id="task-1", model_used="wan-video", seed=None, cost_tokens=None,
-    )
     p_db, p_client, p_reg = _patch_config(db, client, adapter)
     with p_db, p_client, p_reg:
         result = await task_service.get_status("task-1")
-    client.get.assert_awaited_once()
-    # Flattened to match generate_*: urls live at the top level, not under "result"
-    assert result["urls"] == ["https://cdn/v.mp4"]
-    assert "result" not in result
+    client.get.assert_not_called()           # terminal: no upstream poll
+    assert result["status"] == "succeeded"
     await db.close()
 
 

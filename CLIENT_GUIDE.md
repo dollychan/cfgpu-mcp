@@ -20,8 +20,8 @@ export CFGPU_API_TOKEN=sk-...
 
 ```yaml
 transport: stdio              # stdio | streamable-http
-http: {host: 0.0.0.0, port: 8080, stateless: true}   # 仅 streamable-http 用
-cfgpu_api: {base_url: https://www.cfgpu.com/userapi/v1, http_timeout: 120, connect_timeout: 10}
+http: {host: 0.0.0.0, port: 8080, stateless: true}   # 仅 streamable-http 用；stateless 必须为 true（多租户 token 隔离），false 会被拒绝启动
+cfgpu_api: {base_url: https://www.cfgpu.com/userapi/v1, http_timeout: 120, connect_timeout: 10}  # http_timeout/connect_timeout 非正数（如 0）回退默认值
 task_db:
   url: sqlite:///~/.cfgpu/tasks.db        # 或 postgresql://user:pass@host:5432/cfgpu
   pool_min: 1                              # Postgres 连接池（SQLite 忽略）

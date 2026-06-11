@@ -14,13 +14,14 @@ import json
 import time
 from typing import TYPE_CHECKING
 
-# Single source for the backend-agnostic row contract — must stay identical to SQLite.
-from cfgpu_mcp.client.db import _row_to_dict
 from cfgpu_mcp.client.repository import TaskRepository
+# Shared, backend-agnostic row contract (same one the SQLite backend uses).
+from cfgpu_mcp.client.task_row import row_to_dict as _row_to_dict
 
 if TYPE_CHECKING:
     import asyncpg
 
+# Columns must match cfgpu_mcp.client.task_row.COLUMNS (and db.py's DDL).
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS tasks (
     id          TEXT PRIMARY KEY,

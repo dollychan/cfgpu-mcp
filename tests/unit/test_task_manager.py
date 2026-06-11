@@ -175,6 +175,32 @@ async def test_poll_updates_status():
 
 
 @pytest.mark.asyncio
+async def test_poll_success_without_urls_converges_to_failed():
+    """Upstream reports success but returns no artifact URL: poll() writes a
+    terminal 'failed' (not 'succeeded') so the task converges instead of being
+    re-polled forever on every get_status."""
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    req = GenerateVideoInput(prompt="x")
+    task = await tm.create(adapter, req)
+
+    from cfgpu_mcp.tool_registry import NormalizedResult
+    from datetime import datetime, UTC, timedelta
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=[],  # success status but no URLs
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        task_id="task-abc", model_used="wan-video", seed=None, cost_tokens=None,
+    )
+    tm._client.get = AsyncMock(return_value={"id": "task-abc", "status": "completed"})
+    task = await tm.poll(task, adapter)
+    assert task.status == "failed"
+    assert task.result is None
+    assert task.error
+    await db.close()
+
+
+@pytest.mark.asyncio
 async def test_wait_sync_model_returns_immediately():
     tm, db = await _make_tm()
     adapter = _sync_adapter()

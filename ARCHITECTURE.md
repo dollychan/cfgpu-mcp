@@ -63,7 +63,7 @@
 **Mode A 的两种传输：stdio 与 streamable-http**。`server.main()` 按 `settings.transport`（config.yaml）分发：
 
 - `stdio`（默认）：单进程单用户，桌面端 MCP Host。token 取 `CFGPU_API_TOKEN` 环境变量。
-- `streamable-http`：多租户、可水平扩展。`http_app.py` 自建 uvicorn + 一层纯 ASGI `RequestContextMiddleware`，把每个请求的 `Authorization: Bearer <token>` 绑定到请求级 ContextVar（`context.py`），底层 `CFGPUClient` 逐请求注入该 token——共享连接池服务所有租户，不再全局共用一个 token。配 `stateless_http=True` 时每请求独立,可放在 LB 后跑 N 个实例。
+- `streamable-http`：多租户、可水平扩展。`http_app.py` 自建 uvicorn + 一层纯 ASGI `RequestContextMiddleware`，把每个请求的 `Authorization: Bearer <token>` 绑定到请求级 ContextVar（`context.py`），底层 `CFGPUClient` 逐请求注入该 token——共享连接池服务所有租户，不再全局共用一个 token。配 `stateless_http=True` 时每请求独立,可放在 LB 后跑 N 个实例。**`http.stateless` 必须为 `true`**：`false` 时 FastMCP 在长生命周期的 session task 内执行工具调用，请求级 ContextVar 会被冻结在该 session 的首个请求上，导致后续请求复用首个调用者的 token（跨租户泄漏）；`build_http_app()` 因此在 `stateless=false` 时直接拒绝启动。
 
 两种传输共用同一套 `service/`，唯一的有状态点是 task 存储（见 §6，可配置 SQLite / Postgres）。详见 `docs/streamable/http-mcp-servers.md`。
 
@@ -195,7 +195,7 @@ service 返回 dict → 访问层格式化 → 用户
 
 程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 task 仓库（SQLite 连接 / Postgres 连接池）。各访问层各自负责调用：CLI 在 `_run()` 的 `finally` 中调用；stdio MCP server 通过 FastMCP 的 `lifespan` 上下文在关闭阶段调用。**不能用 `atexit` + `asyncio.run()`**——那会新建事件循环去关闭绑定在 server 原循环上的 `ClientSession`，触发 "Event loop is closed" 告警；lifespan 在 server 自身的事件循环内退出，确保 session 在它被创建的同一循环上关闭。
 
-**streamable-http 下的清理差异**：`streamable_http_app()` 用 session manager 的 lifespan 覆盖了构造器 lifespan，且后者在 stateless 模式下每请求运行一次——因此共享单例**不能**在 `server._lifespan` 里关（已加 `transport == "stdio"` 门控）。HTTP 进程级清理由 `http_app.RequestContextMiddleware` 拦截 ASGI `lifespan.shutdown.complete` 时统一 `config.close()` 一次。
+**streamable-http 下的清理差异**：`streamable_http_app()` 用 session manager 的 lifespan 覆盖了构造器 lifespan，且后者在 stateless 模式下每请求运行一次——因此共享单例**不能**在 `server._lifespan` 里关（已加 `transport == "stdio"` 门控）。HTTP 进程级清理由 `http_app.RequestContextMiddleware` 在 ASGI shutdown 终态（`lifespan.shutdown.complete` 或 `lifespan.shutdown.failed`）统一 `config.close()` 一次；清理在转发该消息**之后**执行并包在 try 中，避免缓慢或抛错的 `close()` 阻塞 uvicorn 关停。
 
 ---
 

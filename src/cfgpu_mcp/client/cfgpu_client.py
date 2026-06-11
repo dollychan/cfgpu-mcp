@@ -38,9 +38,11 @@ class CFGPUClient:
         # (ContextVar). ``api_token`` is only a fallback (stdio / direct use).
         self._token = api_token or os.environ.get("CFGPU_API_TOKEN")
         self._base_url = (base_url or os.getenv("CFGPU_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
+        # Distinguish "not supplied" (None) from a caller-provided value. settings
+        # has already validated its values as positive, so we don't re-coerce 0 here.
         self._timeout = aiohttp.ClientTimeout(
-            total=http_timeout if http_timeout else _env_float("CFGPU_HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT),
-            connect=connect_timeout if connect_timeout else _env_float("CFGPU_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
+            total=http_timeout if http_timeout is not None else _env_float("CFGPU_HTTP_TIMEOUT", DEFAULT_HTTP_TIMEOUT),
+            connect=connect_timeout if connect_timeout is not None else _env_float("CFGPU_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT),
         )
         self._session: aiohttp.ClientSession | None = None
 

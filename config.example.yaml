@@ -11,7 +11,9 @@ transport: stdio              # stdio | streamable-http
 http:                          # only used when transport=streamable-http
   host: 0.0.0.0
   port: 8080
-  stateless: true              # stateless mode → horizontally scalable behind a LB
+  stateless: true              # MUST stay true for multi-tenant per-request tokens;
+                               # false freezes one caller's token into the session
+                               # (cross-tenant leak) and the server refuses to start.
 
 cfgpu_api:
   base_url: https://www.cfgpu.com/userapi/v1

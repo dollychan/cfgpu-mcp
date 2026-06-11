@@ -32,6 +32,29 @@ _STATUS_MAP = {
 }
 
 
+def _now_row(
+    task_id: str,
+    adapter_id: str,
+    status: str,
+    payload: dict,
+    *,
+    result: dict | None = None,
+    error: str | None = None,
+) -> dict:
+    """Build an in-memory task row (created_at == updated_at == now).
+
+    Lets create()/poll() return a Task from fields already in hand instead of a
+    read-back round-trip. Timestamps aren't surfaced to callers, so a sub-millisecond
+    drift from the persisted row is immaterial.
+    """
+    now = time.time()
+    return {
+        "id": task_id, "adapter_id": adapter_id, "status": status,
+        "payload": payload, "result": result, "error": error,
+        "created_at": now, "updated_at": now,
+    }
+
+
 class Task:
     def __init__(self, row: dict) -> None:
         self.id: str = row["id"]
@@ -73,10 +96,11 @@ class TaskManager:
             result: NormalizedResult = adapter.parse_response(resp)
             if not result.model_used:
                 result.model_used = adapter.cfgpu_model_id
+            result_dict = result.to_dict(return_metadata=True)
             await self._repo.insert_task(task_id, adapter.adapter_id, "succeeded", payload)
-            await self._repo.update_task(task_id, "succeeded", result=result.to_dict(return_metadata=True))
-            row = await self._repo.get_task(task_id)
-            return Task(row)  # type: ignore[arg-type]
+            await self._repo.update_task(task_id, "succeeded", result=result_dict)
+            # Every field is known here — build the Task in memory instead of re-reading.
+            return Task(_now_row(task_id, adapter.adapter_id, "succeeded", payload, result=result_dict))
 
         # Async model: POST → get task_id from CFGPU → write pending
         resp = await self._client.post(adapter.endpoint, payload)
@@ -93,8 +117,7 @@ class TaskManager:
                 original={"adapter_id": adapter.adapter_id, "response": resp},
             )
         await self._repo.insert_task(cfgpu_task_id, adapter.adapter_id, "pending", payload)
-        row = await self._repo.get_task(cfgpu_task_id)
-        return Task(row)  # type: ignore[arg-type]
+        return Task(_now_row(cfgpu_task_id, adapter.adapter_id, "pending", payload))
 
     # ── Poll ─────────────────────────────────────────────────────────────────
 
@@ -114,12 +137,22 @@ class TaskManager:
             if not result.model_used:
                 result.model_used = adapter.cfgpu_model_id
             result_dict = result.to_dict(return_metadata=True)
+            if not result_dict.get("urls"):
+                # Upstream reports success but yields no artifact URL — treat as a
+                # terminal failure so it converges instead of re-polling forever.
+                status = "failed"
+                result_dict = None
+                error_msg = "Task reported success but returned no artifact URLs"
         elif status == "failed":
             error_msg = resp.get("error", {}).get("message") or "Task failed"
 
         await self._repo.update_task(task.id, status, result=result_dict, error=error_msg)
-        row = await self._repo.get_task(task.id)
-        return Task(row)  # type: ignore[arg-type]
+        # Fields are all in scope — avoid a read-back round-trip; preserve created_at.
+        return Task({
+            "id": task.id, "adapter_id": task.adapter_id, "status": status,
+            "payload": task.payload, "result": result_dict, "error": error_msg,
+            "created_at": task.created_at, "updated_at": time.time(),
+        })
 
     # ── Wait ─────────────────────────────────────────────────────────────────
 

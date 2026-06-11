@@ -45,21 +45,27 @@ async def get_status(task_id: str) -> dict[str, Any]:
     # wait=False submitter (or a reconnecting client) drive an async task to
     # completion without the server holding a connection open.
     #
-    # Re-poll when (a) the task is still in flight (pending/running), or
-    # (b) it reads succeeded but the DB result has no URLs (stale record).
-    # Sync models have no poll_endpoint, so skip them.
-    # Re-poll unless the task is "failed", or "succeeded" *with* URLs in hand.
-    needs_repoll = task.status != "failed" and not (
-        task.status == "succeeded" and (task.result or {}).get("urls")
-    )
+    # Re-poll only while the task is still in flight. succeeded / failed are
+    # terminal: a succeeded-without-urls row is malformed data that poll()
+    # converges to "failed" at write time, not something to retry on every read.
+    needs_repoll = task.status in ("pending", "running")
     if needs_repoll:
+        from cfgpu_mcp.errors import CFGPUError
+
         registry = get_registry()
-        try:
-            adapter = registry.get(task.adapter_id)
-            if adapter.is_async:
+        adapter = registry.get(task.adapter_id)  # missing adapter is a program error, not stale-tolerable
+        if adapter.is_async:
+            try:
                 task = await tm.poll(task, adapter)
-        except Exception as e:
-            logger.debug("Re-poll failed for task %s (%s), using stale DB result: %s", task_id, task.adapter_id, e)
+            except CFGPUError as e:
+                # Auth / bad params are caller-fixable — surface them instead of
+                # masquerading as "still running". Transient network/timeout
+                # errors are tolerated: return the stale record so polling retries.
+                if e.error_type in ("auth", "invalid_params"):
+                    raise
+                logger.warning("Re-poll transient failure for task %s (%s): %s", task_id, task.adapter_id, e)
+            except Exception as e:
+                logger.warning("Re-poll failed for task %s (%s), using stale DB result: %s", task_id, task.adapter_id, e)
 
     return _present(task)
 

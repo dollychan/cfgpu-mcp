@@ -18,10 +18,13 @@ that handles the two things multi-tenant HTTP needs and stdio does not:
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from cfgpu_mcp import config
 from cfgpu_mcp.context import reset_request_token, set_request_token
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -34,8 +37,9 @@ def _token_from_scope(scope: dict) -> str | None:
     for key, value in scope.get("headers") or []:
         if key == b"authorization":
             val = value.decode("latin-1").strip()
-            if val[:7].lower() == "bearer ":
-                return val[7:].strip() or None
+            scheme, _, rest = val.partition(" ")
+            if scheme.lower() == "bearer":
+                return rest.strip() or None   # "Bearer" / "Bearer " → None
             return val or None
     return None
 
@@ -57,9 +61,17 @@ class RequestContextMiddleware:
 
         if scope["type"] == "lifespan":
             async def send_wrapper(message):
-                if message["type"] == "lifespan.shutdown.complete":
-                    await config.close()
-                await send(message)
+                # Clean up on either shutdown terminal state. Forward the message
+                # *first* so a slow/raising close() can't stall the ASGI protocol
+                # (uvicorn waits on this message to finish shutting down).
+                if message["type"] in ("lifespan.shutdown.complete", "lifespan.shutdown.failed"):
+                    await send(message)
+                    try:
+                        await config.close()
+                    except Exception:
+                        logger.exception("config.close() failed during shutdown")
+                else:
+                    await send(message)
 
             await self.app(scope, receive, send_wrapper)
             return
@@ -69,6 +81,19 @@ class RequestContextMiddleware:
 
 def build_http_app(mcp: "FastMCP", settings: "Settings"):
     """Configure FastMCP HTTP settings and return the wrapped ASGI app."""
+    if not settings.http.stateless:
+        # Per-request token isolation relies on the request-scoped ContextVar set
+        # by RequestContextMiddleware. With stateless_http=False, FastMCP runs tool
+        # calls inside a long-lived session task whose context is frozen at the
+        # session's first request, so every later request would reuse the first
+        # caller's token — a cross-tenant leak. Refuse the unsafe combination loudly
+        # rather than shipping silent token bleed.
+        raise ValueError(
+            "http.stateless=false is incompatible with per-request CFGPU token "
+            "isolation: MCP session tasks freeze the request token, leaking one "
+            "tenant's token to others. Set http.stateless=true, or run single-tenant "
+            "with a shared CFGPU_API_TOKEN."
+        )
     mcp.settings.stateless_http = settings.http.stateless
     mcp.settings.host = settings.http.host
     mcp.settings.port = settings.http.port

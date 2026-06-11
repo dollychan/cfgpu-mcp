@@ -6,6 +6,9 @@ from pathlib import Path
 
 import aiosqlite
 
+from cfgpu_mcp.client.task_row import row_to_dict as _row_to_dict
+
+# Columns must match cfgpu_mcp.client.task_row.COLUMNS (and postgres_repo's DDL).
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS tasks (
     id          TEXT PRIMARY KEY,
@@ -87,10 +90,3 @@ async def list_running_tasks(db: aiosqlite.Connection) -> list[dict]:
     ) as cur:
         rows = await cur.fetchall()
         return [_row_to_dict(r) for r in rows]
-
-
-def _row_to_dict(row: aiosqlite.Row) -> dict:
-    d = dict(row)
-    d["payload"] = json.loads(d["payload"])
-    d["result"] = json.loads(d["result"]) if d["result"] else None
-    return d
