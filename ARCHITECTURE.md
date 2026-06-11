@@ -63,7 +63,7 @@
 **Mode A 的两种传输：stdio 与 streamable-http**。`server.main()` 按 `settings.transport`（config.yaml）分发：
 
 - `stdio`（默认）：单进程单用户，桌面端 MCP Host。token 取 `CFGPU_API_TOKEN` 环境变量。
-- `streamable-http`：多租户、可水平扩展。`http_app.py` 自建 uvicorn + 一层纯 ASGI `RequestContextMiddleware`，把每个请求的 `Authorization: Bearer <token>` 绑定到请求级 ContextVar（`context.py`），底层 `CFGPUClient` 逐请求注入该 token——共享连接池服务所有租户，不再全局共用一个 token。配 `stateless_http=True` 时每请求独立,可放在 LB 后跑 N 个实例。**`http.stateless` 必须为 `true`**：`false` 时 FastMCP 在长生命周期的 session task 内执行工具调用，请求级 ContextVar 会被冻结在该 session 的首个请求上，导致后续请求复用首个调用者的 token（跨租户泄漏）；`build_http_app()` 因此在 `stateless=false` 时直接拒绝启动。
+- `streamable-http`：多租户、可水平扩展。`http_app.py` 自建 uvicorn + 一层纯 ASGI `RequestContextMiddleware`，把每个请求的 `Authorization: Bearer <token>` 绑定到请求级 ContextVar（`context.py`），底层 `CFGPUClient` 逐请求注入该 token——共享连接池服务所有租户，不再全局共用一个 token。uvicorn 不在核心依赖里，需装 `http` extra：`pip install -e ".[http]"`。配 `stateless_http=True` 时每请求独立,可放在 LB 后跑 N 个实例。**`http.stateless` 必须为 `true`**：`false` 时 FastMCP 在长生命周期的 session task 内执行工具调用，请求级 ContextVar 会被冻结在该 session 的首个请求上，导致后续请求复用首个调用者的 token（跨租户泄漏）；`build_http_app()` 因此在 `stateless=false` 时直接拒绝启动。
 
 两种传输共用同一套 `service/`，唯一的有状态点是 task 存储（见 §6，可配置 SQLite / Postgres）。详见 `docs/streamable/http-mcp-servers.md`。
 
@@ -292,6 +292,8 @@ task 状态通过 `TaskRepository` 接口持久化（`client/repository.py`）�
 
 - `sqlite:///path` → `SqliteTaskRepository`（单实例 / stdio / CLI，WAL 模式）
 - `postgresql://...` → `PostgresTaskRepository`（asyncpg 连接池；多实例水平扩展，`client/postgres_repo.py`，需 `[postgres]` 可选依赖）
+
+`task_db.url` 支持 `$VAR` / `${VAR}` 形式从环境变量读取（`settings._expand_env`），便于把带密码的 DB URL 移出 config.yaml；引用的变量未设置时启动即报错，而非把字面量 `"$DATABASE_URL"` 传给驱动。
 
 两个后端返回**完全一致的行结构**（JSON 列存 text，读时 `json.loads`），上层 `Task` / `_present` 对后端无感。
 

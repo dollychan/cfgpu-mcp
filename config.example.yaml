@@ -23,6 +23,7 @@ cfgpu_api:
 task_db:
   url: sqlite:///~/.cfgpu/tasks.db
   # url: postgresql://user:pass@host:5432/cfgpu   # multi-instance horizontal scaling
+  # url: $DATABASE_URL                            # or $VAR / ${VAR} → read from environment
   pool_min: 1                  # Postgres connection pool (ignored by SQLite)
   pool_max: 10
 

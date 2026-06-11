@@ -48,6 +48,9 @@ dev = [
 cli = [
     "click>=8.0",
 ]
+http = [
+    "uvicorn>=0.23",
+]
 postgres = [
     "asyncpg>=0.29",
 ]

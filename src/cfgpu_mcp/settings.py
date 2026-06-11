@@ -52,6 +52,29 @@ def _config_path() -> Path | None:
     return default if default.exists() else None
 
 
+def _expand_env(value: str) -> str:
+    """Expand a leading ``$VAR`` / ``${VAR}`` reference to its environment value.
+
+    Lets config.yaml keep the DB URL (which carries a password) out of the file:
+    ``url: $DATABASE_URL`` resolves to the env var at load time. Raises if the
+    referenced variable is unset, so a typo fails loudly instead of handing the
+    literal ``"$DATABASE_URL"`` to the DB driver.
+    """
+    if not isinstance(value, str):
+        return value
+    name = None
+    if value.startswith("${") and value.endswith("}"):
+        name = value[2:-1]
+    elif value.startswith("$"):
+        name = value[1:]
+    if name is None:
+        return value
+    resolved = os.getenv(name)
+    if resolved is None:
+        raise ValueError(f"task_db.url references ${name}, but that environment variable is not set")
+    return resolved
+
+
 def parse_positive_float(raw: str | None, fallback: float) -> float:
     """Parse a positive float; fall back on missing/invalid. Shared by client._env_float."""
     if not raw:
@@ -86,7 +109,7 @@ def load_settings() -> Settings:
             s.connect_timeout = parse_positive_float(str(api["connect_timeout"]), s.connect_timeout)
 
         task_db = data.get("task_db") or {}
-        s.task_db_url = task_db.get("url", s.task_db_url)
+        s.task_db_url = _expand_env(task_db.get("url", s.task_db_url))
         s.task_db_pool_min = int(task_db.get("pool_min", s.task_db_pool_min))
         s.task_db_pool_max = int(task_db.get("pool_max", s.task_db_pool_max))
 

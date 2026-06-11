@@ -23,7 +23,7 @@ transport: stdio              # stdio | streamable-http
 http: {host: 0.0.0.0, port: 8080, stateless: true}   # 仅 streamable-http 用；stateless 必须为 true（多租户 token 隔离），false 会被拒绝启动
 cfgpu_api: {base_url: https://www.cfgpu.com/userapi/v1, http_timeout: 120, connect_timeout: 10}  # http_timeout/connect_timeout 非正数（如 0）回退默认值
 task_db:
-  url: sqlite:///~/.cfgpu/tasks.db        # 或 postgresql://user:pass@host:5432/cfgpu
+  url: sqlite:///~/.cfgpu/tasks.db        # 或 postgresql://user:pass@host:5432/cfgpu；亦可写 $DATABASE_URL / ${VAR} 从环境变量读取（变量未设置则启动报错）
   pool_min: 1                              # Postgres 连接池（SQLite 忽略）
   pool_max: 10
 enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
@@ -125,7 +125,8 @@ task_db:
 ```
 
 ```bash
-pip install -e ".[postgres]"        # Postgres 后端需要
+pip install -e ".[http]"            # HTTP 传输需要（uvicorn）
+pip install -e ".[postgres]"        # Postgres 后端需要（多实例）
 CFGPU_CONFIG=./config.yaml cfgpu-mcp # 监听 http://0.0.0.0:8080/mcp
 ```
 
