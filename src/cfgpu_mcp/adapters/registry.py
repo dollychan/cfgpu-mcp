@@ -45,7 +45,7 @@ class AdapterRegistry:
                     f"but that model is not found: {e}"
                 ) from e
 
-            adapter = self._instantiate(merged)
+            adapter = self._instantiate(merged, raw_configs)
             if self._is_enabled(adapter):
                 self._register(adapter)
 
@@ -67,16 +67,18 @@ class AdapterRegistry:
         merged["extends"] = parent_id
         return merged
 
-    def _instantiate(self, config: dict) -> ModelAdapter:
+    def _instantiate(self, config: dict, all_configs: dict) -> ModelAdapter:
         python_adapters = get_python_adapters()
-        adapter_id = config.get("adapter_id", "")
-        extends = config.get("extends")
 
-        # Method B: prefer Python Adapter for this adapter_id
-        cls = python_adapters.get(adapter_id)
-        # Follow extends chain to find parent's Python Adapter
-        if cls is None and extends:
-            cls = python_adapters.get(extends)
+        # Method B: prefer Python Adapter for this adapter_id, then walk the full
+        # extends chain to find an ancestor's Python Adapter (e.g.
+        # nano-banana-pro-premium → nano-banana-pro → nano-banana-2).
+        cls = python_adapters.get(config.get("adapter_id", ""))
+        parent_id = config.get("extends")
+        while cls is None and parent_id:
+            cls = python_adapters.get(parent_id)
+            parent_id = all_configs.get(parent_id, {}).get("extends")
+
         # Fall back to GenericAdapter
         if cls is None:
             cls = GenericAdapter

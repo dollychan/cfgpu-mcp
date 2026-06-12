@@ -264,10 +264,12 @@ from cfgpu_mcp.adapters import wan_video, seedream, async_image, happyhorse_vide
 
 `_instantiate()` 的查找顺序：
 1. 在 `_PYTHON_ADAPTERS` 中查找 `adapter_id`（e.g. `wan-2-0-fast`）→ 未找到
-2. 查找 `extends` 指向的父 ID（`wan-2-0`）→ 找到 `WanVideoAdapter`
+2. 沿 `extends` 链**逐级向上**查找父 ID（`wan-2-0`）→ 找到 `WanVideoAdapter`
 3. 用 `WanVideoAdapter.from_config(merged_config)` 实例化，此时实例的 `adapter_id`、`cfgpu_model_id` 等已被 merged config 覆盖
 
 这就是 `wan-2-0-fast` 如何复用 `WanVideoAdapter` 的全部逻辑，不需要 `wan_video_fast.py`。
+
+第 2 步必须沿整条链向上走，而不是只看一层父级。例如 `nano-banana-pro-premium` → `nano-banana-pro` → `nano-banana-2`：只有 `nano-banana-2` 注册了 `NanoBananaAdapter`，中间的 `nano-banana-pro` 没有。若只查一层，孙级变体会 fallback 到 `GenericAdapter`，由于没有 `payload_mapping` 而构建出空 payload，导致 API 报 `model参数不能为空`。`_instantiate()` 因此接收完整的 `raw_configs`，以便逐级追溯 `extends`。
 
 ### 5.4 Model Card 合并
 
@@ -659,7 +661,7 @@ FastMCP 0.x 通过函数签名内省来生成 JSON Schema，不支持以 Pydanti
 CLI 的异步工作流：`cfgpu generate video ... --no-wait` 拿到 task_id，进程退出；几分钟后 `cfgpu task wait <task_id>` 需要恢复状态。进程间共享状态必须持久化。SQLite 无需额外服务，满足单机场景。多 agent 并发访问同一文件时，WAL 模式（`PRAGMA journal_mode=WAL`）保证并发读写安全；如需完全隔离，各 agent 在各自 config.yaml 的 `task_db.url` 指向不同的 SQLite 文件。
 
 **为什么 `_merge_extends()` 要在合并后的 dict 里保留 `extends` 字段？**
-`_instantiate()` 分两步工作：先用 `adapter_id` 在 `_PYTHON_ADAPTERS` 里查找 Python 类，找不到时退而查 `extends` 指向的父 ID。如果 `extends` 被清除，variant 模型（如 `wan-2-0-fast`）就找不到对应的 `WanVideoAdapter`，会 fallback 到 `GenericAdapter`，导致视频 payload 构建错误。
+`_instantiate()` 分两步工作：先用 `adapter_id` 在 `_PYTHON_ADAPTERS` 里查找 Python 类，找不到时沿 `extends` 链逐级向上查找父 ID。如果 `extends` 被清除，variant 模型（如 `wan-2-0-fast`）就找不到对应的 `WanVideoAdapter`，会 fallback 到 `GenericAdapter`，导致视频 payload 构建错误。注意必须遍历整条链（见 5.3），孙级变体如 `nano-banana-pro-premium` 的 Python 类位于祖父 `nano-banana-2` 上。
 
 **为什么 `cfgpu_model_id` 只允许在 `build_payload()` 里出现？**
 防止 `cfgpu_model_id` 污染到用户界面或日志。用户只需要知道 `adapter_id`（人类可读、稳定），`cfgpu_model_id` 是 CFGPU API 内部实现细节，会随版本更迭变化。

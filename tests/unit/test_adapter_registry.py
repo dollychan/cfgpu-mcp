@@ -3,6 +3,8 @@ from pathlib import Path
 from cfgpu_mcp.adapters.registry import AdapterRegistry
 from cfgpu_mcp.adapters.wan_video import WanVideoAdapter
 from cfgpu_mcp.adapters.seedream import SeedreamAdapter
+from cfgpu_mcp.adapters.async_image import NanoBananaAdapter
+from cfgpu_mcp.tool_registry import GenerateImageInput
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
 
@@ -95,6 +97,25 @@ def test_python_adapter_preferred_over_generic():
     registry = _load()
     seedream = registry.get("doubao-seedream-5-0-lite")
     assert isinstance(seedream, SeedreamAdapter)
+
+
+@pytest.mark.parametrize(
+    "adapter_id, cfgpu_model_id",
+    [
+        ("nano-banana-pro-premium", "nano-pro-premium"),
+        ("nano-banana-pro-official", "nano-pro-official"),
+    ],
+)
+def test_multilevel_extends_resolves_ancestor_python_adapter(adapter_id, cfgpu_model_id):
+    """A grandchild (premium/official → nano-banana-pro → nano-banana-2) must resolve
+    the ancestor's Python adapter, not silently fall back to GenericAdapter (which
+    would build an empty payload → API 'model参数不能为空')."""
+    registry = _load()
+    adapter = registry.get(adapter_id)
+    assert isinstance(adapter, NanoBananaAdapter)
+    assert adapter.cfgpu_model_id == cfgpu_model_id
+    payload = adapter.build_payload(GenerateImageInput(prompt="hi", model=adapter_id))
+    assert payload["model"] == cfgpu_model_id
 
 
 def test_unknown_model_raises_key_error():
