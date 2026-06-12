@@ -189,9 +189,9 @@ service 返回 dict → 访问层格式化 → 用户
 
 `get_settings()` / `get_registry()` / `get_client()` / `get_task_repository()` 均为模块级单例，首次调用时初始化，后续调用直接返回已有实例。这避免了每次请求重新建立 HTTP 连接、重新解析 YAML 或重开数据库。
 
-- `get_settings()` 从 config.yaml（+ env override）加载配置（`settings.py`）。
+- `get_settings()` 从 config.yaml 加载配置（`settings.py`）。
 - `get_client()` 构造的 `CFGPUClient` **不再持有 token**——共享连接池，token 逐请求从 ContextVar 解析；`base_url`/超时来自 settings。
-- `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。
+- `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。该单例的初始化是 `async` 且首调时有 `await`，因此用 `asyncio.Lock` + 双重检查保护：否则一批并发工具调用会各自看到 `_repo is None` 并同时建仓库 / 跑建表 DDL，撞上 Postgres `CREATE TABLE` 的目录竞争（`pg_type_typname_nsp_index` 唯一键冲突 → `duplicate key (tasks)`）。跨实例同时启动的竞争则由 `PostgresTaskRepository._init_schema` 的事务级 advisory lock（`pg_advisory_xact_lock`）串行化建表，输家随后跑 `CREATE ... IF NOT EXISTS` 成空操作。
 
 程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 task 仓库（SQLite 连接 / Postgres 连接池）。各访问层各自负责调用：CLI 在 `_run()` 的 `finally` 中调用；stdio MCP server 通过 FastMCP 的 `lifespan` 上下文在关闭阶段调用。**不能用 `atexit` + `asyncio.run()`**——那会新建事件循环去关闭绑定在 server 原循环上的 `ClientSession`，触发 "Event loop is closed" 告警；lifespan 在 server 自身的事件循环内退出，确保 session 在它被创建的同一循环上关闭。
 

@@ -1,9 +1,10 @@
+import asyncio
 from pathlib import Path
 
 import pytest
 
 import cfgpu_mcp.config as cfg_module
-from cfgpu_mcp.config import load_registry
+from cfgpu_mcp.config import get_task_repository, load_registry
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
 
@@ -51,3 +52,28 @@ def test_no_enabled_models_loads_all(load):
 
 def test_empty_yaml_list_loads_all(load):
     assert load(yaml_enabled=[]) == _expected_model_count()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_repo_init_creates_one(monkeypatch):
+    """A burst of concurrent get_task_repository() must open exactly one repo.
+
+    Without the lock, every coroutine sees _repo is None and races to open a
+    repository / run schema DDL — the Postgres "duplicate key (tasks)" crash.
+    """
+    calls = 0
+
+    async def fake_create_task_repository(url, pool_min, pool_max):
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0)  # yield so racers interleave before _repo is set
+        return object()
+
+    monkeypatch.setattr(cfg_module, "_repo", None)
+    monkeypatch.setattr(cfg_module, "create_task_repository", fake_create_task_repository)
+
+    repos = await asyncio.gather(*(get_task_repository() for _ in range(10)))
+
+    assert calls == 1
+    assert len({id(r) for r in repos}) == 1  # all callers get the same instance
+    cfg_module._repo = None  # don't leak the dummy into other tests

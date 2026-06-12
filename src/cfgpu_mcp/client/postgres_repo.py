@@ -38,6 +38,13 @@ CREATE TABLE IF NOT EXISTS tasks (
 # Drives list_running_tasks(); also speeds a future background reconciler.
 _CREATE_INDEX = "CREATE INDEX IF NOT EXISTS idx_tasks_status_created ON tasks(status, created_at)"
 
+# CREATE TABLE IF NOT EXISTS is not race-safe at the catalog level: two instances
+# starting together can both pass the existence check and collide inserting the
+# table's row type into pg_type (unique index pg_type_typname_nsp_index). A fixed
+# transaction-scoped advisory lock funnels schema creation so the loser waits and
+# then no-ops. Key is an arbitrary stable int64 tag for "cfgpu.tasks schema".
+_SCHEMA_LOCK_KEY = 0x0CF6_7A5C_0000_0001
+
 
 class PostgresTaskRepository(TaskRepository):
     def __init__(self, pool: "asyncpg.Pool") -> None:
@@ -54,8 +61,13 @@ class PostgresTaskRepository(TaskRepository):
 
     async def _init_schema(self) -> None:
         async with self._pool.acquire() as con:
-            await con.execute(_CREATE_TABLE)
-            await con.execute(_CREATE_INDEX)
+            # Hold a transaction-scoped advisory lock so concurrent instances
+            # serialize the (catalog-unsafe) CREATE TABLE; the lock auto-releases
+            # on commit. The loser then runs CREATE ... IF NOT EXISTS as a no-op.
+            async with con.transaction():
+                await con.execute("SELECT pg_advisory_xact_lock($1)", _SCHEMA_LOCK_KEY)
+                await con.execute(_CREATE_TABLE)
+                await con.execute(_CREATE_INDEX)
 
     async def insert_task(self, task_id: str, adapter_id: str, status: str, payload: dict) -> None:
         now = time.time()

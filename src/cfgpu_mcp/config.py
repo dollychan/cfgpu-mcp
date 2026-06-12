@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
@@ -14,6 +15,11 @@ _settings: Settings | None = None
 _registry: AdapterRegistry | None = None
 _client: CFGPUClient | None = None
 _repo: TaskRepository | None = None
+
+# Serializes the async repo singleton init: without it, a burst of concurrent
+# tool calls all see _repo is None and each open a repository / run schema DDL,
+# racing on Postgres' CREATE TABLE (pg_type unique index → "duplicate key").
+_repo_lock = asyncio.Lock()
 
 
 def get_settings() -> Settings:
@@ -73,12 +79,14 @@ async def get_task_repository() -> TaskRepository:
     """
     global _repo
     if _repo is None:
-        s = get_settings()
-        _repo = await create_task_repository(
-            s.task_db_url,
-            pool_min=s.task_db_pool_min,
-            pool_max=s.task_db_pool_max,
-        )
+        async with _repo_lock:
+            if _repo is None:  # double-check: another coroutine may have won the lock
+                s = get_settings()
+                _repo = await create_task_repository(
+                    s.task_db_url,
+                    pool_min=s.task_db_pool_min,
+                    pool_max=s.task_db_pool_max,
+                )
     return _repo
 
 

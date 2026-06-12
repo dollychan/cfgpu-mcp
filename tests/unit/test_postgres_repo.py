@@ -12,13 +12,21 @@ import pytest
 from cfgpu_mcp.client.postgres_repo import PostgresTaskRepository, _row_to_dict
 
 
+class _FakeTxn:
+    async def __aenter__(self): return self
+    async def __aexit__(self, *a): return False
+
+
 class _FakeConn:
     def __init__(self, rows: dict) -> None:
         self.rows = rows
 
+    def transaction(self):
+        return _FakeTxn()
+
     async def execute(self, sql: str, *args):
         verb = sql.split(None, 1)[0].upper()
-        if verb == "CREATE":
+        if verb in ("CREATE", "SELECT"):  # DDL + pg_advisory_xact_lock are no-ops here
             return
         if verb == "INSERT":
             task_id, adapter_id, status, payload, created, updated = args
