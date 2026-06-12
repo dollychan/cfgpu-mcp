@@ -469,7 +469,7 @@ cfgpu generate image "..." --metadata --json
 # 基础用法
 cfgpu generate video "waves crashing on a beach" --model wan-2-0-fast
 
-# 指定时长和分辨率（所有视频模型均支持 1080p；-d -1 = 智能时长，仅 WAN 2.0 / Seedance）
+# 指定时长和分辨率（1080p：WAN 2.0 / Seedance 1.5 Pro / HappyHorse 支持；WAN 2.0 Fast 文生视频不支持 1080p；-d -1 = 智能时长，仅 WAN 2.0 / Seedance）
 cfgpu generate video "..." -d 8 -r 1080p --no-audio
 
 # 图生视频（指定首帧）
@@ -507,8 +507,9 @@ cfgpu generate video "..." --model-specific '{"tools": [{"type": "web_search"}]}
 
 > `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。仅 `doubao-seedream-*`
 > 支持 `n>1`（自动设置 `sequential_image_generation=auto` + `max_images=n`）；`gpt-image-2`、
-> `nano-banana-*` 传 `n>1` 会被拒绝。`resolution` 现已开放 `1080p`（全部视频模型支持，
-> HappyHorse 会自动大写为 `1080P`），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
+> `nano-banana-*` 传 `n>1` 会被拒绝。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
+> HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，
+> 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
 
 ### 异步工作流（--no-wait）
 

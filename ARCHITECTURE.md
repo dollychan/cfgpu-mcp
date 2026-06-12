@@ -586,7 +586,7 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 - `with_audio`：视频音频开关，`WanVideoAdapter` 映射为 `generate_audio`。
 - `watermark`：水印开关。类型为 `Optional[bool]`，**默认 `None` 表示不写入 payload、沿用各模型 API 自身默认**（避免覆盖 Seedream 4.5 的 `false` 等差异化默认）。支持的 adapter（`wan_video`、`seedream`、`happyhorse`）在 `payload.update(req.model_specific)` **之前**写入 `payload["watermark"]`，因此 `model_specific` 仍可覆盖它；不支持的 adapter（`async_image` 下的 gpt-image-2 / nano-banana）不读取该字段，传入即被忽略。
 - `n`：图片组图数量（1-15），默认 1。仅 `SeedreamAdapter` 支持 `n>1`——会自动写入 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`async_image`（gpt-image-2 / nano-banana）的 `supports()` 对 `n>1` 直接拒绝。
-- `resolution`（视频）：开放 `1080p`，全部视频模型均支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。
+- `resolution`（视频）：开放 `1080p`，WAN 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
 - `duration_seconds`（视频）：允许 `-1`（智能时长，`WanVideoAdapter` 直接透传）。`WanVideoAdapter.supports()` 对 `doubao-seedance-1-5-pro` 额外限制显式时长 ≤12s；`happyhorse` 拒绝 `-1`。
 
 > 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark`、`n` 作为通用参数列在支持模型的顶层 args（`n` 仅列在 seedream 系；gpt/nano 均不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`response_format` 等）。新增/调整参数时同步该文件。

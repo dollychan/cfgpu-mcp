@@ -228,6 +228,48 @@ def test_seedance_rejects_duration_over_12():
     assert "4–12" in reason
 
 
+def _make_fast_adapter() -> WanVideoAdapter:
+    config = {
+        "adapter_id": "wan-2-0-fast",
+        "display_name": "WAN 2.0 Fast",
+        "cfgpu_model_id": "wan-video-fast",
+        "task_type": "video",
+        "endpoint": "/v1/video/tasks",
+        "is_async": True,
+        "poll_endpoint": "/v1/video/tasks/{task_id}",
+        "capabilities": {"text_to_video", "image_to_video", "first_last_frame", "multi_modal_reference"},
+        "cost_tier": 2,
+        "speed_tier": 4,
+    }
+    return WanVideoAdapter.from_config(config)
+
+
+def test_fast_rejects_1080p_text_to_video():
+    adapter = _make_fast_adapter()
+    ok, reason = adapter.supports(GenerateVideoInput(prompt="x", resolution="1080p"))
+    assert ok is False
+    assert "1080p" in reason
+
+
+def test_fast_allows_1080p_image_to_video():
+    adapter = _make_fast_adapter()
+    req = GenerateVideoInput(prompt="x", resolution="1080p", first_frame="https://example.com/f.jpg")
+    ok, _ = adapter.supports(req)
+    assert ok is True
+
+
+def test_fast_allows_720p_text_to_video():
+    adapter = _make_fast_adapter()
+    ok, _ = adapter.supports(GenerateVideoInput(prompt="x", resolution="720p"))
+    assert ok is True
+
+
+def test_full_wan_allows_1080p_text_to_video():
+    adapter = _make_adapter()
+    ok, _ = adapter.supports(GenerateVideoInput(prompt="x", resolution="1080p"))
+    assert ok is True
+
+
 def test_seedance_accepts_smart_duration():
     config = {
         "adapter_id": "doubao-seedance-1-5-pro",

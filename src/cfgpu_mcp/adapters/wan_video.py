@@ -106,6 +106,24 @@ class WanVideoAdapter(ModelAdapter):
             return False, "first/last_frame and reference_images are mutually exclusive"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
+        # WAN 2.0 Fast (doubao-seedance-2-0-fast) does not support 1080p in
+        # text-to-video; the API rejects it post-submit. Catch it here so
+        # model="auto" routing can fall back to the full wan-2-0 instead.
+        is_t2v = not (
+            req.first_frame
+            or req.last_frame
+            or req.reference_images
+            or req.reference_videos
+        )
+        if (
+            self.adapter_id == "wan-2-0-fast"
+            and is_t2v
+            and req.resolution == "1080p"
+        ):
+            return False, (
+                "wan-2-0-fast does not support 1080p for text-to-video "
+                "(use 480p or 720p, or switch to wan-2-0 for 1080p)"
+            )
         # Doubao Seedance 1.5 Pro caps explicit durations at 12s (WAN 2.0 allows up to 15).
         if (
             self.adapter_id == "doubao-seedance-1-5-pro"
