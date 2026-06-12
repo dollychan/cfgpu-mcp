@@ -266,3 +266,57 @@ async def test_list_running_excludes_completed():
     running_after = await tm.list_running()
     assert not any(t.id == "task-run" for t in running_after)
     await db.close()
+
+
+# ── _extract_error_message ────────────────────────────────────────────────────
+
+from cfgpu_mcp.task_manager import _extract_error_message
+
+
+def test_extract_error_nano_failed_has_no_detail():
+    # Real CFGPU nano image failure: status under data, no error field at all.
+    # Top-level "message" is "success" (query succeeded) and must NOT be used.
+    resp = {
+        "code": 200,
+        "message": "success",
+        "data": {"task_id": "t1", "task_type": "nano_generation", "status": "failed", "result": None},
+    }
+    assert _extract_error_message(resp) is None
+
+
+def test_extract_error_wan_null_error_does_not_crash():
+    # WAN video failure carries error: null — must not raise AttributeError.
+    resp = {"id": "t1", "status": "failed", "error": None}
+    assert _extract_error_message(resp) is None
+
+
+def test_extract_error_dict_message():
+    resp = {"id": "t1", "status": "failed", "error": {"message": "content_blocked"}}
+    assert _extract_error_message(resp) == "content_blocked"
+
+
+def test_extract_error_string():
+    resp = {"id": "t1", "status": "failed", "error": "quota exceeded"}
+    assert _extract_error_message(resp) == "quota exceeded"
+
+
+def test_extract_error_nested_fail_reason():
+    resp = {"data": {"status": "failed", "fail_reason": "nsfw detected"}}
+    assert _extract_error_message(resp) == "nsfw detected"
+
+
+@pytest.mark.asyncio
+async def test_poll_wan_null_error_failure_converges():
+    """Regression: a WAN-style failed poll with error: null used to crash
+    (None.get('message')). It should converge to 'failed' with a fallback msg."""
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    req = GenerateVideoInput(prompt="x")
+    task = await tm.create(adapter, req)
+
+    tm._client.get = AsyncMock(return_value={"id": "task-abc", "status": "failed", "error": None})
+    task = await tm.poll(task, adapter)
+    assert task.status == "failed"
+    assert task.error and "no error detail" in task.error
+    await db.close()

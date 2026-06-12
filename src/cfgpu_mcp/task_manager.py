@@ -32,6 +32,34 @@ _STATUS_MAP = {
 }
 
 
+def _extract_error_message(resp: dict) -> str | None:
+    """Best-effort failure reason from a poll response, tolerant of shape.
+
+    Upstreams disagree on where the reason lives: WAN video carries a top-level
+    ``error`` that is ``null`` on success and a dict on failure; nano image tasks
+    nest everything under ``data`` and provide *no* reason at all on failure.
+    Returns None when the upstream genuinely gives nothing — callers supply a
+    fallback. Deliberately ignores the top-level ``message`` field because the
+    image API sets it to "success" (the query succeeded) even for failed tasks.
+    """
+    data = resp.get("data")
+    for container in (resp, data if isinstance(data, dict) else None):
+        if not container:
+            continue
+        err = container.get("error")
+        if isinstance(err, dict):
+            msg = err.get("message") or err.get("msg")
+            if msg:
+                return str(msg)
+        elif isinstance(err, str) and err.strip():
+            return err.strip()
+        for key in ("fail_reason", "failure_reason", "reason"):
+            val = container.get(key)
+            if isinstance(val, str) and val.strip():
+                return val.strip()
+    return None
+
+
 def _now_row(
     task_id: str,
     adapter_id: str,
@@ -144,7 +172,9 @@ class TaskManager:
                 result_dict = None
                 error_msg = "Task reported success but returned no artifact URLs"
         elif status == "failed":
-            error_msg = resp.get("error", {}).get("message") or "Task failed"
+            error_msg = _extract_error_message(resp) or (
+                "Task failed (upstream reported no error detail)"
+            )
 
         await self._repo.update_task(task.id, status, result=result_dict, error=error_msg)
         # Fields are all in scope — avoid a read-back round-trip; preserve created_at.
