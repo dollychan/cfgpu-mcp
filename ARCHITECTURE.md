@@ -213,7 +213,7 @@ ModelAdapter (ABC, adapters/base.py)
     │       ├── GptImage2Adapter      gpt-image-2
     │       └── NanoBananaAdapter     nano-banana-2 / nano-banana-pro（extends 链）
     │
-    ├── WanVideoAdapter           手写 Python，处理复杂 content 数组构建
+    ├── SeedanceVideoAdapter           手写 Python，处理复杂 content 数组构建
     │       └── 同时服务 wan-2-0 和 wan-2-0-fast（通过 extends 链）
     │
     ├── SeedreamAdapter           手写 Python，处理 resolution×ratio → size 映射
@@ -254,24 +254,24 @@ poll_config:
 ### 5.3 Python Adapter 注册机制
 
 ```python
-# adapters/wan_video.py
-@register_python_adapter        # 把 WanVideoAdapter 注册到 _PYTHON_ADAPTERS["wan-2-0"]
-class WanVideoAdapter(ModelAdapter):
+# adapters/seedance_video.py
+@register_python_adapter        # 把 SeedanceVideoAdapter 注册到 _PYTHON_ADAPTERS["wan-2-0"]
+class SeedanceVideoAdapter(ModelAdapter):
     adapter_id = "wan-2-0"
     ...
 ```
 
 ```python
 # adapters/__init__.py
-from cfgpu_mcp.adapters import wan_video, seedream, async_image, happyhorse_video  # 触发 @register_python_adapter
+from cfgpu_mcp.adapters import seedance_video, seedream, async_image, happyhorse_video  # 触发 @register_python_adapter
 ```
 
 `_instantiate()` 的查找顺序：
 1. 在 `_PYTHON_ADAPTERS` 中查找 `adapter_id`（e.g. `wan-2-0-fast`）→ 未找到
-2. 沿 `extends` 链**逐级向上**查找父 ID（`wan-2-0`）→ 找到 `WanVideoAdapter`
-3. 用 `WanVideoAdapter.from_config(merged_config)` 实例化，此时实例的 `adapter_id`、`cfgpu_model_id` 等已被 merged config 覆盖
+2. 沿 `extends` 链**逐级向上**查找父 ID（`wan-2-0`）→ 找到 `SeedanceVideoAdapter`
+3. 用 `SeedanceVideoAdapter.from_config(merged_config)` 实例化，此时实例的 `adapter_id`、`cfgpu_model_id` 等已被 merged config 覆盖
 
-这就是 `wan-2-0-fast` 如何复用 `WanVideoAdapter` 的全部逻辑，不需要 `wan_video_fast.py`。
+这就是 `wan-2-0-fast`、`doubao-seedance-2-0` / `-fast`、`doubao-seedance-1-5-pro` 如何复用 `SeedanceVideoAdapter` 的全部逻辑，不需要各自单独的 Python 文件。
 
 第 2 步必须沿整条链向上走，而不是只看一层父级。例如 `nano-banana-pro-premium` → `nano-banana-pro` → `nano-banana-2`：只有 `nano-banana-2` 注册了 `NanoBananaAdapter`，中间的 `nano-banana-pro` 没有。若只查一层，孙级变体会 fallback 到 `GenericAdapter`，由于没有 `payload_mapping` 而构建出空 payload，导致 API 报 `model参数不能为空`。`_instantiate()` 因此接收完整的 `raw_configs`，以便逐级追溯 `extends`。
 
@@ -336,7 +336,7 @@ while not done:
     interval = min(interval * backoff_factor, max_interval)  # 最长 20s
 ```
 
-每个模型的轮询参数在 `adapter.yaml` 的 `poll_config` 中配置，`WanVideoAdapter` 还根据请求参数（时长、是否有参考媒体）动态延长 `estimate_poll_timeout()`。
+每个模型的轮询参数在 `adapter.yaml` 的 `poll_config` 中配置，`SeedanceVideoAdapter` 还根据请求参数（时长、是否有参考媒体）动态延长 `estimate_poll_timeout()`。
 
 ---
 
@@ -403,12 +403,12 @@ src/cfgpu_mcp/
 │   ├── base.py                 ModelAdapter ABC + @register_python_adapter + PollConfig
 │   ├── registry.py             YAML 加载、extends 合并、Python 类解析
 │   ├── generic.py              YAML DSL 驱动的通用 adapter
-│   ├── wan_video.py            WAN 2.0 / WAN 2.0 Fast 的 Python Adapter
+│   ├── seedance_video.py       Seedance 系列 Python Adapter（WAN 2.0 / WAN 2.0 Fast / Seedance 2.0 / 2.0 Fast / 1.5 Pro 共用）
 │   ├── seedream.py             Seedream 的 Python Adapter（同步模型）
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
 │   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds）
-│   └── __init__.py             导入 wan_video、seedream、async_image、happyhorse_video、kling_video 触发注册
+│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -419,6 +419,12 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── doubao-seedance-1-5-pro/
 │   │   ├── adapter.yaml        extends: wan-2-0, card_base: ~（不继承 card.md）
+│   │   └── card.md
+│   ├── doubao-seedance-2-0/
+│   │   ├── adapter.yaml        Seedance 2.0，API 等同 WAN 2.0，extends: wan-2-0, card_base: ~
+│   │   └── card.md
+│   ├── doubao-seedance-2-0-fast/
+│   │   ├── adapter.yaml        extends: doubao-seedance-2-0, card_base: ~
 │   │   └── card.md
 │   ├── doubao-seedream-5-0-lite/
 │   │   ├── adapter.yaml
@@ -431,6 +437,12 @@ src/cfgpu_mcp/
 │       └── card.md
 │   ├── happyhorse-1-0-t2v/
 │   │   ├── adapter.yaml        DashScope 风格异步视频模型
+│   │   └── card.md
+│   ├── happyhorse-1-0-r2v/
+│   │   ├── adapter.yaml        参考生视频，extends: happyhorse-1-0-t2v, card_base: ~
+│   │   └── card.md
+│   ├── happyhorse-1-0-video-edit/
+│   │   ├── adapter.yaml        视频编辑（源视频+参考图），extends: happyhorse-1-0-t2v, card_base: ~
 │   │   └── card.md
 │   ├── kling-video-o1/
 │   │   ├── adapter.yaml        可灵 O1，flat payload，目前仅 text_to_video
@@ -506,7 +518,7 @@ poll_config:
 
 `card.md`（可选，只写差异，空文件也可以）
 
-无需写 Python 代码。重启后自动加载，`wan-2-0-turbo` 会复用 `WanVideoAdapter`。
+无需写 Python 代码。重启后自动加载，`wan-2-0-turbo` 会复用 `SeedanceVideoAdapter`。
 
 ---
 
@@ -552,7 +564,7 @@ class MyModelAdapter(ModelAdapter):
 3. 在 `adapters/__init__.py` 中导入（触发注册）：
 
 ```python
-from cfgpu_mcp.adapters import wan_video, seedream, my_model
+from cfgpu_mcp.adapters import seedance_video, seedream, my_model
 ```
 
 ---
@@ -598,11 +610,11 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
 跨多数模型、用户高频调整的开关应做成**通用参数**（typed field），而不是埋在 free-form 的 `model_specific` 里。已有两个范例：
 
-- `with_audio`：视频音频开关，`WanVideoAdapter` 映射为 `generate_audio`。
-- `watermark`：水印开关。类型为 `Optional[bool]`，**默认 `None` 表示不写入 payload、沿用各模型 API 自身默认**（避免覆盖 Seedream 4.5 的 `false` 等差异化默认）。支持的 adapter（`wan_video`、`seedream`、`happyhorse`）在 `payload.update(req.model_specific)` **之前**写入 `payload["watermark"]`，因此 `model_specific` 仍可覆盖它；不支持的 adapter（`async_image` 下的 gpt-image-2 / nano-banana）不读取该字段，传入即被忽略。
+- `with_audio`：视频音频开关，`SeedanceVideoAdapter` 映射为 `generate_audio`。
+- `watermark`：水印开关。类型为 `Optional[bool]`，**默认 `None` 表示不写入 payload、沿用各模型 API 自身默认**（避免覆盖 Seedream 4.5 的 `false` 等差异化默认）。支持的 adapter（`seedance_video`、`seedream`、`happyhorse`）在 `payload.update(req.model_specific)` **之前**写入 `payload["watermark"]`，因此 `model_specific` 仍可覆盖它；不支持的 adapter（`async_image` 下的 gpt-image-2 / nano-banana）不读取该字段，传入即被忽略。
 - `n`：图片组图数量（1-15），默认 1。仅 `SeedreamAdapter` 支持 `n>1`——会自动写入 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`async_image`（gpt-image-2 / nano-banana）的 `supports()` 对 `n>1` 直接拒绝。
 - `resolution`（视频）：开放 `1080p`，WAN 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
-- `duration_seconds`（视频）：允许 `-1`（智能时长，`WanVideoAdapter` 直接透传）。`WanVideoAdapter.supports()` 对 `doubao-seedance-1-5-pro` 额外限制显式时长 ≤12s；`happyhorse` 拒绝 `-1`。
+- `duration_seconds`（视频）：允许 `-1`（智能时长，`SeedanceVideoAdapter` 直接透传）。`SeedanceVideoAdapter.supports()` 对 `doubao-seedance-1-5-pro` 额外限制显式时长 ≤12s；`happyhorse` 拒绝 `-1`。
 
 > 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark`、`n` 作为通用参数列在支持模型的顶层 args（`n` 仅列在 seedream 系；gpt/nano 均不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`response_format` 等）。新增/调整参数时同步该文件。
 
@@ -676,7 +688,7 @@ FastMCP 0.x 通过函数签名内省来生成 JSON Schema，不支持以 Pydanti
 CLI 的异步工作流：`cfgpu generate video ... --no-wait` 拿到 task_id，进程退出；几分钟后 `cfgpu task wait <task_id>` 需要恢复状态。进程间共享状态必须持久化。SQLite 无需额外服务，满足单机场景。多 agent 并发访问同一文件时，WAL 模式（`PRAGMA journal_mode=WAL`）保证并发读写安全；如需完全隔离，各 agent 在各自 config.yaml 的 `task_db.url` 指向不同的 SQLite 文件。
 
 **为什么 `_merge_extends()` 要在合并后的 dict 里保留 `extends` 字段？**
-`_instantiate()` 分两步工作：先用 `adapter_id` 在 `_PYTHON_ADAPTERS` 里查找 Python 类，找不到时沿 `extends` 链逐级向上查找父 ID。如果 `extends` 被清除，variant 模型（如 `wan-2-0-fast`）就找不到对应的 `WanVideoAdapter`，会 fallback 到 `GenericAdapter`，导致视频 payload 构建错误。注意必须遍历整条链（见 5.3），孙级变体如 `nano-banana-pro-premium` 的 Python 类位于祖父 `nano-banana-2` 上。
+`_instantiate()` 分两步工作：先用 `adapter_id` 在 `_PYTHON_ADAPTERS` 里查找 Python 类，找不到时沿 `extends` 链逐级向上查找父 ID。如果 `extends` 被清除，variant 模型（如 `wan-2-0-fast`）就找不到对应的 `SeedanceVideoAdapter`，会 fallback 到 `GenericAdapter`，导致视频 payload 构建错误。注意必须遍历整条链（见 5.3），孙级变体如 `nano-banana-pro-premium` 的 Python 类位于祖父 `nano-banana-2` 上。
 
 **为什么 `cfgpu_model_id` 只允许在 `build_payload()` 里出现？**
 防止 `cfgpu_model_id` 污染到用户界面或日志。用户只需要知道 `adapter_id`（人类可读、稳定），`cfgpu_model_id` 是 CFGPU API 内部实现细节，会随版本更迭变化。

@@ -1,0 +1,12 @@
+extends: wan-2-0
+card_base: ~
+
+adapter_id: doubao-seedance-2-0
+display_name: "Doubao Seedance 2.0"
+cfgpu_model_id: doubao-seedance-2-0-260128
+
+# Capabilities, endpoint, poll_config etc. are identical to WAN 2.0 and inherited
+# from the wan-2-0 base; only the identifiers and tiers differ.
+
+cost_tier: 3
+speed_tier: 2

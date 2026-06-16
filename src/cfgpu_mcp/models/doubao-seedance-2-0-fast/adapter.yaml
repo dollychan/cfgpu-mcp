@@ -1,0 +1,12 @@
+extends: doubao-seedance-2-0
+card_base: ~
+
+adapter_id: doubao-seedance-2-0-fast
+display_name: "Doubao Seedance 2.0 fast"
+cfgpu_model_id: doubao-seedance-2-0-fast-260128
+
+cost_tier: 2
+speed_tier: 4
+
+poll_config:
+  default_timeout: 300

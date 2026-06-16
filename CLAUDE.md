@@ -75,9 +75,9 @@ Each model lives in its own directory with `adapter.yaml` and `card.md`. Variant
 
 ### Python Adapter registration (Method B)
 
-`adapters/base.py` holds a global `_PYTHON_ADAPTERS: dict[str, type]`. The `@register_python_adapter` decorator populates it at import time, keyed by `cls.adapter_id`. `adapters/__init__.py` imports `wan_video` and `seedream` to trigger registration before the registry loads.
+`adapters/base.py` holds a global `_PYTHON_ADAPTERS: dict[str, type]`. The `@register_python_adapter` decorator populates it at import time, keyed by `cls.adapter_id`. `adapters/__init__.py` imports `seedance_video` and `seedream` to trigger registration before the registry loads.
 
-`_instantiate()` in the registry looks up `adapter_id` first, then follows `extends` to find the parent's class — this is how `wan-2-0-fast` reuses `WanVideoAdapter` with its own `cfgpu_model_id`.
+`_instantiate()` in the registry looks up `adapter_id` first, then follows `extends` to find the parent's class — this is how `wan-2-0-fast` reuses `SeedanceVideoAdapter` with its own `cfgpu_model_id`. The Seedance family (`wan-2-0`, `wan-2-0-fast`, `doubao-seedance-2-0`, `doubao-seedance-2-0-fast`, `doubao-seedance-1-5-pro`) all share `SeedanceVideoAdapter` (registered under `wan-2-0`) — Seedance 2.0 is API-identical to WAN 2.0.
 
 ### Tool schema single source of truth
 

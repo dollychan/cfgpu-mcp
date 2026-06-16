@@ -83,7 +83,9 @@ class ModelRouter:
                 user_message="没有可用的模型支持当前请求，请检查参数或手动指定 model。",
                 original={},
             )
-        scored.sort(key=lambda x: x[0], reverse=True)
+        # Highest score wins; break ties deterministically by adapter_id so
+        # selection never depends on registry/filesystem iteration order.
+        scored.sort(key=lambda x: (-x[0], x[1].adapter_id))
         return scored[0][1]
 
     def _score(

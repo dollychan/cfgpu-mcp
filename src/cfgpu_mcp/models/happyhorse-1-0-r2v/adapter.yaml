@@ -1,0 +1,12 @@
+extends: happyhorse-1-0-t2v
+card_base: ~
+
+adapter_id: happyhorse-1-0-r2v
+display_name: "happyhorse-1.0-r2v"
+cfgpu_model_id: happyhorse-1.0-r2v
+
+capabilities:
+  - multi_modal_reference
+
+cost_tier: 2
+speed_tier: 3

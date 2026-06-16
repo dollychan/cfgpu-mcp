@@ -10,12 +10,14 @@ if TYPE_CHECKING:
 
 
 @register_python_adapter
-class WanVideoAdapter(ModelAdapter):
-    """Python Adapter for WAN 2.0 (Seedance 2.0) and variants.
+class SeedanceVideoAdapter(ModelAdapter):
+    """Python Adapter for the Seedance video family and variants.
 
     Handles the multimodal content array construction required by the Seedance API.
-    WAN 2.0 Fast reuses this class via Registry extends-chain resolution —
-    no separate wan_video_fast.py needed.
+    WAN 2.0 / WAN 2.0 Fast / Seedance 2.0 / Seedance 2.0 Fast / Doubao Seedance 1.5 Pro
+    all reuse this class via Registry extends-chain resolution — no per-variant
+    Python module needed. The class is registered under ``wan-2-0`` (the base model
+    every variant ``extends:``).
     """
 
     adapter_id = "wan-2-0"

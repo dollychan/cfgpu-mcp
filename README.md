@@ -26,7 +26,11 @@
 | 视频 | `wan-2-0` | WAN 2.0 (Seedance 2.0) |
 | 视频 | `wan-2-0-fast` | WAN 2.0 Fast (Seedance 2.0 fast) |
 | 视频 | `doubao-seedance-1-5-pro` | Doubao Seedance 1.5 Pro |
+| 视频 | `doubao-seedance-2-0` | Doubao Seedance 2.0（多模态，API 等同 WAN 2.0） |
+| 视频 | `doubao-seedance-2-0-fast` | Doubao Seedance 2.0 fast |
 | 视频 | `happyhorse-1-0-t2v` | happyhorse-1.0-t2v |
+| 视频 | `happyhorse-1-0-r2v` | happyhorse-1.0-r2v（参考生视频，最多 9 张参考图） |
+| 视频 | `happyhorse-1-0-video-edit` | happyhorse-1.0-video-edit（视频编辑，源视频 + 最多 5 张参考图） |
 
 > 运行 `cfgpu models list` 查看当前实际加载的模型。
 

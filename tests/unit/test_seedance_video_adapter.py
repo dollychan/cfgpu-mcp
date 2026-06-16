@@ -1,9 +1,9 @@
 import pytest
-from cfgpu_mcp.adapters.wan_video import WanVideoAdapter
+from cfgpu_mcp.adapters.seedance_video import SeedanceVideoAdapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput
 
 
-def _make_adapter(cfgpu_model_id: str = "wan-video") -> WanVideoAdapter:
+def _make_adapter(cfgpu_model_id: str = "wan-video") -> SeedanceVideoAdapter:
     config = {
         "adapter_id": "wan-2-0",
         "display_name": "WAN 2.0",
@@ -17,7 +17,7 @@ def _make_adapter(cfgpu_model_id: str = "wan-video") -> WanVideoAdapter:
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 600},
     }
-    return WanVideoAdapter.from_config(config)
+    return SeedanceVideoAdapter.from_config(config)
 
 
 def test_text_only_has_no_media_items():
@@ -223,13 +223,13 @@ def test_seedance_rejects_duration_over_12():
         "cost_tier": 2,
         "speed_tier": 3,
     }
-    adapter = WanVideoAdapter.from_config(config)
+    adapter = SeedanceVideoAdapter.from_config(config)
     ok, reason = adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=15))
     assert ok is False
     assert "4–12" in reason
 
 
-def _make_fast_adapter() -> WanVideoAdapter:
+def _make_fast_adapter() -> SeedanceVideoAdapter:
     config = {
         "adapter_id": "wan-2-0-fast",
         "display_name": "WAN 2.0 Fast",
@@ -242,7 +242,7 @@ def _make_fast_adapter() -> WanVideoAdapter:
         "cost_tier": 2,
         "speed_tier": 4,
     }
-    return WanVideoAdapter.from_config(config)
+    return SeedanceVideoAdapter.from_config(config)
 
 
 def test_fast_rejects_1080p_text_to_video():
@@ -284,6 +284,6 @@ def test_seedance_accepts_smart_duration():
         "cost_tier": 2,
         "speed_tier": 3,
     }
-    adapter = WanVideoAdapter.from_config(config)
+    adapter = SeedanceVideoAdapter.from_config(config)
     ok, _ = adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=-1))
     assert ok is True

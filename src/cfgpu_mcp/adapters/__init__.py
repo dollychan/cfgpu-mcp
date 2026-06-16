@@ -1,6 +1,6 @@
 # Import Python Adapters to trigger @register_python_adapter before Registry.load()
 from cfgpu_mcp.adapters import (  # noqa: F401
-    wan_video,
+    seedance_video,
     seedream,
     async_image,
     happyhorse_video,

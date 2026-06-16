@@ -37,6 +37,11 @@ class HappyHorseVideoAdapter(ModelAdapter):
         if req.duration_seconds:
             parameters["duration"] = req.duration_seconds
 
+        return self._finalize_payload(inp, parameters, req)
+
+    def _finalize_payload(
+        self, inp: dict, parameters: dict, req: "GenerateVideoInput"
+    ) -> dict:
         payload: dict = {
             "model": self.cfgpu_model_id,
             "input": inp,
@@ -89,4 +94,55 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         if req.first_frame and req.reference_images:
             return False, "first_frame and reference_images are mutually exclusive"
+        if req.reference_images and len(req.reference_images) > 9:
+            return False, f"{self.adapter_id} accepts at most 9 reference_images"
+        return True, ""
+
+
+@register_python_adapter
+class HappyHorseVideoEditAdapter(HappyHorseVideoAdapter):
+    """Natural-language video editing: a source video + up to 5 reference images.
+
+    Output duration/ratio follow the source video, so neither is sent in the payload.
+    """
+
+    adapter_id = "happyhorse-1-0-video-edit"
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
+        assert isinstance(req, GenerateVideoInput)
+
+        media: list[dict] = []
+        for url in (req.reference_videos or []):
+            media.append({"type": "video", "url": url})
+        for url in (req.reference_images or []):
+            media.append({"type": "reference_image", "url": url})
+
+        inp: dict = {"prompt": req.prompt}
+        if media:
+            inp["media"] = media
+
+        parameters: dict = {}
+        if req.resolution and req.resolution != "adaptive":
+            parameters["resolution"] = req.resolution.upper()  # 720p → 720P
+
+        return self._finalize_payload(inp, parameters, req)
+
+    def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
+        # Skip HappyHorseVideoAdapter.supports (it rejects reference_videos); go to base.
+        ok, reason = ModelAdapter.supports(self, req)
+        if not ok:
+            return False, reason
+        assert isinstance(req, GenerateVideoInput)
+        if not req.reference_videos:
+            return False, f"{self.adapter_id} requires a source video (reference_videos)"
+        if len(req.reference_videos) > 1:
+            return False, f"{self.adapter_id} accepts a single source video"
+        if req.reference_images and len(req.reference_images) > 5:
+            return False, f"{self.adapter_id} accepts at most 5 reference_images"
+        if req.first_frame or req.last_frame:
+            return False, f"{self.adapter_id} does not support first_frame/last_frame"
+        if req.reference_audios:
+            return False, f"{self.adapter_id} does not support reference_audios"
+        if req.resolution == "480p":
+            return False, f"{self.adapter_id} minimum resolution is 720p"
         return True, ""

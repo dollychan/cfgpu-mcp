@@ -18,8 +18,9 @@ def test_auto_fast_tier_selects_high_speed_adapter():
     router = _router()
     req = GenerateVideoInput(prompt="test", quality_tier="fast")
     adapter = router.select_model(req)
-    # wan-2-0-fast has speed_tier=4, wan-2-0 has speed_tier=2
-    assert adapter.adapter_id == "wan-2-0-fast"
+    # wan-2-0-fast and doubao-seedance-2-0-fast both score 6 (speed_tier=4,
+    # cost_tier=2); the deterministic adapter_id tie-break picks the latter.
+    assert adapter.adapter_id == "doubao-seedance-2-0-fast"
 
 
 def test_auto_balanced_returns_a_video_model():
@@ -128,7 +129,7 @@ def test_resolve_auto_selects_from_all():
     router = _router()
     req = GenerateVideoInput(prompt="test", model="auto", quality_tier="fast")
     adapter = router.resolve(req)
-    assert adapter.adapter_id == "wan-2-0-fast"
+    assert adapter.adapter_id == "doubao-seedance-2-0-fast"
 
 
 def test_no_candidates_raises_cfgpu_error():

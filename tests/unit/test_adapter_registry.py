@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from cfgpu_mcp.adapters.registry import AdapterRegistry
-from cfgpu_mcp.adapters.wan_video import WanVideoAdapter
+from cfgpu_mcp.adapters.seedance_video import SeedanceVideoAdapter
 from cfgpu_mcp.adapters.seedream import SeedreamAdapter
 from cfgpu_mcp.adapters.async_image import NanoBananaAdapter
 from cfgpu_mcp.tool_registry import GenerateImageInput
@@ -64,10 +64,10 @@ def test_enabled_models_none_registers_all():
     assert len(registry) == _expected_model_count()
 
 
-def test_wan_fast_uses_wan_video_adapter_class():
+def test_wan_fast_uses_seedance_video_adapter_class():
     registry = _load()
     adapter = registry.get("wan-2-0-fast")
-    assert isinstance(adapter, WanVideoAdapter)
+    assert isinstance(adapter, SeedanceVideoAdapter)
 
 
 def test_wan_fast_cfgpu_model_id_is_fast():
