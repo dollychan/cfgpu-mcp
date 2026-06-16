@@ -62,14 +62,13 @@ class HappyHorseVideoAdapter(ModelAdapter):
     def parse_response(self, resp: dict) -> NormalizedResult:
         output = self._output(resp)
         video_url = output.get("video_url")
-        usage = resp.get("usage") or {}
         return NormalizedResult(
             urls=[video_url] if video_url else [],
             expires_at=_default_expires_at(),
             task_id=output.get("task_id"),
             model_used=resp.get("model"),
             seed=output.get("seed"),
-            cost_tokens=usage.get("total_tokens"),
+            usage=resp.get("usage"),
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

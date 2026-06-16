@@ -91,7 +91,7 @@ class WanVideoAdapter(ModelAdapter):
             task_id=resp.get("id"),
             model_used=resp.get("model"),
             seed=resp.get("seed"),
-            cost_tokens=(resp.get("usage") or {}).get("totalTokens"),
+            usage=resp.get("usage"),
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

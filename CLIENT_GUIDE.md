@@ -577,7 +577,7 @@ done
 | `task_id` | `str \| null` | | 任务 ID；同步模型为 `null` |
 | `model_used` | `str \| null` | | 实际使用的模型标识符。优先取 API 返回的 `model` 字段；若 API 未回传，则兜底为所选 adapter 的 `cfgpu_model_id`。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
-| `cost_tokens` | `int \| null` | | 部分模型返回的消耗 token 数 |
+| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null` |
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
 
@@ -602,7 +602,7 @@ done
   "task_id": "task-abc123",
   "model_used": "seedream-v3",
   "seed": 42,
-  "cost_tokens": 100
+  "usage": {"total_tokens": 100}
 }
 ```
 

@@ -33,7 +33,7 @@ def _sync_adapter():
         task_id=None,
         model_used="test",
         seed=None,
-        cost_tokens=10,
+        usage={"total_tokens": 10},
     )
     return adapter
 
@@ -82,7 +82,7 @@ async def test_sync_create_falls_back_to_cfgpu_model_id():
         task_id=None,
         model_used=None,  # API didn't echo back "model"
         seed=None,
-        cost_tokens=10,
+        usage={"total_tokens": 10},
     )
     tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x")
@@ -107,7 +107,7 @@ async def test_poll_falls_back_to_cfgpu_model_id():
         task_id="task-abc",
         model_used=None,  # poll response carries no "model" field
         seed=None,
-        cost_tokens=None,
+        usage=None,
     )
     tm._client.get = AsyncMock(return_value={
         "id": "task-abc", "status": "completed",
@@ -163,7 +163,7 @@ async def test_poll_updates_status():
         task_id="task-abc",
         model_used="wan-video",
         seed=None,
-        cost_tokens=100,
+        usage={"total_tokens": 100},
     )
     tm._client.get = AsyncMock(return_value={
         "id": "task-abc", "status": "completed", "model": "wan-video",
@@ -190,7 +190,7 @@ async def test_poll_success_without_urls_converges_to_failed():
     adapter.parse_response.return_value = NormalizedResult(
         urls=[],  # success status but no URLs
         expires_at=datetime.now(UTC) + timedelta(hours=24),
-        task_id="task-abc", model_used="wan-video", seed=None, cost_tokens=None,
+        task_id="task-abc", model_used="wan-video", seed=None, usage=None,
     )
     tm._client.get = AsyncMock(return_value={"id": "task-abc", "status": "completed"})
     task = await tm.poll(task, adapter)

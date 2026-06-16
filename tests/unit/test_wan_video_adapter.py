@@ -165,7 +165,7 @@ def test_parse_response_real_api_result():
     assert result.task_id == "cgt-20260513110708-8c5wf"
     assert result.model_used == "wan-video-fast"
     assert result.seed == 15233
-    assert result.cost_tokens == 108900
+    assert result.usage == {"completionTokens": 108900, "totalTokens": 108900}
 
 
 def test_supports_rejects_last_frame_without_first_frame():

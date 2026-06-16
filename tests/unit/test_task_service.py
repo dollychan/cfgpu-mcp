@@ -93,7 +93,7 @@ async def test_get_status_repolls_pending_async_task():
     adapter.parse_response.return_value = NormalizedResult(
         urls=["https://cdn/v.mp4"],
         expires_at=datetime.now(UTC) + timedelta(hours=24),
-        task_id="task-1", model_used="wan-video", seed=None, cost_tokens=None,
+        task_id="task-1", model_used="wan-video", seed=None, usage=None,
     )
     p_db, p_client, p_reg = _patch_config(db, client, adapter)
     with p_db, p_client, p_reg:

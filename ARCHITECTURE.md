@@ -539,7 +539,7 @@ class MyModelAdapter(ModelAdapter):
             task_id=resp.get("id"),
             model_used=resp.get("model"),  # 可为 None；见下方兜底说明
             seed=None,
-            cost_tokens=None,
+            usage=resp.get("usage"),  # 原样保留 API 的 usage 对象（计费结构因 API 而异）
         )
 ```
 

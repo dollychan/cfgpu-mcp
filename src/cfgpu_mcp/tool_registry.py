@@ -49,7 +49,7 @@ class GenerateImageInput(BaseModel):
     )
     wait: bool = Field(default=True, description="Wait for task completion before returning")
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
-    return_metadata: bool = Field(default=True, description="Include seed, model_used, cost_tokens in response")
+    return_metadata: bool = Field(default=True, description="Include seed, model_used, usage in response")
     model_specific: Optional[dict] = Field(
         default=None,
         description="Model-specific parameters passed directly to API, e.g. {'tools': [{'type': 'web_search'}]}. "
@@ -117,7 +117,7 @@ class GenerateVideoInput(BaseModel):
     )
     wait: bool = Field(default=True, description="Wait for task completion before returning")
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
-    return_metadata: bool = Field(default=True, description="Include seed, model_used, cost_tokens in response")
+    return_metadata: bool = Field(default=True, description="Include seed, model_used, usage in response")
     model_specific: Optional[dict] = Field(
         default=None,
         description="Model-specific parameters, e.g. {'tools': [{'type': 'web_search'}]}. "
@@ -162,7 +162,7 @@ class NormalizedResult:
     task_id: str | None                # 同步模型为 None
     model_used: str | None             # 实际 cfgpu_model_id
     seed: int | None                   # 部分模型返回
-    cost_tokens: int | None            # 部分模型返回
+    usage: dict[str, Any] | None       # 原始 API 返回的 usage 对象（计费结构因 API 而异）
 
     def to_dict(self, return_metadata: bool = False) -> dict[str, Any]:
         base: dict[str, Any] = {
@@ -174,7 +174,7 @@ class NormalizedResult:
                 "task_id": self.task_id,
                 "model_used": self.model_used,
                 "seed": self.seed,
-                "cost_tokens": self.cost_tokens,
+                "usage": self.usage,
             })
         return base
 

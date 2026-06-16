@@ -60,7 +60,7 @@ class GenericAdapter(ModelAdapter):
             task_id=resp.get("id"),
             model_used=resp.get("model"),
             seed=None,
-            cost_tokens=self._extract(resp, "usage.total_tokens"),
+            usage=resp.get("usage"),
         )
 
     @staticmethod

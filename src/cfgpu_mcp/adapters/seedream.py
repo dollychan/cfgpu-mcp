@@ -69,5 +69,5 @@ class SeedreamAdapter(ModelAdapter):
             task_id=None,          # Synchronous model has no task_id
             model_used=resp.get("model"),
             seed=None,
-            cost_tokens=(resp.get("usage") or {}).get("total_tokens"),
+            usage=resp.get("usage"),
         )

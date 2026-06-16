@@ -61,7 +61,7 @@ def generate() -> None:
 @click.option("--timeout", type=int, default=None,
               help="Max wait seconds (default: model estimate)")
 @click.option("--metadata", is_flag=True,
-              help="Include seed, model_used, cost_tokens in output")
+              help="Include seed, model_used, usage in output")
 @click.option("--json", "json_mode", is_flag=True,
               help="Output raw JSON")
 @click.option("--model-specific", default=None, metavar="JSON",
@@ -135,7 +135,7 @@ def image_cmd(
 @click.option("--timeout", type=int, default=None,
               help="Max wait seconds (default: model estimate)")
 @click.option("--metadata", is_flag=True,
-              help="Include seed, model_used, cost_tokens in output")
+              help="Include seed, model_used, usage in output")
 @click.option("--json", "json_mode", is_flag=True,
               help="Output raw JSON")
 @click.option("--model-specific", default=None, metavar="JSON",

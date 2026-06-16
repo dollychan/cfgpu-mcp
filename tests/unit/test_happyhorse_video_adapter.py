@@ -135,7 +135,7 @@ def test_parse_response_extracts_video_url():
     assert result.task_id == "task-abc123"
     assert result.model_used == "happyhorse-1.0-t2v"
     assert result.seed == 42
-    assert result.cost_tokens == 230
+    assert result.usage == {"total_tokens": 230}
     assert result.expires_at is not None
 
 

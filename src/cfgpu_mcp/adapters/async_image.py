@@ -31,7 +31,7 @@ class _AsyncImageBase(ModelAdapter):
             task_id=data.get("task_id"),
             model_used=None,
             seed=None,
-            cost_tokens=None,
+            usage=resp.get("usage"),
         )
 
     def _finalize_payload(self, payload: dict, req: GenerateImageInput) -> dict:

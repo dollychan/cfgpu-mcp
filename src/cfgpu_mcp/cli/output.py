@@ -24,7 +24,7 @@ def print_result(data: dict, json_mode: bool = False) -> None:
             print("(no URLs returned)", file=sys.stderr)
         if data.get("expires_at"):
             print(f"expires: {data['expires_at']}", file=sys.stderr)
-        for key in ("task_id", "model_used", "seed", "cost_tokens"):
+        for key in ("task_id", "model_used", "seed", "usage"):
             if data.get(key) is not None:
                 print(f"{key}: {data[key]}", file=sys.stderr)
         return
