@@ -69,6 +69,7 @@ class HappyHorseVideoAdapter(ModelAdapter):
             model_used=resp.get("model"),
             seed=output.get("seed"),
             usage=resp.get("usage"),
+            aspect_ratio=output.get("ratio") or resp.get("ratio"),  # resolved output ratio when reported
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

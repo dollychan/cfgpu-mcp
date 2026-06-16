@@ -163,6 +163,7 @@ class NormalizedResult:
     model_used: str | None             # 实际 cfgpu_model_id
     seed: int | None                   # 部分模型返回
     usage: dict[str, Any] | None       # 原始 API 返回的 usage 对象（计费结构因 API 而异）
+    aspect_ratio: str | None = None    # 回传请求的 aspect_ratio（由 TaskManager 填充）
 
     def to_dict(self, return_metadata: bool = False) -> dict[str, Any]:
         base: dict[str, Any] = {
@@ -173,6 +174,7 @@ class NormalizedResult:
             base.update({
                 "task_id": self.task_id,
                 "model_used": self.model_used,
+                "aspect_ratio": self.aspect_ratio,
                 "seed": self.seed,
                 "usage": self.usage,
             })

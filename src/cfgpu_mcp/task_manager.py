@@ -16,6 +16,21 @@ if TYPE_CHECKING:
 
 ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
 
+# Echoed aspect_ratio prefers the value the upstream actually returned (some
+# APIs, e.g. WAN, report the resolved ratio in their response — important when
+# the request asked for "adaptive"). The adapter's parse_response() sets it when
+# present; only when it doesn't do we fall back to the *requested* ratio.
+#
+# That request echo isn't part of the upstream response, so async models (which
+# finalize their result in poll(), with no access to the original request) can't
+# recover it from the API. We stash it in the *stored* payload under this
+# reserved key so poll() — including the task_status re-poll path that reads the
+# row back from the DB — can fall back to it. This never reaches the upstream
+# API: create() POSTs the clean payload and only augments the copy handed to the
+# repository. payload is read back internally only (never re-POSTed), so the
+# extra key is inert.
+_ASPECT_RATIO_KEY = "_requested_aspect_ratio"
+
 # Internal (already normalized via _STATUS_MAP) terminal statuses. Raw API
 # values like "completed" never reach here — they map to "succeeded" first.
 _TERMINAL_STATUSES = {"succeeded", "failed"}
@@ -124,6 +139,8 @@ class TaskManager:
             result: NormalizedResult = adapter.parse_response(resp)
             if not result.model_used:
                 result.model_used = adapter.cfgpu_model_id
+            if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
+                result.aspect_ratio = req.aspect_ratio
             result_dict = result.to_dict(return_metadata=True)
             await self._repo.insert_task(task_id, adapter.adapter_id, "succeeded", payload)
             await self._repo.update_task(task_id, "succeeded", result=result_dict)
@@ -144,8 +161,9 @@ class TaskManager:
                 ),
                 original={"adapter_id": adapter.adapter_id, "response": resp},
             )
-        await self._repo.insert_task(cfgpu_task_id, adapter.adapter_id, "pending", payload)
-        return Task(_now_row(cfgpu_task_id, adapter.adapter_id, "pending", payload))
+        stored_payload = {**payload, _ASPECT_RATIO_KEY: req.aspect_ratio}
+        await self._repo.insert_task(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload)
+        return Task(_now_row(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload))
 
     # ── Poll ─────────────────────────────────────────────────────────────────
 
@@ -164,6 +182,8 @@ class TaskManager:
             result: NormalizedResult = adapter.parse_response(resp)
             if not result.model_used:
                 result.model_used = adapter.cfgpu_model_id
+            if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
+                result.aspect_ratio = task.payload.get(_ASPECT_RATIO_KEY)
             result_dict = result.to_dict(return_metadata=True)
             if not result_dict.get("urls"):
                 # Upstream reports success but yields no artifact URL — treat as a

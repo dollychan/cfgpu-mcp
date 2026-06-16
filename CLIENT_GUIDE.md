@@ -576,6 +576,7 @@ done
 | `expires_at` | `str \| null` | ✓ | URL 过期时间（ISO 8601），通常 24 小时后失效 |
 | `task_id` | `str \| null` | | 任务 ID；同步模型为 `null` |
 | `model_used` | `str \| null` | | 实际使用的模型标识符。优先取 API 返回的 `model` 字段；若 API 未回传，则兜底为所选 adapter 的 `cfgpu_model_id`。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
+| `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
 | `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null` |
 
@@ -601,6 +602,7 @@ done
   "expires_at": "2026-05-13T10:00:00Z",
   "task_id": "task-abc123",
   "model_used": "seedream-v3",
+  "aspect_ratio": "16:9",
   "seed": 42,
   "usage": {"total_tokens": 100}
 }

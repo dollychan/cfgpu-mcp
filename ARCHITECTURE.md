@@ -545,6 +545,10 @@ class MyModelAdapter(ModelAdapter):
 
 > **`model_used` 兜底**：`model_used` 取自 API 响应里的 `resp.get("model")`，但 CFGPU 并不保证回传该字段（异步视频的轮询响应通常没有）。因此 `TaskManager` 在 `create()`（同步）和 `poll()`（异步）中，于 `parse_response()` 之后统一兜底：`if not result.model_used: result.model_used = adapter.cfgpu_model_id`。这对 `model="auto"` 尤为关键——调用方唯一能得知 router 实际选中哪个模型的渠道就是 `model_used`，否则它会是 null。
 
+> **`aspect_ratio` 回传**：`aspect_ratio` 是回传给客户端的宽高比元数据，取值**优先用上游响应实际返回的 `ratio`**——部分 API（如 WAN，响应里带 `"ratio": "9:16"`）会回传解析后的真实宽高比，这在请求传 `adaptive` 时尤其有意义。各 adapter 的 `parse_response()` 在响应含 `ratio` 时即填入 `result.aspect_ratio`；仅当响应未回传时，才由 `TaskManager` 兜底为**请求**的 `aspect_ratio`（与 `model_used` 的兜底模式一致：`if not result.aspect_ratio: ...`）。
+>
+> 该请求兜底值并非来自响应，而异步模型的结果要到 `poll()` 才定型、此处已无请求对象，因此 `create()` 把请求的 `aspect_ratio` 暂存进**入库的** payload（保留键 `_requested_aspect_ratio`），`poll()` 再从 `task.payload` 取回。该保留键只进数据库、不会发往上游（POST 用的是干净的 payload），且 payload 仅供内部回读、从不重新提交，因此对上游与客户端均无影响，同时也让 `task_status` 重新轮询时仍能带上正确的宽高比。
+
 3. 在 `adapters/__init__.py` 中导入（触发注册）：
 
 ```python

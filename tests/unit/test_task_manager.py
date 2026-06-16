@@ -119,6 +119,77 @@ async def test_poll_falls_back_to_cfgpu_model_id():
 
 
 @pytest.mark.asyncio
+async def test_sync_create_echoes_aspect_ratio():
+    """The requested aspect_ratio is echoed back in the result metadata."""
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    req = GenerateImageInput(prompt="x", aspect_ratio="16:9")
+    task = await tm.create(adapter, req)
+    assert task.result["aspect_ratio"] == "16:9"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_echoes_requested_aspect_ratio():
+    """Async models finalize in poll() without the request in scope; the
+    requested aspect_ratio is recovered from the stashed payload and echoed."""
+    from cfgpu_mcp.tool_registry import NormalizedResult
+    from datetime import datetime, UTC, timedelta
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    req = GenerateVideoInput(prompt="x", aspect_ratio="9:16")
+    task = await tm.create(adapter, req)
+
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/v.mp4"],
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        task_id="task-abc",
+        model_used="wan-video",
+        seed=None,
+        usage=None,
+    )
+    tm._client.get = AsyncMock(return_value={
+        "id": "task-abc", "status": "completed",
+        "content": {"videoUrl": "https://cdn/v.mp4"},
+    })
+    task = await tm.poll(task, adapter)
+    assert task.result["aspect_ratio"] == "9:16"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_response_ratio_overrides_requested():
+    """When the upstream response reports the resolved ratio (e.g. the request
+    asked for "adaptive"), it overrides the requested aspect_ratio echo."""
+    from cfgpu_mcp.tool_registry import NormalizedResult
+    from datetime import datetime, UTC, timedelta
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    req = GenerateVideoInput(prompt="x", aspect_ratio="adaptive")
+    task = await tm.create(adapter, req)
+
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/v.mp4"],
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        task_id="task-abc",
+        model_used="wan-video",
+        seed=None,
+        usage=None,
+        aspect_ratio="9:16",  # API resolved "adaptive" → "9:16"
+    )
+    tm._client.get = AsyncMock(return_value={
+        "id": "task-abc", "status": "completed", "ratio": "9:16",
+        "content": {"videoUrl": "https://cdn/v.mp4"},
+    })
+    task = await tm.poll(task, adapter)
+    assert task.result["aspect_ratio"] == "9:16"
+    await db.close()
+
+
+@pytest.mark.asyncio
 async def test_async_model_create_returns_pending():
     tm, db = await _make_tm()
     adapter = _async_adapter()

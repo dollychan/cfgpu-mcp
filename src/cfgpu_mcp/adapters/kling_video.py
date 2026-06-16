@@ -75,6 +75,7 @@ class KlingVideoAdapter(ModelAdapter):
             model_used=resp.get("model"),
             seed=resp.get("seed"),
             usage=resp.get("usage"),
+            aspect_ratio=resp.get("ratio"),  # resolved output ratio when the API reports it
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

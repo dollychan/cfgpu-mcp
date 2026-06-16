@@ -166,6 +166,7 @@ def test_parse_response_real_api_result():
     assert result.model_used == "wan-video-fast"
     assert result.seed == 15233
     assert result.usage == {"completionTokens": 108900, "totalTokens": 108900}
+    assert result.aspect_ratio == "9:16"  # resolved output ratio read from response
 
 
 def test_supports_rejects_last_frame_without_first_frame():

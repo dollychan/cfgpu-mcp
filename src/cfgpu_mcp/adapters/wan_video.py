@@ -92,6 +92,7 @@ class WanVideoAdapter(ModelAdapter):
             model_used=resp.get("model"),
             seed=resp.get("seed"),
             usage=resp.get("usage"),
+            aspect_ratio=resp.get("ratio"),  # resolved output ratio (e.g. "adaptive" → "9:16")
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
