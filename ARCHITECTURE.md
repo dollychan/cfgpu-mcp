@@ -218,8 +218,12 @@ ModelAdapter (ABC, adapters/base.py)
     │
     ├── SeedreamAdapter           手写 Python，处理 resolution×ratio → size 映射
     │
-    └── HappyHorseVideoAdapter    手写 Python，DashScope 风格嵌套 payload
-            └── input.media 数组 + parameters 对象；大写状态码归一化
+    ├── HappyHorseVideoAdapter    手写 Python，DashScope 风格嵌套 payload
+    │       └── input.media 数组 + parameters 对象；大写状态码归一化
+    │
+    └── KlingVideoAdapter         手写 Python，可灵 O1 的 flat payload
+            ├── resolution×ratio → size 像素串、quality_tier → std/pro mode；目前仅 text_to_video
+            └── 同时服务 kling-video-o1 和 kling-v3-omni（通过 extends 链）
 ```
 
 **选择 GenericAdapter 还是 Python Adapter？**
@@ -403,7 +407,8 @@ src/cfgpu_mcp/
 │   ├── seedream.py             Seedream 的 Python Adapter（同步模型）
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
-│   └── __init__.py             导入 wan_video、seedream、async_image、happyhorse_video 触发注册
+│   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds）
+│   └── __init__.py             导入 wan_video、seedream、async_image、happyhorse_video、kling_video 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -426,6 +431,12 @@ src/cfgpu_mcp/
 │       └── card.md
 │   ├── happyhorse-1-0-t2v/
 │   │   ├── adapter.yaml        DashScope 风格异步视频模型
+│   │   └── card.md
+│   ├── kling-video-o1/
+│   │   ├── adapter.yaml        可灵 O1，flat payload，目前仅 text_to_video
+│   │   └── card.md
+│   ├── kling-v3-omni/
+│   │   ├── adapter.yaml        可灵 V3 全能版，extends: kling-video-o1, card_base: ~
 │   │   └── card.md
 │   ├── gpt-image-2/
 │   │   ├── adapter.yaml

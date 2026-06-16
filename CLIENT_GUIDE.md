@@ -492,6 +492,11 @@ cfgpu generate video "身着旗袍的女性，低角度仰拍" \
   --reference-images https://example.com/ref1.jpg \
   --reference-images https://example.com/ref2.jpg
 
+# Kling Video O1（可灵 O1）/ Kling V3 Omni（可灵 V3 全能版）— 目前仅文生视频，resolution+aspect_ratio 自动映射为像素 size
+cfgpu generate video "一只可爱的橘猫在阳光下奔跑，慢镜头，电影质感" \
+  --model kling-video-o1 -r 1080p -d 5
+cfgpu generate video "..." --model kling-v3-omni -r 1080p -d 5
+
 # 去除水印（watermark 已是一等公民参数，无需走 model_specific）
 cfgpu generate video "..." --no-watermark
 cfgpu generate image "..." --no-watermark      # gpt-image-2 / nano-banana 不支持，忽略
