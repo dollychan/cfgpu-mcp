@@ -17,13 +17,19 @@ import inspect
 import pytest
 from pydantic_core import PydanticUndefined
 
+from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
-from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+from cfgpu_mcp.tool_registry import (
+    GenerateAudioInput,
+    GenerateImageInput,
+    GenerateVideoInput,
+)
 
 _CASES = [
     ("generate_image", GenerateImageInput, image_service.generate_image),
     ("generate_video", GenerateVideoInput, video_service.generate_video),
+    ("generate_audio", GenerateAudioInput, audio_service.generate_audio),
 ]
 
 

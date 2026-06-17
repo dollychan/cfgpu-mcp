@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import (
+        GenerateAudioInput,
         GenerateImageInput,
         GenerateVideoInput,
         NormalizedResult,
@@ -52,7 +53,7 @@ class ModelAdapter(ABC):
     adapter_id: str
     display_name: str
     cfgpu_model_id: str          # Only used in build_payload()
-    task_type: Literal["image", "video"]
+    task_type: Literal["image", "video", "audio"]
     endpoint: str
     is_async: bool
     poll_endpoint: str | None
@@ -88,7 +89,7 @@ class ModelAdapter(ABC):
 
     @abstractmethod
     def build_payload(
-        self, req: "GenerateImageInput | GenerateVideoInput"
+        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput"
     ) -> dict:
         """Map unified schema → CFGPU API payload. Only place cfgpu_model_id is used."""
 
@@ -97,15 +98,23 @@ class ModelAdapter(ABC):
         """Map CFGPU response → NormalizedResult. Missing fields set to None."""
 
     def supports(
-        self, req: "GenerateImageInput | GenerateVideoInput"
+        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput"
     ) -> tuple[bool, str]:
         """Return (ok, reason). Subclasses can override for fine-grained checks."""
-        from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+        from cfgpu_mcp.tool_registry import (
+            GenerateAudioInput,
+            GenerateImageInput,
+            GenerateVideoInput,
+        )
 
-        if isinstance(req, GenerateImageInput) and self.task_type != "image":
-            return False, f"{self.adapter_id} is a video model"
-        if isinstance(req, GenerateVideoInput) and self.task_type != "video":
-            return False, f"{self.adapter_id} is an image model"
+        expected = {
+            GenerateImageInput: "image",
+            GenerateVideoInput: "video",
+            GenerateAudioInput: "audio",
+        }
+        for cls, tt in expected.items():
+            if isinstance(req, cls) and self.task_type != tt:
+                return False, f"{self.adapter_id} is a {self.task_type} model, not a {tt} model"
         return True, ""
 
     def extract_task_id(self, resp: dict) -> str | None:
@@ -117,7 +126,7 @@ class ModelAdapter(ABC):
         return resp.get("status", "running")
 
     def estimate_poll_timeout(
-        self, req: "GenerateImageInput | GenerateVideoInput"
+        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput"
     ) -> int:
         """Estimate polling timeout in seconds. Only meaningful for async models."""
         if not self.is_async:

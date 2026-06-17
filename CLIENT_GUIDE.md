@@ -85,7 +85,7 @@ enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
 }
 ```
 
-配置后重启 Claude Desktop，即可在对话中使用 `generate_image`、`generate_video` 等工具。
+配置后重启 Claude Desktop，即可在对话中使用 `generate_image`、`generate_video`、`generate_audio` 等工具。
 
 > **MCP 工具命名**：MCP server 内部名称为 `cfgpu`。Claude Desktop 等 MCP Host 直接以原始名称展示工具（`generate_image` 等）。如果使用 `langchain-mcp-adapters` 之类的第三方 MCP 客户端加载工具，客户端通常会自动拼接 server 名作为前缀，工具名变为 `cfgpu_generate_image`、`cfgpu_generate_video` 等。若需与 Mode B 的 `get_langgraph_tools()` 保持命名一致，建议直接使用 Mode B3，跳过 MCP 协议层。
 
@@ -538,6 +538,29 @@ cfgpu generate video "..." --model-specific '{"tools": [{"type": "web_search"}]}
 
 > `watermark` 现已提升为通用参数（`--watermark/--no-watermark`，service 层 `watermark=True/False`）。
 > 不传时（`None`）沿用各模型自身的默认值（多数为开启，Seedream 4.5 为关闭）。
+
+### 生成音频（语音合成 / text-to-speech）
+
+```bash
+# 豆包语音合成 2.0（seed-tts-2-0）— 异步模型，speaker 选音色
+cfgpu generate audio "明朝开国皇帝朱元璋也称这本书为，万物之根" \
+  --model seed-tts-2-0 --voice zh_female_xiaohe_uranus_bigtts
+
+# MiniMax 语音 2.8 HD / Turbo — 同步模型，voice_id 选音色，支持 speed/volume/pitch/emotion
+cfgpu generate audio "今天是不是很开心呀(laughs)，当然了！" \
+  --model minimax-speech-2-8-hd --voice male-qn-qingse --emotion happy
+cfgpu generate audio "更快更省的合成" --model minimax-speech-2-8-turbo --speed 1.2
+
+# 调整输出格式与采样率（MiniMax 还可设 --bitrate）
+cfgpu generate audio "..." --format wav --sample-rate 24000
+
+# pronunciation_dict / subtitle_enable 等 MiniMax 专有字段走 --model-specific
+cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
+  --model-specific '{"input": {"pronunciation_dict": {"tone": ["处理/(chu3)(li3)"]}}}'
+```
+
+> `seed-tts-2-0` 为异步（提交后轮询 `/voice/tasks/{task_id}`），MiniMax 两款为同步（POST 直接返回音频 URL）。
+> `--speed/--volume/--pitch/--emotion` 仅 MiniMax 生效，seed-tts 会忽略；音频链接 24 小时内有效。
 > `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
 
@@ -613,7 +636,7 @@ done
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
 
-> **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`task_status`、`task_wait` 这四个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。四个工具成功时都返回同一套扁平结构（顶层 `urls`），无 URL 的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。
+> **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`generate_audio`、`task_status`、`task_wait` 这五个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。这些工具成功时都返回同一套扁平结构（顶层 `urls`），无 URL 的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。
 
 ### 等待完成（`wait=True`）
 

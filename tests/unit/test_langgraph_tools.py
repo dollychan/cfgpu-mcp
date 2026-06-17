@@ -7,6 +7,7 @@ from langchain_core.tools import StructuredTool
 
 from cfgpu_mcp.agent.langgraph_tools import get_langgraph_tools
 from cfgpu_mcp.tool_registry import (
+    GenerateAudioInput,
     GenerateImageInput,
     GenerateVideoInput,
     TaskStatusInput,
@@ -19,6 +20,7 @@ from cfgpu_mcp.tool_registry import (
 _EXPECTED_SCHEMAS = {
     "generate_image": GenerateImageInput,
     "generate_video": GenerateVideoInput,
+    "generate_audio": GenerateAudioInput,
     "task_status":    TaskStatusInput,
     "task_wait":      TaskWaitInput,
     "list_models":    ListModelsInput,
@@ -28,8 +30,8 @@ _EXPECTED_SCHEMAS = {
 
 # ── return type and count ─────────────────────────────────────────────────────
 
-def test_no_filter_returns_all_six_tools():
-    assert len(get_langgraph_tools()) == 6
+def test_no_filter_returns_all_seven_tools():
+    assert len(get_langgraph_tools()) == 7
 
 
 def test_returns_structured_tool_instances():

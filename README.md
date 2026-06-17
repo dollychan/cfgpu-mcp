@@ -4,11 +4,11 @@
 [![Python](https://img.shields.io/pypi/pyversions/cfgpu-mcp.svg)](https://pypi.org/project/cfgpu-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-基于 [Model Context Protocol](https://modelcontextprotocol.io) 的图像 / 视频生成 server，统一封装 CFGPU 平台上的多家文生图、文生视频模型。让 Claude、Cursor 等 MCP 客户端能直接调用 `generate_image` / `generate_video` 等工具，也提供独立 CLI 和多 SDK（Anthropic / OpenAI / LangGraph）适配。
+基于 [Model Context Protocol](https://modelcontextprotocol.io) 的图像 / 视频 / 音频生成 server，统一封装 CFGPU 平台上的多家文生图、文生视频、语音合成模型。让 Claude、Cursor 等 MCP 客户端能直接调用 `generate_image` / `generate_video` / `generate_audio` 等工具，也提供独立 CLI 和多 SDK（Anthropic / OpenAI / LangGraph）适配。
 
 ## 功能特性
 
-- **统一接口**：一套 `generate_image` / `generate_video` 工具覆盖所有模型，自动处理同步 / 异步任务、轮询与重试。
+- **统一接口**：一套 `generate_image` / `generate_video` / `generate_audio` 工具覆盖所有模型，自动处理同步 / 异步任务、轮询与重试。
 - **自动选型**：`model="auto"` 按质量档位、参考媒体、中文 prompt 等打分选最优；也可传单个 `adapter_id` 精确指定，或传候选列表在范围内选优。
 - **三种部署模式**：MCP stdio server、Anthropic/OpenAI/LangGraph SDK 工具、独立 CLI，共享同一服务层。
 - **可扩展**：新增模型只需添加 `adapter.yaml` + `card.md`，必要时挂一个 Python adapter。
@@ -66,7 +66,7 @@ pip install "cfgpu-mcp[cli]"
 }
 ```
 
-重启客户端后即可在对话中使用 `generate_image`、`generate_video`、`list_models`、`get_model_card` 等工具。
+重启客户端后即可在对话中使用 `generate_image`、`generate_video`、`generate_audio`、`list_models`、`get_model_card` 等工具。
 
 > 若已 `pip install`，把 `command` 改为 `cfgpu-mcp`、`args` 置为 `[]` 即可。
 

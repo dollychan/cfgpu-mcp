@@ -140,7 +140,7 @@ class TaskManager:
             if not result.model_used:
                 result.model_used = adapter.cfgpu_model_id
             if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
-                result.aspect_ratio = req.aspect_ratio
+                result.aspect_ratio = getattr(req, "aspect_ratio", None)  # audio reqs have none
             result_dict = result.to_dict(return_metadata=True)
             await self._repo.insert_task(task_id, adapter.adapter_id, "succeeded", payload)
             await self._repo.update_task(task_id, "succeeded", result=result_dict)
@@ -161,7 +161,7 @@ class TaskManager:
                 ),
                 original={"adapter_id": adapter.adapter_id, "response": resp},
             )
-        stored_payload = {**payload, _ASPECT_RATIO_KEY: req.aspect_ratio}
+        stored_payload = {**payload, _ASPECT_RATIO_KEY: getattr(req, "aspect_ratio", None)}
         await self._repo.insert_task(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload)
         return Task(_now_row(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload))
 

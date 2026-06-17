@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+from cfgpu_mcp.tool_registry import (
+    GenerateAudioInput,
+    GenerateImageInput,
+    GenerateVideoInput,
+)
 
 if TYPE_CHECKING:
     from cfgpu_mcp.adapters.base import ModelAdapter
@@ -30,7 +34,7 @@ class ModelRouter:
             ) from e
 
     def resolve(
-        self, req: GenerateImageInput | GenerateVideoInput
+        self, req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput
     ) -> "ModelAdapter":
         """Resolve req.model (single id, candidate list, or 'auto') to one adapter."""
         model = req.model
@@ -42,10 +46,15 @@ class ModelRouter:
 
     def select_model(
         self,
-        req: GenerateImageInput | GenerateVideoInput,
+        req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput,
         allowed: list[str] | None = None,
     ) -> "ModelAdapter":
-        task_type = "image" if isinstance(req, GenerateImageInput) else "video"
+        if isinstance(req, GenerateImageInput):
+            task_type = "image"
+        elif isinstance(req, GenerateVideoInput):
+            task_type = "video"
+        else:
+            task_type = "audio"
         candidates: list["ModelAdapter"] = self._registry.list_all(task_type=task_type)
 
         if allowed:
@@ -91,7 +100,7 @@ class ModelRouter:
     def _score(
         self,
         adapter: "ModelAdapter",
-        req: GenerateImageInput | GenerateVideoInput,
+        req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput,
     ) -> int:
         score = 0
 
@@ -118,8 +127,12 @@ class ModelRouter:
             if (req.reference_videos or req.reference_audios) and "multi_modal_reference" in adapter.capabilities:
                 score += 3
 
-        # Chinese prompt preference
-        if _is_chinese(req.prompt) and adapter.adapter_id.startswith("doubao-seedream"):
+        # Chinese prompt preference (image only — seedream is an image family)
+        if (
+            isinstance(req, GenerateImageInput)
+            and _is_chinese(req.prompt)
+            and adapter.adapter_id.startswith("doubao-seedream")
+        ):
             score += 2
 
         return score

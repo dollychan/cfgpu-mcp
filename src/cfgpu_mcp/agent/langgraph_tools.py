@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 
 def _get_service_coroutines() -> dict[str, Any]:
+    from cfgpu_mcp.service import audio as audio_svc
     from cfgpu_mcp.service import image as image_svc
     from cfgpu_mcp.service import model as model_svc
     from cfgpu_mcp.service import task as task_svc
@@ -17,6 +18,7 @@ def _get_service_coroutines() -> dict[str, Any]:
     return {
         "generate_image": image_svc.generate_image,
         "generate_video": video_svc.generate_video,
+        "generate_audio": audio_svc.generate_audio,
         "task_status":    task_svc.get_status,
         "task_wait":      task_svc.wait_for_task,
         "list_models":    model_svc.list_models,

@@ -125,6 +125,52 @@ class GenerateVideoInput(BaseModel):
     )
 
 
+class GenerateAudioInput(BaseModel):
+    """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
+
+    text: str = Field(description="Text to synthesize into speech")
+    model: str | list[str] = Field(
+        default="auto",
+        description="A single adapter_id/cfgpu_model_id (e.g. 'seed-tts-2-0'), "
+        "a list of ids to restrict automatic selection to those candidates "
+        "(e.g. ['minimax-speech-2-8-hd', 'minimax-speech-2-8-turbo']), or 'auto' to choose from all voice models",
+    )
+    voice: Optional[str] = Field(
+        default=None,
+        description="Voice/speaker id. seed-tts-2-0 uses speaker ids like "
+        "'zh_female_xiaohe_uranus_bigtts'; MiniMax uses voice ids like 'male-qn-qingse'. "
+        "None falls back to each model's own default.",
+    )
+    audio_format: Literal["mp3", "wav", "pcm", "flac"] = Field(
+        default="mp3", description="Output audio container/format"
+    )
+    sample_rate: Optional[int] = Field(
+        default=None,
+        description="Output sample rate in Hz (e.g. 24000, 32000). None uses the model's default.",
+    )
+    bitrate: Optional[int] = Field(
+        default=None,
+        description="Output bitrate in bps (MiniMax only, e.g. 128000). None uses the model's default.",
+    )
+    speed: float = Field(default=1.0, description="Speech speed multiplier (MiniMax only)")
+    volume: float = Field(default=1.0, description="Speech volume multiplier (MiniMax only)")
+    pitch: int = Field(default=0, description="Speech pitch offset (MiniMax only)")
+    emotion: Optional[str] = Field(
+        default=None,
+        description="Emotion hint such as 'happy', 'sad', 'angry' (MiniMax only). "
+        "None lets the model infer emotion from the text.",
+    )
+    quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    wait: bool = Field(default=True, description="Wait for task completion before returning")
+    timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
+    return_metadata: bool = Field(default=True, description="Include model_used, usage in response")
+    model_specific: Optional[dict] = Field(
+        default=None,
+        description="Model-specific parameters passed directly to API. Merged last, so it "
+        "overrides typed fields.",
+    )
+
+
 class TaskStatusInput(BaseModel):
     """Query the status of an async generation task."""
 
@@ -141,7 +187,7 @@ class TaskWaitInput(BaseModel):
 class ListModelsInput(BaseModel):
     """List available CFGPU models with their capabilities and identifiers."""
 
-    task_type: Optional[Literal["image", "video"]] = Field(
+    task_type: Optional[Literal["image", "video", "audio"]] = Field(
         default=None,
         description="Filter by task type, None returns all models",
     )
@@ -207,6 +253,7 @@ def annotate_artifact(result: Any) -> Any:
 _REGISTRY: list[tuple[str, type[BaseModel]]] = [
     ("generate_image",  GenerateImageInput),
     ("generate_video",  GenerateVideoInput),
+    ("generate_audio",  GenerateAudioInput),
     ("task_status",     TaskStatusInput),
     ("task_wait",       TaskWaitInput),
     ("list_models",     ListModelsInput),
@@ -216,6 +263,7 @@ _REGISTRY: list[tuple[str, type[BaseModel]]] = [
 _TOOL_TASK_TYPE: dict[str, str] = {
     "generate_image": "image",
     "generate_video": "video",
+    "generate_audio": "audio",
 }
 
 

@@ -5,6 +5,7 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp.errors import tool_error_dict
+from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
 from cfgpu_mcp.tool_registry import annotate_artifact
@@ -81,6 +82,46 @@ def register(mcp: FastMCP) -> None:
                 with_audio=with_audio,
                 quality_tier=quality_tier,
                 watermark=watermark,
+                wait=wait,
+                timeout=timeout,
+                return_metadata=return_metadata,
+                model_specific=model_specific,
+            ))
+        except Exception as e:
+            return tool_error_dict(e)
+
+    @mcp.tool()
+    async def generate_audio(
+        text: str,
+        model: str | list[str] = "auto",
+        voice: Optional[str] = None,
+        audio_format: str = "mp3",
+        sample_rate: Optional[int] = None,
+        bitrate: Optional[int] = None,
+        speed: float = 1.0,
+        volume: float = 1.0,
+        pitch: int = 0,
+        emotion: Optional[str] = None,
+        quality_tier: str = "balanced",
+        wait: bool = True,
+        timeout: Optional[int] = None,
+        return_metadata: bool = True,
+        model_specific: Optional[dict] = None,
+    ) -> dict:
+        """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
+        try:
+            return annotate_artifact(await audio_service.generate_audio(
+                text=text,
+                model=model,
+                voice=voice,
+                audio_format=audio_format,
+                sample_rate=sample_rate,
+                bitrate=bitrate,
+                speed=speed,
+                volume=volume,
+                pitch=pitch,
+                emotion=emotion,
+                quality_tier=quality_tier,
                 wait=wait,
                 timeout=timeout,
                 return_metadata=return_metadata,

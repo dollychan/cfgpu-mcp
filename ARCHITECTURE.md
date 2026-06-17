@@ -425,7 +425,8 @@ src/cfgpu_mcp/
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
 │   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds）
 │   ├── wan_video.py            万相 2.6/2.7 视频家族 Adapter（HappyHorse 风格请求 + Seedance 标准轮询；_build_input 钩子区分 2.6 扁平字段 / 2.7 media 数组）
-│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video 触发注册
+│   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
+│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、audio_tts 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -488,6 +489,15 @@ src/cfgpu_mcp/
 │   ├── wan-2-6-r2v/
 │   │   ├── adapter.yaml        万相 2.6 参考生视频，Wan26VideoR2VAdapter（reference_urls 扁平列表）
 │   │   └── card.md
+│   ├── seed-tts-2-0/
+│   │   ├── adapter.yaml        豆包语音合成 2.0（task_type=audio，异步，SeedTTSAdapter）
+│   │   └── card.md
+│   ├── minimax-speech-2-8-hd/
+│   │   ├── adapter.yaml        MiniMax 语音 2.8 HD（task_type=audio，同步，MiniMaxSpeechAdapter）
+│   │   └── card.md
+│   ├── minimax-speech-2-8-turbo/
+│   │   ├── adapter.yaml        extends: minimax-speech-2-8-hd（更快更省）
+│   │   └── card.md
 │   ├── gpt-image-2/
 │   │   ├── adapter.yaml
 │   │   └── card.md
@@ -501,6 +511,7 @@ src/cfgpu_mcp/
 ├── service/                    业务逻辑层（三种模式共享）
 │   ├── image.py                generate_image()
 │   ├── video.py                generate_video()
+│   ├── audio.py                generate_audio()（语音合成 / TTS）
 │   ├── task.py                 get_status() / wait_for_task()
 │   └── model.py                list_models() / get_model_card()
 │
@@ -516,7 +527,7 @@ src/cfgpu_mcp/
 │
 ├── cli/                        Mode C：命令行入口
 │   ├── main.py                 click 根命令组
-│   ├── cmd_generate.py         cfgpu generate image/video
+│   ├── cmd_generate.py         cfgpu generate image/video/audio
 │   ├── cmd_task.py             cfgpu task status/wait
 │   ├── cmd_models.py           cfgpu models list/card
 │   └── output.py               print_result() / run_with_progress() / print_error()

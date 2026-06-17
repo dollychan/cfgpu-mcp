@@ -1,0 +1,14 @@
+adapter_id: minimax-speech-2-8-hd
+display_name: "MiniMax 语音 2.8 HD"
+cfgpu_model_id: MiniMax/speech-2.8-hd
+task_type: audio
+endpoint: /voice/generations
+is_async: false
+
+capabilities:
+  - text_to_speech
+  - emotion
+  - pronunciation_dict
+
+cost_tier: 2
+speed_tier: 3

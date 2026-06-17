@@ -1,0 +1,151 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.tool_registry import GenerateAudioInput, NormalizedResult
+
+if TYPE_CHECKING:
+    from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+
+# Candidate dotted paths where the generated audio URL may live in a CFGPU voice
+# response. The voice API isn't fully documented for its response shape, and the
+# two providers (Doubao seed-tts, MiniMax) differ, so we probe several known and
+# plausible locations. We only accept http(s) URLs — this also rejects MiniMax's
+# alternative hex-encoded `data.audio` blob, which is not a downloadable URL.
+_AUDIO_URL_PATHS = (
+    "content.audioUrl",
+    "content.audio_url",
+    "data.audioUrl",
+    "data.audio_url",
+    "data.url",
+    "data.audio",
+    "audioUrl",
+    "audio_url",
+    "url",
+    "output.audio_url",
+)
+
+
+def _dig(obj: Any, path: str) -> Any:
+    """Walk a dotted path through nested dicts/lists; return None if any hop misses."""
+    for key in path.split("."):
+        if isinstance(obj, list):
+            try:
+                obj = obj[int(key)]
+            except (ValueError, IndexError):
+                return None
+        elif isinstance(obj, dict):
+            obj = obj.get(key)
+        else:
+            return None
+    return obj
+
+
+def _extract_audio_url(resp: dict) -> str | None:
+    for path in _AUDIO_URL_PATHS:
+        val = _dig(resp, path)
+        if isinstance(val, str) and val.startswith(("http://", "https://")):
+            return val
+    return None
+
+
+@register_python_adapter
+class SeedTTSAdapter(ModelAdapter):
+    """Python Adapter for Doubao seed-tts-2.0 (asynchronous text-to-speech).
+
+    Payload uses the ``req_params`` envelope with a ``speaker`` voice id and a
+    nested ``audio_params`` block. Submit returns a task id; the result URL is
+    fetched by polling ``/voice/tasks/{task_id}``.
+    """
+
+    adapter_id = "seed-tts-2-0"
+
+    _DEFAULT_VOICE = "zh_female_xiaohe_uranus_bigtts"
+    _DEFAULT_SAMPLE_RATE = 24000
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput") -> dict:
+        assert isinstance(req, GenerateAudioInput)
+        req_params: dict = {
+            "text": req.text,
+            "speaker": req.voice or self._DEFAULT_VOICE,
+            "audio_params": {
+                "format": req.audio_format,
+                "sample_rate": req.sample_rate or self._DEFAULT_SAMPLE_RATE,
+            },
+            "callback_url": "",
+        }
+        payload: dict = {
+            "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
+            "req_params": req_params,
+        }
+        if req.model_specific:
+            payload.update(req.model_specific)
+        return payload
+
+    def parse_response(self, resp: dict) -> NormalizedResult:
+        url = _extract_audio_url(resp)
+        return NormalizedResult(
+            urls=[url] if url else [],
+            expires_at=_default_expires_at(),
+            task_id=resp.get("id") or resp.get("task_id"),
+            model_used=resp.get("model"),
+            seed=None,
+            usage=resp.get("usage"),
+        )
+
+
+@register_python_adapter
+class MiniMaxSpeechAdapter(ModelAdapter):
+    """Python Adapter for the MiniMax speech family (synchronous text-to-speech).
+
+    Payload uses the ``input`` envelope with ``voice_setting`` / ``audio_setting``
+    blocks. The result is returned directly in the POST response (is_async: false).
+    Registered under ``minimax-speech-2-8-hd``; the turbo variant reuses this class
+    via the registry extends-chain.
+    """
+
+    adapter_id = "minimax-speech-2-8-hd"
+
+    _DEFAULT_VOICE = "male-qn-qingse"
+    _DEFAULT_SAMPLE_RATE = 32000
+    _DEFAULT_BITRATE = 128000
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput") -> dict:
+        assert isinstance(req, GenerateAudioInput)
+        voice_setting: dict = {
+            "voice_id": req.voice or self._DEFAULT_VOICE,
+            "speed": req.speed,
+            "vol": req.volume,
+            "pitch": req.pitch,
+        }
+        if req.emotion:
+            voice_setting["emotion"] = req.emotion
+        inp: dict = {
+            "text": req.text,
+            "voice_setting": voice_setting,
+            "audio_setting": {
+                "sample_rate": req.sample_rate or self._DEFAULT_SAMPLE_RATE,
+                "bitrate": req.bitrate or self._DEFAULT_BITRATE,
+                "format": req.audio_format,
+                "channel": 1,
+            },
+        }
+        payload: dict = {
+            "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
+            "input": inp,
+        }
+        if req.model_specific:
+            payload.update(req.model_specific)
+        return payload
+
+    def parse_response(self, resp: dict) -> NormalizedResult:
+        url = _extract_audio_url(resp)
+        return NormalizedResult(
+            urls=[url] if url else [],
+            expires_at=_default_expires_at(),
+            task_id=None,          # Synchronous model has no task_id
+            model_used=resp.get("model"),
+            seed=None,
+            usage=resp.get("usage"),
+        )

@@ -34,7 +34,7 @@ def _run(coro) -> dict:
 
 @click.group()
 def generate() -> None:
-    """Generate images or videos."""
+    """Generate images, videos, or audio."""
 
 
 @generate.command("image")
@@ -175,6 +175,78 @@ def video_cmd(
             result = _run(_go())
         else:
             result = _run(run_with_progress(_go(), "Generating video"))
+        print_result(result, json_mode)
+    except Exception as e:
+        print_error(e, json_mode)
+        sys.exit(1)
+
+
+@generate.command("audio")
+@click.argument("text")
+@click.option("--model", "-m", default="auto", show_default=True,
+              help="adapter_id, cfgpu_model_id, or 'auto'")
+@click.option("--voice", default=None, metavar="VOICE_ID",
+              help="Voice/speaker id (default: model's own default)")
+@click.option("--format", "audio_format",
+              type=click.Choice(["mp3", "wav", "pcm", "flac"]),
+              default="mp3", show_default=True)
+@click.option("--sample-rate", type=int, default=None,
+              help="Output sample rate in Hz (default: model's default)")
+@click.option("--bitrate", type=int, default=None,
+              help="Output bitrate in bps (MiniMax only)")
+@click.option("--speed", type=float, default=1.0, show_default=True,
+              help="Speech speed multiplier (MiniMax only)")
+@click.option("--volume", type=float, default=1.0, show_default=True,
+              help="Speech volume multiplier (MiniMax only)")
+@click.option("--pitch", type=int, default=0, show_default=True,
+              help="Speech pitch offset (MiniMax only)")
+@click.option("--emotion", default=None, metavar="EMOTION",
+              help="Emotion hint, e.g. happy/sad/angry (MiniMax only)")
+@click.option("--quality-tier", "-q",
+              type=click.Choice(["fast", "balanced", "best"]),
+              default="balanced", show_default=True)
+@click.option("--no-wait", is_flag=True,
+              help="Return task_id immediately without waiting for completion")
+@click.option("--timeout", type=int, default=None,
+              help="Max wait seconds (default: model estimate)")
+@click.option("--metadata", is_flag=True,
+              help="Include model_used, usage in output")
+@click.option("--json", "json_mode", is_flag=True,
+              help="Output raw JSON")
+@click.option("--model-specific", default=None, metavar="JSON",
+              help='Extra API params as JSON object')
+def audio_cmd(
+    text, model, voice, audio_format, sample_rate, bitrate, speed, volume, pitch,
+    emotion, quality_tier, no_wait, timeout, metadata, json_mode, model_specific,
+) -> None:
+    """Generate speech audio from TEXT (text-to-speech)."""
+    from cfgpu_mcp.service import audio as svc
+    extra = _parse_model_specific(model_specific)
+
+    async def _go():
+        return await svc.generate_audio(
+            text=text,
+            model=model,
+            voice=voice,
+            audio_format=audio_format,
+            sample_rate=sample_rate,
+            bitrate=bitrate,
+            speed=speed,
+            volume=volume,
+            pitch=pitch,
+            emotion=emotion,
+            quality_tier=quality_tier,
+            wait=not no_wait,
+            timeout=timeout,
+            return_metadata=metadata,
+            model_specific=extra,
+        )
+
+    try:
+        if no_wait:
+            result = _run(_go())
+        else:
+            result = _run(run_with_progress(_go(), "Generating audio"))
         print_result(result, json_mode)
     except Exception as e:
         print_error(e, json_mode)

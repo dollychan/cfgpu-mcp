@@ -1,0 +1,7 @@
+adapter_id: minimax-speech-2-8-turbo
+extends: minimax-speech-2-8-hd
+display_name: "MiniMax 语音 2.8 Turbo"
+cfgpu_model_id: MiniMax/speech-2.8-turbo
+
+cost_tier: 1
+speed_tier: 4
