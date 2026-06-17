@@ -357,6 +357,17 @@ CFGPUError.from_http_response(status, body)
 
 `retryable` 字段由 `_RETRYABLE` 集合决定（`rate_limit`、`model_unavailable`、`unknown`），调用方可据此决定是否重试。目前系统内部没有自动重试，该字段供外部调用方使用。
 
+### 失效 / 无权限端点：快速失败（非重试）
+
+上游对**已下线或无访问权限**的模型有时返回 `HTTP 200 + error body`（OpenAI 兼容结构），无法仅凭 status 判断。`CFGPUClient._request()` 因此在 `resp.ok` 之外，额外检查 `body["error"]` 是否为非空 dict，命中则同样走 `from_http_response`。
+
+若不特判，这类错误会落到 `error_type=unknown`（属于 `_RETRYABLE`），导致调用方反复重试一个永远不会恢复的端点。`from_http_response` 通过 `_is_dead_endpoint(code, raw_msg)` 识别这种情况：
+
+- body code 为 `model_not_found`，或
+- 消息文本包含 `does not exist` / `do not have access` / `does not have access` / `no access to`（见 `_DEAD_ENDPOINT_PHRASES`）
+
+命中后强制 `error_type = "model_unavailable"` 且 `retryable = False`（显式覆盖默认值——`model_unavailable` 默认在 `_RETRYABLE` 中，用于 router 的"换个模型重试"语义）。
+
 ### card.md 提示机制
 
 当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，`service/image.py` 和 `service/video.py` 会把 `adapter.adapter_id` 写入 `CFGPUError.adapter_id`。`to_tool_result_dict()` 在 `message` 中追加提示：`"请调用 get_model_card 获取模型 {adapter_id} 的详细参数说明和使用示例。"`, 同时在 dict 中添加 `adapter_id` 字段，方便 LLM 直接用该值调用 `get_model_card`。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
