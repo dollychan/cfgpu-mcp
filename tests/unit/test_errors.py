@@ -38,6 +38,20 @@ def test_unknown_for_unrecognized_status():
     assert err.retryable is True
 
 
+def test_dead_endpoint_phrase_is_non_retryable():
+    # Upstream returns HTTP 200 with an error body for a retired endpoint.
+    body = {"error": {"message": "The model or endpoint foo-250415 does not exist or you do not have access to it."}}
+    err = CFGPUError.from_http_response(200, body)
+    assert err.error_type == "model_unavailable"
+    assert err.retryable is False
+
+
+def test_model_not_found_code_is_non_retryable():
+    err = CFGPUError.from_http_response(404, {"error": {"code": "model_not_found", "message": "gone"}})
+    assert err.error_type == "model_unavailable"
+    assert err.retryable is False
+
+
 def test_user_message_is_nonempty():
     for status in (400, 401, 403, 429, 500, 503):
         err = CFGPUError.from_http_response(status, {})

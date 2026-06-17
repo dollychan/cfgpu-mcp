@@ -37,6 +37,25 @@ _BODY_CODE_MAP: dict[str, ErrorType] = {
     "invalid_request": "invalid_params",
 }
 
+# Body codes / message phrases that mean the endpoint is permanently gone or the
+# token has no access to it. Upstream sometimes signals this with HTTP 200 + an
+# error body (OpenAI-compatible shape), so it can't be inferred from the status.
+# These must NOT be retryable — retrying a dead endpoint never succeeds.
+_DEAD_ENDPOINT_CODES: set[str] = {"model_not_found"}
+_DEAD_ENDPOINT_PHRASES: tuple[str, ...] = (
+    "does not exist",
+    "do not have access",
+    "does not have access",
+    "no access to",
+)
+
+
+def _is_dead_endpoint(code: str, raw_msg: str) -> bool:
+    if code in _DEAD_ENDPOINT_CODES:
+        return True
+    msg = raw_msg.lower()
+    return any(phrase in msg for phrase in _DEAD_ENDPOINT_PHRASES)
+
 
 class CFGPUError(Exception):
     def __init__(
@@ -76,6 +95,13 @@ class CFGPUError(Exception):
             or body.get("message")
             or f"HTTP {status}"
         )
+        # A retired/inaccessible endpoint is permanent — classify it as
+        # model_unavailable and force retryable=False so callers fail fast
+        # instead of retrying a model that will never come back.
+        retryable: bool | None = None
+        if _is_dead_endpoint(str(code), str(raw_msg)):
+            error_type = "model_unavailable"
+            retryable = False
         user_messages: dict[ErrorType, str] = {
             "rate_limit": "请求过于频繁，请稍后重试。",
             "quota_exceeded": "账户配额不足，请检查余额。",
@@ -91,6 +117,7 @@ class CFGPUError(Exception):
             error_type=error_type,
             user_message=user_messages[error_type],
             original=body,
+            retryable=retryable,
         )
 
     def to_tool_result_dict(self) -> dict:
