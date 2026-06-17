@@ -5,6 +5,7 @@ from cfgpu_mcp.adapters import (  # noqa: F401
     async_image,
     happyhorse_video,
     kling_video,
+    wan_video,
 )
 
 from cfgpu_mcp.adapters.base import ModelAdapter, PollConfig, register_python_adapter

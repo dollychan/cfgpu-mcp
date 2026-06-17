@@ -221,6 +221,11 @@ ModelAdapter (ABC, adapters/base.py)
     ├── HappyHorseVideoAdapter    手写 Python，DashScope 风格嵌套 payload
     │       └── input.media 数组 + parameters 对象；大写状态码归一化
     │
+    ├── WanVideoAdapter           手写 Python，万相 2.6/2.7 视频家族（基类=wan2.7-i2v）
+    │       ├── 请求用 HappyHorse 风格 input/parameters（轮询用 Seedance 标准响应 content.videoUrl）；input 由 _build_input 钩子构建
+    │       ├── 万相 2.7（media 数组）：WanVideoR2VAdapter / WanVideoT2VAdapter / WanVideoEditAdapter（type=video+reference_image）
+    │       └── 万相 2.6（扁平 input 字段，无 media）：Wan26VideoT2VAdapter / Wan26VideoI2VAdapter（img_url/audio_url）/ Wan26VideoR2VAdapter（reference_urls）
+    │
     └── KlingVideoAdapter         手写 Python，可灵 O1 的 flat payload
             ├── resolution×ratio → size 像素串、quality_tier → std/pro mode；目前仅 text_to_video
             └── 同时服务 kling-video-o1 和 kling-v3-omni（通过 extends 链）
@@ -419,7 +424,8 @@ src/cfgpu_mcp/
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
 │   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds）
-│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video 触发注册
+│   ├── wan_video.py            万相 2.6/2.7 视频家族 Adapter（HappyHorse 风格请求 + Seedance 标准轮询；_build_input 钩子区分 2.6 扁平字段 / 2.7 media 数组）
+│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -460,6 +466,27 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── kling-v3-omni/
 │   │   ├── adapter.yaml        可灵 V3 全能版，extends: kling-video-o1, card_base: ~
+│   │   └── card.md
+│   ├── wan-2-7-i2v/
+│   │   ├── adapter.yaml        万相 2.7 图生视频，独立 WanVideoAdapter（仅 image_to_video）
+│   │   └── card.md
+│   ├── wan-2-7-r2v/
+│   │   ├── adapter.yaml        万相 2.7 参考生视频，WanVideoR2VAdapter（multi_modal_reference）
+│   │   └── card.md
+│   ├── wan-2-7-t2v/
+│   │   ├── adapter.yaml        万相 2.7 文生视频，WanVideoT2VAdapter（text_to_video，无 media）
+│   │   └── card.md
+│   ├── wan-2-7-videoedit/
+│   │   ├── adapter.yaml        万相 2.7 视频编辑，WanVideoEditAdapter（video_edit，源视频+参考图）
+│   │   └── card.md
+│   ├── wan-2-6-t2v/
+│   │   ├── adapter.yaml        万相 2.6 文生视频，Wan26VideoT2VAdapter（扁平 input）
+│   │   └── card.md
+│   ├── wan-2-6-i2v/
+│   │   ├── adapter.yaml        万相 2.6 图生视频，Wan26VideoI2VAdapter（img_url + 可选 audio_url）
+│   │   └── card.md
+│   ├── wan-2-6-r2v/
+│   │   ├── adapter.yaml        万相 2.6 参考生视频，Wan26VideoR2VAdapter（reference_urls 扁平列表）
 │   │   └── card.md
 │   ├── gpt-image-2/
 │   │   ├── adapter.yaml

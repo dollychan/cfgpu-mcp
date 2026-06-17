@@ -1,0 +1,19 @@
+adapter_id: wan-2-7-t2v
+display_name: "万相 2.7 (文生视频)"
+cfgpu_model_id: wan2.7-t2v
+task_type: video
+endpoint: /video/generations
+is_async: true
+poll_endpoint: /video/tasks/{task_id}
+
+capabilities:
+  - text_to_video
+
+cost_tier: 3
+speed_tier: 2
+
+poll_config:
+  base_interval: 5
+  max_interval: 20
+  backoff_factor: 1.3
+  default_timeout: 400

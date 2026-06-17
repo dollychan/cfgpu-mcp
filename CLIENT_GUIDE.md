@@ -497,6 +497,37 @@ cfgpu generate video "一只可爱的橘猫在阳光下奔跑，慢镜头，电�
   --model kling-video-o1 -r 1080p -d 5
 cfgpu generate video "..." --model kling-v3-omni -r 1080p -d 5
 
+# 万相 2.7（wan-2-7-t2v）— 文生视频，支持电影级分镜叙事；需显式时长（不支持 -1 智能时长）
+cfgpu generate video "侦探追查故事：第1个镜头[0-3秒]雨夜街头...第2个镜头[3-6秒]..." \
+  --model wan-2-7-t2v -r 720p -d 5
+
+# 万相 2.7（wan-2-7-i2v）— 仅图生视频，必须提供首帧；需显式时长（不支持 -1 智能时长）
+cfgpu generate video "一只猫在草地上奔跑" \
+  --model wan-2-7-i2v --first-frame https://example.com/cat.jpg -r 720p -d 5
+
+# 万相 2.7（wan-2-7-r2v）— 参考生视频，需 ≥1 个参考视频/图片；提示词可引用「视频1」「图片3」
+cfgpu generate video "视频2抱着图片3在咖啡厅弹民谣，视频1笑着看着视频2" \
+  --model wan-2-7-r2v \
+  --reference-videos https://example.com/role1.mp4 \
+  --reference-videos https://example.com/role2.mp4 \
+  --reference-images https://example.com/object4.png -r 720p -d 5
+
+# 万相 2.7（wan-2-7-videoedit）— 视频编辑，需 1 个源视频（reference_videos）+ 可选参考图
+cfgpu generate video "将视频中女孩的衣服替换为图片中的衣服" \
+  --model wan-2-7-videoedit \
+  --reference-videos https://example.com/src.mp4 \
+  --reference-images https://example.com/clothes.png -r 720p -d 5
+
+# 万相 2.6 — 与 2.7 的 input 形态不同（扁平字段，非 media 数组），但 CLI 用法一致
+cfgpu generate video "侦探追查故事，电影级分镜..." --model wan-2-6-t2v -r 720p -d 5
+# 2.6 图生视频：首帧 → img_url，可选音频（reference_audios[0]）→ audio_url（如音频驱动 rap）
+cfgpu generate video "少年说唱 rap" --model wan-2-6-i2v \
+  --first-frame https://example.com/rap.png \
+  --reference-audios https://example.com/rap.mp3 -r 720p -d 5
+# 2.6 参考生视频：reference_videos/images 合并为扁平 reference_urls
+cfgpu generate video "character1在沙发上开心地看电影" --model wan-2-6-r2v \
+  --reference-videos https://example.com/vace.mp4 -r 720p -d 5
+
 # 去除水印（watermark 已是一等公民参数，无需走 model_specific）
 cfgpu generate video "..." --no-watermark
 cfgpu generate image "..." --no-watermark      # gpt-image-2 / nano-banana 不支持，忽略
