@@ -72,9 +72,12 @@ async def generate_audio(
         return {"task_id": task.id, "status": task.status}
 
     result = task.result
+    # The real per-model API request is always surfaced, regardless of return_metadata.
+    payload = task.public_payload()
     if not return_metadata:
         return {
             "urls": result.get("urls", []),
             "expires_at": result.get("expires_at"),
+            "payload": payload,
         }
-    return result
+    return {**result, "payload": payload}

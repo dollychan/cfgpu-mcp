@@ -10,13 +10,14 @@ def _present(task: Any) -> dict[str, Any]:
     """Shape a Task into a tool result consistent with ``generate_*``.
 
     On success the flat ``NormalizedResult`` dict (urls/expires_at/metadata at
-    the top level) is returned verbatim — identical to what ``generate_image`` /
-    ``generate_video`` return — so callers see one structure regardless of which
-    tool produced the artifact. Non-terminal / failed tasks fall back to the
-    ``{task_id, status[, error]}`` envelope (mirrors generate's ``wait=False``).
+    the top level), plus the real per-model API ``payload``, is returned —
+    identical to what ``generate_image`` / ``generate_video`` return — so callers
+    see one structure regardless of which tool produced the artifact. Non-terminal
+    / failed tasks fall back to the ``{task_id, status[, error]}`` envelope
+    (mirrors generate's ``wait=False``).
     """
     if task.status == "succeeded" and (task.result or {}).get("urls"):
-        return task.result
+        return {**task.result, "payload": task.public_payload()}
     out: dict[str, Any] = {"task_id": task.id, "status": task.status}
     if task.error:
         out["error"] = task.error

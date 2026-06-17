@@ -633,6 +633,7 @@ done
 | `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
 | `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null` |
+| `payload` | `object` | ✓ | **真实发送给该模型专属 API 的请求体**（即 `adapter.build_payload(req)` 的产物，而非通用工具入参）。便于 agent 看到底层 API 实际收到的字段（含 `cfgpu_model_id`、各模型私有字段等）。**始终返回，不受 `return_metadata` 影响**。内部用于异步轮询回显的 `_requested_aspect_ratio` 键不会出现在此 |
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
 
@@ -644,6 +645,7 @@ done
 {
   "urls": ["https://cdn.cfgpu.com/..."],
   "expires_at": "2026-05-13T10:00:00Z",
+  "payload": {"model": "seedream-v3", "prompt": "...", "size": "2K", "..." : "..."},
   "artifact": true
 }
 ```
@@ -658,7 +660,8 @@ done
   "model_used": "seedream-v3",
   "aspect_ratio": "16:9",
   "seed": 42,
-  "usage": {"total_tokens": 100}
+  "usage": {"total_tokens": 100},
+  "payload": {"model": "seedream-v3", "prompt": "...", "size": "2K", "..." : "..."}
 }
 ```
 

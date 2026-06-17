@@ -117,6 +117,17 @@ class Task:
             "error": self.error,
         }
 
+    def public_payload(self) -> dict:
+        """The concrete upstream API request body for this task.
+
+        ``payload`` is exactly what ``build_payload`` produced and POSTed to the
+        model's specific CFGPU endpoint — i.e. the real per-model API request, not
+        the unified tool schema. The reserved ``_requested_aspect_ratio`` key (see
+        ``_ASPECT_RATIO_KEY``) is an internal echo we stash for async re-polling and
+        is never part of the real request, so it is stripped here.
+        """
+        return {k: v for k, v in self.payload.items() if k != _ASPECT_RATIO_KEY}
+
 
 class TaskManager:
     def __init__(self, client: CFGPUClient, repo: TaskRepository) -> None:

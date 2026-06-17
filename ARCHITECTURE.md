@@ -396,6 +396,8 @@ MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在�
 
 `task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且有 URL 时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成 / 失败时返回 `{task_id, status[, error]}` 信封（对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。
 
+**`payload` 字段（真实 API 请求体回传）**：所有成功结果（`generate_*` 以及 `_present` 的成功分支）在 `NormalizedResult` 元数据之外追加 `payload` 字段，内容是 `Task.public_payload()` —— 即真正 POST 给该模型专属 API 的请求体（`adapter.build_payload(req)` 的产物，含 `cfgpu_model_id` 与各模型私有字段），而非通用工具入参。`public_payload()` 会剥除内部回显用的保留键 `_requested_aspect_ratio`（见 §异步 aspect_ratio 兜底），保证只暴露真实发往上游的字段。**该字段始终返回，不受 `return_metadata` 影响**：`return_metadata=False` 的精简输出（`urls` / `expires_at`）同样带上 `payload`。
+
 `tool_registry.annotate_artifact(result)` 是单一实现：当 `result` 含非空 `urls`（顶层；并保留对嵌套 `result.urls` 的兼容判断作兜底）时打标记；无 URL 的结果（`wait=False` 的 pending、轮询中的 running、error dict）原样返回。`tools/generate.py`、`tools/tasks.py` 在各工具 `return` 处包一层调用。该标记只在 MCP 工具层加，service / dispatcher / CLI 的原始返回不受影响。
 
 ---

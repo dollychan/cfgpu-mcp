@@ -101,3 +101,28 @@ async def test_get_status_repolls_pending_async_task():
     client.get.assert_awaited_once()         # advanced via one upstream poll
     assert result["urls"] == ["https://cdn/v.mp4"]
     await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_result_includes_real_api_payload():
+    """A succeeded task surfaces the real per-model API payload, with the internal
+    _requested_aspect_ratio echo stripped."""
+    from cfgpu_mcp.task_manager import _ASPECT_RATIO_KEY
+
+    db = await aiosqlite.connect(":memory:")
+    db.row_factory = aiosqlite.Row
+    await db.execute(_CREATE_TABLE)
+    await db.commit()
+    stored_payload = {"model": "wan-video", "prompt": "x", _ASPECT_RATIO_KEY: "16:9"}
+    await db_ops.insert_task(db, "task-1", "wan-2-0", "pending", stored_payload)
+    await db_ops.update_task(db, "task-1", "succeeded", result={"urls": ["https://cdn/v.mp4"]})
+
+    client = MagicMock()
+    client.get = AsyncMock()
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=True))
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["payload"] == {"model": "wan-video", "prompt": "x"}
+    assert _ASPECT_RATIO_KEY not in result["payload"]
+    await db.close()
