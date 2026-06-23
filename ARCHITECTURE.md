@@ -97,13 +97,15 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 新开发者最常见的错误：在 `build_payload()` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传入 API。
 
+**四种 `task_type`**：`image` / `video` / `audio` 三类都是**媒体生成**（返回 `urls`），而 `understand`（视觉理解 / 图像推理 / 视频理解，如 Qwen3-VL）是**返回文本**的对话类任务——走 OpenAI 兼容的 `/model/v1/chat/completions`，结果落在 `NormalizedResult.text`（Thinking 模型的推理过程落在 `reasoning`），`urls` 为空。路由、`supports()`、`select_model()` 都按 `task_type` 隔离，understand 请求永远不会选中媒体模型，反之亦然。
+
 ### 3.2 同步模型 vs 异步模型
 
 通过 `adapter.yaml` 中的 `is_async` 字段区分：
 
 | | 同步（`is_async: false`） | 异步（`is_async: true`） |
 |-|--------------------------|--------------------------|
-| 代表模型 | Seedream（图片） | WAN 2.0（视频）、GPT Image 2、Nano Banana（图片） |
+| 代表模型 | Seedream（图片）、MiniMax 语音、Qwen3-VL（视觉理解） | WAN 2.0（视频）、GPT Image 2、Nano Banana（图片）、豆包 seed-tts |
 | POST 响应 | 直接包含图片 URL | 包含 `task_id`，需轮询 |
 | `TaskManager.create()` | 立即写 `succeeded` 到 DB | 写 `pending`，等待轮询 |
 | `TaskManager.wait()` | 立即返回（no-op） | 指数退避轮询直到完成 |
@@ -428,7 +430,8 @@ src/cfgpu_mcp/
 │   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds）
 │   ├── wan_video.py            万相 2.6/2.7 视频家族 Adapter（HappyHorse 风格请求 + Seedance 标准轮询；_build_input 钩子区分 2.6 扁平字段 / 2.7 media 数组）
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
-│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、audio_tts 触发注册
+│   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）
+│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、audio_tts、vision_chat 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -500,6 +503,9 @@ src/cfgpu_mcp/
 │   ├── minimax-speech-2-8-turbo/
 │   │   ├── adapter.yaml        extends: minimax-speech-2-8-hd（更快更省）
 │   │   └── card.md
+│   ├── qwen3-vl-30b-a3b-thinking/
+│   │   ├── adapter.yaml        Qwen3-VL 30B A3B Thinking（task_type=understand，同步，QwenVisionAdapter）
+│   │   └── card.md
 │   ├── gpt-image-2/
 │   │   ├── adapter.yaml
 │   │   └── card.md
@@ -514,11 +520,13 @@ src/cfgpu_mcp/
 │   ├── image.py                generate_image()
 │   ├── video.py                generate_video()
 │   ├── audio.py                generate_audio()（语音合成 / TTS）
+│   ├── vision.py               understand_vision()（视觉理解 / 图像推理 / 视频理解，返回文本）
 │   ├── task.py                 get_status() / wait_for_task()
 │   └── model.py                list_models() / get_model_card()
 │
 ├── tools/                      Mode A：FastMCP 工具注册（参数重声明层）
 │   ├── generate.py
+│   ├── understand.py           understand_vision 工具
 │   ├── tasks.py
 │   └── models.py
 │
@@ -530,6 +538,7 @@ src/cfgpu_mcp/
 ├── cli/                        Mode C：命令行入口
 │   ├── main.py                 click 根命令组
 │   ├── cmd_generate.py         cfgpu generate image/video/audio
+│   ├── cmd_understand.py       cfgpu understand（视觉理解，文本输出 stdout）
 │   ├── cmd_task.py             cfgpu task status/wait
 │   ├── cmd_models.py           cfgpu models list/card
 │   └── output.py               print_result() / run_with_progress() / print_error()

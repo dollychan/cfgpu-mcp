@@ -41,6 +41,10 @@ cfgpu generate image "..." --model doubao-seedream-5-0-lite --resolution 2K --js
 cfgpu generate video "waves on a beach" --model wan-2.0-fast -d 4 -r 480p
 cfgpu generate video "..." --first-frame https://... --no-audio
 
+# Understand images/video (vision-language; prints text answer to stdout)
+cfgpu understand "describe this image" --model qwen3-vl-30b-a3b-thinking -i https://...
+cfgpu understand "list the timeline of events" --video https://...
+
 # Async workflow
 cfgpu generate video "..." --no-wait          # prints task_id immediately
 cfgpu task status <task_id>
@@ -90,6 +94,10 @@ MCP tool wrappers in `tools/` re-declare parameters explicitly (FastMCP limitati
 ### Sync vs. async models
 
 `is_async: false` in adapter YAML (e.g. Seedream) means the API returns the result in the POST response — no polling. `TaskManager.create()` branches on `adapter.is_async`: sync models parse the POST response immediately and write `succeeded` to DB; async models write `pending` and require polling via `TaskManager.wait()`.
+
+### Task types — media generation vs. understanding
+
+`task_type` is one of `image` / `video` / `audio` / `understand`. The first three are **media generation**: `parse_response` returns `NormalizedResult.urls` and the pipeline's "succeeded but no urls = failure" guard applies (async path only). `understand` (vision-language: image/video understanding & reasoning, e.g. `qwen3-vl-30b-a3b-thinking` via `QwenVisionAdapter`) is **text-returning**: it speaks the OpenAI-compatible `/model/v1/chat/completions` API and fills `NormalizedResult.text` (+ `reasoning` for Thinking models), with empty `urls`. It is always synchronous. The router isolates candidates by `task_type`, so an `understand` request never selects a media model. Its tool (`understand_vision`) returns `{text, payload[, model_used, usage, reasoning]}` instead of the flat `urls` shape, and carries no `artifact` flag.
 
 ### Adding a new model
 

@@ -129,7 +129,12 @@ def test_list_all_filters_by_task_type():
     video_models = registry.list_all(task_type="video")
     image_models = registry.list_all(task_type="image")
     audio_models = registry.list_all(task_type="audio")
+    understand_models = registry.list_all(task_type="understand")
     assert all(a.task_type == "video" for a in video_models)
     assert all(a.task_type == "image" for a in image_models)
     assert all(a.task_type == "audio" for a in audio_models)
-    assert len(video_models) + len(image_models) + len(audio_models) == len(registry)
+    assert all(a.task_type == "understand" for a in understand_models)
+    assert (
+        len(video_models) + len(image_models) + len(audio_models)
+        + len(understand_models) == len(registry)
+    )

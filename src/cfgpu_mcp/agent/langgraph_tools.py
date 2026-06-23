@@ -14,11 +14,13 @@ def _get_service_coroutines() -> dict[str, Any]:
     from cfgpu_mcp.service import model as model_svc
     from cfgpu_mcp.service import task as task_svc
     from cfgpu_mcp.service import video as video_svc
+    from cfgpu_mcp.service import vision as vision_svc
 
     return {
         "generate_image": image_svc.generate_image,
         "generate_video": video_svc.generate_video,
         "generate_audio": audio_svc.generate_audio,
+        "understand_vision": vision_svc.understand_vision,
         "task_status":    task_svc.get_status,
         "task_wait":      task_svc.wait_for_task,
         "list_models":    model_svc.list_models,

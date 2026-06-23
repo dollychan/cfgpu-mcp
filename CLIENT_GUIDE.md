@@ -85,7 +85,7 @@ enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
 }
 ```
 
-配置后重启 Claude Desktop，即可在对话中使用 `generate_image`、`generate_video`、`generate_audio` 等工具。
+配置后重启 Claude Desktop，即可在对话中使用 `generate_image`、`generate_video`、`generate_audio`、`understand_vision` 等工具。
 
 > **MCP 工具命名**：MCP server 内部名称为 `cfgpu`。Claude Desktop 等 MCP Host 直接以原始名称展示工具（`generate_image` 等）。如果使用 `langchain-mcp-adapters` 之类的第三方 MCP 客户端加载工具，客户端通常会自动拼接 server 名作为前缀，工具名变为 `cfgpu_generate_image`、`cfgpu_generate_video` 等。若需与 Mode B 的 `get_langgraph_tools()` 保持命名一致，建议直接使用 Mode B3，跳过 MCP 协议层。
 
@@ -570,6 +570,25 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，
 > 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
 
+### 视觉理解（图像理解 / 图像推理 / 视频理解）
+
+```bash
+# 图像理解 / 推理（可传多张图，模型联合推理）
+cfgpu understand "描述这张图片，并指出其中的异常之处" \
+  --model qwen3-vl-30b-a3b-thinking -i https://example.com/a.jpg
+
+# 视频理解（单个公网视频链接）
+cfgpu understand "详细描述视频内容，并列出关键事件的时间线" \
+  --video https://example.com/clip.mp4
+
+# 纯文本对话（不传媒体）；--system 自定义系统提示，--metadata 额外打印推理过程与 usage
+cfgpu understand "用一句话解释相对论" --system "你是物理学教授" --metadata
+```
+
+> `understand_vision` 走 OpenAI 兼容的 `/model/v1/chat/completions`，**同步返回文本结果**（不是媒体文件）。
+> stdout 输出回答文本，stderr 输出元数据；Thinking 模型的推理过程在 `--metadata` 下作为 `reasoning` 打印。
+> 与 `generate_*` 不同，understand 结果没有 `urls`，因此不带 `artifact` 标记。
+
 ### 异步工作流（--no-wait）
 
 ```bash
@@ -636,6 +655,8 @@ done
 | `payload` | `object` | ✓ | **真实发送给该模型专属 API 的请求体**（即 `adapter.build_payload(req)` 的产物，而非通用工具入参）。便于 agent 看到底层 API 实际收到的字段（含 `cfgpu_model_id`、各模型私有字段等）。**始终返回，不受 `return_metadata` 影响**。内部用于异步轮询回显的 `_requested_aspect_ratio` 键不会出现在此 |
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
+
+> **视觉理解（`understand_vision`）的返回结构不同**：它返回的是文本而非媒体，结果顶层为 `text`（模型回答）+ `payload`（真实 API 请求体）；`return_metadata=True` 时追加 `model_used`、`usage`，以及 Thinking 模型的 `reasoning`（推理过程）。没有 `urls` / `expires_at` / `task_id`，因此也不带 `artifact` 标记。
 
 > **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`generate_audio`、`task_status`、`task_wait` 这五个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。这些工具成功时都返回同一套扁平结构（顶层 `urls`），无 URL 的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。
 

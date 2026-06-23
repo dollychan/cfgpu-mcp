@@ -11,6 +11,7 @@ if TYPE_CHECKING:
         GenerateImageInput,
         GenerateVideoInput,
         NormalizedResult,
+        UnderstandVisionInput,
     )
 
 def _default_expires_at() -> datetime:
@@ -53,7 +54,7 @@ class ModelAdapter(ABC):
     adapter_id: str
     display_name: str
     cfgpu_model_id: str          # Only used in build_payload()
-    task_type: Literal["image", "video", "audio"]
+    task_type: Literal["image", "video", "audio", "understand"]
     endpoint: str
     is_async: bool
     poll_endpoint: str | None
@@ -89,7 +90,7 @@ class ModelAdapter(ABC):
 
     @abstractmethod
     def build_payload(
-        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput"
+        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput"
     ) -> dict:
         """Map unified schema → CFGPU API payload. Only place cfgpu_model_id is used."""
 
@@ -98,19 +99,21 @@ class ModelAdapter(ABC):
         """Map CFGPU response → NormalizedResult. Missing fields set to None."""
 
     def supports(
-        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput"
+        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput"
     ) -> tuple[bool, str]:
         """Return (ok, reason). Subclasses can override for fine-grained checks."""
         from cfgpu_mcp.tool_registry import (
             GenerateAudioInput,
             GenerateImageInput,
             GenerateVideoInput,
+            UnderstandVisionInput,
         )
 
         expected = {
             GenerateImageInput: "image",
             GenerateVideoInput: "video",
             GenerateAudioInput: "audio",
+            UnderstandVisionInput: "understand",
         }
         for cls, tt in expected.items():
             if isinstance(req, cls) and self.task_type != tt:
@@ -126,7 +129,7 @@ class ModelAdapter(ABC):
         return resp.get("status", "running")
 
     def estimate_poll_timeout(
-        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput"
+        self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput"
     ) -> int:
         """Estimate polling timeout in seconds. Only meaningful for async models."""
         if not self.is_async:

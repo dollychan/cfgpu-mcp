@@ -171,6 +171,61 @@ class GenerateAudioInput(BaseModel):
     )
 
 
+class UnderstandVisionInput(BaseModel):
+    """Understand and reason over images and video using CFGPU vision-language models.
+
+    Covers image understanding, image reasoning, and video understanding: the model
+    is given a natural-language instruction (``prompt``) plus optional image and/or
+    video URLs, and returns a text answer (not a media file). Synchronous — the
+    result is returned directly, there is no task_id to poll.
+    """
+
+    prompt: str = Field(
+        description="Instruction or question about the supplied media, e.g. "
+        "'描述这张图片' or '列出视频中关键事件的时间线'. Required even when media is "
+        "attached; for pure text chat, supply just the prompt with no images/video.",
+    )
+    model: str | list[str] = Field(
+        default="auto",
+        description="A single adapter_id/cfgpu_model_id (e.g. 'qwen3-vl-30b-a3b-thinking'), "
+        "a list of ids to restrict automatic selection to those candidates, "
+        "or 'auto' to choose from all vision-understanding models",
+    )
+    images: Optional[list[str]] = Field(
+        default=None,
+        description="Public image URLs to analyze (image understanding / reasoning). "
+        "Multiple images are compared/reasoned over jointly.",
+    )
+    video: Optional[str] = Field(
+        default=None,
+        description="A single public video URL to understand (long video supported). "
+        "Can be combined with images and text in one request.",
+    )
+    system_prompt: Optional[str] = Field(
+        default=None,
+        description="System message steering the model's behaviour. "
+        "None uses a generic 'You are a helpful assistant.' default.",
+    )
+    max_tokens: Optional[int] = Field(
+        default=None,
+        description="Maximum number of output tokens. None uses the model's default.",
+    )
+    temperature: Optional[float] = Field(
+        default=None,
+        description="Sampling temperature. None uses the model's default.",
+    )
+    return_metadata: bool = Field(
+        default=True,
+        description="Include model_used, usage, and the model's reasoning (for Thinking "
+        "models) in the response",
+    )
+    model_specific: Optional[dict] = Field(
+        default=None,
+        description="Model-specific parameters passed directly to the chat/completions API "
+        "(e.g. {'top_p': 0.8}). Merged last, so it overrides typed fields.",
+    )
+
+
 class TaskStatusInput(BaseModel):
     """Query the status of an async generation task."""
 
@@ -187,7 +242,7 @@ class TaskWaitInput(BaseModel):
 class ListModelsInput(BaseModel):
     """List available CFGPU models with their capabilities and identifiers."""
 
-    task_type: Optional[Literal["image", "video", "audio"]] = Field(
+    task_type: Optional[Literal["image", "video", "audio", "understand"]] = Field(
         default=None,
         description="Filter by task type, None returns all models",
     )
@@ -210,12 +265,16 @@ class NormalizedResult:
     seed: int | None                   # 部分模型返回
     usage: dict[str, Any] | None       # 原始 API 返回的 usage 对象（计费结构因 API 而异）
     aspect_ratio: str | None = None    # 回传请求的 aspect_ratio（由 TaskManager 填充）
+    text: str | None = None            # 文本结果（视觉理解 / chat 模型），媒体生成模型为 None
+    reasoning: str | None = None       # Thinking 模型的推理过程（reasoning_content）
 
     def to_dict(self, return_metadata: bool = False) -> dict[str, Any]:
         base: dict[str, Any] = {
             "urls": self.urls,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
         }
+        if self.text is not None:
+            base["text"] = self.text
         if return_metadata:
             base.update({
                 "task_id": self.task_id,
@@ -224,6 +283,8 @@ class NormalizedResult:
                 "seed": self.seed,
                 "usage": self.usage,
             })
+            if self.reasoning is not None:
+                base["reasoning"] = self.reasoning
         return base
 
 
@@ -254,6 +315,7 @@ _REGISTRY: list[tuple[str, type[BaseModel]]] = [
     ("generate_image",  GenerateImageInput),
     ("generate_video",  GenerateVideoInput),
     ("generate_audio",  GenerateAudioInput),
+    ("understand_vision", UnderstandVisionInput),
     ("task_status",     TaskStatusInput),
     ("task_wait",       TaskWaitInput),
     ("list_models",     ListModelsInput),
@@ -264,6 +326,7 @@ _TOOL_TASK_TYPE: dict[str, str] = {
     "generate_image": "image",
     "generate_video": "video",
     "generate_audio": "audio",
+    "understand_vision": "understand",
 }
 
 

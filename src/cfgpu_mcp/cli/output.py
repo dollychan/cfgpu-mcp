@@ -16,6 +16,16 @@ def print_result(data: dict, json_mode: bool = False) -> None:
         print_json(data)
         return
 
+    # vision-understanding response: text answer to stdout, metadata to stderr
+    if "text" in data and "urls" not in data:
+        print(data["text"])
+        if data.get("reasoning"):
+            print(f"reasoning: {data['reasoning']}", file=sys.stderr)
+        for key in ("model_used", "usage"):
+            if data.get(key) is not None:
+                print(f"{key}: {data[key]}", file=sys.stderr)
+        return
+
     if "urls" in data:
         urls = data["urls"]
         for url in urls:

@@ -1,0 +1,19 @@
+adapter_id: qwen3-vl-30b-a3b-thinking
+display_name: "Qwen3-VL 30B A3B Thinking"
+cfgpu_model_id: qwen3-vl-30b-a3b-thinking
+task_type: understand
+endpoint: /model/v1/chat/completions
+is_async: false
+
+capabilities:
+  - image_understanding
+  - image_reasoning
+  - video_understanding
+  - long_video
+  - long_document
+  - tool_calling
+  - visual_agent
+  - long_context
+
+cost_tier: 2
+speed_tier: 4

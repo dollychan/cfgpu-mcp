@@ -2,7 +2,11 @@ import pytest
 from pathlib import Path
 from cfgpu_mcp.adapters.registry import AdapterRegistry
 from cfgpu_mcp.router import ModelRouter
-from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+from cfgpu_mcp.tool_registry import (
+    GenerateImageInput,
+    GenerateVideoInput,
+    UnderstandVisionInput,
+)
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
 
@@ -130,6 +134,22 @@ def test_resolve_auto_selects_from_all():
     req = GenerateVideoInput(prompt="test", model="auto", quality_tier="fast")
     adapter = router.resolve(req)
     assert adapter.adapter_id == "doubao-seedance-2-0-fast"
+
+
+def test_understand_request_selects_understand_model():
+    router = _router()
+    req = UnderstandVisionInput(prompt="描述这张图片", images=["https://x/a.jpg"])
+    adapter = router.select_model(req)
+    assert adapter.task_type == "understand"
+    assert adapter.adapter_id == "qwen3-vl-30b-a3b-thinking"
+
+
+def test_understand_request_never_selects_media_model():
+    router = _router()
+    # A video model must never be returned for an understand request.
+    req = UnderstandVisionInput(prompt="x")
+    adapter = router.resolve(req)
+    assert adapter.task_type == "understand"
 
 
 def test_no_candidates_raises_cfgpu_error():

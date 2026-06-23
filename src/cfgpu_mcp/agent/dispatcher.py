@@ -8,6 +8,7 @@ from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import model as model_service
 from cfgpu_mcp.service import task as task_service
 from cfgpu_mcp.service import video as video_service
+from cfgpu_mcp.service import vision as vision_service
 
 
 async def dispatch_tool(name: str, inputs: dict[str, Any]) -> Any:
@@ -24,6 +25,8 @@ async def dispatch_tool(name: str, inputs: dict[str, Any]) -> Any:
                 return await video_service.generate_video(**inputs)
             case "generate_audio":
                 return await audio_service.generate_audio(**inputs)
+            case "understand_vision":
+                return await vision_service.understand_vision(**inputs)
             case "task_status":
                 return await task_service.get_status(**inputs)
             case "task_wait":

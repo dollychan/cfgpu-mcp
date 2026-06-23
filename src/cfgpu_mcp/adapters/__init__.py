@@ -7,6 +7,7 @@ from cfgpu_mcp.adapters import (  # noqa: F401
     kling_video,
     wan_video,
     audio_tts,
+    vision_chat,
 )
 
 from cfgpu_mcp.adapters.base import ModelAdapter, PollConfig, register_python_adapter

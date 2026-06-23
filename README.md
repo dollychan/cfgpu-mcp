@@ -4,11 +4,11 @@
 [![Python](https://img.shields.io/pypi/pyversions/cfgpu-mcp.svg)](https://pypi.org/project/cfgpu-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-基于 [Model Context Protocol](https://modelcontextprotocol.io) 的图像 / 视频 / 音频生成 server，统一封装 CFGPU 平台上的多家文生图、文生视频、语音合成模型。让 Claude、Cursor 等 MCP 客户端能直接调用 `generate_image` / `generate_video` / `generate_audio` 等工具，也提供独立 CLI 和多 SDK（Anthropic / OpenAI / LangGraph）适配。
+基于 [Model Context Protocol](https://modelcontextprotocol.io) 的图像 / 视频 / 音频生成与视觉理解 server，统一封装 CFGPU 平台上的多家文生图、文生视频、语音合成、视觉理解模型。让 Claude、Cursor 等 MCP 客户端能直接调用 `generate_image` / `generate_video` / `generate_audio` / `understand_vision` 等工具，也提供独立 CLI 和多 SDK（Anthropic / OpenAI / LangGraph）适配。
 
 ## 功能特性
 
-- **统一接口**：一套 `generate_image` / `generate_video` / `generate_audio` 工具覆盖所有模型，自动处理同步 / 异步任务、轮询与重试。
+- **统一接口**：一套 `generate_image` / `generate_video` / `generate_audio` / `understand_vision` 工具覆盖所有模型，自动处理同步 / 异步任务、轮询与重试。`understand_vision` 用于图像理解、图像推理、视频理解，返回文本结果。
 - **自动选型**：`model="auto"` 按质量档位、参考媒体、中文 prompt 等打分选最优；也可传单个 `adapter_id` 精确指定，或传候选列表在范围内选优。
 - **三种部署模式**：MCP stdio server、Anthropic/OpenAI/LangGraph SDK 工具、独立 CLI，共享同一服务层。
 - **可扩展**：新增模型只需添加 `adapter.yaml` + `card.md`，必要时挂一个 Python adapter。
@@ -31,6 +31,8 @@
 | 视频 | `happyhorse-1-0-t2v` | happyhorse-1.0-t2v |
 | 视频 | `happyhorse-1-0-r2v` | happyhorse-1.0-r2v（参考生视频，最多 9 张参考图） |
 | 视频 | `happyhorse-1-0-video-edit` | happyhorse-1.0-video-edit（视频编辑，源视频 + 最多 5 张参考图） |
+| 语音 | `seed-tts-2-0` / `minimax-speech-2-8-hd` / `minimax-speech-2-8-turbo` | 豆包语音合成 2.0 / MiniMax 语音 2.8 |
+| 视觉理解 | `qwen3-vl-30b-a3b-thinking` | Qwen3-VL 30B A3B Thinking（图像/视频理解与推理） |
 
 > 运行 `cfgpu models list` 查看当前实际加载的模型。
 
@@ -66,7 +68,7 @@ pip install "cfgpu-mcp[cli]"
 }
 ```
 
-重启客户端后即可在对话中使用 `generate_image`、`generate_video`、`generate_audio`、`list_models`、`get_model_card` 等工具。
+重启客户端后即可在对话中使用 `generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`list_models`、`get_model_card` 等工具。
 
 > 若已 `pip install`，把 `command` 改为 `cfgpu-mcp`、`args` 置为 `[]` 即可。
 

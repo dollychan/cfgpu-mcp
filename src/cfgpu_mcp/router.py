@@ -9,6 +9,7 @@ from cfgpu_mcp.tool_registry import (
     GenerateAudioInput,
     GenerateImageInput,
     GenerateVideoInput,
+    UnderstandVisionInput,
 )
 
 if TYPE_CHECKING:
@@ -34,7 +35,7 @@ class ModelRouter:
             ) from e
 
     def resolve(
-        self, req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput
+        self, req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput
     ) -> "ModelAdapter":
         """Resolve req.model (single id, candidate list, or 'auto') to one adapter."""
         model = req.model
@@ -46,13 +47,15 @@ class ModelRouter:
 
     def select_model(
         self,
-        req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput,
+        req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput,
         allowed: list[str] | None = None,
     ) -> "ModelAdapter":
         if isinstance(req, GenerateImageInput):
             task_type = "image"
         elif isinstance(req, GenerateVideoInput):
             task_type = "video"
+        elif isinstance(req, UnderstandVisionInput):
+            task_type = "understand"
         else:
             task_type = "audio"
         candidates: list["ModelAdapter"] = self._registry.list_all(task_type=task_type)
@@ -100,18 +103,20 @@ class ModelRouter:
     def _score(
         self,
         adapter: "ModelAdapter",
-        req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput,
+        req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput,
     ) -> int:
         score = 0
 
-        if req.quality_tier == "fast":
+        # understand requests carry no quality_tier; treat them as "balanced".
+        quality_tier = getattr(req, "quality_tier", "balanced")
+        if quality_tier == "fast":
             score += adapter.speed_tier * 2 - adapter.cost_tier
-        elif req.quality_tier == "best":
+        elif quality_tier == "best":
             # No model declares an explicit quality flag, so use cost_tier as a
             # proxy: pricier models tend to be the higher-quality flagships.
             score += adapter.cost_tier * 2
             score += adapter.speed_tier - adapter.cost_tier
-        else:  # balanced
+        else:  # balanced (and understand)
             score += adapter.speed_tier - adapter.cost_tier
 
         # Reference media capability bonus

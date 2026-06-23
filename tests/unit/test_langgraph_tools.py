@@ -10,6 +10,7 @@ from cfgpu_mcp.tool_registry import (
     GenerateAudioInput,
     GenerateImageInput,
     GenerateVideoInput,
+    UnderstandVisionInput,
     TaskStatusInput,
     TaskWaitInput,
     ListModelsInput,
@@ -21,6 +22,7 @@ _EXPECTED_SCHEMAS = {
     "generate_image": GenerateImageInput,
     "generate_video": GenerateVideoInput,
     "generate_audio": GenerateAudioInput,
+    "understand_vision": UnderstandVisionInput,
     "task_status":    TaskStatusInput,
     "task_wait":      TaskWaitInput,
     "list_models":    ListModelsInput,
@@ -30,8 +32,8 @@ _EXPECTED_SCHEMAS = {
 
 # ── return type and count ─────────────────────────────────────────────────────
 
-def test_no_filter_returns_all_seven_tools():
-    assert len(get_langgraph_tools()) == 7
+def test_no_filter_returns_all_tools():
+    assert len(get_langgraph_tools()) == len(_EXPECTED_SCHEMAS)
 
 
 def test_returns_structured_tool_instances():

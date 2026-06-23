@@ -7,8 +7,10 @@ from cfgpu_mcp.agent.openai_tools import get_openai_tools, openai_dispatch_tool
 
 # ── schema structure ─────────────────────────────────────────────────────────
 
-def test_no_filter_returns_all_seven_tools():
-    assert len(get_openai_tools()) == 7
+def test_no_filter_returns_all_tools():
+    tools = get_openai_tools()
+    assert len(tools) == 8
+    assert "understand_vision" in {t["function"]["name"] for t in tools}
 
 
 def test_each_tool_has_type_function():

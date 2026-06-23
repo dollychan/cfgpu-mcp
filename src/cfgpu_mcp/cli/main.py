@@ -5,6 +5,7 @@ import click
 from cfgpu_mcp.cli.cmd_generate import generate
 from cfgpu_mcp.cli.cmd_models import models
 from cfgpu_mcp.cli.cmd_task import task
+from cfgpu_mcp.cli.cmd_understand import understand
 
 
 @click.group()
@@ -21,5 +22,6 @@ def cli() -> None:
 
 
 cli.add_command(generate)
+cli.add_command(understand)
 cli.add_command(task)
 cli.add_command(models)

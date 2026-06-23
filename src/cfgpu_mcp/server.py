@@ -7,7 +7,7 @@ from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp import config
 from cfgpu_mcp.tool_registry import get_field_descriptions
-from cfgpu_mcp.tools import generate, models, tasks
+from cfgpu_mcp.tools import generate, models, tasks, understand
 
 
 @asynccontextmanager
@@ -31,9 +31,10 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
             await config.close()
 
 
-mcp = FastMCP("cfgpu", lifespan=_lifespan)
+mcp = FastMCP("cfdream", lifespan=_lifespan)
 
 generate.register(mcp)
+understand.register(mcp)
 tasks.register(mcp)
 models.register(mcp)
 
