@@ -269,13 +269,13 @@ asyncio.run(main())
 from cfgpu_mcp.service import task as task_svc
 
 async def poll():
-    # 查询状态：未完成时返回 {task_id, status[, error]} 信封；
-    # 一旦成功，返回与 generate_* 完全一致的扁平结果（顶层 urls/expires_at/...）
+    # 查询状态：未完成时返回 {task_id, status} 信封；一旦成功，返回与 generate_*
+    # 完全一致的扁平结果（顶层 urls/expires_at/...）；失败则抛出 CFGPUError(task_failed)。
     status = await task_svc.get_status("task-abc123")
     if "urls" in status:
         print(status["urls"])             # 已成功
     else:
-        print(status["status"])           # 'pending' | 'running' | 'failed'
+        print(status["status"])           # 'pending' | 'running'
 
     # 等待完成（内置指数退避轮询）→ 成功时直接是扁平结果，结构同 generate_*
     result = await task_svc.wait_for_task("task-abc123", timeout=300)
@@ -723,11 +723,7 @@ done
 
 > `task_status` 对**非终态的异步任务**会做一次实时上游轮询再返回，所以反复调用它即可把 `wait=false` 提交的任务驱动到完成（客户端驱动轮询）；`task_wait` 则阻塞轮询直到终态或超时。
 
-失败时信封带 `error`（`task_wait` 失败则抛出 / 返回 error dict）：
-
-```json
-{ "task_id": "task-abc123", "status": "failed", "error": "..." }
-```
+任务**失败**时，`task_status` 与 `task_wait` 都返回下方「错误」一节描述的标准 error dict（`error_type: "task_failed"`，并带 `adapter_id`），两者形状完全一致——不再有 `task_status` 独有的 `{status: "failed", error: "..."}` 信封。
 
 ### 错误
 

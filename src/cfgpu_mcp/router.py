@@ -43,7 +43,20 @@ class ModelRouter:
             return self.select_model(req, allowed=model)
         if model == "auto":
             return self.select_model(req)
-        return self.get_adapter(model)
+        # Explicit single model: the auto/list paths filter on supports(), but a
+        # directly named model would otherwise bypass it and surface a task-type /
+        # capability mismatch as a raw AssertionError from build_payload(). Validate
+        # here so the caller gets the friendly supports() reason (and a model-card hint).
+        adapter = self.get_adapter(model)
+        ok, reason = adapter.supports(req)
+        if not ok:
+            raise CFGPUError(
+                error_type="invalid_params",
+                user_message=reason,
+                original={"model": model},
+                adapter_id=adapter.adapter_id,
+            )
+        return adapter
 
     def select_model(
         self,

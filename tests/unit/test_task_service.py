@@ -27,6 +27,16 @@ async def _db_with_pending_task(adapter_id: str) -> aiosqlite.Connection:
     return db
 
 
+async def _db_with_failed_task(adapter_id: str) -> aiosqlite.Connection:
+    db = await aiosqlite.connect(":memory:")
+    db.row_factory = aiosqlite.Row
+    await db.execute(_CREATE_TABLE)
+    await db.commit()
+    await db_ops.insert_task(db, "task-1", adapter_id, "pending", {"prompt": "x"})
+    await db_ops.update_task(db, "task-1", "failed", error="content blocked")
+    return db
+
+
 def _adapter(is_async: bool):
     adapter = MagicMock()
     adapter.adapter_id = "m"
@@ -58,6 +68,26 @@ async def test_get_status_sync_model_skips_repoll():
     # Sync model: no poll attempted, stale result returned without raising
     client.get.assert_not_called()
     assert result["status"] == "succeeded"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_failed_task_raises_standard_error():
+    from cfgpu_mcp.errors import CFGPUError
+    # A failed task must surface the same {error_type: task_failed, adapter_id}
+    # shape as task_wait / generate_* — not a divergent {status, error} envelope.
+    db = await _db_with_failed_task("doubao-seedream-5-0-lite")
+    client = MagicMock()
+    client.get = AsyncMock()
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=True))
+    with p_db, p_client, p_reg:
+        with pytest.raises(CFGPUError) as exc_info:
+            await task_service.get_status("task-1")
+    # Terminal failure: no re-poll attempted.
+    client.get.assert_not_called()
+    assert exc_info.value.error_type == "task_failed"
+    assert exc_info.value.adapter_id == "doubao-seedream-5-0-lite"
+    assert "content blocked" in exc_info.value.user_message
     await db.close()
 
 

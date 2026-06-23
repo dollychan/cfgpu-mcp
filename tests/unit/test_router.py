@@ -129,6 +129,19 @@ def test_resolve_single_model_bypasses_scoring():
     assert adapter.adapter_id == "wan-2-0"
 
 
+def test_resolve_explicit_wrong_task_type_raises_cfgpu_error():
+    from cfgpu_mcp.errors import CFGPUError
+    # Naming a video model on an image request must surface the friendly
+    # supports() reason (with an adapter_id model-card hint), not a raw
+    # AssertionError leaking from build_payload().
+    router = _router()
+    req = GenerateImageInput(prompt="test", model="wan-2-0")
+    with pytest.raises(CFGPUError) as exc_info:
+        router.resolve(req)
+    assert exc_info.value.error_type == "invalid_params"
+    assert exc_info.value.adapter_id == "wan-2-0"
+
+
 def test_resolve_auto_selects_from_all():
     router = _router()
     req = GenerateVideoInput(prompt="test", model="auto", quality_tier="fast")
