@@ -6,6 +6,7 @@ from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import vision as vision_service
+from cfgpu_mcp.tool_registry import reshape_vision_result, split_structured
 
 
 def register(mcp: FastMCP) -> None:
@@ -23,7 +24,7 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Understand and reason over images and video using CFGPU vision-language models."""
         try:
-            return await vision_service.understand_vision(
+            result = await vision_service.understand_vision(
                 prompt=prompt,
                 model=model,
                 images=images,
@@ -36,3 +37,11 @@ def register(mcp: FastMCP) -> None:
             )
         except Exception as e:
             return tool_error_dict(e)
+        # Lean LLM-facing content: {id, model, message}. The chain-of-thought,
+        # token usage, and echoed request payload are client-only — routed to
+        # structuredContent so they never bloat (and get truncated out of) the
+        # model's tool result. See tool_registry.split_structured.
+        return split_structured(
+            reshape_vision_result(result),
+            structured_keys=("reasoning_content", "usage", "payload"),
+        )

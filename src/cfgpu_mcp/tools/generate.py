@@ -8,7 +8,7 @@ from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
-from cfgpu_mcp.tool_registry import annotate_artifact
+from cfgpu_mcp.tool_registry import annotate_artifact, split_structured
 
 
 def register(mcp: FastMCP) -> None:
@@ -29,7 +29,7 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Generate image from text prompt using CFGPU models."""
         try:
-            return annotate_artifact(await image_service.generate_image(
+            return split_structured(annotate_artifact(await image_service.generate_image(
                 prompt=prompt,
                 model=model,
                 aspect_ratio=aspect_ratio,
@@ -42,7 +42,7 @@ def register(mcp: FastMCP) -> None:
                 timeout=timeout,
                 return_metadata=return_metadata,
                 model_specific=model_specific,
-            ))
+            )), structured_keys=("usage", "payload"))
         except Exception as e:
             return tool_error_dict(e)
 
@@ -68,7 +68,7 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Generate video from text prompt, image, or multimodal references using CFGPU models."""
         try:
-            return annotate_artifact(await video_service.generate_video(
+            return split_structured(annotate_artifact(await video_service.generate_video(
                 prompt=prompt,
                 model=model,
                 first_frame=first_frame,
@@ -86,7 +86,7 @@ def register(mcp: FastMCP) -> None:
                 timeout=timeout,
                 return_metadata=return_metadata,
                 model_specific=model_specific,
-            ))
+            )), structured_keys=("usage", "payload"))
         except Exception as e:
             return tool_error_dict(e)
 
@@ -110,7 +110,7 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
         try:
-            return annotate_artifact(await audio_service.generate_audio(
+            return split_structured(annotate_artifact(await audio_service.generate_audio(
                 text=text,
                 model=model,
                 voice=voice,
@@ -126,7 +126,7 @@ def register(mcp: FastMCP) -> None:
                 timeout=timeout,
                 return_metadata=return_metadata,
                 model_specific=model_specific,
-            ))
+            )), structured_keys=("usage", "payload"))
         except Exception as e:
             return tool_error_dict(e)
 

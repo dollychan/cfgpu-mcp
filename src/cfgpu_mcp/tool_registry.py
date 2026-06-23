@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal, Optional
 
+from mcp.types import CallToolResult, TextContent
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -320,6 +321,53 @@ def annotate_artifact(result: Any) -> Any:
         if isinstance(nested, dict) and nested.get("urls"):
             result["artifact"] = True
     return result
+
+
+# ── Structured-content split (MCP tool layer only) ──────────────────────────
+
+def reshape_vision_result(result: Any) -> Any:
+    """Flatten a vision result's nested ``message`` for the MCP content shape.
+
+    The vision service returns ``message`` as the chat ``{role, content,
+    reasoning_content}`` object. For the MCP tool the answer text is hoisted to a
+    top-level ``message`` field (next to ``model``) and the chain-of-thought is split
+    out as a sibling ``reasoning_content`` so it can be routed to structuredContent.
+    Error dicts and non-dict results pass through unchanged.
+    """
+    if not isinstance(result, dict) or result.get("error"):
+        return result
+    message = result.get("message")
+    if isinstance(message, dict):
+        result["message"] = message.get("content")
+        result["reasoning_content"] = message.get("reasoning_content")
+    return result
+
+
+def split_structured(result: Any, *, structured_keys: tuple[str, ...]) -> Any:
+    """Split a success result into lean LLM-facing content + client-facing structuredContent.
+
+    ``langchain-mcp-adapters`` maps an MCP ``CallToolResult``'s text ``content`` to
+    ``ToolMessage.content`` (which enters the LLM context) and its ``structuredContent``
+    to ``ToolMessage.artifact`` (a side channel never shown to the LLM). This helper
+    pops ``structured_keys`` (data the client renders but the model does not need —
+    e.g. ``usage`` / ``payload`` / ``reasoning_content``) out of the content dict and
+    into ``structuredContent``, keeping the LLM-facing payload small and avoiding the
+    downstream truncation that previously collapsed the whole result into an opaque
+    truncated string.
+
+    ``-> dict`` tool annotations produce no ``outputSchema``, so FastMCP and the
+    lowlevel server pass a returned ``CallToolResult`` through verbatim (no output
+    validation). Non-dict results and error dicts (``error`` truthy) pass through
+    unchanged so the model still sees the full failure reason.
+    """
+    if not isinstance(result, dict) or result.get("error"):
+        return result
+    structured = {k: result.pop(k) for k in structured_keys if k in result}
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))],
+        structuredContent=structured or None,
+        isError=False,
+    )
 
 
 # ── Tool Registry ────────────────────────────────────────────────────────────

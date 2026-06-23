@@ -159,3 +159,113 @@ def test_annotate_artifact_passes_through_non_dict():
     from cfgpu_mcp.tool_registry import annotate_artifact
     assert annotate_artifact("not a dict") == "not a dict"
     assert annotate_artifact(None) is None
+
+
+# ── split_structured / reshape_vision_result ─────────────────────────────────
+
+import json
+
+from mcp.types import CallToolResult
+
+from cfgpu_mcp.tool_registry import reshape_vision_result, split_structured
+
+
+def test_split_structured_routes_keys_to_structured_content():
+    result = {
+        "urls": ["https://x"],
+        "expires_at": None,
+        "task_id": "cgt-1",
+        "model_used": "doubao-seedance",
+        "seed": 42,
+        "artifact": True,
+        "usage": {"totalTokens": 100},
+        "payload": {"model": "doubao", "prompt": "x"},
+    }
+    out = split_structured(result, structured_keys=("usage", "payload"))
+
+    assert isinstance(out, CallToolResult)
+    assert out.isError is False
+    # usage/payload live in structuredContent only (client-facing side channel)
+    assert out.structuredContent == {"usage": {"totalTokens": 100}, "payload": {"model": "doubao", "prompt": "x"}}
+    # lean content (LLM-facing) keeps everything else and excludes the split keys
+    content = json.loads(out.content[0].text)
+    assert content == {
+        "urls": ["https://x"],
+        "expires_at": None,
+        "task_id": "cgt-1",
+        "model_used": "doubao-seedance",
+        "seed": 42,
+        "artifact": True,
+    }
+    assert "usage" not in content and "payload" not in content
+
+
+def test_split_structured_empty_structured_is_none():
+    # async no-wait submit carries neither usage nor payload
+    out = split_structured({"task_id": "t", "status": "pending"}, structured_keys=("usage", "payload"))
+    assert isinstance(out, CallToolResult)
+    assert out.structuredContent is None
+    assert json.loads(out.content[0].text) == {"task_id": "t", "status": "pending"}
+
+
+def test_split_structured_passes_through_error_dict():
+    err = {"error": True, "error_type": "invalid_params", "message": "bad", "retryable": False}
+    # error dicts stay a plain dict so the LLM still sees the full failure reason
+    assert split_structured(err, structured_keys=("usage", "payload")) is err
+
+
+def test_split_structured_passes_through_non_dict():
+    assert split_structured("not a dict", structured_keys=("usage",)) == "not a dict"
+    assert split_structured(None, structured_keys=("usage",)) is None
+
+
+def test_reshape_vision_result_hoists_message_and_splits_reasoning():
+    result = {
+        "id": "chatcmpl-1",
+        "model": "qwen3-vl-30b-a3b-thinking",
+        "message": {"role": "assistant", "content": "The video is...", "reasoning_content": "Let's analyze..."},
+        "usage": {"prompt_tokens": 7749},
+        "payload": {"model": "qwen", "messages": []},
+    }
+    reshaped = reshape_vision_result(result)
+    assert reshaped["message"] == "The video is..."
+    assert reshaped["reasoning_content"] == "Let's analyze..."
+    assert reshaped["model"] == "qwen3-vl-30b-a3b-thinking"
+
+
+def test_reshape_vision_result_non_thinking_model_has_null_reasoning():
+    result = {"id": "c", "model": "qwen-vl", "message": {"role": "assistant", "content": "answer"}}
+    reshaped = reshape_vision_result(result)
+    assert reshaped["message"] == "answer"
+    assert reshaped["reasoning_content"] is None
+
+
+def test_reshape_vision_result_passes_through_error_and_non_dict():
+    err = {"error": True, "message": "oops"}
+    assert reshape_vision_result(err) is err
+    assert reshape_vision_result("x") == "x"
+
+
+def test_understand_vision_end_to_end_split():
+    # The full understand_vision MCP shape: reshape then split.
+    service_result = {
+        "id": "chatcmpl-1",
+        "model": "qwen3-vl-30b-a3b-thinking",
+        "message": {"role": "assistant", "content": "answer text", "reasoning_content": "thinking trace"},
+        "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+        "payload": {"model": "qwen", "messages": [{"role": "user", "content": "..."}], "stream": False},
+    }
+    out = split_structured(
+        reshape_vision_result(service_result),
+        structured_keys=("reasoning_content", "usage", "payload"),
+    )
+    assert isinstance(out, CallToolResult)
+    # LLM-facing content is lean: only id, model, message (the answer text)
+    assert json.loads(out.content[0].text) == {
+        "id": "chatcmpl-1",
+        "model": "qwen3-vl-30b-a3b-thinking",
+        "message": "answer text",
+    }
+    # reasoning_content, usage, payload are client-only
+    assert set(out.structuredContent) == {"reasoning_content", "usage", "payload"}
+    assert out.structuredContent["reasoning_content"] == "thinking trace"
