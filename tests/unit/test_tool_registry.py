@@ -130,29 +130,36 @@ def test_image_schema_exposes_n():
 
 
 def test_annotate_artifact_flags_top_level_urls():
-    from cfgpu_mcp.tool_registry import annotate_artifact
+    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
     out = annotate_artifact({"urls": ["https://x"], "expires_at": None})
     assert out["artifact"] is True
+    # terminal hint lets the LLM see generation is done even after MaterialsMiddleware
+    # strips urls out of the content → no redundant task_status/task_wait polling.
+    assert out["status"] == _ARTIFACT_DONE_STATUS
 
 
 def test_annotate_artifact_flags_nested_task_result():
-    from cfgpu_mcp.tool_registry import annotate_artifact
+    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
     out = annotate_artifact(
         {"task_id": "t", "status": "succeeded", "result": {"urls": ["https://y"]}, "error": None}
     )
     assert out["artifact"] is True
+    assert out["status"] == _ARTIFACT_DONE_STATUS
 
 
 def test_annotate_artifact_skips_results_without_urls():
-    from cfgpu_mcp.tool_registry import annotate_artifact
-    # empty urls, pending no-wait, running task, and error dicts get no flag
+    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
+    # empty urls, pending no-wait, running task, and error dicts get no flag — and no
+    # done-status hint (the raw in-flight status must survive untouched).
     for d in (
         {"urls": [], "expires_at": None},
         {"task_id": "t", "status": "pending"},
         {"task_id": "t", "status": "running", "result": None, "error": None},
         {"error": True, "message": "oops"},
     ):
-        assert "artifact" not in annotate_artifact(d)
+        out = annotate_artifact(d)
+        assert "artifact" not in out
+        assert out.get("status") != _ARTIFACT_DONE_STATUS
 
 
 def test_annotate_artifact_passes_through_non_dict():
@@ -217,6 +224,44 @@ def test_split_structured_passes_through_error_dict():
 def test_split_structured_passes_through_non_dict():
     assert split_structured("not a dict", structured_keys=("usage",)) == "not a dict"
     assert split_structured(None, structured_keys=("usage",)) is None
+
+
+def test_task_result_end_to_end_annotate_then_split():
+    # task_status/task_wait success: flat NormalizedResult + payload, same as generate.
+    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
+    service_result = {
+        "urls": ["https://cdn.cfgpu.com/vid.mp4"],
+        "expires_at": None,
+        "task_id": "cgt-1",
+        "model_used": "wan-2-0",
+        "seed": 7,
+        "usage": {"totalTokens": 100},
+        "payload": {"model": "wan", "prompt": "x"},
+    }
+    out = split_structured(annotate_artifact(service_result), structured_keys=("usage", "payload"))
+
+    assert isinstance(out, CallToolResult)
+    content = json.loads(out.content[0].text)
+    # urls + terminal status hint stay LLM-facing; usage/payload routed to side channel
+    assert content["artifact"] is True
+    assert content["status"] == _ARTIFACT_DONE_STATUS
+    assert content["urls"] == ["https://cdn.cfgpu.com/vid.mp4"]
+    assert "usage" not in content and "payload" not in content
+    assert set(out.structuredContent) == {"usage", "payload"}
+
+
+def test_task_result_pending_passes_through_split_without_flag():
+    # in-flight poll: no urls → no artifact flag, no done hint, empty side channel.
+    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
+    out = split_structured(
+        annotate_artifact({"task_id": "cgt-1", "status": "running"}),
+        structured_keys=("usage", "payload"),
+    )
+    assert isinstance(out, CallToolResult)
+    assert out.structuredContent is None
+    content = json.loads(out.content[0].text)
+    assert content == {"task_id": "cgt-1", "status": "running"}
+    assert content["status"] != _ARTIFACT_DONE_STATUS
 
 
 def test_reshape_vision_result_hoists_message_and_splits_reasoning():

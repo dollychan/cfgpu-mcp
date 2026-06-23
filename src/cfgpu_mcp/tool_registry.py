@@ -304,6 +304,9 @@ class NormalizedResult:
 
 # ── Artifact flagging ────────────────────────────────────────────────────────
 
+_ARTIFACT_DONE_STATUS = "Success. URLs already generated; no further task_status/task_wait polling needed."
+
+
 def annotate_artifact(result: Any) -> Any:
     """Stamp ``"artifact": True`` on a tool result that carries generated media.
 
@@ -311,15 +314,22 @@ def annotate_artifact(result: Any) -> Any:
     ``urls`` list — either at the top level (generate_* results) or nested under
     ``result`` (task_status / task_wait results). Error dicts and pending/no-wait
     results (which have no urls yet) are left untouched.
+
+    A terminal ``status`` hint is also stamped alongside the flag so the LLM can
+    tell, from the content it actually sees, that generation already finished — the
+    MaterialsMiddleware rewrites ``urls`` out of the content, and without this the
+    model would otherwise keep polling task_status/task_wait on an already-done task.
     """
     if not isinstance(result, dict):
         return result
     if result.get("urls"):
         result["artifact"] = True
+        result["status"] = _ARTIFACT_DONE_STATUS
     else:
         nested = result.get("result")
         if isinstance(nested, dict) and nested.get("urls"):
             result["artifact"] = True
+            result["status"] = _ARTIFACT_DONE_STATUS
     return result
 
 
