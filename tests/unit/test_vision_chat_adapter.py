@@ -75,32 +75,45 @@ def test_is_sync_no_task_id():
     assert adapter.is_async is False
 
 
-def test_parse_extracts_text_reasoning_and_usage():
+def test_parse_extracts_message_id_and_usage():
     adapter = _adapter()
     resp = {
+        "id": "chatcmpl-abc123",
         "model": "qwen3-vl-30b-a3b-thinking",
         "choices": [
-            {"message": {"content": "这是一只红熊猫", "reasoning_content": "我看到了..."}}
+            {"message": {"role": "assistant", "content": "这是一只红熊猫", "reasoning_content": "我看到了..."}}
         ],
         "usage": {"prompt_tokens": 100, "completion_tokens": 20},
     }
     result = adapter.parse_response(resp)
-    assert result.text == "这是一只红熊猫"
-    assert result.reasoning == "我看到了..."
+    assert result.message == {
+        "role": "assistant",
+        "content": "这是一只红熊猫",
+        "reasoning_content": "我看到了...",
+    }
+    assert result.response_id == "chatcmpl-abc123"
     assert result.urls == []
     assert result.task_id is None
     assert result.usage == {"prompt_tokens": 100, "completion_tokens": 20}
-    # text surfaces in to_dict; reasoning only with metadata
-    assert result.to_dict()["text"] == "这是一只红熊猫"
-    assert "reasoning" not in result.to_dict()
-    assert result.to_dict(return_metadata=True)["reasoning"] == "我看到了..."
+    # to_dict emits the chat-completion envelope; usage only with metadata
+    d = result.to_dict()
+    assert d == {
+        "id": "chatcmpl-abc123",
+        "model": "qwen3-vl-30b-a3b-thinking",
+        "message": result.message,
+    }
+    assert "usage" not in d
+    assert result.to_dict(return_metadata=True)["usage"] == {
+        "prompt_tokens": 100,
+        "completion_tokens": 20,
+    }
 
 
 def test_parse_handles_missing_choices_and_reasoning():
     adapter = _adapter()
     result = adapter.parse_response({"model": "qwen3-vl-30b-a3b-thinking", "choices": []})
-    assert result.text == ""
-    assert result.reasoning is None
+    assert result.message == {"role": "assistant", "content": ""}
+    assert "reasoning_content" not in result.message
 
 
 def test_reuses_class_with_own_model_id():

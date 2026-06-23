@@ -581,12 +581,12 @@ cfgpu understand "描述这张图片，并指出其中的异常之处" \
 cfgpu understand "详细描述视频内容，并列出关键事件的时间线" \
   --video https://example.com/clip.mp4
 
-# 纯文本对话（不传媒体）；--system 自定义系统提示，--metadata 额外打印推理过程与 usage
+# 纯文本对话（不传媒体）；--system 自定义系统提示，--metadata 额外打印 usage
 cfgpu understand "用一句话解释相对论" --system "你是物理学教授" --metadata
 ```
 
 > `understand_vision` 走 OpenAI 兼容的 `/model/v1/chat/completions`，**同步返回文本结果**（不是媒体文件）。
-> stdout 输出回答文本，stderr 输出元数据；Thinking 模型的推理过程在 `--metadata` 下作为 `reasoning` 打印。
+> stdout 输出回答文本（`message.content`），stderr 输出 id / model；Thinking 模型的推理过程（`message.reasoning_content`）也打到 stderr，`--metadata` 额外打印 usage。
 > 与 `generate_*` 不同，understand 结果没有 `urls`，因此不带 `artifact` 标记。
 
 ### 异步工作流（--no-wait）
@@ -656,7 +656,25 @@ done
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
 
-> **视觉理解（`understand_vision`）的返回结构不同**：它返回的是文本而非媒体，结果顶层为 `text`（模型回答）+ `payload`（真实 API 请求体）；`return_metadata=True` 时追加 `model_used`、`usage`，以及 Thinking 模型的 `reasoning`（推理过程）。没有 `urls` / `expires_at` / `task_id`，因此也不带 `artifact` 标记。
+> **视觉理解（`understand_vision`）的返回结构不同**：它返回的是文本而非媒体，沿用 chat-completion 结构 —— 结果顶层为 `id`（响应 id `chatcmpl-...`）、`model`（实际模型）、`message`（assistant 消息：`{role, content}`，回答在 `content`；Thinking 模型额外带 `reasoning_content` 推理过程）、`payload`（真实 API 请求体）。`return_metadata=True` 时追加 `usage`（token 用量）。没有 `urls` / `expires_at` / `task_id`，因此也不带 `artifact` 标记。
+>
+> ```json
+> {
+>   "id": "chatcmpl-e08011aa8a004eadbb55a9ca23b76113",
+>   "model": "qwen3-vl-30b-a3b-thinking",
+>   "message": {
+>     "role": "assistant",
+>     "content": "The video is a cinematic montage of fantastical creatures...",
+>     "reasoning_content": "So, let's analyze this video. First, ..."
+>   },
+>   "usage": {
+>     "prompt_tokens": 7749, "completion_tokens": 795, "total_tokens": 8544,
+>     "completion_tokens_details": {"text_tokens": 419, "reasoning_tokens": 376},
+>     "prompt_tokens_details": {"text_tokens": 25, "video_tokens": 7724}
+>   },
+>   "payload": { "model": "qwen3-vl-30b-a3b-thinking", "messages": [ ... ], "stream": false }
+> }
+> ```
 
 > **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`generate_audio`、`task_status`、`task_wait` 这五个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。这些工具成功时都返回同一套扁平结构（顶层 `urls`），无 URL 的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。
 

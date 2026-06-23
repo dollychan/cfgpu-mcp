@@ -47,7 +47,7 @@ def _run(coro) -> dict:
 @click.option("--temperature", type=float, default=None,
               help="Sampling temperature (default: model's default)")
 @click.option("--metadata", is_flag=True,
-              help="Include model_used, usage, and reasoning in output")
+              help="Include token usage in output")
 @click.option("--json", "json_mode", is_flag=True,
               help="Output raw JSON")
 @click.option("--model-specific", default=None, metavar="JSON",

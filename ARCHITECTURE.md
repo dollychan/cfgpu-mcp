@@ -97,7 +97,7 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 新开发者最常见的错误：在 `build_payload()` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传入 API。
 
-**四种 `task_type`**：`image` / `video` / `audio` 三类都是**媒体生成**（返回 `urls`），而 `understand`（视觉理解 / 图像推理 / 视频理解，如 Qwen3-VL）是**返回文本**的对话类任务——走 OpenAI 兼容的 `/model/v1/chat/completions`，结果落在 `NormalizedResult.text`（Thinking 模型的推理过程落在 `reasoning`），`urls` 为空。路由、`supports()`、`select_model()` 都按 `task_type` 隔离，understand 请求永远不会选中媒体模型，反之亦然。
+**四种 `task_type`**：`image` / `video` / `audio` 三类都是**媒体生成**（返回 `urls`），而 `understand`（视觉理解 / 图像推理 / 视频理解，如 Qwen3-VL）是**返回文本**的对话类任务——走 OpenAI 兼容的 `/model/v1/chat/completions`，结果落在 `NormalizedResult.message`（assistant 消息 `{role, content[, reasoning_content]}`，回答是 `content`、Thinking 模型的推理过程是 `reasoning_content`）与 `response_id`，`urls` 为空。其工具返回 chat-completion 结构 `{id, model, message, payload[, usage]}`（`usage` 受 `return_metadata` 控制）。路由、`supports()`、`select_model()` 都按 `task_type` 隔离，understand 请求永远不会选中媒体模型，反之亦然。
 
 ### 3.2 同步模型 vs 异步模型
 

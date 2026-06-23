@@ -50,12 +50,16 @@ async def understand_vision(
         raise
 
     result = task.result or {}
-    # The real per-model API request is always surfaced, regardless of return_metadata.
+    # Chat-completion-shaped result: the answer is message.content (plus
+    # reasoning_content for Thinking models). The real per-model API request is
+    # always surfaced under "payload", regardless of return_metadata.
     payload = task.public_payload()
-    out: dict[str, Any] = {"text": result.get("text", ""), "payload": payload}
+    out: dict[str, Any] = {
+        "id": result.get("id"),
+        "model": result.get("model"),
+        "message": result.get("message"),
+        "payload": payload,
+    }
     if return_metadata:
-        out["model_used"] = result.get("model_used")
         out["usage"] = result.get("usage")
-        if result.get("reasoning") is not None:
-            out["reasoning"] = result["reasoning"]
     return out

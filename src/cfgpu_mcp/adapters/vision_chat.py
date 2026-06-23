@@ -24,8 +24,8 @@ class QwenVisionAdapter(ModelAdapter):
     ``text`` / ``image_url`` / ``video_url`` parts. Synchronous (is_async: false) —
     the answer is returned directly in the POST response under
     ``choices[0].message.content``. Thinking variants additionally surface their
-    chain-of-thought under ``message.reasoning_content``, which we carry through as
-    ``reasoning`` metadata.
+    chain-of-thought under ``message.reasoning_content``, which we carry through on
+    the assistant ``message`` object alongside ``content``.
 
     Registered under ``qwen3-vl-30b-a3b-thinking``; sibling Qwen3-VL models reuse
     this class via the registry extends-chain with their own ``cfgpu_model_id``.
@@ -64,9 +64,15 @@ class QwenVisionAdapter(ModelAdapter):
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         choices = resp.get("choices") or []
-        message = choices[0].get("message", {}) if choices else {}
-        text = message.get("content") or ""
-        reasoning = message.get("reasoning_content") or None
+        raw = choices[0].get("message", {}) if choices else {}
+        message: dict = {
+            "role": raw.get("role", "assistant"),
+            "content": raw.get("content") or "",
+        }
+        # Thinking models surface chain-of-thought; only carry it when present.
+        reasoning = raw.get("reasoning_content")
+        if reasoning:
+            message["reasoning_content"] = reasoning
         return NormalizedResult(
             urls=[],                       # understanding returns text, not media
             expires_at=None,               # text answers don't expire
@@ -74,6 +80,6 @@ class QwenVisionAdapter(ModelAdapter):
             model_used=resp.get("model"),
             seed=None,
             usage=resp.get("usage"),
-            text=text,
-            reasoning=reasoning,
+            response_id=resp.get("id"),
+            message=message,
         )

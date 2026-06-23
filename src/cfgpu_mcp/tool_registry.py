@@ -216,8 +216,9 @@ class UnderstandVisionInput(BaseModel):
     )
     return_metadata: bool = Field(
         default=True,
-        description="Include model_used, usage, and the model's reasoning (for Thinking "
-        "models) in the response",
+        description="Include token usage in the response. The answer (message.content) "
+        "and the model's reasoning (message.reasoning_content, for Thinking models) are "
+        "always returned regardless.",
     )
     model_specific: Optional[dict] = Field(
         default=None,
@@ -265,16 +266,30 @@ class NormalizedResult:
     seed: int | None                   # 部分模型返回
     usage: dict[str, Any] | None       # 原始 API 返回的 usage 对象（计费结构因 API 而异）
     aspect_ratio: str | None = None    # 回传请求的 aspect_ratio（由 TaskManager 填充）
-    text: str | None = None            # 文本结果（视觉理解 / chat 模型），媒体生成模型为 None
-    reasoning: str | None = None       # Thinking 模型的推理过程（reasoning_content）
+    # ── Vision-understanding (text-returning) fields ──
+    # message: chat-completion assistant message, e.g.
+    #   {"role": "assistant", "content": "...", "reasoning_content": "..."}.
+    # Its presence is what marks a result as text-returning rather than media.
+    response_id: str | None = None     # chat/completions 响应 id（chatcmpl-...）
+    message: dict[str, Any] | None = None
 
     def to_dict(self, return_metadata: bool = False) -> dict[str, Any]:
+        # Vision-understanding results carry a chat message rather than media urls —
+        # emit the chat-completion-shaped envelope {id, model, message[, usage]}.
+        if self.message is not None:
+            out: dict[str, Any] = {
+                "id": self.response_id,
+                "model": self.model_used,
+                "message": self.message,
+            }
+            if return_metadata:
+                out["usage"] = self.usage
+            return out
+
         base: dict[str, Any] = {
             "urls": self.urls,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
         }
-        if self.text is not None:
-            base["text"] = self.text
         if return_metadata:
             base.update({
                 "task_id": self.task_id,
@@ -283,8 +298,6 @@ class NormalizedResult:
                 "seed": self.seed,
                 "usage": self.usage,
             })
-            if self.reasoning is not None:
-                base["reasoning"] = self.reasoning
         return base
 
 
