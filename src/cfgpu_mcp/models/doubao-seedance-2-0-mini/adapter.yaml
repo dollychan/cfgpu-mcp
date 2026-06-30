@@ -1,0 +1,16 @@
+extends: doubao-seedance-2-0
+card_base: ~
+
+adapter_id: doubao-seedance-2-0-mini
+display_name: "Doubao Seedance 2.0 mini"
+cfgpu_model_id: Doubao-Seedance-2.0-mini
+
+# Capabilities, endpoint, poll_config etc. are inherited from wan-2-0 via the
+# doubao-seedance-2-0 chain; only the identifiers and tiers differ.
+# mini is the high-cost-performance tier — cheapest of the Seedance 2.0 family.
+
+cost_tier: 1
+speed_tier: 3
+
+poll_config:
+  default_timeout: 300

@@ -449,6 +449,9 @@ src/cfgpu_mcp/
 │   ├── doubao-seedance-2-0-fast/
 │   │   ├── adapter.yaml        extends: doubao-seedance-2-0, card_base: ~
 │   │   └── card.md
+│   ├── doubao-seedance-2-0-mini/
+│   │   ├── adapter.yaml        extends: doubao-seedance-2-0, card_base: ~（高性价比）
+│   │   └── card.md
 │   ├── doubao-seedream-5-0-lite/
 │   │   ├── adapter.yaml
 │   │   └── card.md
