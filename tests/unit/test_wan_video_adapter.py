@@ -90,23 +90,33 @@ def test_model_specific_merges_at_top_level():
     assert payload["parameters"] == {"resolution": "1080P", "duration": 8}
 
 
-def test_parse_response_reads_content_video_url():
+def test_parse_response_reads_output_video_url():
+    # Poll response is the DashScope output-nested envelope (camelCase, UPPERCASE status).
     adapter = _make_adapter()
     resp = {
-        "id": "cgt-123",
         "model": "wan2.7-i2v",
-        "status": "succeeded",
-        "content": {"videoUrl": "https://cdn/v.mp4"},
-        "seed": 42,
-        "ratio": "9:16",
-        "usage": {"totalTokens": 1000},
+        "output": {
+            "taskId": "cgt-123",
+            "taskStatus": "SUCCEEDED",
+            "videoUrl": "https://cdn/v.mp4",
+            "seed": 42,
+        },
+        "usage": {"totalTokens": 1000, "ratio": "9:16"},
     }
+    assert adapter.extract_status(resp) == "succeeded"
     result = adapter.parse_response(resp)
     assert result.urls == ["https://cdn/v.mp4"]
     assert result.task_id == "cgt-123"
     assert result.seed == 42
     assert result.aspect_ratio == "9:16"
-    assert result.usage == {"totalTokens": 1000}
+    assert result.usage == {"totalTokens": 1000, "ratio": "9:16"}
+
+
+def test_extract_task_id_from_create_response():
+    # Create response uses snake_case keys nested under output.
+    adapter = _make_adapter()
+    create = {"output": {"task_status": "PENDING", "task_id": "cgt-123"}, "request_id": "r1"}
+    assert adapter.extract_task_id(create) == "cgt-123"
 
 
 def test_requires_first_frame():
@@ -161,10 +171,10 @@ def test_r2v_media_videos_then_images_in_order():
     assert payload["parameters"] == {"resolution": "720P", "duration": 5}
 
 
-def test_r2v_inherits_seedance_style_parse():
+def test_r2v_inherits_output_envelope_parse():
     adapter = _make_r2v_adapter()
     result = adapter.parse_response(
-        {"id": "cgt-9", "content": {"videoUrl": "https://v.mp4"}, "ratio": "16:9"}
+        {"output": {"taskId": "cgt-9", "videoUrl": "https://v.mp4"}, "usage": {"ratio": "16:9"}}
     )
     assert result.urls == ["https://v.mp4"]
     assert result.task_id == "cgt-9"

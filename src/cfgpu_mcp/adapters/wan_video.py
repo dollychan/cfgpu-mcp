@@ -23,10 +23,12 @@ class WanVideoAdapter(ModelAdapter):
         * 万相 2.7 (i2v/r2v/t2v/videoedit): ``{"prompt", "media": [{"type","url"}]}``
         * 万相 2.6 (i2v/r2v/t2v): flat keys ``{"prompt", "img_url", "audio_url",
           "reference_urls": [...]}`` — no ``media`` array.
-    - **Poll** uses the standard ``/video/tasks/{task_id}`` shape like Seedance —
-      ``{"id", "status", "content": {"videoUrl"}, ...}`` — *not* HappyHorse's
-      ``output``-nested response. So the base ``extract_task_id`` /
-      ``extract_status`` and a Seedance-style ``parse_response`` are reused.
+    - **Poll** uses the DashScope ``output``-nested envelope like HappyHorse —
+      create returns ``{"output": {"task_status", "task_id"}}`` (snake_case),
+      poll returns ``{"output": {"taskId", "taskStatus", "videoUrl"}, "usage"}``
+      (camelCase) — *not* Seedance's flat ``{"id", "status", "content"}``. So
+      ``extract_task_id`` / ``extract_status`` / ``parse_response`` read the
+      ``output`` envelope, tolerating both key casings.
 
     This base class is 万相 2.7 图生视频 (``wan2.7-i2v``): image-to-video only, a
     first-frame image is required. Siblings override ``_build_input`` (or the
@@ -34,6 +36,9 @@ class WanVideoAdapter(ModelAdapter):
     """
 
     adapter_id = "wan-2-7-i2v"
+
+    def _output(self, resp: dict) -> dict:
+        return resp.get("output") or {}
 
     def _build_media(self, req: "GenerateVideoInput") -> list[dict]:
         """万相 2.7 image-to-video: a single first-frame image."""
@@ -61,17 +66,32 @@ class WanVideoAdapter(ModelAdapter):
             payload.update(req.model_specific)
         return payload
 
+    def extract_task_id(self, resp: dict) -> str | None:
+        # Create response is snake_case (task_id); poll response is camelCase (taskId).
+        output = self._output(resp)
+        return output.get("taskId") or output.get("task_id")
+
+    def extract_status(self, resp: dict) -> str:
+        # Poll response uses camelCase taskStatus with UPPERCASE values (SUCCEEDED).
+        output = self._output(resp)
+        status = (output.get("taskStatus") or output.get("task_status") or "running").lower()
+        # "canceled" and "unknown" aren't in task_manager's _STATUS_MAP; collapse to failed
+        if status in ("canceled", "unknown"):
+            return "failed"
+        return status
+
     def parse_response(self, resp: dict) -> NormalizedResult:
-        content = resp.get("content") or {}
-        video_url = content.get("videoUrl")
+        output = self._output(resp)
+        usage = resp.get("usage") or {}
+        video_url = output.get("videoUrl")
         return NormalizedResult(
             urls=[video_url] if video_url else [],
             expires_at=_default_expires_at(),
-            task_id=resp.get("id"),
+            task_id=output.get("taskId") or output.get("task_id"),
             model_used=resp.get("model"),
-            seed=resp.get("seed"),
+            seed=output.get("seed"),
             usage=resp.get("usage"),
-            aspect_ratio=resp.get("ratio"),  # resolved output ratio when the API reports it
+            aspect_ratio=usage.get("ratio") or output.get("ratio"),  # resolved output ratio (usage.ratio)
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

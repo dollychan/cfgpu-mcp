@@ -64,35 +64,37 @@
 ```
 
 ## 响应结构
+创建视频结构:
+
+```json
+{"output":{
+  "task_status":"PENDING",
+  "task_id":"36598b68-c4f5-423c-92a1-2d144692c1d0"},
+  "request_id":"e25956ba-fa12-9eda-8bcb-a04225e8ef70"}
+```
 
 查询任务结果 GET `/video/tasks/{task_id}` 返回标准视频任务结构：
 
 ```json
-{
-  "id": "cgt-xxx",
-  "model": "wan2.7-t2v",
-  "status": "succeeded",
-  "content": {
-    "videoUrl": "https://...",
-    "lastFrameUrl": null
-  },
-  "seed": 15233,
-  "resolution": "720p",
-  "ratio": "16:9",
-  "duration": 5,
-  "usage": {
-    "completionTokens": 108900,
-    "totalTokens": 108900
-  }
-}
+{"requestId":"c6b9559f-4c28-98b0-86ea-2ed499172652",
+"model":"wan2.7-t2v",
+"output":{"taskId":"36598b68-c4f5-423c-92a1-2d144692c1d0",
+"taskStatus":"SUCCEEDED","submitTime":"2026-06-30 18:07:20.235",
+"scheduledTime":"2026-06-30 18:07:20.275",
+"endTime":"2026-06-30 18:10:08.044",
+"origPrompt":"一段紧张刺激的侦探追查故事，展现电影级叙事能力。第1个镜头[0-3秒] 全景：雨夜的纽约街头，霓虹灯闪烁，一位身穿黑色风衣的侦探快步行走。 第2个镜头[3-6秒] 中景：侦探进入一栋老旧建筑，雨水打湿了他的外套，门在他身后缓缓关闭。 第3个镜头[6-9秒] 特写：侦探的眼神坚毅专注，远处传来警笛声，他微微皱眉思考。 第4个镜头[9-12秒] 中景：侦探在昏暗走廊中小心前行，手电筒照亮前方。 第5个镜头[12-15秒] 特写：侦探发现关键线索，脸上露出恍然大悟的表情。",
+"videoUrl":"https://dashscope-a717.oss-accelerate.aliyuncs.com/1d/84/20260630/3980f064/7904451-metadata_user_2e83035bf62f2589.mp4?Expires=1782900606&OSSAccessKeyId=LTAI5tJjG6wsHad1Sf7iezX4&Signature=c6%2FqN%2FjHNfu0pFWHsAfPhBbkveI%3D"},
+"usage":{"duration":5,"inputVideoDuration":0,"outputVideoDuration":5,"videoCount":1,"sr":720,"ratio":"16:9"}
+} 
 ```
 
 | 字段 | 说明 |
 |------|------|
-| `id` | 任务 ID |
-| `status` | 任务状态：`pending` / `running` / `succeeded` / `failed` |
-| `content.videoUrl` | 生成的视频 URL（24 小时有效） |
-| `usage.totalTokens` | Token 消耗 |
+| `output.taskId` | 任务 ID（创建响应为 snake_case `output.task_id`） |
+| `output.taskStatus` | 任务状态：`PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED`（创建响应为 `output.task_status`） |
+| `output.videoUrl` | 生成的视频 URL（24 小时有效） |
+| `usage.duration` / `usage.outputVideoDuration` | 计费时长（秒） |
+| `usage.ratio` / `usage.sr` | 输出宽高比 / 分辨率 |
 
 ## 约束与限制
 
