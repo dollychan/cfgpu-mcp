@@ -55,10 +55,10 @@ class HappyHorseVideoAdapter(ModelAdapter):
         return payload
 
     def extract_task_id(self, resp: dict) -> str | None:
-        return self._output(resp).get("task_id")
+        return self._output(resp).get("taskId")
 
     def extract_status(self, resp: dict) -> str:
-        status = self._output(resp).get("task_status", "running").lower()
+        status = self._output(resp).get("taskStatus", "running").lower()
         # "canceled" and "unknown" aren't in task_manager's STATUS_MAP; collapse to failed
         if status in ("canceled", "unknown"):
             return "failed"
@@ -66,15 +66,16 @@ class HappyHorseVideoAdapter(ModelAdapter):
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         output = self._output(resp)
-        video_url = output.get("video_url")
+        usage = resp.get("usage") or {}
+        video_url = output.get("videoUrl")
         return NormalizedResult(
             urls=[video_url] if video_url else [],
             expires_at=_default_expires_at(),
-            task_id=output.get("task_id"),
+            task_id=output.get("taskId"),
             model_used=resp.get("model"),
             seed=output.get("seed"),
             usage=resp.get("usage"),
-            aspect_ratio=output.get("ratio") or resp.get("ratio"),  # resolved output ratio when reported
+            aspect_ratio=usage.get("ratio") or output.get("ratio"),  # resolved output ratio when reported (usage.ratio)
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

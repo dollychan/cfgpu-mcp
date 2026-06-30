@@ -91,7 +91,7 @@ def test_model_specific_merged():
 
 def test_extract_task_id_from_output():
     adapter = _make_adapter()
-    resp = {"output": {"task_id": "task-abc123", "task_status": "PENDING"}}
+    resp = {"output": {"taskId": "task-abc123", "taskStatus": "PENDING"}}
     assert adapter.extract_task_id(resp) == "task-abc123"
 
 
@@ -112,7 +112,7 @@ def test_extract_task_id_missing_returns_none():
 ])
 def test_extract_status_normalizes(api_status, expected):
     adapter = _make_adapter()
-    resp = {"output": {"task_status": api_status}}
+    resp = {"output": {"taskStatus": api_status}}
     assert adapter.extract_status(resp) == expected
 
 
@@ -120,30 +120,69 @@ def test_extract_status_normalizes(api_status, expected):
 
 def test_parse_response_extracts_video_url():
     adapter = _make_adapter()
+    # Real API shape: camelCase keys, ratio nested under usage.
     resp = {
+        "model": "happyhorse-1.0-video-edit",
         "output": {
-            "task_id": "task-abc123",
-            "task_status": "SUCCEEDED",
-            "video_url": "https://cdn.example.com/video.mp4",
-            "seed": 42,
+            "taskId": "task-abc123",
+            "taskStatus": "SUCCEEDED",
+            "videoUrl": "https://cdn.example.com/video.mp4",
+            "origPrompt": "...",
         },
-        "usage": {"total_tokens": 230},
-        "model": "happyhorse-1.0-t2v",
+        "usage": {
+            "duration": 7,
+            "inputVideoDuration": 3,
+            "outputVideoDuration": 3,
+            "videoCount": 1,
+            "sr": 1080,
+            "ratio": "9:16",
+        },
     }
     result = adapter.parse_response(resp)
     assert result.urls == ["https://cdn.example.com/video.mp4"]
     assert result.task_id == "task-abc123"
-    assert result.model_used == "happyhorse-1.0-t2v"
-    assert result.seed == 42
-    assert result.usage == {"total_tokens": 230}
+    assert result.model_used == "happyhorse-1.0-video-edit"
+    assert result.aspect_ratio == "9:16"
+    assert result.usage == resp["usage"]
     assert result.expires_at is not None
 
 
 def test_parse_response_missing_url_returns_empty():
     adapter = _make_adapter()
-    resp = {"output": {"task_id": "t1", "task_status": "SUCCEEDED"}}
+    resp = {"output": {"taskId": "t1", "taskStatus": "SUCCEEDED"}}
     result = adapter.parse_response(resp)
     assert result.urls == []
+
+
+def test_parse_real_video_edit_response():
+    """Regression: exact payload returned by the live happyhorse-1.0-video-edit API."""
+    adapter = _make_adapter()
+    resp = {
+        "requestId": "71d3b143-903b-9efd-870b-b303bd49e543",
+        "model": "happyhorse-1.0-video-edit",
+        "output": {
+            "taskId": "f5618505-4804-4472-a3fe-50054d0a99da",
+            "taskStatus": "SUCCEEDED",
+            "submitTime": "2026-06-30 15:38:22.582",
+            "scheduledTime": "2026-06-30 15:38:22.611",
+            "endTime": "2026-06-30 15:39:52.883",
+            "origPrompt": "Anime style transformation of the video...",
+            "videoUrl": "https://dashscope-a717.oss-accelerate.aliyuncs.com/1d/ea/x_merged.mp4?Expires=1",
+        },
+        "usage": {
+            "duration": 7,
+            "inputVideoDuration": 3,
+            "outputVideoDuration": 3,
+            "videoCount": 1,
+            "sr": 1080,
+            "ratio": None,
+        },
+    }
+    assert adapter.extract_status(resp) == "succeeded"
+    assert adapter.extract_task_id(resp) == "f5618505-4804-4472-a3fe-50054d0a99da"
+    result = adapter.parse_response(resp)
+    assert result.urls == [resp["output"]["videoUrl"]]
+    assert result.aspect_ratio is None  # usage.ratio was null
 
 
 # ── supports ─────────────────────────────────────────────────────────────────

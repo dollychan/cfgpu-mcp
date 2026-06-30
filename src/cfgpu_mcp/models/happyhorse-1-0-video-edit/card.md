@@ -84,35 +84,40 @@ curl -X GET https://www.cfgpu.com/userapi/v1/video/tasks/<TASK_ID> \
 
 ```json
 {
+  "requestId": "...",
+  "model": "happyhorse-1.0-video-edit",
   "output": {
-    "task_id": "task-abc123",
-    "task_status": "PENDING"
-  },
-  "request_id": "..."
+    "taskId": "task-abc123",
+    "taskStatus": "PENDING"
+  }
 }
 ```
 
 ### 查询任务 GET `/video/tasks/{task_id}`
 
+> **注意：响应体字段为 camelCase**（`taskId` / `taskStatus` / `videoUrl` / `origPrompt`），与万相 / Seedance 一致。adapter 据此提取链接。
+
 ```json
 {
+  "requestId": "...",
+  "model": "happyhorse-1.0-video-edit",
   "output": {
-    "task_id": "task-abc123",
-    "task_status": "SUCCEEDED",
-    "video_url": "https://cdn.example.com/video.mp4",
-    "orig_prompt": "让视频中的马头人身角色穿上图片中的条纹毛衣",
-    "submit_time": "2026-06-10 10:00:00.000",
-    "scheduled_time": "2026-06-10 10:00:01.000",
-    "end_time": "2026-06-10 10:00:30.000"
+    "taskId": "task-abc123",
+    "taskStatus": "SUCCEEDED",
+    "videoUrl": "https://cdn.example.com/video.mp4",
+    "origPrompt": "让视频中的马头人身角色穿上图片中的条纹毛衣",
+    "submitTime": "2026-06-30 15:38:22.582",
+    "scheduledTime": "2026-06-30 15:38:22.611",
+    "endTime": "2026-06-30 15:39:52.883"
   },
   "usage": {
-    "input_video_duration": 5,
-    "output_video_duration": 5,
-    "duration": 5,
-    "SR": 720,
-    "video_count": 1
-  },
-  "request_id": "..."
+    "duration": 7,
+    "inputVideoDuration": 3,
+    "outputVideoDuration": 3,
+    "videoCount": 1,
+    "sr": 1080,
+    "ratio": null
+  }
 }
 ```
 

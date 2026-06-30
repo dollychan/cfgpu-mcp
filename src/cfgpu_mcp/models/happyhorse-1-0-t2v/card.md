@@ -126,28 +126,39 @@
 
 ```json
 {
+  "requestId": "...",
+  "model": "happyhorse-1.0-t2v",
   "output": {
-    "task_id": "task-abc123",
-    "task_status": "PENDING"
-  },
-  "request_id": "..."
+    "taskId": "task-abc123",
+    "taskStatus": "PENDING"
+  }
 }
 ```
 
 ### 查询任务 GET `/video/tasks/{task_id}`
 
+> **注意：响应体字段为 camelCase**（`taskId` / `taskStatus` / `videoUrl` / `origPrompt`），与万相 / Seedance 一致。adapter 据此提取链接。
+
 ```json
 {
+  "requestId": "...",
+  "model": "happyhorse-1.0-t2v",
   "output": {
-    "task_id": "task-abc123",
-    "task_status": "SUCCEEDED",
-    "video_url": "https://cdn.example.com/video.mp4",
-    "seed": 42
+    "taskId": "task-abc123",
+    "taskStatus": "SUCCEEDED",
+    "videoUrl": "https://cdn.example.com/video.mp4",
+    "origPrompt": "...",
+    "submitTime": "2026-06-10 10:00:00.000",
+    "scheduledTime": "2026-06-10 10:00:01.000",
+    "endTime": "2026-06-10 10:00:30.000"
   },
   "usage": {
-    "total_tokens": 230
-  },
-  "request_id": "..."
+    "duration": 5,
+    "outputVideoDuration": 5,
+    "videoCount": 1,
+    "sr": 720,
+    "ratio": null
+  }
 }
 ```
 
