@@ -132,6 +132,11 @@ class CFGPUError(Exception):
         }
         if self.adapter_id:
             result["adapter_id"] = self.adapter_id
+        # Surface task_id (carried in ``original`` by task_failed / timeout errors)
+        # so the caller can re-query or report the exact failed task.
+        task_id = self.original.get("task_id")
+        if task_id:
+            result["task_id"] = task_id
         return result
 
     @staticmethod

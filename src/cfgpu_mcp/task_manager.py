@@ -51,11 +51,12 @@ def _extract_error_message(resp: dict) -> str | None:
     """Best-effort failure reason from a poll response, tolerant of shape.
 
     Upstreams disagree on where the reason lives: WAN video carries a top-level
-    ``error`` that is ``null`` on success and a dict on failure; nano image tasks
-    nest everything under ``data`` and provide *no* reason at all on failure.
-    Returns None when the upstream genuinely gives nothing — callers supply a
-    fallback. Deliberately ignores the top-level ``message`` field because the
-    image API sets it to "success" (the query succeeded) even for failed tasks.
+    ``error`` that is ``null`` on success and a dict on failure; gpt-image-2 /
+    nano image tasks nest the reason under ``data.error_msg`` (e.g. an Azure
+    OpenAI safety-system rejection). Returns None when the upstream genuinely
+    gives nothing — callers supply a fallback. Deliberately ignores the
+    top-level ``message`` field because the image API sets it to "success" (the
+    query succeeded) even for failed tasks.
     """
     data = resp.get("data")
     for container in (resp, data if isinstance(data, dict) else None):
@@ -68,7 +69,7 @@ def _extract_error_message(resp: dict) -> str | None:
                 return str(msg)
         elif isinstance(err, str) and err.strip():
             return err.strip()
-        for key in ("fail_reason", "failure_reason", "reason"):
+        for key in ("error_msg", "fail_reason", "failure_reason", "reason"):
             val = container.get(key)
             if isinstance(val, str) and val.strip():
                 return val.strip()
