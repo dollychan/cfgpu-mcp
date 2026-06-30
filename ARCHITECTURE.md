@@ -678,6 +678,7 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 - `n`：图片组图数量（1-15），默认 1。仅 `SeedreamAdapter` 支持 `n>1`——会自动写入 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`async_image`（gpt-image-2 / nano-banana）的 `supports()` 对 `n>1` 直接拒绝。
 - `resolution`（视频）：开放 `1080p`，WAN 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
 - `duration_seconds`（视频）：允许 `-1`（智能时长，`SeedanceVideoAdapter` 直接透传）。`SeedanceVideoAdapter.supports()` 对 `doubao-seedance-1-5-pro` 额外限制显式时长 ≤12s；`happyhorse` 拒绝 `-1`。
+- **能力校验（视频）**：CFGPU 上游 API 会**按 `content` 数组形态在服务端推导 `task_type`**（如带 `reference_video` → `r2v`），客户端从不传 `task_type`。`SeedanceVideoAdapter.supports()` 据此把场景映射成能力名（首帧+尾帧→`first_last_frame`、仅首帧→`image_to_video`、reference_images/videos/audios→`multi_modal_reference`、纯文本→`text_to_video`），若该能力不在模型 `capabilities` 内则本地直接拒绝（如 `doubao-seedance-1-5-pro` 无 `multi_modal_reference`，传 `reference_videos` 会得到清晰报错，而非上游 `the specified task_type r2v does not support model ...`）。这也让 `model="auto"` 路由跳过不支持该场景的模型。
 
 > 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark`、`n` 作为通用参数列在支持模型的顶层 args（`n` 仅列在 seedream 系；gpt/nano 均不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`response_format` 等）。新增/调整参数时同步该文件。
 

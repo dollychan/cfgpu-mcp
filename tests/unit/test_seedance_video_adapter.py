@@ -189,6 +189,53 @@ def test_supports_rejects_mixed_first_frame_and_reference_images():
     assert "mutually exclusive" in reason
 
 
+def _make_no_reference_adapter() -> SeedanceVideoAdapter:
+    """Adapter like Doubao Seedance 1.5 Pro: no multi_modal_reference."""
+    config = {
+        "adapter_id": "doubao-seedance-1-5-pro",
+        "display_name": "Doubao Seedance 1.5 Pro",
+        "cfgpu_model_id": "doubao-seedance-1-5-pro-251215",
+        "task_type": "video",
+        "endpoint": "/video/generations",
+        "is_async": True,
+        "poll_endpoint": "/video/tasks/{task_id}",
+        "capabilities": {"text_to_video", "image_to_video", "first_last_frame"},
+        "cost_tier": 2,
+        "speed_tier": 3,
+    }
+    return SeedanceVideoAdapter.from_config(config)
+
+
+def test_supports_rejects_reference_videos_without_capability():
+    adapter = _make_no_reference_adapter()
+    req = GenerateVideoInput(prompt="x", reference_videos=["https://example.com/v.mp4"])
+    ok, reason = adapter.supports(req)
+    assert ok is False
+    assert "multi_modal_reference" in reason
+
+
+def test_supports_rejects_reference_images_without_capability():
+    adapter = _make_no_reference_adapter()
+    req = GenerateVideoInput(prompt="x", reference_images=["https://example.com/r.jpg"])
+    ok, reason = adapter.supports(req)
+    assert ok is False
+    assert "multi_modal_reference" in reason
+
+
+def test_supports_allows_first_frame_without_reference_capability():
+    adapter = _make_no_reference_adapter()
+    req = GenerateVideoInput(prompt="x", first_frame="https://example.com/f.jpg")
+    ok, _ = adapter.supports(req)
+    assert ok is True
+
+
+def test_supports_allows_reference_videos_with_capability():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", reference_videos=["https://example.com/v.mp4"])
+    ok, _ = adapter.supports(req)
+    assert ok is True
+
+
 def test_resolution_1080p_passthrough():
     adapter = _make_adapter()
     req = GenerateVideoInput(prompt="x", resolution="1080p")

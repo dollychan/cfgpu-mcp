@@ -109,6 +109,24 @@ class SeedanceVideoAdapter(ModelAdapter):
             return False, "first/last_frame and reference_images are mutually exclusive"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
+        # Validate the requested scene type against the model's declared
+        # capabilities. The CFGPU API derives task_type server-side from the
+        # content array shape (e.g. a reference_video → r2v); a model that lacks
+        # the capability is rejected post-submit. Catch it here so the failure is
+        # local and clear, and so model="auto" routing skips incapable models.
+        if req.first_frame and req.last_frame:
+            needed = "first_last_frame"
+        elif req.first_frame:
+            needed = "image_to_video"
+        elif req.reference_images or req.reference_videos or req.reference_audios:
+            needed = "multi_modal_reference"
+        else:
+            needed = "text_to_video"
+        if needed not in self.capabilities:
+            return False, (
+                f"{self.adapter_id} does not support {needed} "
+                f"(capabilities: {', '.join(sorted(self.capabilities))})"
+            )
         # WAN 2.0 Fast (doubao-seedance-2-0-fast) does not support 1080p in
         # text-to-video; the API rejects it post-submit. Catch it here so
         # model="auto" routing can fall back to the full wan-2-0 instead.
