@@ -64,13 +64,35 @@ def test_seed_voice_and_sample_rate_override():
     assert rp["audio_params"] == {"format": "wav", "sample_rate": 16000}
 
 
+def test_seed_extract_task_id_from_create_envelope():
+    adapter = _seed_adapter()
+    resp = {"code": 20000000, "message": "ok",
+            "data": {"task_status": 1, "req_text_length": 20, "task_id": "vt-123"}}
+    assert adapter.extract_task_id(resp) == "vt-123"
+
+
+def test_seed_extract_status_from_poll_booleans():
+    adapter = _seed_adapter()
+    ok = {"data": {"taskStatus": 2, "audioUrl": "https://x/a.mp3"},
+          "success": True, "failure": False, "running": False}
+    fail = {"data": {"taskStatus": 3}, "success": False, "failure": True, "running": False}
+    pending = {"data": {"taskStatus": 1}, "success": False, "failure": False, "running": True}
+    assert adapter.extract_status(ok) == "succeeded"
+    assert adapter.extract_status(fail) == "failed"
+    assert adapter.extract_status(pending) == "running"
+
+
 def test_seed_is_async_response_task_id():
     adapter = _seed_adapter()
     assert adapter.is_async is True
-    result = adapter.parse_response({"id": "vt-123", "status": "succeeded",
-                                     "content": {"audioUrl": "https://x/a.mp3"}})
+    result = adapter.parse_response({
+        "code": 20000000, "message": "ok",
+        "data": {"taskId": "vt-123", "taskStatus": 2, "audioUrl": "https://x/a.mp3",
+                 "urlExpireTime": 1782895148},
+    })
     assert result.urls == ["https://x/a.mp3"]
     assert result.task_id == "vt-123"
+    assert result.expires_at.timestamp() == 1782895148
 
 
 def test_seed_model_specific_merges_top_level():

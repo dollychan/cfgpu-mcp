@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
@@ -83,12 +84,38 @@ class SeedTTSAdapter(ModelAdapter):
             payload.update(req.model_specific)
         return payload
 
+    def extract_task_id(self, resp: dict) -> str | None:
+        # Create response nests the id under `data`:
+        #   {"code":..., "data":{"task_status":1, "task_id":"..."}, "message":"ok"}
+        data = resp.get("data") or {}
+        return data.get("task_id") or data.get("taskId")
+
+    def extract_status(self, resp: dict) -> str:
+        # Poll response:
+        #   {"data":{"taskStatus":2, "audioUrl":...}, "success":true,
+        #    "failure":false, "running":false}
+        # The top-level booleans are the authoritative signal; `taskStatus` is an
+        # integer (1=processing, 2=success) that _STATUS_MAP can't map directly.
+        if resp.get("success") is True:
+            return "succeeded"
+        if resp.get("failure") is True:
+            return "failed"
+        return "running"
+
     def parse_response(self, resp: dict) -> NormalizedResult:
+        data = resp.get("data") or {}
         url = _extract_audio_url(resp)
+        # Prefer the upstream url expiry (epoch seconds) when present.
+        expire = data.get("urlExpireTime")
+        expires_at = (
+            datetime.fromtimestamp(expire, UTC)
+            if isinstance(expire, (int, float))
+            else _default_expires_at()
+        )
         return NormalizedResult(
             urls=[url] if url else [],
-            expires_at=_default_expires_at(),
-            task_id=resp.get("id") or resp.get("task_id"),
+            expires_at=expires_at,
+            task_id=data.get("taskId") or data.get("task_id") or resp.get("id"),
             model_used=resp.get("model"),
             seed=None,
             usage=resp.get("usage"),
