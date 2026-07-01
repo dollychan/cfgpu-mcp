@@ -118,7 +118,7 @@
 "seconds":"5",
 "size":"1920x1080",
 "taskResult":{"videos":[{"id":"qvideo-1383109830-1782873292947656139-1",
-"url":"https://aitoken-video.qnaigc.com/1383109830/qvideo-1383109830-1782873292947656139/1.mp4?e=1783478173&token=IDB69r4gicDbMd9Fbmn9w2bWuEENg9i5_yasXqhp:i7PMXsMN3DP3tUG3CJT_50_c9_o=",
+"url":"https://...",
 "duration":"5"}]
 },
 "error":null}
