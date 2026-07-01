@@ -89,20 +89,37 @@
 
 ## 响应结构
 
+创建视频响应结构：
+```json
+{"mode":"pro",
+"seconds":"5",
+"updated_at":1782873292,
+"size":"1920x1080",
+"billing_type_description":"pro x 无参考视频 x 无声",
+"job_type_description":"可灵 Omni-Video",
+"created_at":1782873292,"model":"kling-video-o1",
+"id":"qvideo-1383109830-1782873292947656139",
+"object":"video",
+"status":"queued"}
+```
+
+
 查询任务结果 GET `/video/tasks/{task_id}` 返回标准视频任务结构：
 
 ```json
-{
-  "id": "cgt-xxx",
-  "model": "kling-video-o1",
-  "status": "succeeded",
-  "content": {
-    "videoUrl": "https://...",
-    "lastFrameUrl": null
-  },
-  "seed": 15233,
-  "usage": {
-    "totalTokens": null
-  }
-}
+{"id":"qvideo-1383109830-1782873292947656139",
+"object":"video",
+"model":"kling-video-o1",
+"mode":"pro",
+"status":"completed",
+"createdAt":1782873292,
+"updatedAt":1782873373,
+"completedAt":1782873373,
+"seconds":"5",
+"size":"1920x1080",
+"taskResult":{"videos":[{"id":"qvideo-1383109830-1782873292947656139-1",
+"url":"https://aitoken-video.qnaigc.com/1383109830/qvideo-1383109830-1782873292947656139/1.mp4?e=1783478173&token=IDB69r4gicDbMd9Fbmn9w2bWuEENg9i5_yasXqhp:i7PMXsMN3DP3tUG3CJT_50_c9_o=",
+"duration":"5"}]
+},
+"error":null}
 ```

@@ -230,6 +230,7 @@ ModelAdapter (ABC, adapters/base.py)
     │
     └── KlingVideoAdapter         手写 Python，可灵 O1 的 flat payload
             ├── resolution×ratio → size 像素串、quality_tier → std/pro mode；目前仅 text_to_video
+            ├── 轮询响应把结果嵌在 taskResult.videos[].url（顶层 status=completed），parse_response 读该数组
             └── 同时服务 kling-video-o1 和 kling-v3-omni（通过 extends 链）
 ```
 

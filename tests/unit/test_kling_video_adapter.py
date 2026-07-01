@@ -92,24 +92,60 @@ def test_model_specific_merged_and_overrides():
 def test_parse_response_extracts_video_url():
     adapter = _make_adapter()
     resp = {
-        "id": "cgt-abc123",
+        "id": "qvideo-1383109830-1782873292947656139",
+        "object": "video",
         "model": "kling-video-o1",
-        "status": "succeeded",
-        "content": {"videoUrl": "https://cdn.example.com/video.mp4", "lastFrameUrl": None},
-        "seed": 42,
-        "usage": {"totalTokens": None},
+        "mode": "pro",
+        "status": "completed",
+        "createdAt": 1782873292,
+        "updatedAt": 1782873373,
+        "completedAt": 1782873373,
+        "seconds": "5",
+        "size": "1920x1080",
+        "taskResult": {
+            "videos": [
+                {
+                    "id": "qvideo-1383109830-1782873292947656139-1",
+                    "url": "https://cdn.example.com/video.mp4",
+                    "duration": "5",
+                }
+            ]
+        },
+        "error": None,
     }
     result = adapter.parse_response(resp)
     assert result.urls == ["https://cdn.example.com/video.mp4"]
-    assert result.task_id == "cgt-abc123"
+    assert result.task_id == "qvideo-1383109830-1782873292947656139"
     assert result.model_used == "kling-video-o1"
-    assert result.seed == 42
     assert result.expires_at is not None
+
+
+def test_parse_response_multiple_videos():
+    adapter = _make_adapter()
+    resp = {
+        "id": "t1",
+        "status": "completed",
+        "taskResult": {
+            "videos": [
+                {"id": "t1-1", "url": "https://cdn.example.com/1.mp4", "duration": "5"},
+                {"id": "t1-2", "url": "https://cdn.example.com/2.mp4", "duration": "5"},
+            ]
+        },
+    }
+    result = adapter.parse_response(resp)
+    assert result.urls == ["https://cdn.example.com/1.mp4", "https://cdn.example.com/2.mp4"]
 
 
 def test_parse_response_missing_url_returns_empty():
     adapter = _make_adapter()
-    resp = {"id": "t1", "status": "succeeded", "content": {}}
+    resp = {"id": "t1", "status": "completed", "taskResult": {"videos": []}}
+    result = adapter.parse_response(resp)
+    assert result.urls == []
+
+
+def test_parse_response_missing_task_result_returns_empty():
+    adapter = _make_adapter()
+    resp = {"id": "t1", "status": "queued"}
     result = adapter.parse_response(resp)
     assert result.urls == []
 

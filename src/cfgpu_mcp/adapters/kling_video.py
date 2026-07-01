@@ -43,9 +43,13 @@ class KlingVideoAdapter(ModelAdapter):
     Kling's create API uses a flat payload (``prompt`` / ``size`` / ``mode`` /
     ``seconds``) rather than WAN's multimodal ``content`` array, so it needs its
     own adapter: ``resolution`` + ``aspect_ratio`` are mapped to a pixel ``size``
-    string and ``quality_tier`` maps to Kling's ``std`` / ``pro`` mode. The poll
-    response follows the standard ``/video/tasks/{task_id}`` shape, so the base
-    ``extract_task_id`` / ``extract_status`` are reused.
+    string and ``quality_tier`` maps to Kling's ``std`` / ``pro`` mode.
+
+    Create returns a flat ``{"id", "status": "queued", ...}`` envelope, so the
+    base ``extract_task_id`` / ``extract_status`` are reused. The poll response
+    nests the result under ``taskResult.videos[]`` (``[{"id", "url", "duration"}]``)
+    with the outcome in a top-level ``status`` (``completed``), so
+    ``parse_response`` reads that nested array.
     """
 
     adapter_id = "kling-video-o1"
@@ -66,10 +70,11 @@ class KlingVideoAdapter(ModelAdapter):
         return payload
 
     def parse_response(self, resp: dict) -> NormalizedResult:
-        content = resp.get("content") or {}
-        video_url = content.get("videoUrl")
+        task_result = resp.get("taskResult") or {}
+        videos = task_result.get("videos") or []
+        urls = [v["url"] for v in videos if isinstance(v, dict) and v.get("url")]
         return NormalizedResult(
-            urls=[video_url] if video_url else [],
+            urls=urls,
             expires_at=_default_expires_at(),
             task_id=resp.get("id"),
             model_used=resp.get("model"),
