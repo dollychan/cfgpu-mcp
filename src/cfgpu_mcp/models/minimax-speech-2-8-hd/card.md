@@ -76,6 +76,17 @@ MiniMax 语音大模型能够根据上下文，智能预测文本的情绪、语
 }
 ```
 
+响应结构
+
+```json
+{"output":
+{"trace_id":"0693f8fe57c5b4a1abf4e029d5424532",
+"extra_info":{"audio_size":66804,"word_count":22,"usage_characters":34,
+"invisible_character_ratio":0,"audio_channel":1,"audio_length":4067,"audio_format":"mp3",
+"bitrate":128000,"audio_sample_rate":32000},"base_resp":{"status_code":0,"status_msg":"success"},
+"data":{"ced":"","audio":" 一段MPEG Layer III编码","status":2}},"usage":{"characters":34},"request_id":"41815a9b-3cf4-9f6a-a2c3-cdc2b7cf008f"}
+```
+
 > `pronunciation_dict` 与 `subtitle_enable` 可通过 `model_specific` 传入。
 
 ## 系统音色列表（voice 可选值 / Voice ID）

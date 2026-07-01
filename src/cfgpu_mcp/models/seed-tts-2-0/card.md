@@ -55,10 +55,38 @@
 }
 ```
 
+响应结构
+
+```json
+{"code":20000000,
+"data":{
+  "task_status":1,
+  "req_text_length":20,
+  "task_id":"be2d0ed3-cad6-47a6-bed6-8e9fe247ab69"},
+  "message":"ok"}% 
+```
+
+
 ### 语音查询
 
 ```
 GET /voice/tasks/{task_id}
+```
+
+响应结构
+
+```json
+{"code":20000000,
+"message":"ok",
+"data":{"taskId":"be2d0ed3-cad6-47a6-bed6-8e9fe247ab69",
+"taskStatus":2,
+"audioUrl":"https://...",
+"reqTextLength":20,
+"synthesizeTextLength":20,
+"urlExpireTime":1782895148},
+"running":false,
+"success":true,
+"failure":false}
 ```
 
 ## 约束与限制
