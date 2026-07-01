@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import base64
+
 import pytest
 
 from cfgpu_mcp.adapters.audio_tts import (
     MiniMaxSpeechAdapter,
     SeedTTSAdapter,
     _extract_audio_url,
+    _extract_inline_audio,
 )
 from cfgpu_mcp.tool_registry import GenerateAudioInput
 
@@ -141,6 +144,61 @@ def test_minimax_is_sync_no_task_id():
     result = adapter.parse_response({"data": {"audio_url": "https://x/o.mp3"}, "model": "MiniMax/speech-2.8-hd"})
     assert result.urls == ["https://x/o.mp3"]
     assert result.task_id is None
+
+
+def test_minimax_inline_audio_when_no_url():
+    """MiniMax returns audio inline as a hex blob under output.data.audio (no URL).
+
+    parse_response should decode it into an inline_media descriptor (base64 + mime),
+    leaving urls empty, so the consumer can materialise it into its own OSS object.
+    """
+    adapter = _minimax_adapter()
+    raw = b"\xff\xfb\x90\x00fake-mp3-frames"
+    resp = {
+        "output": {
+            "extra_info": {"audio_format": "mp3", "audio_size": len(raw)},
+            "data": {"audio": raw.hex(), "status": 2},
+            "base_resp": {"status_code": 0, "status_msg": "success"},
+        },
+        "usage": {"characters": 34},
+        "request_id": "req-1",
+    }
+    result = adapter.parse_response(resp)
+    assert result.urls == []
+    assert result.task_id is None
+    assert result.inline_media == [
+        {"data": base64.b64encode(raw).decode("ascii"), "mime_type": "audio/mpeg", "filename": "speech.mp3"}
+    ]
+    # inline_media surfaces in the media dict (artifact payload, not gated by metadata).
+    assert result.to_dict()["inline_media"] == result.inline_media
+
+
+def test_minimax_prefers_url_over_inline():
+    """A real URL wins; no inline_media is emitted when a downloadable URL exists."""
+    adapter = _minimax_adapter()
+    resp = {"data": {"audio_url": "https://x/o.mp3", "audio": "deadbeef"}}
+    result = adapter.parse_response(resp)
+    assert result.urls == ["https://x/o.mp3"]
+    assert result.inline_media is None
+
+
+@pytest.mark.parametrize("resp,expected_mime", [
+    ({"output": {"data": {"audio": b"x".hex()}, "extra_info": {"audio_format": "mp3"}}}, "audio/mpeg"),
+    ({"output": {"data": {"audio": b"x".hex()}, "extra_info": {"audio_format": "wav"}}}, "audio/wav"),
+    ({"output": {"data": {"audio": b"x".hex()}}}, "audio/mpeg"),  # format defaults to mp3
+])
+def test_extract_inline_audio_mime(resp, expected_mime):
+    assert _extract_inline_audio(resp)["mime_type"] == expected_mime
+
+
+@pytest.mark.parametrize("resp", [
+    {},                                                  # no output
+    {"output": {"data": {"audio": ""}}},                # empty blob
+    {"output": {"data": {"audio": "not-hex-zz"}}},      # undecodable hex
+    {"output": {"data": {}}},                           # no audio key
+])
+def test_extract_inline_audio_absent_or_bad(resp):
+    assert _extract_inline_audio(resp) is None
 
 
 def test_turbo_reuses_class_with_own_model_id():

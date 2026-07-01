@@ -126,7 +126,7 @@ def register(mcp: FastMCP) -> None:
                 timeout=timeout,
                 return_metadata=return_metadata,
                 model_specific=model_specific,
-            )), structured_keys=("usage", "payload"))
+            )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
             return tool_error_dict(e)
 

@@ -273,6 +273,14 @@ class NormalizedResult:
     # Its presence is what marks a result as text-returning rather than media.
     response_id: str | None = None     # chat/completions 响应 id（chatcmpl-...）
     message: dict[str, Any] | None = None
+    # ── Inline media (no downloadable URL) ──
+    # Some providers return generated media inline instead of a URL (e.g. MiniMax
+    # speech hands back a hex audio blob). Each descriptor carries base64 `data` +
+    # `mime_type` (+ optional `filename`). This rides structuredContent (the split
+    # pops it out of the LLM-facing content — see generate_audio's structured_keys),
+    # so the raw blob never enters the model context; the consumer materialises it
+    # into its own OSS object_key.
+    inline_media: list[dict[str, Any]] | None = None
 
     def to_dict(self, return_metadata: bool = False) -> dict[str, Any]:
         # Vision-understanding results carry a chat message rather than media urls —
@@ -291,6 +299,8 @@ class NormalizedResult:
             "urls": self.urls,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
         }
+        if self.inline_media:  # actual artifact payload — always surfaced, like urls
+            base["inline_media"] = self.inline_media
         if return_metadata:
             base.update({
                 "task_id": self.task_id,
@@ -312,8 +322,9 @@ def annotate_artifact(result: Any) -> Any:
 
     A result is considered to hold an artifact when it contains a non-empty
     ``urls`` list — either at the top level (generate_* results) or nested under
-    ``result`` (task_status / task_wait results). Error dicts and pending/no-wait
-    results (which have no urls yet) are left untouched.
+    ``result`` (task_status / task_wait results) — or a non-empty ``inline_media``
+    list (media returned inline without a URL, e.g. MiniMax speech). Error dicts and
+    pending/no-wait results (which have neither) are left untouched.
 
     A terminal ``status`` hint is also stamped alongside the flag so the LLM can
     tell, from the content it actually sees, that generation already finished — the
@@ -322,7 +333,7 @@ def annotate_artifact(result: Any) -> Any:
     """
     if not isinstance(result, dict):
         return result
-    if result.get("urls"):
+    if result.get("urls") or result.get("inline_media"):
         result["artifact"] = True
         result["status"] = _ARTIFACT_DONE_STATUS
     else:

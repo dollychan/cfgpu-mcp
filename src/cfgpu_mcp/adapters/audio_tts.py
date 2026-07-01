@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -49,6 +50,43 @@ def _extract_audio_url(resp: dict) -> str | None:
         if isinstance(val, str) and val.startswith(("http://", "https://")):
             return val
     return None
+
+
+# MiniMax speech returns the audio inline (is_async: false, no URL) as a hex string at
+# ``output.data.audio`` with the container format at ``output.extra_info.audio_format``.
+# Map that format to a MIME type for the inline_media descriptor.
+_AUDIO_MIME_BY_FORMAT = {
+    "mp3": "audio/mpeg",
+    "wav": "audio/wav",
+    "flac": "audio/flac",
+    "pcm": "audio/L16",
+}
+
+
+def _extract_inline_audio(resp: dict) -> dict | None:
+    """Decode MiniMax's inline hex audio blob into an ``inline_media`` descriptor.
+
+    The hex at ``output.data.audio`` decodes directly to the container bytes (MPEG
+    Layer III frames are already a playable ``.mp3``), which we re-encode as base64 for
+    the LLM-hidden structuredContent side channel. Returns ``None`` when the blob is
+    absent/unusable so the caller falls back to (empty) URL handling.
+    """
+    audio_hex = _dig(resp, "output.data.audio")
+    if not isinstance(audio_hex, str) or not audio_hex.strip():
+        return None
+    try:
+        raw = bytes.fromhex(audio_hex.strip())
+    except ValueError:
+        return None
+    if not raw:
+        return None
+    fmt = _dig(resp, "output.extra_info.audio_format")
+    fmt = fmt.lower() if isinstance(fmt, str) and fmt else "mp3"
+    return {
+        "data": base64.b64encode(raw).decode("ascii"),
+        "mime_type": _AUDIO_MIME_BY_FORMAT.get(fmt, "application/octet-stream"),
+        "filename": f"speech.{fmt}",
+    }
 
 
 @register_python_adapter
@@ -168,8 +206,14 @@ class MiniMaxSpeechAdapter(ModelAdapter):
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         url = _extract_audio_url(resp)
+        # Prefer a real URL when present; otherwise capture the inline hex blob so the
+        # consumer can materialise it (decode → its own OSS object_key). Keeping the
+        # blob in structuredContent (via generate_audio's structured_keys) means it
+        # never enters the LLM context.
+        inline = None if url else _extract_inline_audio(resp)
         return NormalizedResult(
             urls=[url] if url else [],
+            inline_media=[inline] if inline else None,
             expires_at=_default_expires_at(),
             task_id=None,          # Synchronous model has no task_id
             model_used=resp.get("model"),
