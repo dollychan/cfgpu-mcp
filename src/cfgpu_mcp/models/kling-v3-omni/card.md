@@ -30,7 +30,7 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
 
 ## 参数说明
 
-与 [可灵 O1](../kling-video-o1/card.md) 共用同一套 flat 请求格式（由 `KlingVideoAdapter` 通过 extends 链复用）：
+与 `kling-video-o1`（可灵 O1）共用同一套 flat 请求格式：
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
