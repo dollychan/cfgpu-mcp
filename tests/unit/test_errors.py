@@ -74,45 +74,45 @@ def test_timeout_factory():
 # ── card.md hint in to_tool_result_dict ──────────────────────────────────────
 
 def test_card_hint_for_invalid_params():
-    err = CFGPUError(error_type="invalid_params", user_message="参数错误", adapter_id="wan-2-0")
+    err = CFGPUError(error_type="invalid_params", user_message="参数错误", model_id="wan-2-0")
     d = err.to_tool_result_dict()
     assert "get_model_card" in d["message"]
     assert "wan-2-0" in d["message"]
-    assert d["adapter_id"] == "wan-2-0"
+    assert d["model_id"] == "wan-2-0"
 
 
 def test_card_hint_for_model_unavailable():
-    err = CFGPUError(error_type="model_unavailable", user_message="模型不可用", adapter_id="gpt-image-2")
+    err = CFGPUError(error_type="model_unavailable", user_message="模型不可用", model_id="gpt-image-2")
     d = err.to_tool_result_dict()
     assert "get_model_card" in d["message"]
 
 
 def test_card_hint_for_content_blocked():
-    err = CFGPUError(error_type="content_blocked", user_message="内容被拦截", adapter_id="doubao-seedream-5-0-lite")
+    err = CFGPUError(error_type="content_blocked", user_message="内容被拦截", model_id="doubao-seedream-5-0-lite")
     d = err.to_tool_result_dict()
     assert "get_model_card" in d["message"]
 
 
 def test_no_card_hint_for_auth():
-    err = CFGPUError(error_type="auth", user_message="Token 无效", adapter_id="wan-2-0")
+    err = CFGPUError(error_type="auth", user_message="Token 无效", model_id="wan-2-0")
     d = err.to_tool_result_dict()
     assert "get_model_card" not in d["message"]
 
 
 def test_no_card_hint_for_timeout():
-    err = CFGPUError(error_type="timeout", user_message="超时", adapter_id="wan-2-0")
+    err = CFGPUError(error_type="timeout", user_message="超时", model_id="wan-2-0")
     d = err.to_tool_result_dict()
     assert "get_model_card" not in d["message"]
 
 
 def test_no_card_hint_for_rate_limit():
-    err = CFGPUError(error_type="rate_limit", user_message="限流", adapter_id="wan-2-0")
+    err = CFGPUError(error_type="rate_limit", user_message="限流", model_id="wan-2-0")
     d = err.to_tool_result_dict()
     assert "get_model_card" not in d["message"]
 
 
-def test_no_card_hint_without_adapter_id():
+def test_no_card_hint_without_model_id():
     err = CFGPUError(error_type="invalid_params", user_message="参数错误")
     d = err.to_tool_result_dict()
     assert "get_model_card" not in d["message"]
-    assert "adapter_id" not in d
+    assert "model_id" not in d

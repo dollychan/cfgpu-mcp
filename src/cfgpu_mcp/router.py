@@ -54,7 +54,7 @@ class ModelRouter:
                 error_type="invalid_params",
                 user_message=reason,
                 original={"model": model},
-                adapter_id=adapter.adapter_id,
+                model_id=adapter.cfgpu_model_id,
             )
         return adapter
 
@@ -84,7 +84,7 @@ class ModelRouter:
                     error_type="invalid_params",
                     user_message=(
                         f"未知或不支持当前任务类型({task_type})的 model: "
-                        f"{sorted(unknown)}。请使用 list_models 查看可用 adapter_id。"
+                        f"{sorted(unknown)}。请使用 list_models 查看可用 model_id。"
                     ),
                     original={"model": allowed},
                 )

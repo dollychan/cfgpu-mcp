@@ -123,7 +123,7 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 | id 列表（list[str]） | `["wan-2-0", "wan-2-0-fast"]` | `select_model(allowed=...)` 仅在该候选范围内打分选最优 |
 | `"auto"`（str，默认） | `"auto"` | `select_model()` 在全部模型中打分选最优 |
 
-列表与 `"auto"` 都只产出**一个** task / 一个结果，区别仅是候选池大小；列表里若含未知或与当前任务类型不符的 id，`select_model()` 抛 `invalid_params`。**单个 id 的精确路径同样会过 `supports(req)`**：auto/列表路径靠 `supports()` 过滤候选，但直接点名的模型若与任务类型 / 能力不符，否则会让 `build_payload()` 里的 `assert` 泄漏成裸 `AssertionError`——因此 `resolve()` 在此也校验，不通过则抛带 `adapter_id` 的 `invalid_params`（触发 `get_model_card` 提示）。
+列表与 `"auto"` 都只产出**一个** task / 一个结果，区别仅是候选池大小；列表里若含未知或与当前任务类型不符的 id，`select_model()` 抛 `invalid_params`。**单个 id 的精确路径同样会过 `supports(req)`**：auto/列表路径靠 `supports()` 过滤候选，但直接点名的模型若与任务类型 / 能力不符，否则会让 `build_payload()` 里的 `assert` 泄漏成裸 `AssertionError`——因此 `resolve()` 在此也校验，不通过则抛带 `model_id` 的 `invalid_params`（触发 `get_model_card` 提示）。
 
 `ModelRouter.select_model()` 对候选模型打分，最高分获选：
 
@@ -378,13 +378,13 @@ CFGPUError.from_http_response(status, body)
 
 ### card.md 提示机制
 
-当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，`service/image.py` 和 `service/video.py` 会把 `adapter.adapter_id` 写入 `CFGPUError.adapter_id`。`to_tool_result_dict()` 在 `message` 中追加提示：`"请调用 get_model_card 获取模型 {adapter_id} 的详细参数说明和使用示例。"`, 同时在 dict 中添加 `adapter_id` 字段，方便 LLM 直接用该值调用 `get_model_card`。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
+当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.cfgpu_model_id` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加提示：`"请调用 get_model_card 获取模型 {model_id} 的详细参数说明和使用示例。"`, 同时在 dict 中添加 `model_id` 字段，方便 LLM 直接用该值调用 `get_model_card`。**agent 侧只见 `model_id`（全局唯一的 `cfgpu_model_id`），从不暴露 MCP 内部的 `adapter_id`**——`registry.get()` 同时按 `cfgpu_model_id` 解析，故 agent 拿 `model_id` 即可命中。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
 
 ### 错误在各层的展示方式
 
 | 层 | 展示方式 |
 |----|---------|
-| MCP tools（`tools/`） | 工具内部 try/except → 返回 `{"error": True, "error_type": ..., "message": ..., "retryable": ..., "adapter_id": ...}` dict，LLM 可直接读取 |
+| MCP tools（`tools/`） | 工具内部 try/except → 返回 `{"error": True, "error_type": ..., "message": ..., "retryable": ..., "model_id": ...}` dict，LLM 可直接读取 |
 | agent/dispatcher | `dispatch_tool()` 内部 try/except → 返回同上 error dict（`ValueError` 除外，编程错误继续上抛）|
 | CLI | `print_error()` 打印到 stderr，`sys.exit(1)` |
 
@@ -397,7 +397,7 @@ FastMCP 捕获异常后设置 `isError: true`，但 MCP 客户端是否将其内
 
 MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在结果顶层追加 `"artifact": True`，与 error dict 的 `"error": True` 顶层布尔标记对称，供 MCP 客户端快速判断"本次结果含可渲染产物"。
 
-`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且有 URL 时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成时返回 `{task_id, status}` 信封（对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。**失败任务**由 `_raise_if_failed(task)` 抛出标准 `CFGPUError(task_failed)`（带 `adapter_id`），经工具层 `tool_error_dict` 转成与 `task_wait` / `generate_*` 完全一致的 error dict——`task_status` 不再有独有的 `{status: "failed", error: "<string>"}` 信封。`wait_for_task()` 重建用于超时估算的最小 `req` 时也按 `adapter.task_type` 完整映射到对应 Input 类型（image/video/audio/understand），避免把错误的 Input 喂给 per-type 的 `estimate_poll_timeout()` 覆盖。
+`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且有 URL 时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成时返回 `{task_id, status}` 信封（对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。**失败任务**由 `_raise_if_failed(task)` 抛出标准 `CFGPUError(task_failed)`（带 `model_id`——由 `registry.get(task.adapter_id).cfgpu_model_id` 映射得到，不暴露内部 `adapter_id`），经工具层 `tool_error_dict` 转成与 `task_wait` / `generate_*` 完全一致的 error dict——`task_status` 不再有独有的 `{status: "failed", error: "<string>"}` 信封。`wait_for_task()` 重建用于超时估算的最小 `req` 时也按 `adapter.task_type` 完整映射到对应 Input 类型（image/video/audio/understand），避免把错误的 Input 喂给 per-type 的 `estimate_poll_timeout()` 覆盖。
 
 **`payload` 字段（真实 API 请求体回传）**：所有成功结果（`generate_*` 以及 `_present` 的成功分支）在 `NormalizedResult` 元数据之外追加 `payload` 字段，内容是 `Task.public_payload()` —— 即真正 POST 给该模型专属 API 的请求体（`adapter.build_payload(req)` 的产物，含 `cfgpu_model_id` 与各模型私有字段），而非通用工具入参。`public_payload()` 会剥除内部回显用的保留键 `_requested_aspect_ratio`（见 §异步 aspect_ratio 兜底），保证只暴露真实发往上游的字段。**该字段始终返回，不受 `return_metadata` 影响**：`return_metadata=False` 的精简输出（`urls` / `expires_at`）同样带上 `payload`。
 

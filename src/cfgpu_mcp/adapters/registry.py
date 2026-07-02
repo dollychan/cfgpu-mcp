@@ -106,7 +106,7 @@ class AdapterRegistry:
             or self._by_display_name.get(key)
         )
         if adapter is None:
-            available = list(self._by_adapter_id.keys())
+            available = list(self._by_cfgpu_model_id.keys())
             raise KeyError(f"Model {key!r} not found. Available: {available}")
         return adapter
 

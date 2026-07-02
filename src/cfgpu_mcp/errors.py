@@ -64,14 +64,16 @@ class CFGPUError(Exception):
         user_message: str,
         original: dict | None = None,
         retryable: bool | None = None,
-        adapter_id: str | None = None,
+        model_id: str | None = None,
     ) -> None:
         super().__init__(user_message)
         self.error_type: ErrorType = error_type
         self.user_message = user_message
         self.original: dict = original or {}
         self.retryable: bool = retryable if retryable is not None else error_type in _RETRYABLE
-        self.adapter_id: str | None = adapter_id
+        # Agent-facing model identifier (the global-unique cfgpu_model_id, exposed
+        # as ``model_id``). Never the internal adapter_id — see get_model_card hint.
+        self.model_id: str | None = model_id
 
     def __repr__(self) -> str:
         return f"CFGPUError(type={self.error_type!r}, retryable={self.retryable}, msg={self.user_message!r})"
@@ -122,16 +124,16 @@ class CFGPUError(Exception):
 
     def to_tool_result_dict(self) -> dict:
         message = self.user_message
-        if self.adapter_id and self.error_type in _CARD_HINT_TYPES:
-            message += f" 请调用 get_model_card 获取模型 {self.adapter_id} 的详细参数说明和使用示例。"
+        if self.model_id and self.error_type in _CARD_HINT_TYPES:
+            message += f" 请调用 get_model_card 获取模型 {self.model_id} 的详细参数说明和使用示例。"
         result: dict = {
             "error": True,
             "error_type": self.error_type,
             "message": message,
             "retryable": self.retryable,
         }
-        if self.adapter_id:
-            result["adapter_id"] = self.adapter_id
+        if self.model_id:
+            result["model_id"] = self.model_id
         # Surface task_id (carried in ``original`` by task_failed / timeout errors)
         # so the caller can re-query or report the exact failed task.
         task_id = self.original.get("task_id")

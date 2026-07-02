@@ -17,9 +17,9 @@ class GenerateImageInput(BaseModel):
     prompt: str = Field(description="Text description of the image to generate")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id (e.g. 'doubao-seedream-5-0-lite'), "
-        "a list of ids to restrict automatic selection to those candidates "
-        "(e.g. ['doubao-seedream-5-0-lite', 'seedream']), or 'auto' to choose from all models",
+        description="A single model_id from list_models (e.g. 'doubao-seedream-5-0-260128'), "
+        "a list of model_ids to restrict automatic selection to those candidates "
+        "(e.g. ['doubao-seedream-5-0-260128', 'nano-pro']), or 'auto' to choose from all models",
     )
     aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
     resolution: Literal["1K", "2K", "3K", "4K"] = Field(default="2K")
@@ -64,9 +64,9 @@ class GenerateVideoInput(BaseModel):
     prompt: str = Field(description="Text description of the video to generate")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id (e.g. 'wan-2-0'), "
-        "a list of ids to restrict automatic selection to those candidates "
-        "(e.g. ['wan-2-0', 'wan-2-0-fast']), or 'auto' to choose from all models",
+        description="A single model_id from list_models (e.g. 'wan-video'), "
+        "a list of model_ids to restrict automatic selection to those candidates "
+        "(e.g. ['wan-video', 'wan-video-fast']), or 'auto' to choose from all models",
     )
     first_frame: Optional[str] = Field(default=None, description="First frame image URL (public)")
     last_frame: Optional[str] = Field(default=None, description="Last frame image URL (public), use with first_frame")
@@ -132,9 +132,9 @@ class GenerateAudioInput(BaseModel):
     text: str = Field(description="Text to synthesize into speech")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id (e.g. 'seed-tts-2-0'), "
-        "a list of ids to restrict automatic selection to those candidates "
-        "(e.g. ['minimax-speech-2-8-hd', 'minimax-speech-2-8-turbo']), or 'auto' to choose from all voice models",
+        description="A single model_id from list_models (e.g. 'seed-tts-2.0'), "
+        "a list of model_ids to restrict automatic selection to those candidates "
+        "(e.g. ['MiniMax/speech-2.8-hd', 'MiniMax/speech-2.8-turbo']), or 'auto' to choose from all voice models",
     )
     voice: Optional[str] = Field(
         default=None,
@@ -188,8 +188,8 @@ class UnderstandVisionInput(BaseModel):
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id (e.g. 'qwen3-vl-30b-a3b-thinking'), "
-        "a list of ids to restrict automatic selection to those candidates, "
+        description="A single model_id from list_models (e.g. 'qwen3-vl-30b-a3b-thinking'), "
+        "a list of model_ids to restrict automatic selection to those candidates, "
         "or 'auto' to choose from all vision-understanding models",
     )
     images: Optional[list[str]] = Field(
@@ -253,7 +253,7 @@ class ListModelsInput(BaseModel):
 class GetModelCardInput(BaseModel):
     """Get detailed model information, parameters, and usage examples."""
 
-    model_name: str = Field(description="Model cfgpu_model_id or adapter_id")
+    model_name: str = Field(description="A model_id from list_models")
 
 
 # ── NormalizedResult ────────────────────────────────────────────────────────

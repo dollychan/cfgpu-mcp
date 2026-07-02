@@ -30,15 +30,23 @@ def _raise_if_failed(task: Any) -> None:
 
     Keeps the failure contract identical across ``task_status`` / ``task_wait`` /
     ``generate_*`` (all produce ``{error: True, error_type, message, retryable,
-    adapter_id}`` via ``tool_error_dict``), instead of ``task_status`` alone
+    model_id}`` via ``tool_error_dict``), instead of ``task_status`` alone
     emitting a divergent ``{status: "failed", error: "<string>"}`` envelope.
     """
     if task.status == "failed":
+        from cfgpu_mcp.config import get_registry
+        # Expose the agent-facing model_id (cfgpu_model_id), not the internal
+        # adapter_id stored on the task row.
+        model_id: str | None = None
+        try:
+            model_id = get_registry().get(task.adapter_id).cfgpu_model_id
+        except KeyError:
+            pass
         raise CFGPUError(
             error_type="task_failed",
             user_message=task.error or "Task failed without error message",
             original={"task_id": task.id},
-            adapter_id=task.adapter_id,
+            model_id=model_id,
         )
 
 
@@ -133,6 +141,6 @@ async def wait_for_task(
     try:
         task = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
-        e.adapter_id = adapter.adapter_id
+        e.model_id = adapter.cfgpu_model_id
         raise
     return _present(task)

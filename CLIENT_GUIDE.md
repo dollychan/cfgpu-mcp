@@ -723,7 +723,7 @@ done
 
 > `task_status` 对**非终态的异步任务**会做一次实时上游轮询再返回，所以反复调用它即可把 `wait=false` 提交的任务驱动到完成（客户端驱动轮询）；`task_wait` 则阻塞轮询直到终态或超时。
 
-任务**失败**时，`task_status` 与 `task_wait` 都返回下方「错误」一节描述的标准 error dict（`error_type: "task_failed"`，并带 `adapter_id`），两者形状完全一致——不再有 `task_status` 独有的 `{status: "failed", error: "..."}` 信封。
+任务**失败**时，`task_status` 与 `task_wait` 都返回下方「错误」一节描述的标准 error dict（`error_type: "task_failed"`，并带 `model_id`），两者形状完全一致——不再有 `task_status` 独有的 `{status: "failed", error: "..."}` 信封。
 
 ### 错误
 
@@ -735,11 +735,11 @@ done
   "error_type": "invalid_params",
   "message": "请求参数错误：image size must be at least 3686400 pixels 请调用 get_model_card 获取模型 gpt-image-2 的详细参数说明和使用示例。",
   "retryable": false,
-  "adapter_id": "gpt-image-2"
+  "model_id": "gpt-image-2"
 }
 ```
 
-当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加 `get_model_card` 提示，`adapter_id` 字段也会出现在 dict 中。LLM 可直接用 `adapter_id` 值调用 `get_model_card` 获取该模型的完整参数说明。
+当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加 `get_model_card` 提示，`model_id` 字段也会出现在 dict 中。LLM 可直接用 `model_id` 值调用 `get_model_card` 获取该模型的完整参数说明。（`model_id` 即全局唯一的 `cfgpu_model_id`；对外从不暴露 MCP 内部的 `adapter_id`。）
 
 `error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
 

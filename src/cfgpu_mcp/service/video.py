@@ -60,7 +60,7 @@ async def generate_video(
     try:
         task = await tm.create(adapter, req)
     except CFGPUError as e:
-        e.adapter_id = adapter.adapter_id
+        e.model_id = adapter.cfgpu_model_id
         raise
 
     if not wait:
@@ -69,7 +69,7 @@ async def generate_video(
     try:
         task = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
-        e.adapter_id = adapter.adapter_id
+        e.model_id = adapter.cfgpu_model_id
         raise
 
     if task.result is None:
