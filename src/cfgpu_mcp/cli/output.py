@@ -62,12 +62,12 @@ def print_models(models: list[dict], json_mode: bool = False) -> None:
         return
 
     col_w = 28
-    header = f"{'ADAPTER ID':<{col_w}}  {'TYPE':<6}  {'COST':<5}  {'SPEED':<6}  DISPLAY NAME"
+    header = f"{'MODEL ID':<{col_w}}  {'TYPE':<6}  {'COST':<5}  {'SPEED':<6}  DISPLAY NAME"
     print(header)
     print("-" * len(header))
     for m in models:
         print(
-            f"{m['adapter_id']:<{col_w}}"
+            f"{m['model_id']:<{col_w}}"
             f"  {m['task_type']:<6}"
             f"  {m['cost_tier']:<5}"
             f"  {m['speed_tier']:<6}"

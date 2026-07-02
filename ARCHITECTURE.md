@@ -92,10 +92,10 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 | 名称 | 示例 | 用途 |
 |------|------|------|
 | `adapter_id` | `wan-2-0-fast` | 目录名、registry key、用户传入的 `model=` 参数、日志 |
-| `display_name` | `WAN 2.0 Fast (...)` | 仅 `list_models()` 返回值中展示 |
-| `cfgpu_model_id` | `wan-video-fast` | **仅在** `build_payload()` 里写入 API 请求体 |
+| `display_name` | `WAN 2.0 Fast (...)` | `list_models()` 返回值中展示 |
+| `cfgpu_model_id` | `wan-video-fast` | `build_payload()` 里写入 API 请求体；并作为 `list_models()` 返回的 `model_id` 暴露 |
 
-新开发者最常见的错误：在 `build_payload()` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传入 API。
+`list_models()` 返回 `model_id`（即 `cfgpu_model_id`）+ `display_name`，**不再回传 `adapter_id`**。新开发者最常见的错误：在 `build_payload()` / `list_models` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传入 API。
 
 **四种 `task_type`**：`image` / `video` / `audio` 三类都是**媒体生成**（返回 `urls`），而 `understand`（视觉理解 / 图像推理 / 视频理解，如 Qwen3-VL）是**返回文本**的对话类任务——走 OpenAI 兼容的 `/model/v1/chat/completions`，结果落在 `NormalizedResult.message`（assistant 消息 `{role, content[, reasoning_content]}`，回答是 `content`、Thinking 模型的推理过程是 `reasoning_content`）与 `response_id`，`urls` 为空。其工具返回 chat-completion 结构 `{id, model, message, payload[, usage]}`（`usage` 受 `return_metadata` 控制）。路由、`supports()`、`select_model()` 都按 `task_type` 隔离，understand 请求永远不会选中媒体模型，反之亦然。
 
