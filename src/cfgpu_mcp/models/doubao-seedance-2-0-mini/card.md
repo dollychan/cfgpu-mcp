@@ -2,7 +2,7 @@
 
 Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性价比视频生成模型。在保持竞争力效果的同时，将视频生成能力带入更低门槛、更高频、更规模化的应用场景。
 
-> **API 完全等同 WAN 2.0 / Seedance 2.0。** 模型能力、参数类型、API 请求体与返回结构完全一致，共用 `SeedanceVideoAdapter`（`adapters/seedance_video.py`）。完整的 content 输入数组、各多模态场景示例与字段映射详见 `wan-2-0` 的 card.md，此处仅列出本模型的标识与计价差异。
+> **API 完全等同 WAN 2.0 / Seedance 2.0。** 模型能力、参数类型、API 请求体与返回结构完全一致，共用 `SeedanceVideoAdapter`（`adapters/seedance_video.py`）。完整的 content 输入数组、各多模态场景示例与字段映射详见 `wan-video` 的 card.md，此处仅列出本模型的标识与计价差异。
 
 ## 基本信息
 
@@ -65,4 +65,4 @@ curl --location 'https://www.cfgpu.com/userapi/v1/video/generations' \
 }'
 ```
 
-完整的多模态请求示例与响应结构请参见 `wan-2-0` 的 card.md。
+完整的多模态请求示例与响应结构请参见 `wan-video` 的 card.md。

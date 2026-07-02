@@ -2,7 +2,7 @@
 
 Seedance 2.0 fast 是豆包大模型团队推出的新一代多模态视频创作模型，继承了 Seedance 2.0 模型的核心功能和优势，生成速度更快。
 
-> **API 完全等同 WAN 2.0 / Seedance 2.0。** 模型能力、参数类型、API 请求体与返回结构完全一致，共用 `SeedanceVideoAdapter`（`adapters/seedance_video.py`）。完整的 content 输入数组、各多模态场景示例与字段映射详见 `wan-2-0` 的 card.md，此处仅列出本模型的标识与计价差异。
+> **API 完全等同 WAN 2.0 / Seedance 2.0。** 模型能力、参数类型、API 请求体与返回结构完全一致，共用 `SeedanceVideoAdapter`（`adapters/seedance_video.py`）。完整的 content 输入数组、各多模态场景示例与字段映射详见 `wan-video` 的 card.md，此处仅列出本模型的标识与计价差异。
 
 ## 基本信息
 
@@ -66,4 +66,4 @@ curl --location 'https://www.cfgpu.com/userapi/v1/video/generations' \
 }'
 ```
 
-完整的多模态请求示例与响应结构请参见 `wan-2-0` 的 card.md。
+完整的多模态请求示例与响应结构请参见 `wan-video` 的 card.md。

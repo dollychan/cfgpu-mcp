@@ -51,9 +51,9 @@
 
 ## 参数说明
 
-**参数与 `wan-2-0` 完全一致。**
+**参数与 `wan-video` 完全一致。**
 
-详细参数说明请参考 [wan-2-0/card.md](../wan-2-0/card.md)。
+详细参数说明请参考 `wan-video` 的模型卡（可调用 get_model_card 获取）。
 
 ## 示例
 
@@ -160,11 +160,11 @@
 
 ## 约束与限制
 
-与 `wan-2-0` 一致，详见 [wan-2-0/card.md](../wan-2-0/card.md)。
+与 `wan-video` 一致，详见 `wan-video` 的模型卡（可调用 get_model_card 获取）。
 
 ## 响应结构
 
-与 `wan-2-0` 响应格式一致，`content.videoUrl` 为视频下载链接。
+与 `wan-video` 响应格式一致，`content.videoUrl` 为视频下载链接。
 
 `wan-video-fast` 查询结果示例：
 
@@ -198,9 +198,9 @@
 }
 ```
 
-关键区别：`model` 字段为 `wan-video-fast`。其余字段结构与 `wan-2-0` 完全一致。
+关键区别：`model` 字段为 `wan-video-fast`。其余字段结构与 `wan-video` 完全一致。
 
 
 ## 与统一 Schema 的映射
 
-与 `wan-2-0` 映射一致，详见 [wan-2-0/card.md](../wan-2-0/card.md)。
+与 `wan-video` 映射一致，详见 `wan-video` 的模型卡（可调用 get_model_card 获取）。
