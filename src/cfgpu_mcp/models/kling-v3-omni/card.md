@@ -7,7 +7,6 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | video |
-| adapter_id | `kling-v3-omni` |
 | CFGPU 模型 ID | `kling-v3-omni` |
 | 能力标签 | text_to_video |
 | 成本档位 | 5/5 |

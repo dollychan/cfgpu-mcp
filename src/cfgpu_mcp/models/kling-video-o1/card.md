@@ -7,7 +7,6 @@
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | video |
-| adapter_id | `kling-video-o1` |
 | CFGPU 模型 ID | `kling-video-o1` |
 | 能力标签 | text_to_video |
 | 成本档位 | 4/5 |

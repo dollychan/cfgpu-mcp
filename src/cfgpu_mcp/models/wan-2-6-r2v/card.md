@@ -5,7 +5,6 @@
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | video |
-| adapter_id | `wan-2-6-r2v` |
 | CFGPU 模型 ID | `wan2.6-r2v` |
 | 能力标签 | multi_modal_reference |
 | 成本档位 | 3/5 |

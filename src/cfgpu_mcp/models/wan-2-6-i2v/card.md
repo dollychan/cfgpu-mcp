@@ -5,7 +5,6 @@
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | video |
-| adapter_id | `wan-2-6-i2v` |
 | CFGPU 模型 ID | `wan2.6-i2v` |
 | 能力标签 | image_to_video, audio_generate |
 | 成本档位 | 3/5 |

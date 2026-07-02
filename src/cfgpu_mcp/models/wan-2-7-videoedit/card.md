@@ -5,7 +5,6 @@
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | video |
-| adapter_id | `wan-2-7-videoedit` |
 | CFGPU 模型 ID | `wan2.7-videoedit` |
 | 能力标签 | video_edit |
 | 成本档位 | 3/5 |
