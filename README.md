@@ -33,7 +33,7 @@
 | 视频 | `happyhorse-1-0-r2v` | happyhorse-1.0-r2v（参考生视频，最多 9 张参考图） |
 | 视频 | `happyhorse-1-0-video-edit` | happyhorse-1.0-video-edit（视频编辑，源视频 + 最多 5 张参考图） |
 | 语音 | `seed-tts-2-0` / `minimax-speech-2-8-hd` / `minimax-speech-2-8-turbo` | 豆包语音合成 2.0 / MiniMax 语音 2.8 |
-| 视觉理解 | `qwen3-vl-30b-a3b-thinking` | Qwen3-VL 30B A3B Thinking（图像/视频理解与推理） |
+| 视觉理解 | `qwen-3-6-plus` | Qwen3.6-Plus（图像/视频理解与推理） |
 
 > 运行 `cfgpu models list` 查看当前实际加载的模型。
 

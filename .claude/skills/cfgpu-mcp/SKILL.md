@@ -78,7 +78,7 @@ Give the user the `urls`. **Warn that links expire (~24 h) — download promptly
 ### Vision understanding (`understand_vision`)
 
 ```json
-{ "id": "chatcmpl-...", "model": "qwen3-vl-30b-a3b-thinking", "message": "the answer text" }
+{ "id": "chatcmpl-...", "model": "qwen3.6-plus", "message": "the answer text" }
 ```
 
 The answer is the top-level `message` string. For Thinking models the chain-of-thought (`reasoning_content`) and `usage` go to `structuredContent`. There are no `urls`.

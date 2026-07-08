@@ -42,7 +42,7 @@ cfgpu generate video "waves on a beach" --model wan-2.0-fast -d 4 -r 480p
 cfgpu generate video "..." --first-frame https://... --no-audio
 
 # Understand images/video (vision-language; prints text answer to stdout)
-cfgpu understand "describe this image" --model qwen3-vl-30b-a3b-thinking -i https://...
+cfgpu understand "describe this image" --model qwen-3-6-plus -i https://...
 cfgpu understand "list the timeline of events" --video https://...
 
 # Async workflow
@@ -97,7 +97,7 @@ MCP tool wrappers in `tools/` re-declare parameters explicitly (FastMCP limitati
 
 ### Task types — media generation vs. understanding
 
-`task_type` is one of `image` / `video` / `audio` / `understand`. The first three are **media generation**: `parse_response` returns `NormalizedResult.urls` and the pipeline's "succeeded but no urls = failure" guard applies (async path only). `understand` (vision-language: image/video understanding & reasoning, e.g. `qwen3-vl-30b-a3b-thinking` via `QwenVisionAdapter`) is **text-returning**: it speaks the OpenAI-compatible `/model/v1/chat/completions` API and fills `NormalizedResult.message` (the assistant `{role, content[, reasoning_content]}`) + `response_id`, with empty `urls`. It is always synchronous. The router isolates candidates by `task_type`, so an `understand` request never selects a media model. Its tool (`understand_vision`) returns a `CallToolResult` split into a lean LLM-facing `content` (`{id, model, message}`, where `message` is the hoisted answer text) and a client-facing `structuredContent` (`{reasoning_content, usage, payload}`); see "MCP content vs structuredContent split" below. It carries no `artifact` flag.
+`task_type` is one of `image` / `video` / `audio` / `understand`. The first three are **media generation**: `parse_response` returns `NormalizedResult.urls` and the pipeline's "succeeded but no urls = failure" guard applies (async path only). `understand` (vision-language: image/video understanding & reasoning, e.g. `qwen-3-6-plus` via `QwenVisionAdapter`) is **text-returning**: it speaks the OpenAI-compatible `/model/v1/chat/completions` API and fills `NormalizedResult.message` (the assistant `{role, content[, reasoning_content]}`) + `response_id`, with empty `urls`. It is always synchronous. The router isolates candidates by `task_type`, so an `understand` request never selects a media model. Its tool (`understand_vision`) returns a `CallToolResult` split into a lean LLM-facing `content` (`{id, model, message}`, where `message` is the hoisted answer text) and a client-facing `structuredContent` (`{reasoning_content, usage, payload}`); see "MCP content vs structuredContent split" below. It carries no `artifact` flag.
 
 ### MCP content vs structuredContent split
 

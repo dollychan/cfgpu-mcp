@@ -507,8 +507,8 @@ src/cfgpu_mcp/
 │   ├── minimax-speech-2-8-turbo/
 │   │   ├── adapter.yaml        extends: minimax-speech-2-8-hd（更快更省）
 │   │   └── card.md
-│   ├── qwen3-vl-30b-a3b-thinking/
-│   │   ├── adapter.yaml        Qwen3-VL 30B A3B Thinking（task_type=understand，同步，QwenVisionAdapter）
+│   ├── qwen-3-6-plus/
+│   │   ├── adapter.yaml        Qwen3.6-Plus（task_type=understand，同步，QwenVisionAdapter）
 │   │   └── card.md
 │   ├── gpt-image-2/
 │   │   ├── adapter.yaml

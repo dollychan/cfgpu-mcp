@@ -17,7 +17,7 @@ _DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
 
 @register_python_adapter
 class QwenVisionAdapter(ModelAdapter):
-    """Python Adapter for Qwen3-VL vision-language models (image/video understanding).
+    """Python Adapter for Qwen3.6-Plus vision-language models (image/video understanding).
 
     Speaks the OpenAI-compatible ``/model/v1/chat/completions`` API: the unified
     request is mapped to a single user turn whose ``content`` is an array of
@@ -27,11 +27,11 @@ class QwenVisionAdapter(ModelAdapter):
     chain-of-thought under ``message.reasoning_content``, which we carry through on
     the assistant ``message`` object alongside ``content``.
 
-    Registered under ``qwen3-vl-30b-a3b-thinking``; sibling Qwen3-VL models reuse
+    Registered under ``qwen-3-6-plus``; sibling Qwen3.6 models reuse
     this class via the registry extends-chain with their own ``cfgpu_model_id``.
     """
 
-    adapter_id = "qwen3-vl-30b-a3b-thinking"
+    adapter_id = "qwen-3-6-plus"
 
     def build_payload(
         self,

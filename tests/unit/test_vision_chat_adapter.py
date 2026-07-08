@@ -4,10 +4,10 @@ from cfgpu_mcp.adapters.vision_chat import QwenVisionAdapter
 from cfgpu_mcp.tool_registry import UnderstandVisionInput
 
 
-def _adapter(cfgpu_model_id: str = "qwen3-vl-30b-a3b-thinking") -> QwenVisionAdapter:
+def _adapter(cfgpu_model_id: str = "qwen3.6-plus") -> QwenVisionAdapter:
     config = {
-        "adapter_id": "qwen3-vl-30b-a3b-thinking",
-        "display_name": "Qwen3-VL 30B A3B Thinking",
+        "adapter_id": "qwen-3-6-plus",
+        "display_name": "Qwen3.6-Plus",
         "cfgpu_model_id": cfgpu_model_id,
         "task_type": "understand",
         "endpoint": "/model/v1/chat/completions",
@@ -24,7 +24,7 @@ def _adapter(cfgpu_model_id: str = "qwen3-vl-30b-a3b-thinking") -> QwenVisionAda
 def test_text_only_payload_envelope_and_defaults():
     adapter = _adapter()
     payload = adapter.build_payload(UnderstandVisionInput(prompt="Hello!"))
-    assert payload["model"] == "qwen3-vl-30b-a3b-thinking"
+    assert payload["model"] == "qwen3.6-plus"
     assert payload["stream"] is False
     messages = payload["messages"]
     assert messages[0] == {"role": "system", "content": "You are a helpful assistant."}
@@ -79,7 +79,7 @@ def test_parse_extracts_message_id_and_usage():
     adapter = _adapter()
     resp = {
         "id": "chatcmpl-abc123",
-        "model": "qwen3-vl-30b-a3b-thinking",
+        "model": "qwen3.6-plus",
         "choices": [
             {"message": {"role": "assistant", "content": "这是一只红熊猫", "reasoning_content": "我看到了..."}}
         ],
@@ -99,7 +99,7 @@ def test_parse_extracts_message_id_and_usage():
     d = result.to_dict()
     assert d == {
         "id": "chatcmpl-abc123",
-        "model": "qwen3-vl-30b-a3b-thinking",
+        "model": "qwen3.6-plus",
         "message": result.message,
     }
     assert "usage" not in d
@@ -111,7 +111,7 @@ def test_parse_extracts_message_id_and_usage():
 
 def test_parse_handles_missing_choices_and_reasoning():
     adapter = _adapter()
-    result = adapter.parse_response({"model": "qwen3-vl-30b-a3b-thinking", "choices": []})
+    result = adapter.parse_response({"model": "qwen3.6-plus", "choices": []})
     assert result.message == {"role": "assistant", "content": ""}
     assert "reasoning_content" not in result.message
 

@@ -188,7 +188,7 @@ class UnderstandVisionInput(BaseModel):
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'qwen3-vl-30b-a3b-thinking'), "
+        description="A single model_id from list_models (e.g. 'qwen-3-6-plus'), "
         "a list of model_ids to restrict automatic selection to those candidates, "
         "or 'auto' to choose from all vision-understanding models",
     )

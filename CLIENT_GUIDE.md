@@ -575,7 +575,7 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 ```bash
 # 图像理解 / 推理（可传多张图，模型联合推理）
 cfgpu understand "描述这张图片，并指出其中的异常之处" \
-  --model qwen3-vl-30b-a3b-thinking -i https://example.com/a.jpg
+  --model qwen-3-6-plus -i https://example.com/a.jpg
 
 # 视频理解（单个公网视频链接）
 cfgpu understand "详细描述视频内容，并列出关键事件的时间线" \
@@ -661,7 +661,7 @@ done
 > ```json
 > {
 >   "id": "chatcmpl-e08011aa8a004eadbb55a9ca23b76113",
->   "model": "qwen3-vl-30b-a3b-thinking",
+>   "model": "qwen3.6-plus",
 >   "message": {
 >     "role": "assistant",
 >     "content": "The video is a cinematic montage of fantastical creatures...",
@@ -672,7 +672,7 @@ done
 >     "completion_tokens_details": {"text_tokens": 419, "reasoning_tokens": 376},
 >     "prompt_tokens_details": {"text_tokens": 25, "video_tokens": 7724}
 >   },
->   "payload": { "model": "qwen3-vl-30b-a3b-thinking", "messages": [ ... ], "stream": false }
+>   "payload": { "model": "qwen3.6-plus", "messages": [ ... ], "stream": false }
 > }
 > ```
 

@@ -1,18 +1,18 @@
-# Qwen3-VL 30B A3B Thinking
+# Qwen3.6-plus
 
 ## 基本信息
 
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | understand (视觉理解 / 图像推理 / 视频理解) |
-| CFGPU 模型 ID | `qwen3-vl-30b-a3b-thinking` |
+| CFGPU 模型 ID | `qwen3.6-plus` |
 | 能力标签 | image_understanding, image_reasoning, video_understanding, long_video, long_document, tool_calling, visual_agent, long_context |
 | 调用方式 | 同步（POST `/model/v1/chat/completions` 直接返回结果） |
 | 上下文 | 128K |
 | 成本档位 | 2/5 |
 | 速度档位 | 4/5 |
 
-Qwen3-VL 系列第二大 MoE 模型的 Thinking 版本，响应速度快，具备更强的多模态理解与推理、视觉智能体、长视频长文档等超长上下文支持能力；全面升级图像/视频理解、空间感知与万物识别能力，胜任复杂现实任务。返回的是**文本结果**（理解 / 推理 / 描述），不是图片或视频文件。
+Qwen3.6原生视觉语言系列Plus模型，展现出与当前顶尖前沿模型相媲美的卓越性能，模型效果相较3.5系列显著提升。模型在Agentic coding、前端编程、Vibe coding等代码能力、多模态万物识别、OCR、物体定位等能力上显著增强。返回的是**文本结果**（理解 / 推理 / 描述），不是图片或视频文件。
 
 ## 价格
 
@@ -44,7 +44,7 @@ Qwen3-VL 系列第二大 MoE 模型的 Thinking 版本，响应速度快，具�
 ```json
 {
   "stream": false,
-  "model": "qwen3-vl-30b-a3b-thinking",
+  "model": "qwen3.6-plus",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant."},
     {
@@ -63,7 +63,7 @@ Qwen3-VL 系列第二大 MoE 模型的 Thinking 版本，响应速度快，具�
 ```json
 {
   "stream": false,
-  "model": "qwen3-vl-30b-a3b-thinking",
+  "model": "qwen3.6-plus",
   "messages": [
     {"role": "system", "content": "You are a helpful assistant."},
     {

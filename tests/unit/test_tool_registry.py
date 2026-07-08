@@ -267,7 +267,7 @@ def test_task_result_pending_passes_through_split_without_flag():
 def test_reshape_vision_result_hoists_message_and_splits_reasoning():
     result = {
         "id": "chatcmpl-1",
-        "model": "qwen3-vl-30b-a3b-thinking",
+        "model": "qwen3.6-plus",
         "message": {"role": "assistant", "content": "The video is...", "reasoning_content": "Let's analyze..."},
         "usage": {"prompt_tokens": 7749},
         "payload": {"model": "qwen", "messages": []},
@@ -275,7 +275,7 @@ def test_reshape_vision_result_hoists_message_and_splits_reasoning():
     reshaped = reshape_vision_result(result)
     assert reshaped["message"] == "The video is..."
     assert reshaped["reasoning_content"] == "Let's analyze..."
-    assert reshaped["model"] == "qwen3-vl-30b-a3b-thinking"
+    assert reshaped["model"] == "qwen3.6-plus"
 
 
 def test_reshape_vision_result_non_thinking_model_has_null_reasoning():
@@ -295,7 +295,7 @@ def test_understand_vision_end_to_end_split():
     # The full understand_vision MCP shape: reshape then split.
     service_result = {
         "id": "chatcmpl-1",
-        "model": "qwen3-vl-30b-a3b-thinking",
+        "model": "qwen3.6-plus",
         "message": {"role": "assistant", "content": "answer text", "reasoning_content": "thinking trace"},
         "usage": {"prompt_tokens": 10, "completion_tokens": 5},
         "payload": {"model": "qwen", "messages": [{"role": "user", "content": "..."}], "stream": False},
@@ -308,7 +308,7 @@ def test_understand_vision_end_to_end_split():
     # LLM-facing content is lean: only id, model, message (the answer text)
     assert json.loads(out.content[0].text) == {
         "id": "chatcmpl-1",
-        "model": "qwen3-vl-30b-a3b-thinking",
+        "model": "qwen3.6-plus",
         "message": "answer text",
     }
     # reasoning_content, usage, payload are client-only

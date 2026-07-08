@@ -154,7 +154,7 @@ def test_understand_request_selects_understand_model():
     req = UnderstandVisionInput(prompt="描述这张图片", images=["https://x/a.jpg"])
     adapter = router.select_model(req)
     assert adapter.task_type == "understand"
-    assert adapter.adapter_id == "qwen3-vl-30b-a3b-thinking"
+    assert adapter.adapter_id == "qwen-3-6-plus"
 
 
 def test_understand_request_never_selects_media_model():
