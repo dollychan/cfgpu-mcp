@@ -19,6 +19,22 @@ def _make_adapter() -> SeedreamAdapter:
     return SeedreamAdapter.from_config(config)
 
 
+def _make_pro_adapter() -> SeedreamAdapter:
+    config = {
+        "adapter_id": "doubao-seedream-5-0-pro",
+        "display_name": "Doubao Seedream 5.0 Pro",
+        "cfgpu_model_id": "doubao-seedream-5-0-pro",
+        "task_type": "image",
+        "endpoint": "/v1/images/generations",
+        "is_async": False,
+        "poll_endpoint": None,
+        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion"},
+        "cost_tier": 2,
+        "speed_tier": 3,
+    }
+    return SeedreamAdapter.from_config(config)
+
+
 def test_2k_1x1_maps_to_correct_size():
     adapter = _make_adapter()
     req = GenerateImageInput(prompt="x", resolution="2K", aspect_ratio="1:1")
@@ -110,3 +126,65 @@ def test_n_equals_one_omits_group_fields():
     payload = adapter.build_payload(req)
     assert "sequential_image_generation" not in payload
     assert "sequential_image_generation_options" not in payload
+
+
+# --- 2K extended aspect ratios (added with Seedream 5.0 Pro spec) ---
+
+def test_2k_3x2_maps_to_correct_size():
+    adapter = _make_adapter()
+    req = GenerateImageInput(prompt="x", resolution="2K", aspect_ratio="3:2")
+    payload = adapter.build_payload(req)
+    assert payload["size"] == "2496x1664"
+
+
+def test_2k_2x3_maps_to_correct_size():
+    adapter = _make_adapter()
+    req = GenerateImageInput(prompt="x", resolution="2K", aspect_ratio="2:3")
+    payload = adapter.build_payload(req)
+    assert payload["size"] == "1664x2496"
+
+
+def test_2k_21x9_maps_to_correct_size():
+    adapter = _make_adapter()
+    req = GenerateImageInput(prompt="x", resolution="2K", aspect_ratio="21:9")
+    payload = adapter.build_payload(req)
+    assert payload["size"] == "3136x1344"
+
+
+# --- doubao-seedream-5-0-pro (single-image, 1K/2K) ---
+
+def test_pro_n_greater_than_one_raises():
+    adapter = _make_pro_adapter()
+    req = GenerateImageInput(prompt="x", n=4)
+    with pytest.raises(ValueError, match="does not support n>1"):
+        adapter.build_payload(req)
+
+
+def test_pro_1k_resolution_passes_through():
+    adapter = _make_pro_adapter()
+    req = GenerateImageInput(prompt="x", resolution="1K", aspect_ratio="16:9")
+    payload = adapter.build_payload(req)
+    assert payload["size"] == "1K"
+
+
+def test_pro_2k_3x2_maps_to_correct_size():
+    adapter = _make_pro_adapter()
+    req = GenerateImageInput(prompt="x", resolution="2K", aspect_ratio="3:2")
+    payload = adapter.build_payload(req)
+    assert payload["size"] == "2496x1664"
+
+
+def test_pro_no_group_fields():
+    adapter = _make_pro_adapter()
+    req = GenerateImageInput(prompt="x")  # n defaults to 1
+    payload = adapter.build_payload(req)
+    assert "sequential_image_generation" not in payload
+    assert "sequential_image_generation_options" not in payload
+
+
+def test_pro_cfgpu_model_id_in_model_field():
+    adapter = _make_pro_adapter()
+    req = GenerateImageInput(prompt="x")
+    payload = adapter.build_payload(req)
+    assert payload["model"] == "doubao-seedream-5-0-pro"
+    assert str(payload).count("doubao-seedream-5-0-pro") == 1

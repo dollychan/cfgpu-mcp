@@ -465,7 +465,7 @@
       "note": "Unified tool schema from GenerateImageInput. Model not yet fixed; ranges are the union enum/limits of the unified schema, not a specific model. Once a model is chosen, switch to that model's entry for the real per-model ranges.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
-        "model": { "type": "enum", "options": ["auto", "doubao-seedream-5-0-lite", "doubao-seedream-4-0", "doubao-seedream-4-5", "gpt-image-2", "nano-banana-2", "nano-banana-pro", "nano-banana-pro-official", "nano-banana-pro-premium"], "default": "auto", "writable": "true" },
+        "model": { "type": "enum", "options": ["auto", "doubao-seedream-5-0-lite", "doubao-seedream-5-0-pro", "doubao-seedream-4-0", "doubao-seedream-4-5", "gpt-image-2", "nano-banana-2", "nano-banana-pro", "nano-banana-pro-official", "nano-banana-pro-premium"], "default": "auto", "writable": "true" },
         "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true" },
         "resolution": { "type": "enum", "options": ["1K", "2K", "3K", "4K"], "default": "2K", "writable": "true" },
         "reference_images": { "type": "url_array", "writable": "true" },
@@ -502,6 +502,30 @@
             "tools": { "type": "array", "note": "web search: [{\"type\": \"web_search\"}]" },
             "optimize_prompt_options.mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" }
           }
+        }
+      }
+    },
+    {
+      "adapterId": "doubao-seedream-5-0-pro",
+      "modelId": "doubao-seedream-5-0-pro",
+      "displayName": "Doubao Seedream 5.0 Pro",
+      "args": {
+        "prompt": { "type": "text", "writable": "true" },
+        "model": { "type": "string", "value": "doubao-seedream-5-0-pro", "writable": "false" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint (2K table); 1K tier is model-judged; output ratio range [1/16, 16]" },
+        "resolution": { "type": "enum", "options": ["1K", "2K"], "default": "2K", "writable": "true", "note": "1K passes size=\"1K\" (方式2); 2K maps to exact pixels; total pixel range [921600, 4624220]" },
+        "reference_images": { "type": "url_array", "maxItems": 10, "writable": "true", "note": "multi-image fusion needs 2–10 refs; single output only" },
+        "n": { "type": "integer", "min": 1, "max": 1, "default": 1, "writable": "true", "note": "pro is single-image only; n>1 raises ValueError (no 组图 support). Use doubao-seedream-5-0-lite for group images" },
+        "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (true); adds an \"AI generated\" watermark" },
+        "wait": { "type": "boolean", "default": true, "writable": "false" },
+        "timeout": { "type": "integer", "writable": "false" },
+        "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
+        "model_specific": {
+          "type": "object",
+          "fields": {
+            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" }
+          },
+          "note": "pro does NOT support stream, tools (web_search), or optimize_prompt_options"
         }
       }
     },

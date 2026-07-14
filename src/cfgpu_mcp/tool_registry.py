@@ -31,7 +31,8 @@ class GenerateImageInput(BaseModel):
         default=1,
         description="Number of images to generate as a related group (组图 / sequential image "
         "generation). 1–15. Only doubao-seedream-* models support n>1; other image models "
-        "generate a single image and reject n>1.",
+        "generate a single image and reject n>1. Exception: doubao-seedream-5-0-pro is a "
+        "single-image model (no 组图 support) and rejects n>1.",
     )
 
     @field_validator("n")

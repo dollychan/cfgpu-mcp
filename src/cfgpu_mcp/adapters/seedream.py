@@ -15,6 +15,9 @@ _SIZE_MAP: dict[tuple[str, str], str] = {
     ("2K", "3:4"):  "1728x2304",
     ("2K", "16:9"): "2848x1600",
     ("2K", "9:16"): "1600x2848",
+    ("2K", "3:2"):  "2496x1664",
+    ("2K", "2:3"):  "1664x2496",
+    ("2K", "21:9"): "3136x1344",
     ("3K", "1:1"):  "3072x3072",
     ("3K", "16:9"): "4096x2304",
     ("3K", "9:16"): "2304x4096",
@@ -26,17 +29,36 @@ _SIZE_MAP: dict[tuple[str, str], str] = {
 
 @register_python_adapter
 class SeedreamAdapter(ModelAdapter):
-    """Python Adapter for Doubao Seedream 5.0 lite (synchronous image model)."""
+    """Python Adapter for Doubao Seedream (synchronous image models).
+
+    Base for doubao-seedream-5-0-lite; also reused (via the `extends` chain) by
+    the 4.0/4.5 variants and doubao-seedream-5-0-pro. Pro is single-image only
+    and supports 1K/2K tiers; see build_payload for the pro-specific guards.
+    """
 
     adapter_id = "doubao-seedream-5-0-lite"
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)
 
-        size = _SIZE_MAP.get(
-            (req.resolution, req.aspect_ratio),
-            _SIZE_MAP.get((req.resolution, "1:1"), "2048x2048"),  # fallback: 2K 1:1
-        )
+        is_pro = self.adapter_id == "doubao-seedream-5-0-pro"
+
+        # Pro is single-image only (no 组图 / multi_image_group).
+        if is_pro and req.n and req.n > 1:
+            raise ValueError(
+                "doubao-seedream-5-0-pro does not support n>1 (group images); "
+                "use doubao-seedream-5-0-lite for 组图 generation."
+            )
+
+        if is_pro and req.resolution == "1K":
+            # Pro's 1K tier has no fixed pixel table (model judges aspect), so
+            # pass the tier through to the API (方式 2) instead of mapping.
+            size = "1K"
+        else:
+            size = _SIZE_MAP.get(
+                (req.resolution, req.aspect_ratio),
+                _SIZE_MAP.get((req.resolution, "1:1"), "2048x2048"),  # fallback: 2K 1:1
+            )
         payload: dict = {
             "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
             "prompt": req.prompt,

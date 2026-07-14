@@ -99,6 +99,19 @@ def test_python_adapter_preferred_over_generic():
     assert isinstance(seedream, SeedreamAdapter)
 
 
+def test_seedream_5_0_pro_extends_resolves_seedream_adapter():
+    """doubao-seedream-5-0-pro extends doubao-seedream-5-0-lite, so it must reuse
+    SeedreamAdapter (the ancestor Python class) — not fall back to GenericAdapter."""
+    registry = _load()
+    pro = registry.get("doubao-seedream-5-0-pro")
+    assert isinstance(pro, SeedreamAdapter)
+    assert pro.cfgpu_model_id == "doubao-seedream-5-0-pro"
+    # capabilities override should drop multi_image_group / web_search present on lite
+    assert "multi_image_group" not in pro.capabilities
+    assert "web_search" not in pro.capabilities
+    assert "multi_image_fusion" in pro.capabilities
+
+
 @pytest.mark.parametrize(
     "adapter_id, cfgpu_model_id",
     [

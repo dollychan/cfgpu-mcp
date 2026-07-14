@@ -425,7 +425,7 @@ src/cfgpu_mcp/
 │   ├── registry.py             YAML 加载、extends 合并、Python 类解析
 │   ├── generic.py              YAML DSL 驱动的通用 adapter
 │   ├── seedance_video.py       Seedance 系列 Python Adapter（WAN 2.0 / WAN 2.0 Fast / Seedance 2.0 / 2.0 Fast / 1.5 Pro 共用）
-│   ├── seedream.py             Seedream 的 Python Adapter（同步模型）
+│   ├── seedream.py             Seedream 系列 Python Adapter（同步模型；5.0 lite / 5.0 Pro / 4.5 / 4.0 共用。Pro 为单图模型，n>1 报错；1K 档位透传 size="1K"）
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
 │   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds）
@@ -455,6 +455,9 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── doubao-seedream-5-0-lite/
 │   │   ├── adapter.yaml
+│   │   └── card.md
+│   ├── doubao-seedream-5-0-pro/
+│   │   ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~（单图、1K/2K，不支持组图/联网搜索）
 │   │   └── card.md
 │   ├── doubao-seedream-4-5/
 │   │   ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~

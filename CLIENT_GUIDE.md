@@ -565,8 +565,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
 
 > `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。仅 `doubao-seedream-*`
-> 支持 `n>1`（自动设置 `sequential_image_generation=auto` + `max_images=n`）；`gpt-image-2`、
-> `nano-banana-*` 传 `n>1` 会被拒绝。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
+> 支持 `n>1`（自动设置 `sequential_image_generation=auto` + `max_images=n`），**例外：
+> `doubao-seedream-5-0-pro` 为单图模型，不支持组图，`n>1` 会报错**；`gpt-image-2`、
+> `nano-banana-*` 传 `n>1` 也会被拒绝。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
 > HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，
 > 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
 
