@@ -179,3 +179,41 @@ def test_no_candidates_raises_cfgpu_error():
     with pytest.raises(CFGPUError) as exc_info:
         router.select_model(req)
     assert exc_info.value.error_type == "model_unavailable"
+
+
+# ── ③ Unknown-model fallback (understand only) ───────────────────────────────
+
+
+def test_understand_unknown_model_falls_back_to_auto():
+    """A hallucinated / unknown model_id on understand_vision must not hard-fail:
+    vision-understanding is a small, synchronous, cheap-to-rerun set, so resolve()
+    falls back to auto-selection instead of raising."""
+    router = _router()
+    req = UnderstandVisionInput(prompt="describe this", model="qwen-3-vl-plus")
+    adapter = router.resolve(req)
+    assert adapter.task_type == "understand"
+
+
+def test_generate_unknown_model_still_raises():
+    """generate_* keeps the hard error for an unknown model_id — a wrong media model
+    would waste an async, billed generation job and must surface loudly."""
+    from cfgpu_mcp.errors import CFGPUError
+
+    router = _router()
+    req = GenerateImageInput(prompt="a cat", model="doubao-fake-999")
+    with pytest.raises(CFGPUError) as exc_info:
+        router.resolve(req)
+    assert exc_info.value.error_type == "invalid_params"
+
+
+def test_understand_known_but_unsupported_model_still_raises():
+    """The fallback covers only *unknown* ids. A model that exists but does not
+    support the understand task (capability mismatch) stays a hard error."""
+    from cfgpu_mcp.errors import CFGPUError
+
+    router = _router()
+    # A real image model is a valid id but cannot serve an understand request.
+    req = UnderstandVisionInput(prompt="x", model="doubao-seedream-5-0-lite")
+    with pytest.raises(CFGPUError) as exc_info:
+        router.resolve(req)
+    assert exc_info.value.error_type == "invalid_params"

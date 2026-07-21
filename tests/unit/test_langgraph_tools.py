@@ -7,6 +7,7 @@ from langchain_core.tools import StructuredTool
 
 from cfgpu_mcp.agent.langgraph_tools import get_langgraph_tools
 from cfgpu_mcp.tool_registry import (
+    _TOOL_TASK_TYPE,
     GenerateAudioInput,
     GenerateImageInput,
     GenerateVideoInput,
@@ -28,6 +29,13 @@ _EXPECTED_SCHEMAS = {
     "list_models":    ListModelsInput,
     "get_model_card": GetModelCardInput,
 }
+
+
+def _json_schema(tool) -> dict:
+    """Model-bearing tools carry ``args_schema`` as a stamped JSON-schema *dict* (so the
+    dynamic cfgpu_model_id enum can be injected); the rest keep the Pydantic class."""
+    schema = tool.args_schema
+    return schema if isinstance(schema, dict) else schema.model_json_schema()
 
 
 # ── return type and count ─────────────────────────────────────────────────────
@@ -60,26 +68,36 @@ def test_tool_names_match_registry():
     assert names == set(_EXPECTED_SCHEMAS.keys())
 
 
-# ── args_schema is the Pydantic model from tool_registry ─────────────────────
+# ── args_schema comes from tool_registry (class for non-model tools, stamped
+#    JSON-schema dict for model-bearing tools so the model enum can be injected) ──
 
 def test_args_schema_matches_pydantic_model():
     for tool in get_langgraph_tools():
         expected_cls = _EXPECTED_SCHEMAS[tool.name]
-        assert tool.args_schema is expected_cls, (
-            f"{tool.name}: expected args_schema={expected_cls.__name__}, "
-            f"got {tool.args_schema}"
-        )
+        if tool.name in _TOOL_TASK_TYPE:
+            # Model-bearing tools pass a stamped JSON-schema dict, not the class. It
+            # still derives from the Pydantic model — same property set — plus a
+            # ``model`` enum the raw class schema cannot carry.
+            assert isinstance(tool.args_schema, dict), tool.name
+            assert set(tool.args_schema["properties"]) == set(
+                expected_cls.model_json_schema()["properties"]
+            ), tool.name
+        else:
+            assert tool.args_schema is expected_cls, (
+                f"{tool.name}: expected args_schema={expected_cls.__name__}, "
+                f"got {tool.args_schema}"
+            )
 
 
 def test_generate_image_schema_requires_prompt():
     tool = next(t for t in get_langgraph_tools() if t.name == "generate_image")
-    schema = tool.args_schema.model_json_schema()
+    schema = _json_schema(tool)
     assert "prompt" in schema.get("required", [])
 
 
 def test_generate_video_schema_has_reference_fields():
     tool = next(t for t in get_langgraph_tools() if t.name == "generate_video")
-    props = tool.args_schema.model_json_schema()["properties"]
+    props = _json_schema(tool)["properties"]
     assert "reference_videos" in props
     assert "reference_audios" in props
 

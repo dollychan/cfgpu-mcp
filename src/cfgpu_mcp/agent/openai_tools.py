@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from cfgpu_mcp.tool_registry import _REGISTRY, _TOOL_TASK_TYPE
+from cfgpu_mcp.tool_registry import _REGISTRY, _TOOL_TASK_TYPE, apply_model_enum
 from cfgpu_mcp.agent.dispatcher import dispatch_tool
 
 
@@ -24,7 +24,7 @@ def get_openai_tools(
         tool_type = _TOOL_TASK_TYPE.get(name)
         if task_types is not None and tool_type and tool_type not in task_types:
             continue
-        schema = model_cls.model_json_schema()
+        schema = apply_model_enum(model_cls.model_json_schema(), name)
         schema.pop("title", None)
         schema.pop("description", None)
         result.append({

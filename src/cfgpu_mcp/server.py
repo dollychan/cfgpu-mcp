@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp import config
-from cfgpu_mcp.tool_registry import get_field_descriptions
+from cfgpu_mcp.tool_registry import apply_model_enum, get_field_descriptions
 from cfgpu_mcp.tools import generate, models, tasks, understand
 
 
@@ -52,7 +52,21 @@ def _inject_param_descriptions(server: FastMCP) -> None:
                 props[name].setdefault("description", description)
 
 
+def _inject_model_enums(server: FastMCP) -> None:
+    """Pin each generation / understand tool's ``model`` parameter to the registry's
+    real model ids, so MCP clients cannot hallucinate a non-existent model_id.
+
+    FastMCP builds the schema from the wrapper's bare ``model: str | list[str]``
+    signature — an open string that invites LLMs to invent plausible-looking ids
+    (e.g. ``qwen-3-vl-plus``). Delegates to the shared ``apply_model_enum`` so the MCP
+    (Mode A) and Anthropic / OpenAI / LangGraph (Mode B) exposures stay in lockstep.
+    """
+    for tool in server._tool_manager.list_tools():
+        apply_model_enum(tool.parameters, tool.name)
+
+
 _inject_param_descriptions(mcp)
+_inject_model_enums(mcp)
 
 
 def main() -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.tool_registry import _REGISTRY, _TOOL_TASK_TYPE
+from cfgpu_mcp.tool_registry import _REGISTRY, _TOOL_TASK_TYPE, apply_model_enum
 
 if TYPE_CHECKING:
     from langchain_core.tools import StructuredTool
@@ -60,12 +60,21 @@ def get_langgraph_tools(
         tool_type = _TOOL_TASK_TYPE.get(name)
         if task_types is not None and tool_type and tool_type not in task_types:
             continue
+        # Model-bearing tools pass a stamped JSON-schema dict so the dynamic
+        # cfgpu_model_id enum reaches the bound LLM (a Pydantic class cannot carry the
+        # registry-driven enum). The service layer re-validates against the Pydantic
+        # model, so dropping LangChain-level class validation here is safe. Non-model
+        # tools keep the Pydantic class unchanged.
+        if tool_type is not None:
+            args_schema: Any = apply_model_enum(model_cls.model_json_schema(), name)
+        else:
+            args_schema = model_cls
         result.append(
             StructuredTool.from_function(
                 coroutine=coroutines[name],
                 name=name,
                 description=(model_cls.__doc__ or "").strip(),
-                args_schema=model_cls,
+                args_schema=args_schema,
             )
         )
     return result

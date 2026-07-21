@@ -189,9 +189,10 @@ class UnderstandVisionInput(BaseModel):
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'qwen-3-6-plus'), "
+        description="A single model_id from list_models (e.g. 'qwen3.6-plus'), "
         "a list of model_ids to restrict automatic selection to those candidates, "
-        "or 'auto' to choose from all vision-understanding models",
+        "or 'auto' to choose from all vision-understanding models. Prefer 'auto' "
+        "unless a specific model is required — an unknown id falls back to auto.",
     )
     images: Optional[list[str]] = Field(
         default=None,
@@ -430,6 +431,59 @@ def get_field_descriptions(tool_name: str) -> dict[str, str]:
     return {}
 
 
+def _stamp_model_enum(prop: dict, model_ids: list[str]) -> None:
+    """Constrain a ``model`` JSON-schema property to ``model_ids`` (in place).
+
+    The field type is ``str | list[str]`` (default ``"auto"``), so Pydantic / FastMCP
+    emit ``anyOf: [{type: string}, {type: array, items: {type: string}}]``. We stamp the
+    string branch's ``enum`` with ``["auto", *model_ids]`` and the array branch's
+    ``items.enum`` with just ``model_ids`` ("auto" is not a valid list element — the list
+    form restricts auto-selection to named candidates). Falls back to a flat ``enum`` if
+    the schema is ever a bare string.
+    """
+    branches = prop.get("anyOf")
+    if isinstance(branches, list):
+        for branch in branches:
+            if branch.get("type") == "string":
+                branch["enum"] = ["auto", *model_ids]
+            elif branch.get("type") == "array":
+                items = branch.get("items")
+                if isinstance(items, dict):
+                    items["enum"] = list(model_ids)
+    elif prop.get("type") == "string":
+        prop["enum"] = ["auto", *model_ids]
+
+
+def apply_model_enum(schema: dict, tool_name: str) -> dict:
+    """Pin a tool's ``model`` parameter to the registry's real model ids (in place).
+
+    Shared by every LLM-facing schema exposure — MCP/FastMCP (Mode A) and the Anthropic /
+    OpenAI / LangGraph builders (Mode B) — so no client can hallucinate a non-existent
+    model_id (e.g. ``qwen-3-vl-plus``). Only the public ``cfgpu_model_id`` is advertised;
+    the internal ``adapter_id`` is never exposed, though ``registry.get()`` still resolves
+    either, so existing callers keep working. The model list is registry-driven, hence the
+    enum can only be stamped at schema-build time, not declared statically on the Pydantic
+    model. Best-effort: a registry load failure leaves the schema unconstrained (validation
+    + the understand-vision auto-fallback remain the backstops). Returns ``schema`` for
+    chaining. Non-model tools (task_status, list_models, ...) are a no-op.
+    """
+    task_type = _TOOL_TASK_TYPE.get(tool_name)
+    if task_type is None:
+        return schema
+    prop = schema.get("properties", {}).get("model")
+    if not isinstance(prop, dict):
+        return schema
+    try:
+        from cfgpu_mcp.config import get_registry
+
+        model_ids = sorted({a.cfgpu_model_id for a in get_registry().list_all(task_type=task_type)})
+    except Exception:  # pragma: no cover - defensive: never block schema build on config
+        return schema
+    if model_ids:
+        _stamp_model_enum(prop, model_ids)
+    return schema
+
+
 def get_anthropic_tools(
     task_types: list[str] | None = None,
     tools: list[str] | None = None,
@@ -447,7 +501,7 @@ def get_anthropic_tools(
         tool_type = _TOOL_TASK_TYPE.get(name)
         if task_types is not None and tool_type and tool_type not in task_types:
             continue
-        schema = model.model_json_schema()
+        schema = apply_model_enum(model.model_json_schema(), name)
         result.append({
             "name": name,
             "description": model.__doc__,

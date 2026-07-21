@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import unicodedata
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,8 @@ from cfgpu_mcp.tool_registry import (
 
 if TYPE_CHECKING:
     from cfgpu_mcp.adapters.base import ModelAdapter
+
+logger = logging.getLogger(__name__)
 
 
 def _is_chinese(text: str) -> bool:
@@ -47,7 +50,23 @@ class ModelRouter:
         # directly named model would otherwise bypass it and surface a task-type /
         # capability mismatch as a raw AssertionError from build_payload(). Validate
         # here so the caller gets the friendly supports() reason (and a model-card hint).
-        adapter = self.get_adapter(model)
+        try:
+            adapter = self.get_adapter(model)
+        except CFGPUError:
+            # An unknown model_id here is almost always a hallucinated / mistyped id.
+            # Vision-understanding models are a small, homogeneous, *synchronous* set
+            # (the call is cheap and re-runnable), so a hard failure would needlessly
+            # abort the whole analysis. Fall back to auto-selection instead. The
+            # generate_* paths deliberately keep the hard error: a wrong media model
+            # would waste an async, billed generation job and must surface loudly.
+            if isinstance(req, UnderstandVisionInput):
+                logger.warning(
+                    "understand_vision: unknown model %r, falling back to auto-selection",
+                    model,
+                )
+                return self.select_model(req)
+            raise
+        ok, reason = adapter.supports(req)
         ok, reason = adapter.supports(req)
         if not ok:
             raise CFGPUError(
