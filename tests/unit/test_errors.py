@@ -116,3 +116,15 @@ def test_no_card_hint_without_model_id():
     d = err.to_tool_result_dict()
     assert "get_model_card" not in d["message"]
     assert "model_id" not in d
+
+
+# ── request_id correlation echo ──────────────────────────────────────────────
+
+def test_request_id_echoed_in_tool_result():
+    err = CFGPUError(error_type="task_failed", user_message="失败", request_id="r-1")
+    assert err.to_tool_result_dict()["request_id"] == "r-1"
+
+
+def test_request_id_absent_when_not_set():
+    err = CFGPUError(error_type="task_failed", user_message="失败")
+    assert "request_id" not in err.to_tool_result_dict()

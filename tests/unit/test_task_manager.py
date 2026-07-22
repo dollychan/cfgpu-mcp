@@ -339,6 +339,50 @@ async def test_list_running_excludes_completed():
     await db.close()
 
 
+# ── request_id correlation stashing ───────────────────────────────────────────
+
+from cfgpu_mcp.task_manager import _REQUEST_ID_KEY
+
+
+@pytest.mark.asyncio
+async def test_sync_create_stashes_request_id_stripped_from_payload():
+    """A caller-supplied request_id rides the stored payload (so task_status can
+    echo it) but is stripped from public_payload — it is never part of the real
+    upstream API request."""
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    req = GenerateImageInput(prompt="x", request_id="r-sync-1")
+    task = await tm.create(adapter, req)
+    assert task.payload[_REQUEST_ID_KEY] == "r-sync-1"      # stashed for later echo
+    assert _REQUEST_ID_KEY not in task.public_payload()     # never sent upstream
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_async_create_stashes_request_id():
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    req = GenerateVideoInput(prompt="x", request_id="r-async-1")
+    task = await tm.create(adapter, req)
+    assert task.payload[_REQUEST_ID_KEY] == "r-async-1"
+    assert _REQUEST_ID_KEY not in task.public_payload()
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_create_without_request_id_leaves_payload_clean():
+    """No request_id supplied → the reserved key is absent, result shape unchanged."""
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    req = GenerateImageInput(prompt="x")
+    task = await tm.create(adapter, req)
+    assert _REQUEST_ID_KEY not in task.payload
+    await db.close()
+
+
 # ── _extract_error_message ────────────────────────────────────────────────────
 
 from cfgpu_mcp.task_manager import _extract_error_message

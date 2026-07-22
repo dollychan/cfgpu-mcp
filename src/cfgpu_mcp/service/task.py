@@ -4,6 +4,8 @@ import logging
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
+from cfgpu_mcp.task_manager import _REQUEST_ID_KEY
+from cfgpu_mcp.tool_registry import stamp_request_id
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +18,16 @@ def _present(task: Any) -> dict[str, Any]:
     identical to what ``generate_image`` / ``generate_video`` return — so callers
     see one structure regardless of which tool produced the artifact. Non-terminal
     tasks fall back to the ``{task_id, status}`` envelope (mirrors generate's
-    ``wait=False``). Failed tasks are surfaced by raising ``CFGPUError`` — see
-    ``_raise_if_failed`` — so the error shape matches ``task_wait`` and the
-    ``generate_*`` tools exactly.
+    ``wait=False``). The caller's ``request_id`` (stashed in the stored payload at
+    create time) is echoed on both shapes so an async artifact can be joined back to
+    the originating generate_* request. Failed tasks are surfaced by raising
+    ``CFGPUError`` — see ``_raise_if_failed`` — so the error shape matches
+    ``task_wait`` and the ``generate_*`` tools exactly.
     """
+    request_id = task.payload.get(_REQUEST_ID_KEY)
     if task.status == "succeeded" and (task.result or {}).get("urls"):
-        return {**task.result, "payload": task.public_payload()}
-    return {"task_id": task.id, "status": task.status}
+        return stamp_request_id({**task.result, "payload": task.public_payload()}, request_id)
+    return stamp_request_id({"task_id": task.id, "status": task.status}, request_id)
 
 
 def _raise_if_failed(task: Any) -> None:
@@ -47,6 +52,7 @@ def _raise_if_failed(task: Any) -> None:
             user_message=task.error or "Task failed without error message",
             original={"task_id": task.id},
             model_id=model_id,
+            request_id=task.payload.get(_REQUEST_ID_KEY),
         )
 
 
@@ -86,6 +92,7 @@ async def get_status(task_id: str) -> dict[str, Any]:
                 # masquerading as "still running". Transient network/timeout
                 # errors are tolerated: return the stale record so polling retries.
                 if e.error_type in ("auth", "invalid_params"):
+                    e.request_id = task.payload.get(_REQUEST_ID_KEY)
                     raise
                 logger.warning("Re-poll transient failure for task %s (%s): %s", task_id, task.adapter_id, e)
             except Exception as e:
@@ -142,5 +149,6 @@ async def wait_for_task(
         task = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
         e.model_id = adapter.cfgpu_model_id
+        e.request_id = task.payload.get(_REQUEST_ID_KEY)
         raise
     return _present(task)

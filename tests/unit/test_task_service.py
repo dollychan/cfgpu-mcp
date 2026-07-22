@@ -157,3 +157,74 @@ async def test_get_status_result_includes_real_api_payload():
     assert result["payload"] == {"model": "wan-video", "prompt": "x"}
     assert _ASPECT_RATIO_KEY not in result["payload"]
     await db.close()
+
+
+# ── request_id correlation echo ────────────────────────────────────────────────
+
+from cfgpu_mcp.task_manager import _REQUEST_ID_KEY
+
+
+async def _db_with_task(status: str, adapter_id: str, *, result=None, error=None,
+                        request_id: str | None = None) -> aiosqlite.Connection:
+    db = await aiosqlite.connect(":memory:")
+    db.row_factory = aiosqlite.Row
+    await db.execute(_CREATE_TABLE)
+    await db.commit()
+    payload = {"prompt": "x"}
+    if request_id:
+        payload[_REQUEST_ID_KEY] = request_id
+    await db_ops.insert_task(db, "task-1", adapter_id, "pending", payload)
+    if status != "pending":
+        await db_ops.update_task(db, "task-1", status, result=result, error=error)
+    return db
+
+
+@pytest.mark.asyncio
+async def test_get_status_echoes_request_id_on_success():
+    """A succeeded async task echoes the caller's request_id (recovered from the
+    stored payload) so the artifact can be joined back to the generate_* call —
+    while the reserved key is stripped from the surfaced payload."""
+    db = await _db_with_task(
+        "succeeded", "wan-2-0", result={"urls": ["https://cdn/v.mp4"]}, request_id="r-42"
+    )
+    client = MagicMock()
+    client.get = AsyncMock()
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=True))
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+    assert result["request_id"] == "r-42"
+    assert _REQUEST_ID_KEY not in result["payload"]
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_echoes_request_id_on_pending_envelope():
+    db = await _db_with_task("pending", "wan-2-0", request_id="r-99")
+    client = MagicMock()
+    # keep it pending: upstream still running, so the pending envelope is returned
+    client.get = AsyncMock(return_value={"id": "task-1", "status": "running"})
+    adapter = _adapter(is_async=True)
+    adapter.extract_status.return_value = "running"
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+    assert result["status"] in ("pending", "running")
+    assert result["request_id"] == "r-99"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_failed_task_echoes_request_id():
+    """A failed task carries request_id onto the CFGPUError so the error result
+    can be joined back to the originating request."""
+    from cfgpu_mcp.errors import CFGPUError
+    db = await _db_with_task("failed", "wan-2-0", error="content blocked", request_id="r-7")
+    client = MagicMock()
+    client.get = AsyncMock()
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=True))
+    with p_db, p_client, p_reg:
+        with pytest.raises(CFGPUError) as exc_info:
+            await task_service.get_status("task-1")
+    assert exc_info.value.request_id == "r-7"
+    assert exc_info.value.to_tool_result_dict()["request_id"] == "r-7"
+    await db.close()

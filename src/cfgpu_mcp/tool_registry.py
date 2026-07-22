@@ -57,6 +57,15 @@ class GenerateImageInput(BaseModel):
         description="Model-specific parameters passed directly to API, e.g. {'tools': [{'type': 'web_search'}]}. "
         "Merged last, so it overrides typed fields like watermark.",
     )
+    request_id: Optional[str] = Field(
+        default=None,
+        description="Optional caller-supplied correlation id, echoed back verbatim on "
+        "the immediate response and on the eventual artifact/error returned by a later "
+        "task_status/task_wait call. Use it to link an async result (whose tool_call id "
+        "differs from this request's) back to this request. Unlike task_id it is known "
+        "at call time and also works for synchronous models (which have no task_id). "
+        "Omitted from the response when not supplied.",
+    )
 
 
 class GenerateVideoInput(BaseModel):
@@ -125,6 +134,15 @@ class GenerateVideoInput(BaseModel):
         description="Model-specific parameters, e.g. {'tools': [{'type': 'web_search'}]}. "
         "Merged last, so it overrides typed fields like watermark.",
     )
+    request_id: Optional[str] = Field(
+        default=None,
+        description="Optional caller-supplied correlation id, echoed back verbatim on "
+        "the immediate response and on the eventual artifact/error returned by a later "
+        "task_status/task_wait call. Use it to link an async result (whose tool_call id "
+        "differs from this request's) back to this request. Unlike task_id it is known "
+        "at call time and also works for synchronous models (which have no task_id). "
+        "Omitted from the response when not supplied.",
+    )
 
 
 class GenerateAudioInput(BaseModel):
@@ -170,6 +188,15 @@ class GenerateAudioInput(BaseModel):
         default=None,
         description="Model-specific parameters passed directly to API. Merged last, so it "
         "overrides typed fields.",
+    )
+    request_id: Optional[str] = Field(
+        default=None,
+        description="Optional caller-supplied correlation id, echoed back verbatim on "
+        "the immediate response and on the eventual artifact/error returned by a later "
+        "task_status/task_wait call. Use it to link an async result (whose tool_call id "
+        "differs from this request's) back to this request. Unlike task_id it is known "
+        "at call time and also works for synchronous models (which have no task_id). "
+        "Omitted from the response when not supplied.",
     )
 
 
@@ -346,6 +373,26 @@ def annotate_artifact(result: Any) -> Any:
         if isinstance(nested, dict) and nested.get("urls"):
             result["artifact"] = True
             result["status"] = _ARTIFACT_DONE_STATUS
+    return result
+
+
+# ── Request-id correlation echo (service-layer data contract) ────────────────
+
+def stamp_request_id(result: Any, request_id: str | None) -> Any:
+    """Echo the caller-supplied ``request_id`` onto a result dict (in place), if set.
+
+    ``request_id`` is an optional caller-chosen correlation handle threaded from a
+    ``generate_*`` call through to its eventual artifact / error. It lets the caller
+    join a result back to the originating request across the async
+    ``generate → task_wait/task_status`` hop (where the tool_call ids differ) and for
+    synchronous models that have no ``task_id``. Stamped by the **service layer** — not
+    the MCP wrapper — so all three call modes (MCP, agent dispatcher, CLI) echo it.
+    Omitted when falsy so callers that don't supply one see unchanged result shapes;
+    ``setdefault`` never clobbers a value already present. Non-dict results (e.g. a
+    ``CallToolResult``) pass through untouched.
+    """
+    if request_id and isinstance(result, dict):
+        result.setdefault("request_id", request_id)
     return result
 
 

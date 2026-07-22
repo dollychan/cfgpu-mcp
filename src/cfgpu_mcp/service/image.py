@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.tool_registry import GenerateImageInput
+from cfgpu_mcp.tool_registry import GenerateImageInput, stamp_request_id
 
 
 async def generate_image(
@@ -19,6 +19,7 @@ async def generate_image(
     timeout: int | None = None,
     return_metadata: bool = True,
     model_specific: dict | None = None,
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import get_client, get_task_repository, get_registry
     from cfgpu_mcp.router import ModelRouter
@@ -37,6 +38,7 @@ async def generate_image(
         timeout=timeout,
         return_metadata=return_metadata,
         model_specific=model_specific,
+        request_id=request_id,
     )
 
     registry = get_registry()
@@ -51,27 +53,29 @@ async def generate_image(
         task = await tm.create(adapter, req)
     except CFGPUError as e:
         e.model_id = adapter.cfgpu_model_id
+        e.request_id = request_id
         raise
 
     if not wait:
-        return {"task_id": task.id, "status": task.status}
+        return stamp_request_id({"task_id": task.id, "status": task.status}, request_id)
 
     try:
         task = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
         e.model_id = adapter.cfgpu_model_id
+        e.request_id = request_id
         raise
 
     if task.result is None:
-        return {"task_id": task.id, "status": task.status}
+        return stamp_request_id({"task_id": task.id, "status": task.status}, request_id)
 
     result = task.result
     # The real per-model API request is always surfaced, regardless of return_metadata.
     payload = task.public_payload()
     if not return_metadata:
-        return {
+        return stamp_request_id({
             "urls": result.get("urls", []),
             "expires_at": result.get("expires_at"),
             "payload": payload,
-        }
-    return {**result, "payload": payload}
+        }, request_id)
+    return stamp_request_id({**result, "payload": payload}, request_id)

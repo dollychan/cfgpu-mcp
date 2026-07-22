@@ -65,6 +65,7 @@ class CFGPUError(Exception):
         original: dict | None = None,
         retryable: bool | None = None,
         model_id: str | None = None,
+        request_id: str | None = None,
     ) -> None:
         super().__init__(user_message)
         self.error_type: ErrorType = error_type
@@ -74,6 +75,9 @@ class CFGPUError(Exception):
         # Agent-facing model identifier (the global-unique cfgpu_model_id, exposed
         # as ``model_id``). Never the internal adapter_id — see get_model_card hint.
         self.model_id: str | None = model_id
+        # Caller-supplied correlation handle (see tool_registry.stamp_request_id),
+        # echoed on the error result so a failure can be joined back to the request.
+        self.request_id: str | None = request_id
 
     def __repr__(self) -> str:
         return f"CFGPUError(type={self.error_type!r}, retryable={self.retryable}, msg={self.user_message!r})"
@@ -139,6 +143,10 @@ class CFGPUError(Exception):
         task_id = self.original.get("task_id")
         if task_id:
             result["task_id"] = task_id
+        # Echo the caller's correlation handle so a failed generate/task can be joined
+        # back to the originating request (works even for sync models with no task_id).
+        if self.request_id:
+            result["request_id"] = self.request_id
         return result
 
     @staticmethod

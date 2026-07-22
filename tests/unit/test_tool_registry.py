@@ -168,6 +168,37 @@ def test_annotate_artifact_passes_through_non_dict():
     assert annotate_artifact(None) is None
 
 
+# ── stamp_request_id ─────────────────────────────────────────────────────────
+
+def test_stamp_request_id_adds_when_set():
+    from cfgpu_mcp.tool_registry import stamp_request_id
+    assert stamp_request_id({"urls": ["x"]}, "r-1") == {"urls": ["x"], "request_id": "r-1"}
+
+
+def test_stamp_request_id_omitted_when_none():
+    from cfgpu_mcp.tool_registry import stamp_request_id
+    out = stamp_request_id({"urls": ["x"]}, None)
+    assert "request_id" not in out
+
+
+def test_stamp_request_id_does_not_clobber_existing():
+    from cfgpu_mcp.tool_registry import stamp_request_id
+    out = stamp_request_id({"request_id": "kept"}, "other")
+    assert out["request_id"] == "kept"
+
+
+def test_stamp_request_id_passes_through_non_dict():
+    from cfgpu_mcp.tool_registry import stamp_request_id
+    assert stamp_request_id("not a dict", "r-1") == "not a dict"
+
+
+def test_generate_image_schema_exposes_request_id():
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+    props = GenerateImageInput.model_json_schema()["properties"]
+    assert "request_id" in props
+    assert GenerateImageInput(prompt="x").request_id is None
+
+
 # ── split_structured / reshape_vision_result ─────────────────────────────────
 
 import json

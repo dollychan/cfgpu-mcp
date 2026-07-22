@@ -679,6 +679,8 @@ done
 
 > **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`generate_audio`、`task_status`、`task_wait` 这五个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。这些工具成功时都返回同一套扁平结构（顶层 `urls`），无 URL 的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。
 
+> **`request_id`（调用方关联标识，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `request_id` 入参，服务端会将其**原样回显**在本次即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact / error 上（有值才出现，不传则响应结构完全不变）。用途——异步流程里 generate 与稍后返回 artifact 的 `task_status` / `task_wait` 分属**不同的 tool_call**，而 `task_id` 要等 POST 返回才有、同步模型更是没有 `task_id`；`request_id` 由调用方在**发起时**自选，从而在整条链路上提供一个稳定、可直接对应的关联键，用来把异步结果 / 失败 join 回原始请求。它只作关联用途，绝不进入上游 API 请求体（`payload` 中不出现）。此回显在 service 层完成，故 MCP、Agent dispatcher、CLI 三种模式一致生效。仅可能异步的 `generate_*` 支持；`understand_vision` 恒同步、单次返回，无关联缺口，故不设此参数。
+
 ### 等待完成（`wait=True`）
 
 ```json
@@ -711,6 +713,16 @@ done
 {
   "task_id": "task-abc123",
   "status": "pending"
+}
+```
+
+传入 `request_id` 时，即时响应与之后的 `task_status` / `task_wait` 结果都会带上它，供跨 tool_call 关联：
+
+```json
+{
+  "task_id": "task-abc123",
+  "status": "pending",
+  "request_id": "gen-用户自选-01"
 }
 ```
 

@@ -31,6 +31,30 @@ ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
 # extra key is inert.
 _ASPECT_RATIO_KEY = "_requested_aspect_ratio"
 
+# Reserved stored-payload key holding the caller-supplied ``request_id`` correlation
+# handle (see tool_registry.stamp_request_id). Stashed here — alongside
+# _ASPECT_RATIO_KEY — so task_status/task_wait can recover and echo it from the DB row
+# without a schema/column change. Like the aspect-ratio echo it is internal-only:
+# create() POSTs the clean build_payload() output and only augments the stored copy,
+# and public_payload() strips it, so it never reaches the upstream API.
+_REQUEST_ID_KEY = "_request_id"
+
+
+def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
+    """Return a copy of ``payload`` augmented with the reserved internal keys.
+
+    Adds the caller's ``request_id`` (when supplied) so task_status/task_wait can echo
+    it, and — for async tasks (``aspect_ratio=True``) — the requested aspect_ratio echo
+    that poll() falls back to. Returns ``payload`` unchanged when nothing needs stashing.
+    """
+    extra: dict[str, Any] = {}
+    if aspect_ratio:
+        extra[_ASPECT_RATIO_KEY] = getattr(req, "aspect_ratio", None)
+    request_id = getattr(req, "request_id", None)
+    if request_id:
+        extra[_REQUEST_ID_KEY] = request_id
+    return {**payload, **extra} if extra else payload
+
 # Internal (already normalized via _STATUS_MAP) terminal statuses. Raw API
 # values like "completed" never reach here — they map to "succeeded" first.
 _TERMINAL_STATUSES = {"succeeded", "failed"}
@@ -123,11 +147,14 @@ class Task:
 
         ``payload`` is exactly what ``build_payload`` produced and POSTed to the
         model's specific CFGPU endpoint — i.e. the real per-model API request, not
-        the unified tool schema. The reserved ``_requested_aspect_ratio`` key (see
-        ``_ASPECT_RATIO_KEY``) is an internal echo we stash for async re-polling and
-        is never part of the real request, so it is stripped here.
+        the unified tool schema. The reserved internal keys (``_requested_aspect_ratio``
+        for async re-polling, ``_request_id`` for the caller's correlation echo) are
+        never part of the real request, so they are stripped here.
         """
-        return {k: v for k, v in self.payload.items() if k != _ASPECT_RATIO_KEY}
+        return {
+            k: v for k, v in self.payload.items()
+            if k not in (_ASPECT_RATIO_KEY, _REQUEST_ID_KEY)
+        }
 
 
 class TaskManager:
@@ -154,10 +181,11 @@ class TaskManager:
             if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
                 result.aspect_ratio = getattr(req, "aspect_ratio", None)  # audio reqs have none
             result_dict = result.to_dict(return_metadata=True)
-            await self._repo.insert_task(task_id, adapter.adapter_id, "succeeded", payload)
+            stored_payload = _stash_internal(payload, req, aspect_ratio=False)
+            await self._repo.insert_task(task_id, adapter.adapter_id, "succeeded", stored_payload)
             await self._repo.update_task(task_id, "succeeded", result=result_dict)
             # Every field is known here — build the Task in memory instead of re-reading.
-            return Task(_now_row(task_id, adapter.adapter_id, "succeeded", payload, result=result_dict))
+            return Task(_now_row(task_id, adapter.adapter_id, "succeeded", stored_payload, result=result_dict))
 
         # Async model: POST → get task_id from CFGPU → write pending
         resp = await self._client.post(adapter.endpoint, payload)
@@ -173,7 +201,7 @@ class TaskManager:
                 ),
                 original={"adapter_id": adapter.adapter_id, "response": resp},
             )
-        stored_payload = {**payload, _ASPECT_RATIO_KEY: getattr(req, "aspect_ratio", None)}
+        stored_payload = _stash_internal(payload, req, aspect_ratio=True)
         await self._repo.insert_task(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload)
         return Task(_now_row(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload))
 
