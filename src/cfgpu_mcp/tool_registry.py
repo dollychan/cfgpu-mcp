@@ -197,11 +197,14 @@ class UnderstandVisionInput(BaseModel):
     images: Optional[list[str]] = Field(
         default=None,
         description="Public image URLs to analyze (image understanding / reasoning). "
-        "Multiple images are compared/reasoned over jointly.",
+        "Multiple images are compared/reasoned over jointly. Images ONLY — a video "
+        "must NOT go here; route it through the `video` parameter. A video URL placed "
+        "in `images` is misclassified as a still frame.",
     )
     video: Optional[str] = Field(
         default=None,
         description="A single public video URL to understand (long video supported). "
+        "Use this for ANY video input — never put a video into `images`. "
         "Can be combined with images and text in one request.",
     )
     system_prompt: Optional[str] = Field(
