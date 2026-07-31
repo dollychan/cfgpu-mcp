@@ -1,4 +1,4 @@
-# WAN 2.0 Fast (Seedance 2.0 fast)
+# WAN 2.0 Fast 
 
 ## 基本信息
 

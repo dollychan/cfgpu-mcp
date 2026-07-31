@@ -2,7 +2,7 @@
 extends: wan-2-0
 
 adapter_id: wan-2-0-fast
-display_name: "WAN 2.0 Fast (Seedance 2.0 fast)"
+display_name: "WAN 2.0 Fast "
 cfgpu_model_id: wan-video-fast
 model_name: wan-video-fast
 
