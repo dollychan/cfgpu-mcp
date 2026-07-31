@@ -1,6 +1,8 @@
 adapter_id: seed-tts-2-0
 display_name: "豆包语音合成 2.0 (Seed-TTS 2.0)"
 cfgpu_model_id: seed-tts-2.0
+model_name: seed-tts-2.0
+
 task_type: audio
 endpoint: /voice/generations
 is_async: true

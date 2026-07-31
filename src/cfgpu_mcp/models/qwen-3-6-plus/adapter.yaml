@@ -1,6 +1,8 @@
 adapter_id: qwen-3-6-plus
 display_name: "Qwen3.6-Plus"
 cfgpu_model_id: qwen3.6-plus
+model_name: qwen3.6-plus
+
 task_type: understand
 endpoint: /model/v1/chat/completions
 is_async: false

@@ -5,7 +5,7 @@
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | video |
-| CFGPU 模型 ID | `doubao-seedance-1-5-pro-251215` |
+| 模型 ID | `doubao-seedance-1-5-pro` |
 | 能力标签 | text_to_video, image_to_video, first_last_frame, audio_generate, sample_mode |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |

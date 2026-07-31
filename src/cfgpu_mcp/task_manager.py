@@ -176,8 +176,10 @@ class TaskManager:
             # Synchronous model: POST → parse response immediately
             resp = await self._client.post(adapter.endpoint, payload)
             result: NormalizedResult = adapter.parse_response(resp)
-            if not result.model_used:
-                result.model_used = adapter.cfgpu_model_id
+            # Always stamp the public model_name — adapters may set model_used from the
+            # upstream response's echoed "model" field, which is the internal
+            # cfgpu_model_id and must never reach the caller.
+            result.model_used = adapter.model_name
             if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
                 result.aspect_ratio = getattr(req, "aspect_ratio", None)  # audio reqs have none
             result_dict = result.to_dict(return_metadata=True)
@@ -220,17 +222,20 @@ class TaskManager:
 
         if status == "succeeded":
             result: NormalizedResult = adapter.parse_response(resp)
-            if not result.model_used:
-                result.model_used = adapter.cfgpu_model_id
+            # Always stamp the public model_name — see the same override in create().
+            result.model_used = adapter.model_name
             if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
                 result.aspect_ratio = task.payload.get(_ASPECT_RATIO_KEY)
             result_dict = result.to_dict(return_metadata=True)
-            if not result_dict.get("urls"):
-                # Upstream reports success but yields no artifact URL — treat as a
+            if not (result_dict.get("urls") or result_dict.get("inline_media")):
+                # Upstream reports success but yields no artifact at all — treat as a
                 # terminal failure so it converges instead of re-polling forever.
+                # Both artifact shapes count: some providers return media inline
+                # (base64 blob, no URL) instead of a downloadable link, so keep this
+                # check in step with annotate_artifact()'s urls-or-inline_media test.
                 status = "failed"
                 result_dict = None
-                error_msg = "Task reported success but returned no artifact URLs"
+                error_msg = "Task reported success but returned no artifact URLs or inline media"
         elif status == "failed":
             error_msg = _extract_error_message(resp) or (
                 "Task failed (upstream reported no error detail)"

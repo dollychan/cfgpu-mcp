@@ -52,7 +52,7 @@ async def generate_image(
     try:
         task = await tm.create(adapter, req)
     except CFGPUError as e:
-        e.model_id = adapter.cfgpu_model_id
+        e.model_id = adapter.model_name
         e.request_id = request_id
         raise
 
@@ -62,7 +62,7 @@ async def generate_image(
     try:
         task = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
-        e.model_id = adapter.cfgpu_model_id
+        e.model_id = adapter.model_name
         e.request_id = request_id
         raise
 

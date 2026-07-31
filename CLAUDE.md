@@ -61,15 +61,18 @@ The server has three deployment modes sharing the same service layer:
 - **Mode B**: Agent direct (Anthropic SDK calls `agent/dispatcher.py` → same `service/`)
 - **Mode C** (future): CLI wrapping `service/` directly
 
-### Three model identifiers — keep them distinct
+### Four model identifiers — keep them distinct
 
-Every model has three identifiers that must not be mixed up:
+Every model has four identifiers that must not be mixed up:
 
 | Name | Example | Used where |
 |---|---|---|
-| `adapter_id` | `wan-2-0-fast` | Directory name, registry keys, user-facing everywhere |
+| `adapter_id` | `wan-2-0-fast` | Directory name, registry keys — internal only, never exposed |
 | `display_name` | `WAN 2.0 Fast` | `list_models()` output only |
-| `cfgpu_model_id` | `wan-video-fast` | **Only** inside `build_payload()` |
+| `cfgpu_model_id` | `wan-video-fast` | **Only** inside `build_payload()` — internal only, never exposed |
+| `model_name` | `wan-video-fast` | The **only** public identifier: the `model` tool param/enum, `list_models()`'s `model_id`, `NormalizedResult.model_used`, and `CFGPUError.model_id` all use it |
+
+`AdapterRegistry.get()` resolves a key against `model_name` first, then falls back to `adapter_id` / `cfgpu_model_id` / `display_name`, so existing callers using the internal ids keep working — but nothing produced by the server (schemas, `list_models`, `model_used`, error `model_id`) ever emits `adapter_id` or `cfgpu_model_id`. `TaskManager` unconditionally stamps `result.model_used = adapter.model_name` after `parse_response()` — adapters often set `model_used` from the upstream response's echoed `"model"` field, which is actually `cfgpu_model_id`, so the override is not a fallback, it always runs.
 
 ### Model configs (`src/cfgpu_mcp/models/`)
 

@@ -40,11 +40,11 @@ def _raise_if_failed(task: Any) -> None:
     """
     if task.status == "failed":
         from cfgpu_mcp.config import get_registry
-        # Expose the agent-facing model_id (cfgpu_model_id), not the internal
+        # Expose the agent-facing model_id (model_name), not the internal
         # adapter_id stored on the task row.
         model_id: str | None = None
         try:
-            model_id = get_registry().get(task.adapter_id).cfgpu_model_id
+            model_id = get_registry().get(task.adapter_id).model_name
         except KeyError:
             pass
         raise CFGPUError(
@@ -148,7 +148,7 @@ async def wait_for_task(
     try:
         task = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
-        e.model_id = adapter.cfgpu_model_id
+        e.model_id = adapter.model_name
         e.request_id = task.payload.get(_REQUEST_ID_KEY)
         raise
     return _present(task)

@@ -46,7 +46,7 @@ async def understand_vision(
     try:
         task = await tm.create(adapter, req)
     except CFGPUError as e:
-        e.model_id = adapter.cfgpu_model_id
+        e.model_id = adapter.model_name
         raise
 
     result = task.result or {}

@@ -56,7 +56,7 @@ async def list_models(task_type: str | None = None) -> list[dict[str, Any]]:
     adapters = registry.list_all(task_type=task_type)
     return [
         {
-            "model_id":       a.cfgpu_model_id,
+            "model_id":       a.model_name,
             "display_name":   a.display_name,
             "task_type":      a.task_type,
             "capabilities":   sorted(a.capabilities),

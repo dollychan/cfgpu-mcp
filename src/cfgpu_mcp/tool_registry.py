@@ -17,9 +17,9 @@ class GenerateImageInput(BaseModel):
     prompt: str = Field(description="Text description of the image to generate")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'doubao-seedream-5-0-260128'), "
+        description="A single model_id from list_models (e.g. 'doubao-seedream-5-0-lite'), "
         "a list of model_ids to restrict automatic selection to those candidates "
-        "(e.g. ['doubao-seedream-5-0-260128', 'nano-pro']), or 'auto' to choose from all models",
+        "(e.g. ['doubao-seedream-5-0-lite', 'cf-pro']), or 'auto' to choose from all models",
     )
     aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
     resolution: Literal["1K", "2K", "3K", "4K"] = Field(default="2K")
@@ -295,7 +295,7 @@ class NormalizedResult:
     urls: list[str]
     expires_at: datetime | None        # URL 过期时间，通常 24h 后
     task_id: str | None                # 同步模型为 None
-    model_used: str | None             # 实际 cfgpu_model_id
+    model_used: str | None             # 实际使用的 model_name（对外公开标识）
     seed: int | None                   # 部分模型返回
     usage: dict[str, Any] | None       # 原始 API 返回的 usage 对象（计费结构因 API 而异）
     aspect_ratio: str | None = None    # 回传请求的 aspect_ratio（由 TaskManager 填充）
@@ -509,13 +509,14 @@ def apply_model_enum(schema: dict, tool_name: str) -> dict:
 
     Shared by every LLM-facing schema exposure — MCP/FastMCP (Mode A) and the Anthropic /
     OpenAI / LangGraph builders (Mode B) — so no client can hallucinate a non-existent
-    model_id (e.g. ``qwen-3-vl-plus``). Only the public ``cfgpu_model_id`` is advertised;
-    the internal ``adapter_id`` is never exposed, though ``registry.get()`` still resolves
-    either, so existing callers keep working. The model list is registry-driven, hence the
-    enum can only be stamped at schema-build time, not declared statically on the Pydantic
-    model. Best-effort: a registry load failure leaves the schema unconstrained (validation
-    + the understand-vision auto-fallback remain the backstops). Returns ``schema`` for
-    chaining. Non-model tools (task_status, list_models, ...) are a no-op.
+    model_id (e.g. ``qwen-3-vl-plus``). Only the public ``model_name`` is advertised; the
+    internal ``adapter_id`` / ``cfgpu_model_id`` are never exposed, though ``registry.get()``
+    still resolves any of them, so existing callers keep working. The model list is
+    registry-driven, hence the enum can only be stamped at schema-build time, not declared
+    statically on the Pydantic model. Best-effort: a registry load failure leaves the schema
+    unconstrained (validation + the understand-vision auto-fallback remain the backstops).
+    Returns ``schema`` for chaining. Non-model tools (task_status, list_models, ...) are a
+    no-op.
     """
     task_type = _TOOL_TASK_TYPE.get(tool_name)
     if task_type is None:
@@ -526,7 +527,7 @@ def apply_model_enum(schema: dict, tool_name: str) -> dict:
     try:
         from cfgpu_mcp.config import get_registry
 
-        model_ids = sorted({a.cfgpu_model_id for a in get_registry().list_all(task_type=task_type)})
+        model_ids = sorted({a.model_name for a in get_registry().list_all(task_type=task_type)})
     except Exception:  # pragma: no cover - defensive: never block schema build on config
         return schema
     if model_ids:

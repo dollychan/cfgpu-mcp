@@ -1,6 +1,8 @@
 adapter_id: minimax-speech-2-8-hd
 display_name: "MiniMax 语音 2.8 HD"
 cfgpu_model_id: MiniMax/speech-2.8-hd
+model_name: MiniMax/speech-2.8-hd
+
 task_type: audio
 endpoint: /voice/generations
 is_async: false

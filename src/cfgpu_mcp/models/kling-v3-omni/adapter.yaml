@@ -4,6 +4,7 @@ card_base: ~
 adapter_id: kling-v3-omni
 display_name: "Kling V3 Omni (可灵 V3 全能版)"
 cfgpu_model_id: kling-v3-omni
+model_name: kling-v3-omni
 
 capabilities:
   - text_to_video

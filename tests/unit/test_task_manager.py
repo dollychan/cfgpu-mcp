@@ -22,6 +22,7 @@ def _sync_adapter():
     adapter = MagicMock()
     adapter.adapter_id = "doubao-seedream-5-0-lite"
     adapter.cfgpu_model_id = "doubao-seedream-5-0-lite-api"
+    adapter.model_name = "doubao-seedream-5-0-lite"
     adapter.is_async = False
     adapter.endpoint = "/v1/images/generations"
     adapter.build_payload.return_value = {"model": "test", "prompt": "x"}
@@ -42,6 +43,7 @@ def _async_adapter(task_id: str = "cfgpu-task-1"):
     adapter = MagicMock()
     adapter.adapter_id = "wan-2-0"
     adapter.cfgpu_model_id = "wan-video"
+    adapter.model_name = "wan-video"
     adapter.is_async = True
     adapter.endpoint = "/v1/video/tasks"
     adapter.poll_endpoint = "/v1/video/tasks/{task_id}"
@@ -68,10 +70,10 @@ async def test_sync_model_create_returns_succeeded():
 
 
 @pytest.mark.asyncio
-async def test_sync_create_falls_back_to_cfgpu_model_id():
-    """When the API response omits `model`, model_used falls back to the
-    adapter's cfgpu_model_id — critical for model='auto' where the caller has
-    no other way to learn which model ran."""
+async def test_sync_create_stamps_model_name():
+    """model_used always mirrors the adapter's public model_name, regardless of
+    what (if anything) the upstream response echoes back in "model" — that field
+    is the internal cfgpu_model_id and must never reach the caller."""
     from cfgpu_mcp.tool_registry import NormalizedResult
     from datetime import datetime, UTC, timedelta
     tm, db = await _make_tm()
@@ -80,23 +82,24 @@ async def test_sync_create_falls_back_to_cfgpu_model_id():
         urls=["https://cdn/img.jpg"],
         expires_at=datetime.now(UTC) + timedelta(hours=24),
         task_id=None,
-        model_used=None,  # API didn't echo back "model"
+        model_used="doubao-seedream-5-0-lite-api",  # upstream echo of cfgpu_model_id
         seed=None,
         usage={"total_tokens": 10},
     )
     tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x")
     task = await tm.create(adapter, req)
-    assert task.result["model_used"] == "doubao-seedream-5-0-lite-api"
+    assert task.result["model_used"] == "doubao-seedream-5-0-lite"
     await db.close()
 
 
 @pytest.mark.asyncio
-async def test_poll_falls_back_to_cfgpu_model_id():
+async def test_poll_stamps_model_name():
     from cfgpu_mcp.tool_registry import NormalizedResult
     from datetime import datetime, UTC, timedelta
     tm, db = await _make_tm()
     adapter = _async_adapter()
+    adapter.model_name = "cf-wan-video"  # distinct from cfgpu_model_id, to prove the override
     tm._client.post = AsyncMock(return_value={"id": "task-abc"})
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
@@ -105,7 +108,7 @@ async def test_poll_falls_back_to_cfgpu_model_id():
         urls=["https://cdn/v.mp4"],
         expires_at=datetime.now(UTC) + timedelta(hours=24),
         task_id="task-abc",
-        model_used=None,  # poll response carries no "model" field
+        model_used="wan-video",  # upstream echo of cfgpu_model_id
         seed=None,
         usage=None,
     )
@@ -114,7 +117,7 @@ async def test_poll_falls_back_to_cfgpu_model_id():
         "content": {"videoUrl": "https://cdn/v.mp4"},
     })
     task = await tm.poll(task, adapter)
-    assert task.result["model_used"] == "wan-video"
+    assert task.result["model_used"] == "cf-wan-video"
     await db.close()
 
 
@@ -268,6 +271,33 @@ async def test_poll_success_without_urls_converges_to_failed():
     assert task.status == "failed"
     assert task.result is None
     assert task.error
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_success_with_inline_media_only_stays_succeeded():
+    """Inline media (base64 blob, no downloadable URL) is a real artifact: the
+    urls-less guard must not force such a task to 'failed'. Keeps poll() in step
+    with annotate_artifact(), which counts urls OR inline_media as an artifact."""
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    req = GenerateVideoInput(prompt="x")
+    task = await tm.create(adapter, req)
+
+    from cfgpu_mcp.tool_registry import NormalizedResult
+    from datetime import datetime, UTC, timedelta
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=[],  # no URL — the artifact came back inline instead
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        task_id="task-abc", model_used="wan-video", seed=None, usage=None,
+        inline_media=[{"data": "AAA=", "mime_type": "audio/mpeg"}],
+    )
+    tm._client.get = AsyncMock(return_value={"id": "task-abc", "status": "completed"})
+    task = await tm.poll(task, adapter)
+    assert task.status == "succeeded"
+    assert task.result["inline_media"] == [{"data": "AAA=", "mime_type": "audio/mpeg"}]
+    assert task.error is None
     await db.close()
 
 

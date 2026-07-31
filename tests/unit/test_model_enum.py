@@ -1,8 +1,9 @@
 """The ``model`` parameter of every generation / understand tool must advertise a
 JSON-schema ``enum`` of the registry's real model ids — so no LLM client can emit a
 hallucinated model_id (the reported ``qwen-3-vl-plus`` failure). Only the public
-``cfgpu_model_id`` is exposed; the internal ``adapter_id`` must never leak. This must
-hold identically across Mode A (MCP/FastMCP) and Mode B (Anthropic / OpenAI / LangGraph).
+``model_name`` is exposed; the internal ``adapter_id`` / ``cfgpu_model_id`` must never
+leak. This must hold identically across Mode A (MCP/FastMCP) and Mode B (Anthropic /
+OpenAI / LangGraph).
 """
 
 from __future__ import annotations
@@ -31,13 +32,17 @@ def _array_enum(model_prop: dict) -> list[str]:
 
 def _expected_ids(tool_name: str) -> list[str]:
     task_type = _TOOL_TASK_TYPE[tool_name]
-    return sorted({a.cfgpu_model_id for a in get_registry().list_all(task_type=task_type)})
+    return sorted({a.model_name for a in get_registry().list_all(task_type=task_type)})
 
 
-def _adapter_only_ids(tool_name: str) -> set[str]:
+def _internal_only_ids(tool_name: str) -> set[str]:
+    """adapter_id / cfgpu_model_id values that differ from the adapter's public model_name."""
     task_type = _TOOL_TASK_TYPE[tool_name]
     adapters = get_registry().list_all(task_type=task_type)
-    return {a.adapter_id for a in adapters} - {a.cfgpu_model_id for a in adapters}
+    model_names = {a.model_name for a in adapters}
+    return (
+        {a.adapter_id for a in adapters} | {a.cfgpu_model_id for a in adapters}
+    ) - model_names
 
 
 # ── shared helper ────────────────────────────────────────────────────────────
@@ -100,7 +105,7 @@ def _all_path_enums(tool_name: str) -> dict[str, list[str]]:
 
 
 @pytest.mark.parametrize("tool_name", MODEL_TOOLS)
-def test_all_paths_expose_same_cfgpu_model_ids(tool_name):
+def test_all_paths_expose_same_model_names(tool_name):
     pytest.importorskip("langchain_core")
     expected = ["auto", *_expected_ids(tool_name)]
     enums = _all_path_enums(tool_name)
@@ -109,13 +114,13 @@ def test_all_paths_expose_same_cfgpu_model_ids(tool_name):
 
 
 @pytest.mark.parametrize("tool_name", MODEL_TOOLS)
-def test_no_path_leaks_adapter_id(tool_name):
+def test_no_path_leaks_internal_ids(tool_name):
     pytest.importorskip("langchain_core")
-    adapter_only = _adapter_only_ids(tool_name)
-    if not adapter_only:
-        pytest.skip("no adapter_id distinct from cfgpu_model_id for this task type")
+    internal_only = _internal_only_ids(tool_name)
+    if not internal_only:
+        pytest.skip("no adapter_id/cfgpu_model_id distinct from model_name for this task type")
     for path, enum in _all_path_enums(tool_name).items():
-        assert not (set(enum) & adapter_only), f"{path} leaked adapter_id for {tool_name}"
+        assert not (set(enum) & internal_only), f"{path} leaked an internal id for {tool_name}"
 
 
 def test_hallucinated_understand_model_excluded_everywhere():

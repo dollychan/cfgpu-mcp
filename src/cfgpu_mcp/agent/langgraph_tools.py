@@ -61,7 +61,7 @@ def get_langgraph_tools(
         if task_types is not None and tool_type and tool_type not in task_types:
             continue
         # Model-bearing tools pass a stamped JSON-schema dict so the dynamic
-        # cfgpu_model_id enum reaches the bound LLM (a Pydantic class cannot carry the
+        # model_name enum reaches the bound LLM (a Pydantic class cannot carry the
         # registry-driven enum). The service layer re-validates against the Pydantic
         # model, so dropping LangChain-level class validation here is safe. Non-model
         # tools keep the Pydantic class unchanged.

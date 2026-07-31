@@ -1,6 +1,8 @@
 adapter_id: wan-2-6-t2v
 display_name: "万相 2.6 (文生视频)"
 cfgpu_model_id: wan2.6-t2v
+model_name: wan2.6-t2v
+
 task_type: video
 endpoint: /video/generations
 is_async: true

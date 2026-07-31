@@ -40,7 +40,7 @@ def generate() -> None:
 @generate.command("image")
 @click.argument("prompt")
 @click.option("--model", "-m", default="auto", show_default=True,
-              help="adapter_id, cfgpu_model_id, or 'auto'")
+              help="model_name (see `cfgpu models list`), or 'auto'")
 @click.option("--aspect-ratio", "-a",
               type=click.Choice(["1:1", "16:9", "9:16", "4:3", "3:4"]),
               default="1:1", show_default=True)
@@ -104,7 +104,7 @@ def image_cmd(
 @generate.command("video")
 @click.argument("prompt")
 @click.option("--model", "-m", default="auto", show_default=True,
-              help="adapter_id, cfgpu_model_id, or 'auto'")
+              help="model_name (see `cfgpu models list`), or 'auto'")
 @click.option("--first-frame", default=None, metavar="URL",
               help="First frame image URL")
 @click.option("--last-frame", default=None, metavar="URL",
@@ -184,7 +184,7 @@ def video_cmd(
 @generate.command("audio")
 @click.argument("text")
 @click.option("--model", "-m", default="auto", show_default=True,
-              help="adapter_id, cfgpu_model_id, or 'auto'")
+              help="model_name (see `cfgpu models list`), or 'auto'")
 @click.option("--voice", default=None, metavar="VOICE_ID",
               help="Voice/speaker id (default: model's own default)")
 @click.option("--format", "audio_format",

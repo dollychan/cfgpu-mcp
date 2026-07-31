@@ -1,6 +1,8 @@
 adapter_id: wan-2-7-videoedit
 display_name: "万相 2.7 (视频编辑)"
 cfgpu_model_id: wan2.7-videoedit
+model_name: wan2.7-videoedit
+
 task_type: video
 endpoint: /video/generations
 is_async: true

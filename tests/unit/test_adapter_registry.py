@@ -39,9 +39,15 @@ def test_lookup_by_cfgpu_model_id():
     assert adapter.adapter_id == "wan-2-0"
 
 
+def test_lookup_by_model_name():
+    registry = _load()
+    adapter = registry.get("cf-image-2")
+    assert adapter.adapter_id == "gpt-image-2"
+
+
 def test_lookup_by_display_name():
     registry = _load()
-    adapter = registry.get("WAN 2.0 (Seedance 2.0)")
+    adapter = registry.get("WAN 2.0")
     assert adapter.adapter_id == "wan-2-0"
 
 

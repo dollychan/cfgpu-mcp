@@ -43,7 +43,7 @@ def list_cmd(task_type: str | None, json_mode: bool) -> None:
 @models.command("card")
 @click.argument("model_name")
 def card_cmd(model_name: str) -> None:
-    """Print the model card for MODEL_NAME (adapter_id or cfgpu_model_id)."""
+    """Print the model card for MODEL_NAME (the public model_id from `cfgpu models list`)."""
     from cfgpu_mcp.service import model as svc
 
     try:

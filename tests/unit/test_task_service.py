@@ -40,7 +40,8 @@ async def _db_with_failed_task(adapter_id: str) -> aiosqlite.Connection:
 def _adapter(is_async: bool):
     adapter = MagicMock()
     adapter.adapter_id = "m"
-    adapter.cfgpu_model_id = "m-model"
+    adapter.cfgpu_model_id = "m-model-api"
+    adapter.model_name = "m-model"
     adapter.is_async = is_async
     adapter.poll_endpoint = "/v1/tasks/{task_id}" if is_async else None
     return adapter

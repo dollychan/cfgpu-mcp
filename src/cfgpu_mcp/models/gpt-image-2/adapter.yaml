@@ -1,6 +1,8 @@
 adapter_id: gpt-image-2
-display_name: "GPT Image 2"
+display_name: "CF Image 2"
 cfgpu_model_id: gpt-image-2
+model_name: cf-image-2
+
 task_type: image
 endpoint: /images/generations
 is_async: true

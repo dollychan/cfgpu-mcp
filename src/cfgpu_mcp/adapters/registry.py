@@ -25,6 +25,7 @@ class AdapterRegistry:
         )
         self._by_adapter_id:     dict[str, ModelAdapter] = {}
         self._by_cfgpu_model_id: dict[str, ModelAdapter] = {}
+        self._by_model_name:     dict[str, ModelAdapter] = {}
         self._by_display_name:   dict[str, ModelAdapter] = {}
 
     # ── Loading ─────────────────────────────────────────────────────────────
@@ -89,24 +90,30 @@ class AdapterRegistry:
         if self.enabled_models is None:
             return True
         return bool(
-            self.enabled_models & {adapter.adapter_id, adapter.cfgpu_model_id}
+            self.enabled_models
+            & {adapter.adapter_id, adapter.cfgpu_model_id, adapter.model_name}
         )
 
     def _register(self, adapter: ModelAdapter) -> None:
         self._by_adapter_id[adapter.adapter_id] = adapter
         self._by_cfgpu_model_id[adapter.cfgpu_model_id] = adapter
+        self._by_model_name[adapter.model_name] = adapter
         self._by_display_name[adapter.display_name] = adapter
 
     # ── Lookup ───────────────────────────────────────────────────────────────
 
     def get(self, key: str) -> ModelAdapter:
+        # model_name is the public identifier callers pass; adapter_id/cfgpu_model_id/
+        # display_name remain resolvable so internal callers and existing integrations
+        # keep working.
         adapter = (
-            self._by_adapter_id.get(key)
+            self._by_model_name.get(key)
+            or self._by_adapter_id.get(key)
             or self._by_cfgpu_model_id.get(key)
             or self._by_display_name.get(key)
         )
         if adapter is None:
-            available = list(self._by_cfgpu_model_id.keys())
+            available = list(self._by_model_name.keys())
             raise KeyError(f"Model {key!r} not found. Available: {available}")
         return adapter
 

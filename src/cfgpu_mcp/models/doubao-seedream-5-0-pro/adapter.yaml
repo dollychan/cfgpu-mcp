@@ -4,6 +4,7 @@ card_base: ~
 adapter_id: doubao-seedream-5-0-pro
 display_name: "Doubao Seedream 5.0 Pro"
 cfgpu_model_id: doubao-seedream-5-0-pro
+model_name: doubao-seedream-5-0-pro
 
 # Pro drops 组图 (multi_image_group) and 联网搜索 (web_search); single image only.
 capabilities:

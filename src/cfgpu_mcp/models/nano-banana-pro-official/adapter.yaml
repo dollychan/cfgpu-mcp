@@ -2,7 +2,8 @@ extends: nano-banana-pro
 card_base: ~
 
 adapter_id: nano-banana-pro-official
-display_name: "Nano Banana Pro绘画模型-official"
+display_name: " Pro-official"
 cfgpu_model_id: nano-pro-official
+model_name: cf-pro-official
 cost_tier: 4
 speed_tier: 3

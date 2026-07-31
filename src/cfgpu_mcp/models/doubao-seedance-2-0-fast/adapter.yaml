@@ -4,6 +4,7 @@ card_base: ~
 adapter_id: doubao-seedance-2-0-fast
 display_name: "Doubao Seedance 2.0 fast"
 cfgpu_model_id: doubao-seedance-2-0-fast-260128
+model_name: doubao-seedance-2-0-fast
 
 cost_tier: 2
 speed_tier: 4

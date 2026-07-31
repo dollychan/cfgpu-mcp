@@ -31,7 +31,7 @@ async def test_lifespan_closes_resources_on_exit(monkeypatch):
     assert closed_on == [body_loop]
 
 
-# ── ② model-enum injection (only cfgpu_model_id is advertised) ───────────────
+# ── ② model-enum injection (only model_name is advertised) ───────────────────
 
 
 def _model_schema(tool_name: str) -> dict:
@@ -41,22 +41,23 @@ def _model_schema(tool_name: str) -> dict:
     raise AssertionError(f"tool {tool_name!r} not found")
 
 
-def test_understand_model_enum_lists_only_cfgpu_model_ids():
+def test_understand_model_enum_lists_only_model_names():
     from cfgpu_mcp.config import get_registry
 
     prop = _model_schema("understand_vision")
     string_branch = next(b for b in prop["anyOf"] if b.get("type") == "string")
     array_branch = next(b for b in prop["anyOf"] if b.get("type") == "array")
 
-    expected_ids = sorted({a.cfgpu_model_id for a in get_registry().list_all(task_type="understand")})
+    expected_ids = sorted({a.model_name for a in get_registry().list_all(task_type="understand")})
     assert string_branch["enum"] == ["auto", *expected_ids]
     # "auto" is not a valid element inside the candidate-list form.
     assert array_branch["items"]["enum"] == expected_ids
 
 
-def test_model_enum_never_exposes_adapter_id():
-    """Only the canonical cfgpu_model_id is advertised; the internal adapter_id
-    (e.g. 'qwen-3-6-plus' vs cfgpu_model_id 'qwen3.6-plus') must not leak."""
+def test_model_enum_never_exposes_internal_ids():
+    """Only the canonical model_name is advertised; the internal adapter_id /
+    cfgpu_model_id (e.g. 'gpt-image-2' / 'gpt-image-2' vs model_name 'cf-image-2')
+    must not leak."""
     from cfgpu_mcp.config import get_registry
 
     for tool_name, task_type in (
@@ -69,10 +70,12 @@ def test_model_enum_never_exposes_adapter_id():
         string_branch = next(b for b in prop["anyOf"] if b.get("type") == "string")
         advertised = set(string_branch["enum"]) - {"auto"}
         adapters = get_registry().list_all(task_type=task_type)
-        cfgpu_ids = {a.cfgpu_model_id for a in adapters}
-        adapter_only_ids = {a.adapter_id for a in adapters} - cfgpu_ids
-        assert advertised == cfgpu_ids
-        assert advertised.isdisjoint(adapter_only_ids)
+        model_names = {a.model_name for a in adapters}
+        internal_only_ids = (
+            {a.adapter_id for a in adapters} | {a.cfgpu_model_id for a in adapters}
+        ) - model_names
+        assert advertised == model_names
+        assert advertised.isdisjoint(internal_only_ids)
 
 
 def test_hallucinated_model_id_is_rejected_by_enum():

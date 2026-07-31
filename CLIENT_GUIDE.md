@@ -91,7 +91,7 @@ enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
 
 ### 可选：限制加载的模型
 
-在 config.yaml 的 `enabled_models` 白名单里列出要加载的 `adapter_id`（省略 / 留空 = 全量）：
+在 config.yaml 的 `enabled_models` 白名单里列出要加载的 `adapter_id`（或 `model_name` / `cfgpu_model_id`，省略 / 留空 = 全量）：
 
 ```yaml
 enabled_models:
@@ -649,7 +649,7 @@ done
 | `urls` | `list[str]` | ✓ | 生成的资源 URL 列表 |
 | `expires_at` | `str \| null` | ✓ | URL 过期时间（ISO 8601），通常 24 小时后失效 |
 | `task_id` | `str \| null` | | 任务 ID；同步模型为 `null` |
-| `model_used` | `str \| null` | | 实际使用的模型标识符。优先取 API 返回的 `model` 字段；若 API 未回传，则兜底为所选 adapter 的 `cfgpu_model_id`。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
+| `model_used` | `str \| null` | | 实际使用的模型公开标识（`model_name`，与 `list_models()`/`model` 参数同一套 id 空间；从不是内部的 `cfgpu_model_id`）。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
 | `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null` |
@@ -752,7 +752,7 @@ done
 }
 ```
 
-当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加 `get_model_card` 提示，`model_id` 字段也会出现在 dict 中。LLM 可直接用 `model_id` 值调用 `get_model_card` 获取该模型的完整参数说明。（`model_id` 即全局唯一的 `cfgpu_model_id`；对外从不暴露 MCP 内部的 `adapter_id`。）
+当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加 `get_model_card` 提示，`model_id` 字段也会出现在 dict 中。LLM 可直接用 `model_id` 值调用 `get_model_card` 获取该模型的完整参数说明。（`model_id` 即全局唯一的 `model_name`；对外从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`。）
 
 `error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
 

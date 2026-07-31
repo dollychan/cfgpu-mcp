@@ -1,6 +1,8 @@
 adapter_id: wan-2-6-r2v
 display_name: "万相 2.6 (参考生视频)"
 cfgpu_model_id: wan2.6-r2v
+model_name: wan2.6-r2v
+
 task_type: video
 endpoint: /video/generations
 is_async: true

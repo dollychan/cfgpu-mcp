@@ -72,8 +72,9 @@ class CFGPUError(Exception):
         self.user_message = user_message
         self.original: dict = original or {}
         self.retryable: bool = retryable if retryable is not None else error_type in _RETRYABLE
-        # Agent-facing model identifier (the global-unique cfgpu_model_id, exposed
-        # as ``model_id``). Never the internal adapter_id — see get_model_card hint.
+        # Agent-facing model identifier (the public model_name, exposed as
+        # ``model_id``). Never the internal adapter_id / cfgpu_model_id — see
+        # get_model_card hint.
         self.model_id: str | None = model_id
         # Caller-supplied correlation handle (see tool_registry.stamp_request_id),
         # echoed on the error result so a failure can be joined back to the request.

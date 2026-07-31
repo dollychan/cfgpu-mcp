@@ -54,6 +54,7 @@ class ModelAdapter(ABC):
     adapter_id: str
     display_name: str
     cfgpu_model_id: str          # Only used in build_payload()
+    model_name: str              # Public model identifier — the only one ever exposed to callers
     task_type: Literal["image", "video", "audio", "understand"]
     endpoint: str
     is_async: bool
@@ -72,6 +73,8 @@ class ModelAdapter(ABC):
         instance.adapter_id = config["adapter_id"]
         instance.display_name = config.get("display_name", config["adapter_id"])
         instance.cfgpu_model_id = config["cfgpu_model_id"]
+        # Falls back to adapter_id for configs/fixtures predating model_name.
+        instance.model_name = config.get("model_name", config["adapter_id"])
         instance.task_type = config["task_type"]
         instance.endpoint = config["endpoint"]
         instance.is_async = config.get("is_async", True)

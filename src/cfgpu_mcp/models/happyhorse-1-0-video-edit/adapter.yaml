@@ -4,6 +4,7 @@ card_base: ~
 adapter_id: happyhorse-1-0-video-edit
 display_name: "happyhorse-1.0-video-edit"
 cfgpu_model_id: happyhorse-1.0-video-edit
+model_name: happyhorse-1.0-video-edit
 
 capabilities:
   - video_edit

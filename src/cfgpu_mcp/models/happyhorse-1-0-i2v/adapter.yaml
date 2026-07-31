@@ -4,6 +4,7 @@ card_base: ~
 adapter_id: happyhorse-1-0-i2v
 display_name: "happyhorse-1.0-i2v"
 cfgpu_model_id: happyhorse-1.0-i2v
+model_name: happyhorse-1.0-i2v
 
 capabilities:
   - image_to_video

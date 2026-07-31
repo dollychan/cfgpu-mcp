@@ -1,6 +1,7 @@
 adapter_id: kling-video-o1
 display_name: "Kling Video O1 (可灵 O1)"
 cfgpu_model_id: kling-video-o1
+model_name: kling-video-o1
 task_type: video
 endpoint: /video/generations
 is_async: true

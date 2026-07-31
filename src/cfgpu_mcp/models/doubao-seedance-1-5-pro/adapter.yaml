@@ -3,6 +3,7 @@ card_base: ~
 
 adapter_id: doubao-seedance-1-5-pro
 display_name: "Doubao Seedance 1.5 Pro"
+model_name: doubao-seedance-1-5-pro
 cfgpu_model_id: doubao-seedance-1-5-pro-251215
 
 capabilities:

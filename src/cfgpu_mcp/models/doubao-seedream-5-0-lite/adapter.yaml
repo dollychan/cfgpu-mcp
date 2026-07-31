@@ -1,6 +1,7 @@
 adapter_id: doubao-seedream-5-0-lite
 display_name: "Doubao Seedream 5.0 lite"
 cfgpu_model_id: doubao-seedream-5-0-260128
+model_name: doubao-seedream-5-0-lite
 task_type: image
 endpoint: /images/generations
 is_async: false

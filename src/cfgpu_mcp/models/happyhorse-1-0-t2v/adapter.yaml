@@ -1,6 +1,7 @@
 adapter_id: happyhorse-1-0-t2v
 display_name: "happyhorse-1.0-t2v"
 cfgpu_model_id: happyhorse-1.0-t2v
+model_name: happyhorse-1.0-t2v
 task_type: video
 endpoint: /video/generations
 is_async: true

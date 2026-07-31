@@ -85,17 +85,18 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 ## 3. 核心概念
 
-### 3.1 三种模型标识符
+### 3.1 四种模型标识符
 
-每个模型有三个 ID，**绝对不能混用**：
+每个模型有四个 ID，**绝对不能混用**：
 
 | 名称 | 示例 | 用途 |
 |------|------|------|
-| `adapter_id` | `wan-2-0-fast` | 目录名、registry key、用户传入的 `model=` 参数、日志 |
+| `adapter_id` | `wan-2-0-fast` | 目录名、registry key、内部日志；**不对外暴露** |
 | `display_name` | `WAN 2.0 Fast (...)` | `list_models()` 返回值中展示 |
-| `cfgpu_model_id` | `wan-video-fast` | `build_payload()` 里写入 API 请求体；并作为 `list_models()` 返回的 `model_id` 暴露 |
+| `cfgpu_model_id` | `wan-video-fast` | **只在** `build_payload()` 里写入 API 请求体；**不对外暴露** |
+| `model_name` | `wan-video-fast` | 唯一对外公开的模型标识——`model=` 参数、`list_models()` 的 `model_id`、`model_used`、错误里的 `model_id` 一律用它 |
 
-`list_models()` 返回 `model_id`（即 `cfgpu_model_id`）+ `display_name`，**不再回传 `adapter_id`**。新开发者最常见的错误：在 `build_payload()` / `list_models` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传入 API。
+`list_models()` 返回 `model_id`（即 `model_name`）+ `display_name`，**不回传 `adapter_id` 或 `cfgpu_model_id`**。新开发者最常见的错误：在 `build_payload()` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传给调用方/写进对外可见的结果。`registry.get()` 依次按 `model_name` → `adapter_id` → `cfgpu_model_id` → `display_name` 解析，因此旧调用方传 `adapter_id`/`cfgpu_model_id` 仍能命中，但工具 schema 的 `model` 枚举、`list_models`、`model_used`、错误 `model_id` 只会**出现** `model_name` 的取值。
 
 **四种 `task_type`**：`image` / `video` / `audio` 三类都是**媒体生成**（返回 `urls`），而 `understand`（视觉理解 / 图像推理 / 视频理解，如 Qwen3-VL）是**返回文本**的对话类任务——走 OpenAI 兼容的 `/model/v1/chat/completions`，结果落在 `NormalizedResult.message`（assistant 消息 `{role, content[, reasoning_content]}`，回答是 `content`、Thinking 模型的推理过程是 `reasoning_content`）与 `response_id`，`urls` 为空。其工具返回 chat-completion 结构 `{id, model, message, payload[, usage]}`（`usage` 受 `return_metadata` 控制）。路由、`supports()`、`select_model()` 都按 `task_type` 隔离，understand 请求永远不会选中媒体模型，反之亦然。
 
@@ -378,7 +379,7 @@ CFGPUError.from_http_response(status, body)
 
 ### card.md 提示机制
 
-当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.cfgpu_model_id` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加提示：`"请调用 get_model_card 获取模型 {model_id} 的详细参数说明和使用示例。"`, 同时在 dict 中添加 `model_id` 字段，方便 LLM 直接用该值调用 `get_model_card`。**agent 侧只见 `model_id`（全局唯一的 `cfgpu_model_id`），从不暴露 MCP 内部的 `adapter_id`**——`registry.get()` 同时按 `cfgpu_model_id` 解析，故 agent 拿 `model_id` 即可命中。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
+当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.model_name` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加提示：`"请调用 get_model_card 获取模型 {model_id} 的详细参数说明和使用示例。"`, 同时在 dict 中添加 `model_id` 字段，方便 LLM 直接用该值调用 `get_model_card`。**agent 侧只见 `model_id`（全局唯一的 `model_name`），从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`**——`registry.get()` 同时按 `model_name` 解析，故 agent 拿 `model_id` 即可命中。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
 
 ### 错误在各层的展示方式
 
@@ -397,7 +398,7 @@ FastMCP 捕获异常后设置 `isError: true`，但 MCP 客户端是否将其内
 
 MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在结果顶层追加 `"artifact": True`，与 error dict 的 `"error": True` 顶层布尔标记对称，供 MCP 客户端快速判断"本次结果含可渲染产物"。
 
-`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且有 URL 时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成时返回 `{task_id, status}` 信封（对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。**失败任务**由 `_raise_if_failed(task)` 抛出标准 `CFGPUError(task_failed)`（带 `model_id`——由 `registry.get(task.adapter_id).cfgpu_model_id` 映射得到，不暴露内部 `adapter_id`），经工具层 `tool_error_dict` 转成与 `task_wait` / `generate_*` 完全一致的 error dict——`task_status` 不再有独有的 `{status: "failed", error: "<string>"}` 信封。`wait_for_task()` 重建用于超时估算的最小 `req` 时也按 `adapter.task_type` 完整映射到对应 Input 类型（image/video/audio/understand），避免把错误的 Input 喂给 per-type 的 `estimate_poll_timeout()` 覆盖。
+`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且有 URL 时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成时返回 `{task_id, status}` 信封（对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。**失败任务**由 `_raise_if_failed(task)` 抛出标准 `CFGPUError(task_failed)`（带 `model_id`——由 `registry.get(task.adapter_id).model_name` 映射得到，不暴露内部 `adapter_id`），经工具层 `tool_error_dict` 转成与 `task_wait` / `generate_*` 完全一致的 error dict——`task_status` 不再有独有的 `{status: "failed", error: "<string>"}` 信封。`wait_for_task()` 重建用于超时估算的最小 `req` 时也按 `adapter.task_type` 完整映射到对应 Input 类型（image/video/audio/understand），避免把错误的 Input 喂给 per-type 的 `estimate_poll_timeout()` 覆盖。
 
 **`payload` 字段（真实 API 请求体回传）**：所有成功结果（`generate_*` 以及 `_present` 的成功分支）在 `NormalizedResult` 元数据之外追加 `payload` 字段，内容是 `Task.public_payload()` —— 即真正 POST 给该模型专属 API 的请求体（`adapter.build_payload(req)` 的产物，含 `cfgpu_model_id` 与各模型私有字段），而非通用工具入参。`public_payload()` 会剥除内部回显用的保留键 `_requested_aspect_ratio`（见 §异步 aspect_ratio 兜底），保证只暴露真实发往上游的字段。**该字段始终返回，不受 `return_metadata` 影响**：`return_metadata=False` 的精简输出（`urls` / `expires_at`）同样带上 `payload`。
 
@@ -579,6 +580,7 @@ extends: wan-2-0
 adapter_id: wan-2-0-turbo
 display_name: "WAN 2.0 Turbo"
 cfgpu_model_id: wan-video-turbo
+model_name: wan-video-turbo   # 唯一对外暴露的标识，通常与 cfgpu_model_id 同名即可
 cost_tier: 4
 speed_tier: 5
 poll_config:
@@ -624,9 +626,9 @@ class MyModelAdapter(ModelAdapter):
         )
 ```
 
-> **`model_used` 兜底**：`model_used` 取自 API 响应里的 `resp.get("model")`，但 CFGPU 并不保证回传该字段（异步视频的轮询响应通常没有）。因此 `TaskManager` 在 `create()`（同步）和 `poll()`（异步）中，于 `parse_response()` 之后统一兜底：`if not result.model_used: result.model_used = adapter.cfgpu_model_id`。这对 `model="auto"` 尤为关键——调用方唯一能得知 router 实际选中哪个模型的渠道就是 `model_used`，否则它会是 null。
+> **`model_used` 一律回填为 `model_name`**：adapter 的 `parse_response()` 常把 `resp.get("model")`（API 响应里回显的值，其实就是内部 `cfgpu_model_id`）写进 `model_used`，但这个值绝不能直接暴露给调用方。因此 `TaskManager` 在 `create()`（同步）和 `poll()`（异步）中，于 `parse_response()` **之后无条件覆盖**：`result.model_used = adapter.model_name`——不是"缺省才兜底"，而是每次都用公开标识覆盖掉 adapter 可能塞进来的内部 ID。这对 `model="auto"` 尤为关键——调用方唯一能得知 router 实际选中哪个模型的渠道就是 `model_used`，它必须是一个稳定、公开的 `model_name`。
 
-> **`aspect_ratio` 回传**：`aspect_ratio` 是回传给客户端的宽高比元数据，取值**优先用上游响应实际返回的 `ratio`**——部分 API（如 WAN，响应里带 `"ratio": "9:16"`）会回传解析后的真实宽高比，这在请求传 `adaptive` 时尤其有意义。各 adapter 的 `parse_response()` 在响应含 `ratio` 时即填入 `result.aspect_ratio`；仅当响应未回传时，才由 `TaskManager` 兜底为**请求**的 `aspect_ratio`（与 `model_used` 的兜底模式一致：`if not result.aspect_ratio: ...`）。
+> **`aspect_ratio` 回传**：`aspect_ratio` 是回传给客户端的宽高比元数据，取值**优先用上游响应实际返回的 `ratio`**——部分 API（如 WAN，响应里带 `"ratio": "9:16"`）会回传解析后的真实宽高比，这在请求传 `adaptive` 时尤其有意义。各 adapter 的 `parse_response()` 在响应含 `ratio` 时即填入 `result.aspect_ratio`；仅当响应未回传时，才由 `TaskManager` 兜底为**请求**的 `aspect_ratio`（`if not result.aspect_ratio: ...`——这里是真正的"缺省才兜底"，与上面 `model_used` 的无条件覆盖不同）。
 >
 > 该请求兜底值并非来自响应，而异步模型的结果要到 `poll()` 才定型、此处已无请求对象，因此 `create()` 把请求的 `aspect_ratio` 暂存进**入库的** payload（保留键 `_requested_aspect_ratio`），`poll()` 再从 `task.payload` 取回。该保留键只进数据库、不会发往上游（POST 用的是干净的 payload），且 payload 仅供内部回读、从不重新提交，因此对上游与客户端均无影响，同时也让 `task_status` 重新轮询时仍能带上正确的宽高比。
 
@@ -761,4 +763,4 @@ CLI 的异步工作流：`cfgpu generate video ... --no-wait` 拿到 task_id，�
 `_instantiate()` 分两步工作：先用 `adapter_id` 在 `_PYTHON_ADAPTERS` 里查找 Python 类，找不到时沿 `extends` 链逐级向上查找父 ID。如果 `extends` 被清除，variant 模型（如 `wan-2-0-fast`）就找不到对应的 `SeedanceVideoAdapter`，会 fallback 到 `GenericAdapter`，导致视频 payload 构建错误。注意必须遍历整条链（见 5.3），孙级变体如 `nano-banana-pro-premium` 的 Python 类位于祖父 `nano-banana-2` 上。
 
 **为什么 `cfgpu_model_id` 只允许在 `build_payload()` 里出现？**
-防止 `cfgpu_model_id` 污染到用户界面或日志。用户只需要知道 `adapter_id`（人类可读、稳定），`cfgpu_model_id` 是 CFGPU API 内部实现细节，会随版本更迭变化。
+防止 `cfgpu_model_id` 污染到用户界面或日志。它是 CFGPU API 内部实现细节，会随版本更迭变化，且部分模型的 `cfgpu_model_id` 就是厂商原始 model 名（如 `nano-pro-official`），不适合直接暴露。调用方只需要知道 `model_name`（唯一对外的公开标识，见 §3.1）；`adapter_id` 同样是内部注册表 key，不对外暴露。

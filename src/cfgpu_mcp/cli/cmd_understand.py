@@ -35,7 +35,7 @@ def _run(coro) -> dict:
 @click.command("understand")
 @click.argument("prompt")
 @click.option("--model", "-m", default="auto", show_default=True,
-              help="adapter_id, cfgpu_model_id, or 'auto'")
+              help="model_name (see `cfgpu models list`), or 'auto'")
 @click.option("--image", "-i", "images", multiple=True, metavar="URL",
               help="Image URL to analyze (repeat for multiple)")
 @click.option("--video", default=None, metavar="URL",

@@ -67,13 +67,12 @@ class ModelRouter:
                 return self.select_model(req)
             raise
         ok, reason = adapter.supports(req)
-        ok, reason = adapter.supports(req)
         if not ok:
             raise CFGPUError(
                 error_type="invalid_params",
                 user_message=reason,
                 original={"model": model},
-                model_id=adapter.cfgpu_model_id,
+                model_id=adapter.model_name,
             )
         return adapter
 
@@ -94,9 +93,11 @@ class ModelRouter:
 
         if allowed:
             allowed_set = set(allowed)
-            known = {a.adapter_id for a in candidates} | {
-                a.cfgpu_model_id for a in candidates
-            }
+            known = (
+                {a.model_name for a in candidates}
+                | {a.adapter_id for a in candidates}
+                | {a.cfgpu_model_id for a in candidates}
+            )
             unknown = allowed_set - known
             if unknown:
                 raise CFGPUError(
@@ -110,7 +111,9 @@ class ModelRouter:
             candidates = [
                 a
                 for a in candidates
-                if a.adapter_id in allowed_set or a.cfgpu_model_id in allowed_set
+                if a.model_name in allowed_set
+                or a.adapter_id in allowed_set
+                or a.cfgpu_model_id in allowed_set
             ]
 
         scored: list[tuple[int, "ModelAdapter"]] = []
