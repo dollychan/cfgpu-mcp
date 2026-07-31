@@ -1,7 +1,7 @@
 extends: nano-banana-2
 card_base: ~
 adapter_id: nano-banana-pro
-display_name: " Pro"
+display_name: "CF Pro"
 cfgpu_model_id: nano-pro
 model_name: cf-pro
 cost_tier: 3
