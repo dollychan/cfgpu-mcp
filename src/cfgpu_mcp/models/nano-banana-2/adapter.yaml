@@ -3,6 +3,6 @@ card_base: ~
 adapter_id: nano-banana-2
 display_name: "CF2"
 cfgpu_model_id: nano2
-model_name: nano2
+model_name: cf2
 cost_tier: 4
 speed_tier: 3
