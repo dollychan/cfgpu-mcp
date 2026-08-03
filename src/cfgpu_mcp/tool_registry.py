@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from dataclasses import dataclass
 from datetime import datetime
@@ -7,6 +8,96 @@ from typing import Any, Literal, Optional
 
 from mcp.types import CallToolResult, TextContent
 from pydantic import BaseModel, Field, field_validator
+
+
+# ── Media (material) slot annotations ───────────────────────────────────────
+#
+# Eight parameters across four tools are *material slots*: they carry a reference to a
+# media file rather than a scalar value. Which parameters those are — and what may be
+# put in them — used to be knowable only by reading English prose ("List of public
+# image URLs to use as reference"). That is not enough for a host that maintains its
+# own reference layer (e.g. DeerFlow/cf-dream, where the model hands the agent a short
+# material id like `m3` and the agent resolves it to a freshly-signed URL at the moment
+# the tool fires). Such a host needs two things this schema could not previously give it:
+#
+#   1. **Which parameters to re-describe.** If the schema says "public image URL" while
+#      the host's own ledger says "material id", the model mixes the two formats — and
+#      the parameter-level description, being nearer the decision, tends to win.
+#   2. **Which parameters to resolve on the way out.** Without a slot list, a host has to
+#      inspect every string in the argument tree and guess by shape, which misfires on
+#      ordinary values (`16/9`, `black-forest-labs/FLUX.1-dev`, a prompt that happens to
+#      contain a path) and can never be closed.
+#
+# So each media slot carries a machine-readable ``x-cfgpu-media`` annotation next to its
+# description, and the description prose is *generated* from that annotation
+# (``_compose_media_description``) so the two cannot drift.
+#
+# The annotation describes the **wire contract only**: cfgpu is a remote service and can
+# fetch only what it can reach, which is what ``accepts`` states. It deliberately says
+# nothing about host dialects — a host that speaks one replaces the generated wire clause
+# with its own, reusing ``slot`` (carried in the annotation for exactly that purpose) as
+# the semantic half that is true for everyone.
+
+MEDIA_ANNOTATION_KEY = "x-cfgpu-media"
+
+# Closed vocabulary for ``accepts``. Base64 data URIs are *not* advertised even where an
+# upstream model tolerates them: inlining megabytes of media into a tool call is never the
+# right call for an LLM to make, and hosts that need it can still pass it.
+_WIRE_FORMS: dict[str, str] = {
+    "https_url": "a publicly reachable https:// URL",
+    "asset_url": "an `asset://<ASSET_ID>` handle (Seedance / WAN video models only)",
+}
+
+
+def _compose_media_description(slot: str, accepts: list[str], arity: str) -> str:
+    """Compose a media slot's description = semantic half + generated wire clause.
+
+    The wire clause is derived from ``accepts`` rather than hand-written, so adding a
+    wire form to a slot updates its prose automatically and no slot can advertise a
+    format its annotation does not declare.
+    """
+    forms = " or ".join(_WIRE_FORMS[a] for a in accepts)
+    subject = "Each entry must be" if arity == "many" else "Must be"
+    return f"{slot} {subject} {forms}."
+
+
+def media_field(
+    *,
+    slot: str,
+    role: Literal["image", "video", "audio"],
+    arity: Literal["one", "many"],
+    accepts: list[str],
+) -> Any:
+    """Declare a material slot: a Field carrying ``x-cfgpu-media`` + generated prose.
+
+    ``slot`` is the semantic half of the description — what this input *is* — and is
+    stamped into the annotation as well so a host can rebuild the description around its
+    own reference format without string surgery on the composed text.
+
+    **The annotation carries permissive facts only** — what *may* appear in this slot —
+    never restrictive ones. ``role`` / ``arity`` / ``accepts`` are true for the tool: a
+    slot's role never varies, arity is its Python type, and ``accepts`` is a union over
+    the models, so at worst a caller sends a form some model rejects, exactly as today.
+    Caps and mutual exclusions are the opposite shape: they are per-model (this schema is
+    per-tool), so a host that reads them as enforceable would reject calls that are legal
+    on the model actually being used. There is deliberately no ``max_items`` / ``excludes``
+    / ``requires`` key; such limits live in the prose as model-relative guidance, with
+    ``get_model_card`` / ``list_models`` as the authority and cfgpu's own validation as
+    the enforcement point.
+
+    Every media slot is optional and defaults to ``None`` (kept here rather than at each
+    call site so the eight declarations stay comparable; the schema-consistency test pins
+    this against the FastMCP wrapper signatures).
+    """
+    unknown = [a for a in accepts if a not in _WIRE_FORMS]
+    if unknown:
+        raise ValueError(f"unknown media wire form(s) {unknown}; known: {sorted(_WIRE_FORMS)}")
+    spec: dict[str, Any] = {"role": role, "arity": arity, "accepts": list(accepts), "slot": slot}
+    return Field(
+        default=None,
+        description=_compose_media_description(slot, accepts, arity),
+        json_schema_extra={MEDIA_ANNOTATION_KEY: spec},
+    )
 
 
 # ── Input Models (single source of truth for all tool schemas) ─────────────
@@ -23,9 +114,11 @@ class GenerateImageInput(BaseModel):
     )
     aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
     resolution: Literal["1K", "2K", "3K", "4K"] = Field(default="2K")
-    reference_images: Optional[list[str]] = Field(
-        default=None,
-        description="List of public image URLs to use as reference",
+    reference_images: Optional[list[str]] = media_field(
+        slot="Reference images that guide the generation.",
+        role="image",
+        arity="many",
+        accepts=["https_url"],
     )
     n: int = Field(
         default=1,
@@ -78,19 +171,46 @@ class GenerateVideoInput(BaseModel):
         "a list of model_ids to restrict automatic selection to those candidates "
         "(e.g. ['wan-video', 'wan-video-fast']), or 'auto' to choose from all models",
     )
-    first_frame: Optional[str] = Field(default=None, description="First frame image URL (public)")
-    last_frame: Optional[str] = Field(default=None, description="Last frame image URL (public), use with first_frame")
-    reference_images: Optional[list[str]] = Field(
-        default=None,
-        description="Reference image URLs (role=reference_image), max 9, mutually exclusive with first/last_frame",
+    # All five slots accept `asset://<ASSET_ID>`: the Seedance / WAN request schema takes a
+    # 素材 ID on `image_url.url`, `video_url.url` and `audio_url.url` alike (see
+    # models/wan-2-0/card.md — only the image row spells the `asset://` scheme out, the
+    # other two say 素材 ID). Media inputs are the whole reason the asset library exists,
+    # so this is the tool where the handle is at home.
+    first_frame: Optional[str] = media_field(
+        slot="The image to use as the video's first frame (image-to-video).",
+        role="image",
+        arity="one",
+        accepts=["https_url", "asset_url"],
     )
-    reference_videos: Optional[list[str]] = Field(
-        default=None,
-        description="Reference video URLs (role=reference_video), max 3",
+    last_frame: Optional[str] = media_field(
+        slot="The image to use as the video's last frame; use together with first_frame.",
+        role="image",
+        arity="one",
+        accepts=["https_url", "asset_url"],
     )
-    reference_audios: Optional[list[str]] = Field(
-        default=None,
-        description="Reference audio URLs (role=reference_audio), max 3",
+    reference_images: Optional[list[str]] = media_field(
+        slot="Reference images that guide the generation (role=reference_image). Typically "
+        "up to 9, and on most models mutually exclusive with first_frame / last_frame — "
+        "call get_model_card for the chosen model's actual limits.",
+        role="image",
+        arity="many",
+        accepts=["https_url", "asset_url"],
+    )
+    reference_videos: Optional[list[str]] = media_field(
+        slot="Reference videos that guide the generation (role=reference_video). Support and "
+        "limits vary by model (the Seedance 2.0 family takes up to 3) — call get_model_card "
+        "for the chosen model.",
+        role="video",
+        arity="many",
+        accepts=["https_url", "asset_url"],
+    )
+    reference_audios: Optional[list[str]] = media_field(
+        slot="Reference audio that guides the generation (role=reference_audio). Support, "
+        "limits, and whether audio may be supplied without an accompanying image or video "
+        "vary by model — call get_model_card for the chosen model.",
+        role="audio",
+        arity="many",
+        accepts=["https_url", "asset_url"],
     )
     duration_seconds: int = Field(
         default=5,
@@ -221,18 +341,22 @@ class UnderstandVisionInput(BaseModel):
         "or 'auto' to choose from all vision-understanding models. Prefer 'auto' "
         "unless a specific model is required — an unknown id falls back to auto.",
     )
-    images: Optional[list[str]] = Field(
-        default=None,
-        description="Public image URLs to analyze (image understanding / reasoning). "
-        "Multiple images are compared/reasoned over jointly. Images ONLY — a video "
-        "must NOT go here; route it through the `video` parameter. A video URL placed "
-        "in `images` is misclassified as a still frame.",
+    images: Optional[list[str]] = media_field(
+        slot="Images to analyze (image understanding / reasoning). Multiple images are "
+        "compared/reasoned over jointly. Images ONLY — a video must NOT go here; route it "
+        "through the `video` parameter, since a video placed in `images` is misclassified "
+        "as a still frame.",
+        role="image",
+        arity="many",
+        accepts=["https_url"],
     )
-    video: Optional[str] = Field(
-        default=None,
-        description="A single public video URL to understand (long video supported). "
-        "Use this for ANY video input — never put a video into `images`. "
-        "Can be combined with images and text in one request.",
+    video: Optional[str] = media_field(
+        slot="A single video to understand (long video supported). Use this for ANY video "
+        "input — never put a video into `images`. Can be combined with images and text in "
+        "one request.",
+        role="video",
+        arity="one",
+        accepts=["https_url"],
     )
     system_prompt: Optional[str] = Field(
         default=None,
@@ -479,6 +603,46 @@ def get_field_descriptions(tool_name: str) -> dict[str, str]:
                 if field.description
             }
     return {}
+
+
+def get_media_slots(tool_name: str) -> dict[str, dict]:
+    """Return ``{param_name: x-cfgpu-media spec}`` for a tool's material slots.
+
+    The single source of truth for "which parameters of this tool carry media
+    references". Hosts use it to re-describe those parameters in their own reference
+    format and to locate exactly the values they must resolve before the call — instead
+    of guessing by inspecting every string argument. Tools with no media slots return
+    ``{}``. Specs are deep-copied so a consumer cannot mutate the class-level annotation.
+    """
+    for name, model in _REGISTRY:
+        if name == tool_name:
+            return {
+                fname: copy.deepcopy(field.json_schema_extra[MEDIA_ANNOTATION_KEY])
+                for fname, field in model.model_fields.items()
+                if isinstance(field.json_schema_extra, dict)
+                and MEDIA_ANNOTATION_KEY in field.json_schema_extra
+            }
+    return {}
+
+
+def apply_media_annotations(schema: dict, tool_name: str) -> dict:
+    """Stamp each material slot's ``x-cfgpu-media`` annotation onto a built schema (in place).
+
+    Needed only where the schema is built from a bare function signature — i.e. the
+    FastMCP wrappers (Mode A), same reason ``get_field_descriptions`` has to be injected
+    there. Every other exposure (Anthropic / OpenAI / LangGraph) builds from
+    ``model_json_schema()``, which already carries ``json_schema_extra``, so those paths
+    must not call this. Existing annotations are never overwritten. Returns ``schema``
+    for chaining; a tool without media slots is a no-op.
+    """
+    props = schema.get("properties")
+    if not isinstance(props, dict):
+        return schema
+    for fname, spec in get_media_slots(tool_name).items():
+        prop = props.get(fname)
+        if isinstance(prop, dict):
+            prop.setdefault(MEDIA_ANNOTATION_KEY, spec)
+    return schema
 
 
 def _stamp_model_enum(prop: dict, model_ids: list[str]) -> None:

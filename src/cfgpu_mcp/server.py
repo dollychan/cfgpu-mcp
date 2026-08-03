@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp import config
-from cfgpu_mcp.tool_registry import apply_model_enum, get_field_descriptions
+from cfgpu_mcp.tool_registry import apply_media_annotations, apply_model_enum, get_field_descriptions
 from cfgpu_mcp.tools import generate, models, tasks, understand
 
 
@@ -65,8 +65,22 @@ def _inject_model_enums(server: FastMCP) -> None:
         apply_model_enum(tool.parameters, tool.name)
 
 
+def _inject_media_annotations(server: FastMCP) -> None:
+    """Stamp the ``x-cfgpu-media`` annotation onto every material slot's schema property.
+
+    Same reason as ``_inject_param_descriptions``: FastMCP builds the input schema from
+    the wrapper's bare signature, so the Pydantic ``json_schema_extra`` that the Mode B /
+    OpenAI / LangGraph schemas get for free never reaches the MCP schema. Without it an
+    MCP host cannot tell which parameters carry media references, and one that maintains
+    its own reference layer is left inspecting every string argument by shape.
+    """
+    for tool in server._tool_manager.list_tools():
+        apply_media_annotations(tool.parameters, tool.name)
+
+
 _inject_param_descriptions(mcp)
 _inject_model_enums(mcp)
+_inject_media_annotations(mcp)
 
 
 def main() -> None:
