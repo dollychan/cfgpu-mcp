@@ -27,6 +27,7 @@ def register(mcp: FastMCP) -> None:
         return_metadata: bool = True,
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
+        caption: Optional[str] = None,
     ) -> dict:
         """Generate image from text prompt using CFGPU models."""
         try:
@@ -44,6 +45,7 @@ def register(mcp: FastMCP) -> None:
                 return_metadata=return_metadata,
                 model_specific=model_specific,
                 request_id=request_id,
+                caption=caption,
             )), structured_keys=("usage", "payload"))
         except Exception as e:
             return tool_error_dict(e)
@@ -68,6 +70,7 @@ def register(mcp: FastMCP) -> None:
         return_metadata: bool = True,
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
+        caption: Optional[str] = None,
     ) -> dict:
         """Generate video from text prompt, image, or multimodal references using CFGPU models."""
         try:
@@ -90,6 +93,7 @@ def register(mcp: FastMCP) -> None:
                 return_metadata=return_metadata,
                 model_specific=model_specific,
                 request_id=request_id,
+                caption=caption,
             )), structured_keys=("usage", "payload"))
         except Exception as e:
             return tool_error_dict(e)
@@ -112,6 +116,7 @@ def register(mcp: FastMCP) -> None:
         return_metadata: bool = True,
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
+        caption: Optional[str] = None,
     ) -> dict:
         """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
         try:
@@ -132,6 +137,7 @@ def register(mcp: FastMCP) -> None:
                 return_metadata=return_metadata,
                 model_specific=model_specific,
                 request_id=request_id,
+                caption=caption,
             )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
             return tool_error_dict(e)

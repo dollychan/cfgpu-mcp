@@ -681,6 +681,10 @@ done
 
 > **`request_id`（调用方关联标识，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `request_id` 入参，服务端会将其**原样回显**在本次即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact / error 上（有值才出现，不传则响应结构完全不变）。用途——异步流程里 generate 与稍后返回 artifact 的 `task_status` / `task_wait` 分属**不同的 tool_call**，而 `task_id` 要等 POST 返回才有、同步模型更是没有 `task_id`；`request_id` 由调用方在**发起时**自选，从而在整条链路上提供一个稳定、可直接对应的关联键，用来把异步结果 / 失败 join 回原始请求。它只作关联用途，绝不进入上游 API 请求体（`payload` 中不出现）。此回显在 service 层完成，故 MCP、Agent dispatcher、CLI 三种模式一致生效。仅可能异步的 `generate_*` 支持；`understand_vision` 恒同步、单次返回，无关联缺口，故不设此参数。
 
+> **`caption`（产物标签，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `caption` 入参——一句人类可读的**短标签**（如 `"角色阿雅 第一版"` / `"封面图 v1"`），服务端同样**原样回显**在即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact 上。用途——客户端若自建素材台账（如 DeerFlow / cf-dream 把每个生成产物登记为可用短 id 引用的 **material**），不带标签的条目是无名的，只能在生成之后再花一次工具调用去补名字；把标签放在发起时携带即可省掉这一跳，而它随任务记录存储这一点，使**两段式**（`wait=False` → `task_wait`）也无需客户端自己维护 `task_id → 标签` 的映射。
+>
+> 三条约束：①它是**标签不是第二个 prompt**——写清主体与版本即可，不要复述生成 prompt；②超过 200 字符会被**截断而非报错**（标签不影响出图，为它失败一整次调用不划算）；③绝不进入上游 API 请求体（`payload` 中不出现），对生成结果零影响。与 `request_id` 的唯一差异在**失败路径**：错误结果带 `request_id`（关联标识正是用来把失败 join 回原请求的），但不带 `caption`——调用失败即没有产物可标注。
+
 ### 等待完成（`wait=True`）
 
 ```json

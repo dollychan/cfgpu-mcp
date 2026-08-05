@@ -4,8 +4,8 @@ import logging
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.task_manager import _REQUEST_ID_KEY
-from cfgpu_mcp.tool_registry import stamp_request_id
+from cfgpu_mcp.task_manager import _CAPTION_KEY, _REQUEST_ID_KEY
+from cfgpu_mcp.tool_registry import stamp_echo
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +18,19 @@ def _present(task: Any) -> dict[str, Any]:
     identical to what ``generate_image`` / ``generate_video`` return — so callers
     see one structure regardless of which tool produced the artifact. Non-terminal
     tasks fall back to the ``{task_id, status}`` envelope (mirrors generate's
-    ``wait=False``). The caller's ``request_id`` (stashed in the stored payload at
-    create time) is echoed on both shapes so an async artifact can be joined back to
-    the originating generate_* request. Failed tasks are surfaced by raising
-    ``CFGPUError`` — see ``_raise_if_failed`` — so the error shape matches
-    ``task_wait`` and the ``generate_*`` tools exactly.
+    ``wait=False``). The caller's echo fields — ``request_id`` and ``caption``, both
+    stashed in the stored payload at create time — are echoed on both shapes, so an
+    async artifact can be joined back to the originating generate_* request and carries
+    the label that request gave it. This is the whole point of stashing the caption: it
+    is supplied on ``generate_*`` but the artifact only exists here, one tool call later.
+    Failed tasks are surfaced by raising ``CFGPUError`` — see ``_raise_if_failed`` — so
+    the error shape matches ``task_wait`` and the ``generate_*`` tools exactly.
     """
     request_id = task.payload.get(_REQUEST_ID_KEY)
+    caption = task.payload.get(_CAPTION_KEY)
     if task.status == "succeeded" and (task.result or {}).get("urls"):
-        return stamp_request_id({**task.result, "payload": task.public_payload()}, request_id)
-    return stamp_request_id({"task_id": task.id, "status": task.status}, request_id)
+        return stamp_echo({**task.result, "payload": task.public_payload()}, request_id=request_id, caption=caption)
+    return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption)
 
 
 def _raise_if_failed(task: Any) -> None:

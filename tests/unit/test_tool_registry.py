@@ -168,28 +168,54 @@ def test_annotate_artifact_passes_through_non_dict():
     assert annotate_artifact(None) is None
 
 
-# ── stamp_request_id ─────────────────────────────────────────────────────────
+# ── stamp_echo (request_id + caption) ────────────────────────────────────────
 
-def test_stamp_request_id_adds_when_set():
-    from cfgpu_mcp.tool_registry import stamp_request_id
-    assert stamp_request_id({"urls": ["x"]}, "r-1") == {"urls": ["x"], "request_id": "r-1"}
+def test_stamp_echo_adds_when_set():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert stamp_echo({"urls": ["x"]}, request_id="r-1") == {"urls": ["x"], "request_id": "r-1"}
 
 
-def test_stamp_request_id_omitted_when_none():
-    from cfgpu_mcp.tool_registry import stamp_request_id
-    out = stamp_request_id({"urls": ["x"]}, None)
+def test_stamp_echo_omitted_when_none():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    out = stamp_echo({"urls": ["x"]}, request_id=None)
     assert "request_id" not in out
 
 
-def test_stamp_request_id_does_not_clobber_existing():
-    from cfgpu_mcp.tool_registry import stamp_request_id
-    out = stamp_request_id({"request_id": "kept"}, "other")
+def test_stamp_echo_does_not_clobber_existing():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    out = stamp_echo({"request_id": "kept"}, request_id="other")
     assert out["request_id"] == "kept"
 
 
-def test_stamp_request_id_passes_through_non_dict():
-    from cfgpu_mcp.tool_registry import stamp_request_id
-    assert stamp_request_id("not a dict", "r-1") == "not a dict"
+def test_stamp_echo_passes_through_non_dict():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert stamp_echo("not a dict", request_id="r-1") == "not a dict"
+
+
+def test_stamp_echo_adds_caption_when_set():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert stamp_echo({"urls": ["x"]}, caption="角色阿雅 第一版") == {
+        "urls": ["x"], "caption": "角色阿雅 第一版",
+    }
+
+
+def test_stamp_echo_caption_omitted_when_none():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert "caption" not in stamp_echo({"urls": ["x"]}, caption=None)
+
+
+def test_stamp_echo_caption_does_not_clobber_existing():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert stamp_echo({"caption": "kept"}, caption="other")["caption"] == "kept"
+
+
+def test_stamp_echo_carries_both_fields_independently():
+    """The two echo fields are independent: supplying one never implies the other."""
+    from cfgpu_mcp.tool_registry import stamp_echo
+    both = stamp_echo({"urls": ["x"]}, request_id="r-1", caption="cover v1")
+    assert both == {"urls": ["x"], "request_id": "r-1", "caption": "cover v1"}
+    assert "caption" not in stamp_echo({}, request_id="r-1")
+    assert "request_id" not in stamp_echo({}, caption="cover v1")
 
 
 def test_generate_image_schema_exposes_request_id():
@@ -197,6 +223,40 @@ def test_generate_image_schema_exposes_request_id():
     props = GenerateImageInput.model_json_schema()["properties"]
     assert "request_id" in props
     assert GenerateImageInput(prompt="x").request_id is None
+
+
+# ── caption field ────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("model, required", [
+    ("GenerateImageInput", {"prompt": "x"}),
+    ("GenerateVideoInput", {"prompt": "x"}),
+    ("GenerateAudioInput", {"text": "x"}),
+])
+def test_generate_schemas_expose_optional_caption(model, required):
+    """All three generate tools carry the label slot; none requires it."""
+    import cfgpu_mcp.tool_registry as tr
+    cls = getattr(tr, model)
+    assert "caption" in cls.model_json_schema()["properties"]
+    assert cls(**required).caption is None
+
+
+def test_understand_vision_has_no_caption():
+    """understand_vision returns text, not an artifact — there is nothing to label."""
+    from cfgpu_mcp.tool_registry import UnderstandVisionInput
+    assert "caption" not in UnderstandVisionInput.model_fields
+
+
+def test_caption_is_truncated_not_rejected():
+    """An over-long label must not fail the call: the caption has no effect on the
+    generated media, so costing the caller a whole turn over it would be a bad trade."""
+    from cfgpu_mcp.tool_registry import CAPTION_MAX_CHARS, GenerateImageInput
+    req = GenerateImageInput(prompt="x", caption="蓝" * (CAPTION_MAX_CHARS + 50))
+    assert req.caption == "蓝" * CAPTION_MAX_CHARS
+
+
+def test_caption_under_the_cap_is_untouched():
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+    assert GenerateImageInput(prompt="x", caption="cover image v1").caption == "cover image v1"
 
 
 # ── split_structured / reshape_vision_result ─────────────────────────────────

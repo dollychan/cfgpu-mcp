@@ -413,6 +413,61 @@ async def test_create_without_request_id_leaves_payload_clean():
     await db.close()
 
 
+# ── caption stashing ──────────────────────────────────────────────────────────
+
+from cfgpu_mcp.task_manager import _CAPTION_KEY
+
+
+@pytest.mark.asyncio
+async def test_sync_create_stashes_caption_stripped_from_payload():
+    """The label rides the stored payload but is never part of the upstream request."""
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    req = GenerateImageInput(prompt="x", caption="角色阿雅 第一版")
+    task = await tm.create(adapter, req)
+    assert task.payload[_CAPTION_KEY] == "角色阿雅 第一版"
+    assert _CAPTION_KEY not in task.public_payload()
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_async_create_stashes_caption():
+    """The async path is the one that needs the stash: the label is supplied here but
+    the artifact only appears at task_wait, one tool call later."""
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    req = GenerateVideoInput(prompt="x", caption="开场镜头 v2")
+    task = await tm.create(adapter, req)
+    assert task.payload[_CAPTION_KEY] == "开场镜头 v2"
+    assert _CAPTION_KEY not in task.public_payload()
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_caption_does_not_reach_the_posted_body():
+    """create() POSTs build_payload()'s clean output; only the stored copy is augmented."""
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client.post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    await tm.create(adapter, GenerateVideoInput(prompt="x", caption="开场镜头 v2", request_id="r-1"))
+    posted_body = tm._client.post.await_args.args[1]
+    assert _CAPTION_KEY not in posted_body
+    assert _REQUEST_ID_KEY not in posted_body
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_create_without_caption_leaves_payload_clean():
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    task = await tm.create(adapter, GenerateImageInput(prompt="x"))
+    assert _CAPTION_KEY not in task.payload
+    await db.close()
+
+
 # ── _extract_error_message ────────────────────────────────────────────────────
 
 from cfgpu_mcp.task_manager import _extract_error_message

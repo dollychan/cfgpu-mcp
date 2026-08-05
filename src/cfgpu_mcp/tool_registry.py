@@ -4,10 +4,10 @@ import copy
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from mcp.types import CallToolResult, TextContent
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AfterValidator, BaseModel, Field, field_validator
 
 
 # ── Media (material) slot annotations ───────────────────────────────────────
@@ -100,6 +100,47 @@ def media_field(
     )
 
 
+# ── Caption (artifact label) ────────────────────────────────────────────────
+#
+# Like ``request_id``, ``caption`` is a caller-supplied handle this server stores and
+# echoes but never interprets — it is not part of any upstream request. It exists for
+# hosts that keep their own asset ledger (DeerFlow/cf-dream registers every generated
+# artifact as a *material* the user later refers to by a short id): without a label
+# supplied at call time, the ledger entry is nameless and the host has to spend a second
+# tool round trip naming it after the fact. Riding the generate call closes that gap, and
+# riding the stored payload means the async ``generate → task_wait`` hop carries it for
+# free — the host needs no state of its own to survive the two-phase case.
+#
+# Over-long captions are truncated, never rejected: a caption has no effect on the
+# generated media, so failing the call — and costing the caller a whole turn — over the
+# length of a cosmetic label would be a bad trade.
+
+CAPTION_MAX_CHARS = 200
+
+
+def _truncate_caption(v: str | None) -> str | None:
+    return v[:CAPTION_MAX_CHARS] if v else v
+
+
+CaptionStr = Annotated[Optional[str], AfterValidator(_truncate_caption)]
+
+
+def caption_field() -> Any:
+    """Declare the artifact-label slot (kept in one place so the three copies can't drift)."""
+    return Field(
+        default=None,
+        description="Optional short human-readable label for the artifact this call "
+        "produces, e.g. '角色阿雅 第一版' or 'cover image v1'. Echoed back verbatim "
+        "alongside the result — including on the eventual artifact returned by a later "
+        "task_status/task_wait call — so a caller that keeps its own asset ledger can "
+        "file this artifact under a name a human recognises, without a second call to "
+        "name it afterwards. It is a label, not a second prompt: name the subject and "
+        "the version, and do not restate the generation prompt. Never sent to the model "
+        f"API and has no effect on the generated media. Truncated at {CAPTION_MAX_CHARS} "
+        "characters; omitted from the response when not supplied.",
+    )
+
+
 # ── Input Models (single source of truth for all tool schemas) ─────────────
 
 class GenerateImageInput(BaseModel):
@@ -159,6 +200,7 @@ class GenerateImageInput(BaseModel):
         "at call time and also works for synchronous models (which have no task_id). "
         "Omitted from the response when not supplied.",
     )
+    caption: CaptionStr = caption_field()
 
 
 class GenerateVideoInput(BaseModel):
@@ -263,6 +305,7 @@ class GenerateVideoInput(BaseModel):
         "at call time and also works for synchronous models (which have no task_id). "
         "Omitted from the response when not supplied.",
     )
+    caption: CaptionStr = caption_field()
 
 
 class GenerateAudioInput(BaseModel):
@@ -318,6 +361,7 @@ class GenerateAudioInput(BaseModel):
         "at call time and also works for synchronous models (which have no task_id). "
         "Omitted from the response when not supplied.",
     )
+    caption: CaptionStr = caption_field()
 
 
 class UnderstandVisionInput(BaseModel):
@@ -500,23 +544,37 @@ def annotate_artifact(result: Any) -> Any:
     return result
 
 
-# ── Request-id correlation echo (service-layer data contract) ────────────────
+# ── Caller-supplied echo fields (service-layer data contract) ───────────────
 
-def stamp_request_id(result: Any, request_id: str | None) -> Any:
-    """Echo the caller-supplied ``request_id`` onto a result dict (in place), if set.
+def stamp_echo(result: Any, *, request_id: str | None = None, caption: str | None = None) -> Any:
+    """Echo the caller's own handles onto a result dict (in place), if set.
 
-    ``request_id`` is an optional caller-chosen correlation handle threaded from a
-    ``generate_*`` call through to its eventual artifact / error. It lets the caller
-    join a result back to the originating request across the async
-    ``generate → task_wait/task_status`` hop (where the tool_call ids differ) and for
-    synchronous models that have no ``task_id``. Stamped by the **service layer** — not
-    the MCP wrapper — so all three call modes (MCP, agent dispatcher, CLI) echo it.
-    Omitted when falsy so callers that don't supply one see unchanged result shapes;
-    ``setdefault`` never clobbers a value already present. Non-dict results (e.g. a
-    ``CallToolResult``) pass through untouched.
+    Both fields are supplied on a ``generate_*`` call, stored, and handed back
+    untouched; neither is part of any upstream request:
+
+    - ``request_id`` is a correlation handle. It lets the caller join a result back to
+      the originating request across the async ``generate → task_wait/task_status`` hop
+      (where the tool_call ids differ) and for synchronous models that have no
+      ``task_id``.
+    - ``caption`` is a human-readable label for the artifact, for callers that keep
+      their own asset ledger and would otherwise have to name the entry in a second
+      call.
+
+    Stamped by the **service layer** — not the MCP wrapper — so all three call modes
+    (MCP, agent dispatcher, CLI) echo them. Omitted when falsy so callers that supply
+    neither see unchanged result shapes; ``setdefault`` never clobbers a value already
+    present. Non-dict results (e.g. a ``CallToolResult``) pass through untouched.
+
+    The two diverge on **failures**: ``CFGPUError`` carries ``request_id`` (joining a
+    failure back to its request is exactly what a correlation handle is for) but not
+    ``caption`` — a failed call produced no artifact, so there is nothing to label.
     """
-    if request_id and isinstance(result, dict):
+    if not isinstance(result, dict):
+        return result
+    if request_id:
         result.setdefault("request_id", request_id)
+    if caption:
+        result.setdefault("caption", caption)
     return result
 
 

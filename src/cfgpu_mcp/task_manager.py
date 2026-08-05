@@ -31,21 +31,25 @@ ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
 # extra key is inert.
 _ASPECT_RATIO_KEY = "_requested_aspect_ratio"
 
-# Reserved stored-payload key holding the caller-supplied ``request_id`` correlation
-# handle (see tool_registry.stamp_request_id). Stashed here — alongside
-# _ASPECT_RATIO_KEY — so task_status/task_wait can recover and echo it from the DB row
-# without a schema/column change. Like the aspect-ratio echo it is internal-only:
-# create() POSTs the clean build_payload() output and only augments the stored copy,
-# and public_payload() strips it, so it never reaches the upstream API.
+# Reserved stored-payload keys holding the caller's own echo fields — the ``request_id``
+# correlation handle and the ``caption`` artifact label (see tool_registry.stamp_echo).
+# Stashed here — alongside _ASPECT_RATIO_KEY — so task_status/task_wait can recover and
+# echo them from the DB row without a schema/column change. This is what makes the
+# caption survive the async hop with no state on the caller's side: the label is supplied
+# on generate but the artifact only exists at task_wait. Like the aspect-ratio echo they
+# are internal-only: create() POSTs the clean build_payload() output and only augments
+# the stored copy, and public_payload() strips them, so they never reach the upstream API.
 _REQUEST_ID_KEY = "_request_id"
+_CAPTION_KEY = "_caption"
 
 
 def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
     """Return a copy of ``payload`` augmented with the reserved internal keys.
 
-    Adds the caller's ``request_id`` (when supplied) so task_status/task_wait can echo
-    it, and — for async tasks (``aspect_ratio=True``) — the requested aspect_ratio echo
-    that poll() falls back to. Returns ``payload`` unchanged when nothing needs stashing.
+    Adds the caller's ``request_id`` / ``caption`` (when supplied) so task_status/
+    task_wait can echo them, and — for async tasks (``aspect_ratio=True``) — the
+    requested aspect_ratio echo that poll() falls back to. Returns ``payload``
+    unchanged when nothing needs stashing.
     """
     extra: dict[str, Any] = {}
     if aspect_ratio:
@@ -53,6 +57,9 @@ def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
     request_id = getattr(req, "request_id", None)
     if request_id:
         extra[_REQUEST_ID_KEY] = request_id
+    caption = getattr(req, "caption", None)
+    if caption:
+        extra[_CAPTION_KEY] = caption
     return {**payload, **extra} if extra else payload
 
 # Internal (already normalized via _STATUS_MAP) terminal statuses. Raw API
@@ -148,12 +155,12 @@ class Task:
         ``payload`` is exactly what ``build_payload`` produced and POSTed to the
         model's specific CFGPU endpoint — i.e. the real per-model API request, not
         the unified tool schema. The reserved internal keys (``_requested_aspect_ratio``
-        for async re-polling, ``_request_id`` for the caller's correlation echo) are
-        never part of the real request, so they are stripped here.
+        for async re-polling, ``_request_id`` / ``_caption`` for the caller's echo
+        fields) are never part of the real request, so they are stripped here.
         """
         return {
             k: v for k, v in self.payload.items()
-            if k not in (_ASPECT_RATIO_KEY, _REQUEST_ID_KEY)
+            if k not in (_ASPECT_RATIO_KEY, _REQUEST_ID_KEY, _CAPTION_KEY)
         }
 
 

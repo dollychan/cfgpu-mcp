@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.tool_registry import GenerateImageInput, stamp_request_id
+from cfgpu_mcp.tool_registry import GenerateImageInput, stamp_echo
 
 
 async def generate_image(
@@ -20,6 +20,7 @@ async def generate_image(
     return_metadata: bool = True,
     model_specific: dict | None = None,
     request_id: str | None = None,
+    caption: str | None = None,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import get_client, get_task_repository, get_registry
     from cfgpu_mcp.router import ModelRouter
@@ -39,6 +40,7 @@ async def generate_image(
         return_metadata=return_metadata,
         model_specific=model_specific,
         request_id=request_id,
+        caption=caption,
     )
 
     registry = get_registry()
@@ -57,7 +59,7 @@ async def generate_image(
         raise
 
     if not wait:
-        return stamp_request_id({"task_id": task.id, "status": task.status}, request_id)
+        return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption)
 
     try:
         task = await tm.wait(task, adapter, req, timeout=timeout)
@@ -67,15 +69,15 @@ async def generate_image(
         raise
 
     if task.result is None:
-        return stamp_request_id({"task_id": task.id, "status": task.status}, request_id)
+        return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption)
 
     result = task.result
     # The real per-model API request is always surfaced, regardless of return_metadata.
     payload = task.public_payload()
     if not return_metadata:
-        return stamp_request_id({
+        return stamp_echo({
             "urls": result.get("urls", []),
             "expires_at": result.get("expires_at"),
             "payload": payload,
-        }, request_id)
-    return stamp_request_id({**result, "payload": payload}, request_id)
+        }, request_id=request_id, caption=caption)
+    return stamp_echo({**result, "payload": payload}, request_id=request_id, caption=caption)

@@ -76,8 +76,10 @@ class CFGPUError(Exception):
         # ``model_id``). Never the internal adapter_id / cfgpu_model_id — see
         # get_model_card hint.
         self.model_id: str | None = model_id
-        # Caller-supplied correlation handle (see tool_registry.stamp_request_id),
-        # echoed on the error result so a failure can be joined back to the request.
+        # Caller-supplied correlation handle (see tool_registry.stamp_echo), echoed on
+        # the error result so a failure can be joined back to the request. Deliberately
+        # the only echo field carried here: the sibling ``caption`` labels an artifact,
+        # and a failed call produced none.
         self.request_id: str | None = request_id
 
     def __repr__(self) -> str:
