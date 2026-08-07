@@ -257,6 +257,15 @@ def test_wan_accepts_15s_duration():
     assert ok is True
 
 
+def test_wan_rejects_duration_over_15():
+    # 30s is schema-legal (Seedance 2.5 allows it) but past WAN 2.0's own ceiling,
+    # so the adapter — not the Pydantic validator — has to catch it.
+    adapter = _make_adapter()
+    ok, reason = adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=30))
+    assert ok is False
+    assert "4–15" in reason
+
+
 def test_seedance_rejects_duration_over_12():
     config = {
         "adapter_id": "doubao-seedance-1-5-pro",
@@ -269,11 +278,68 @@ def test_seedance_rejects_duration_over_12():
         "capabilities": {"text_to_video"},
         "cost_tier": 2,
         "speed_tier": 3,
+        "max_duration_seconds": 12,
     }
     adapter = SeedanceVideoAdapter.from_config(config)
     ok, reason = adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=15))
     assert ok is False
     assert "4–12" in reason
+
+
+def _make_2_5_adapter() -> SeedanceVideoAdapter:
+    config = {
+        "adapter_id": "doubao-seedance-2-5",
+        "display_name": "Doubao Seedance 2.5",
+        "cfgpu_model_id": "doubao-seedance-2-5",
+        "model_name": "doubao-seedance-2-5",
+        "task_type": "video",
+        "endpoint": "/video/generations",
+        "is_async": True,
+        "poll_endpoint": "/video/tasks/{task_id}",
+        "capabilities": {
+            "text_to_video", "image_to_video", "first_last_frame",
+            "multi_modal_reference", "video_edit", "video_extend", "audio_generate",
+        },
+        "cost_tier": 4,
+        "speed_tier": 2,
+        "max_duration_seconds": 30,
+    }
+    return SeedanceVideoAdapter.from_config(config)
+
+
+def test_seedance_2_5_accepts_30s_duration():
+    adapter = _make_2_5_adapter()
+    req = GenerateVideoInput(prompt="x", duration_seconds=30)
+    ok, _ = adapter.supports(req)
+    assert ok is True
+    assert adapter.build_payload(req)["duration"] == 30
+
+
+def test_seedance_2_5_builds_the_same_content_array_as_2_0():
+    # 2.5 differs from 2.0 in scale, not in payload shape — the reference roles and
+    # top-level keys must stay byte-identical, only `model` changes.
+    req = GenerateVideoInput(
+        prompt="x",
+        reference_images=["https://example.com/1.jpg"],
+        reference_videos=["https://example.com/v.mp4"],
+        reference_audios=["https://example.com/a.mp3"],
+        duration_seconds=30,
+    )
+    payload = _make_2_5_adapter().build_payload(req)
+    assert payload["model"] == "doubao-seedance-2-5"
+    assert [(c["type"], c["role"]) for c in payload["content"] if c["type"] != "text"] == [
+        ("image_url", "reference_image"),
+        ("video_url", "reference_video"),
+        ("audio_url", "reference_audio"),
+    ]
+
+
+def test_seedance_2_5_poll_timeout_covers_a_30s_render():
+    adapter = _make_2_5_adapter()
+    adapter.poll_config = None  # exercise the no-poll_config branch
+    req = GenerateVideoInput(prompt="x", duration_seconds=30)
+    # base 300 (text-to-video) + 25s beyond the 5s baseline × 20
+    assert adapter.estimate_poll_timeout(req) == 800
 
 
 def _make_fast_adapter() -> SeedanceVideoAdapter:

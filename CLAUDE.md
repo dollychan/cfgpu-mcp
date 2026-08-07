@@ -84,7 +84,9 @@ Each model lives in its own directory with `adapter.yaml` and `card.md`. Variant
 
 `adapters/base.py` holds a global `_PYTHON_ADAPTERS: dict[str, type]`. The `@register_python_adapter` decorator populates it at import time, keyed by `cls.adapter_id`. `adapters/__init__.py` imports `seedance_video` and `seedream` to trigger registration before the registry loads.
 
-`_instantiate()` in the registry looks up `adapter_id` first, then follows `extends` to find the parent's class — this is how `wan-2-0-fast` reuses `SeedanceVideoAdapter` with its own `cfgpu_model_id`. The Seedance family (`wan-2-0`, `wan-2-0-fast`, `doubao-seedance-2-0`, `doubao-seedance-2-0-fast`, `doubao-seedance-1-5-pro`) all share `SeedanceVideoAdapter` (registered under `wan-2-0`) — Seedance 2.0 is API-identical to WAN 2.0.
+`_instantiate()` in the registry looks up `adapter_id` first, then follows `extends` to find the parent's class — this is how `wan-2-0-fast` reuses `SeedanceVideoAdapter` with its own `cfgpu_model_id`. The Seedance family (`wan-2-0`, `wan-2-0-fast`, `doubao-seedance-2-0`, `doubao-seedance-2-0-fast`, `doubao-seedance-2-0-mini`, `doubao-seedance-2-5`, `doubao-seedance-1-5-pro`) all share `SeedanceVideoAdapter` (registered under `wan-2-0`) — Seedance 2.0 is API-identical to WAN 2.0, and 2.5 differs in scale only (30s single-shot, up to 50 reference materials, multilingual audio), not in payload shape.
+
+Per-model video duration ceilings are declarative: `GenerateVideoInput`'s validator allows the fleet-wide widest range (4–30, set by Seedance 2.5), each `adapter.yaml` declares its real limit as `max_duration_seconds` (default 15 — the pre-2.5 global cap, so no existing model changed), and `ModelAdapter.supports()` enforces it. This keeps over-long requests failing locally and lets `model="auto"` route around a too-short model instead of hard-failing in the schema.
 
 ### Tool schema single source of truth
 

@@ -137,6 +137,20 @@ def test_multilevel_extends_resolves_ancestor_python_adapter(adapter_id, cfgpu_m
     assert payload["model"] == cfgpu_model_id
 
 
+def test_seedance_2_5_inherits_the_wan_chain_and_raises_its_duration_cap():
+    """doubao-seedance-2-5 → doubao-seedance-2-0 → wan-2-0: it must reuse
+    SeedanceVideoAdapter (two levels up) and inherit the full capability set,
+    overriding only its identifiers, tiers and the 30s duration ceiling."""
+    registry = _load()
+    adapter = registry.get("doubao-seedance-2-5")
+    assert isinstance(adapter, SeedanceVideoAdapter)
+    assert adapter.cfgpu_model_id == "doubao-seedance-2-5"
+    assert registry.get("wan-2-0").capabilities == adapter.capabilities
+    assert adapter.max_duration_seconds == 30
+    assert registry.get("doubao-seedance-2-0").max_duration_seconds == 15
+    assert registry.get("doubao-seedance-1-5-pro").max_duration_seconds == 12
+
+
 def test_unknown_model_raises_key_error():
     registry = _load()
     with pytest.raises(KeyError, match="not found"):

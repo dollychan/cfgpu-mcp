@@ -98,9 +98,16 @@ def test_video_duration_rejects_out_of_range():
     from pydantic import ValidationError
     from cfgpu_mcp.tool_registry import GenerateVideoInput
     with pytest.raises(ValidationError):
-        GenerateVideoInput(prompt="x", duration_seconds=16)
+        GenerateVideoInput(prompt="x", duration_seconds=31)
     with pytest.raises(ValidationError):
         GenerateVideoInput(prompt="x", duration_seconds=2)
+
+
+def test_video_duration_allows_the_fleet_wide_maximum():
+    # The schema caps at the widest model in the fleet (Seedance 2.5 at 30s);
+    # narrower ceilings belong to each adapter's supports(), not here.
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+    assert GenerateVideoInput(prompt="x", duration_seconds=30).duration_seconds == 30
 
 
 def test_video_resolution_accepts_1080p():

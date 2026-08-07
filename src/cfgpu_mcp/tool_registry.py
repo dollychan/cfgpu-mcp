@@ -232,16 +232,17 @@ class GenerateVideoInput(BaseModel):
     )
     reference_images: Optional[list[str]] = media_field(
         slot="Reference images that guide the generation (role=reference_image). Typically "
-        "up to 9, and on most models mutually exclusive with first_frame / last_frame — "
-        "call get_model_card for the chosen model's actual limits.",
+        "up to 9 (up to 30 on Doubao Seedance 2.5), and on most models mutually exclusive "
+        "with first_frame / last_frame — call get_model_card for the chosen model's actual "
+        "limits.",
         role="image",
         arity="many",
         accepts=["https_url", "asset_url"],
     )
     reference_videos: Optional[list[str]] = media_field(
         slot="Reference videos that guide the generation (role=reference_video). Support and "
-        "limits vary by model (the Seedance 2.0 family takes up to 3) — call get_model_card "
-        "for the chosen model.",
+        "limits vary by model (the Seedance 2.0 family takes up to 3, Seedance 2.5 up to 10) "
+        "— call get_model_card for the chosen model.",
         role="video",
         arity="many",
         accepts=["https_url", "asset_url"],
@@ -256,19 +257,24 @@ class GenerateVideoInput(BaseModel):
     )
     duration_seconds: int = Field(
         default=5,
-        description="Video duration in seconds: 4–15 (WAN 2.0, WAN 2.0 Fast, HappyHorse) or "
-        "4–12 (Doubao Seedance 1.5 Pro). Use -1 for a model-chosen 'smart' duration "
-        "(supported by WAN 2.0 and Doubao Seedance 1.5 Pro).",
+        description="Video duration in seconds: 4–30 (Doubao Seedance 2.5), 4–15 (WAN 2.0, "
+        "WAN 2.0 Fast, the Doubao Seedance 2.0 family, HappyHorse) or 4–12 (Doubao Seedance "
+        "1.5 Pro). Use -1 for a model-chosen 'smart' duration (supported by WAN 2.0 and the "
+        "Doubao Seedance family).",
     )
 
     @field_validator("duration_seconds")
     @classmethod
     def _validate_duration(cls, v: int) -> int:
-        if v != -1 and not (4 <= v <= 15):
+        # 30 is the fleet-wide maximum (Doubao Seedance 2.5); narrower per-model
+        # ceilings are enforced by each adapter's supports(), so model="auto" can
+        # route around them instead of hard-failing here.
+        if v != -1 and not (4 <= v <= 30):
             raise ValueError(
-                f"duration_seconds={v} is out of range. Use 4–15 seconds, or -1 for a "
-                f"model-chosen 'smart' duration (WAN 2.0 / Doubao Seedance 1.5 Pro). "
-                f"Note Doubao Seedance 1.5 Pro caps explicit durations at 12 seconds."
+                f"duration_seconds={v} is out of range. Use 4–30 seconds, or -1 for a "
+                f"model-chosen 'smart' duration (WAN 2.0 / Doubao Seedance). Note only "
+                f"Doubao Seedance 2.5 goes beyond 15 seconds; WAN 2.0 and Seedance 2.0 cap "
+                f"at 15, and Doubao Seedance 1.5 Pro at 12."
             )
         return v
     aspect_ratio: Literal["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"] = Field(

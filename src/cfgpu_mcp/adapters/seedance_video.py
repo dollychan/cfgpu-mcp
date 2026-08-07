@@ -14,7 +14,8 @@ class SeedanceVideoAdapter(ModelAdapter):
     """Python Adapter for the Seedance video family and variants.
 
     Handles the multimodal content array construction required by the Seedance API.
-    WAN 2.0 / WAN 2.0 Fast / Seedance 2.0 / Seedance 2.0 Fast / Doubao Seedance 1.5 Pro
+    WAN 2.0 / WAN 2.0 Fast / Seedance 2.0 / Seedance 2.0 Fast / Seedance 2.0 mini /
+    Seedance 2.5 / Doubao Seedance 1.5 Pro
     all reuse this class via Registry extends-chain resolution — no per-variant
     Python module needed. The class is registered under ``wan-2-0`` (the base model
     every variant ``extends:``).
@@ -145,16 +146,8 @@ class SeedanceVideoAdapter(ModelAdapter):
                 "wan-2-0-fast does not support 1080p for text-to-video "
                 "(use 480p or 720p, or switch to wan-2-0 for 1080p)"
             )
-        # Doubao Seedance 1.5 Pro caps explicit durations at 12s (WAN 2.0 allows up to 15).
-        if (
-            self.adapter_id == "doubao-seedance-1-5-pro"
-            and req.duration_seconds != -1
-            and req.duration_seconds > 12
-        ):
-            return False, (
-                f"{self.adapter_id} supports explicit durations of 4–12 seconds "
-                f"(or -1 for a model-chosen smart duration)"
-            )
+        # Per-model duration ceilings (1.5 Pro 12s, 2.5 30s, the rest 15s) come from
+        # each adapter.yaml's max_duration_seconds and are enforced by super().supports().
         return True, ""
 
     def estimate_poll_timeout(self, req: "GenerateImageInput | GenerateVideoInput") -> int:

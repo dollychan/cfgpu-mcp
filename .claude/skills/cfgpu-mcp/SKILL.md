@@ -55,7 +55,7 @@ All `generate_*` tools share these:
 
 Tool-specific parameters are documented in each model's skill / card. Key ones:
 - `generate_image`: `aspect_ratio` (`1:1`…`21:9`), `resolution` (`1K`–`4K`), `reference_images`, `n` (1–15, 组图, `doubao-seedream-*` only), `watermark`.
-- `generate_video`: `first_frame`/`last_frame` **or** `reference_images`/`reference_videos`/`reference_audios` (mutually exclusive scenarios), `duration_seconds` (4–15, `-1`=smart), `aspect_ratio`, `resolution` (`480p`/`720p`/`1080p`), `with_audio`, `watermark`.
+- `generate_video`: `first_frame`/`last_frame` **or** `reference_images`/`reference_videos`/`reference_audios` (mutually exclusive scenarios), `duration_seconds` (4–30 on `doubao-seedance-2-5`, 4–15 elsewhere, `-1`=smart), `aspect_ratio`, `resolution` (`480p`/`720p`/`1080p`), `with_audio`, `watermark`.
 - `generate_audio`: `voice`, `audio_format` (`mp3`/`wav`/`pcm`/`flac`), `sample_rate`, plus MiniMax-only `bitrate`/`speed`/`volume`/`pitch`/`emotion`.
 - `understand_vision`: `images` (list), `video` (single URL), `system_prompt`, `max_tokens`, `temperature`. Synchronous — no `wait`/`task_id`.
 
@@ -136,11 +136,11 @@ These come from per-model `build_payload` validation, mostly as `invalid_params`
 | `n>1` rejected | `n>1` on a non-`doubao-seedream-*` image model | Use a `doubao-seedream-*` model for 组图, or set `n=1`. |
 | 1080p rejected on `wan-2-0-fast` t2v | WAN 2.0 Fast text-to-video maxes at 720p | Use 480p/720p, add an image input, or switch to `wan-2-0`. |
 | `does not support multi_modal_reference` | sent `reference_images`/`reference_videos`/`reference_audios` to a model lacking that capability (e.g. `doubao-seedance-1-5-pro`) | Switch to a reference-capable model (`doubao-seedance-2-0`, `wan-2-0`, or a `wan-2-*-r2v`/`-videoedit`), or drop the reference inputs. The upstream raw form is `the specified task_type r2v does not support model ...` — `task_type` is server-derived from the content shape, never a client param. |
-| duration out of range | `duration_seconds` not 4–15 (or `-1`) | Clamp to the model's range (Seedance 1.5 Pro caps at 12). |
+| `supports explicit durations of 4–N seconds` | `duration_seconds` above the chosen model's ceiling | Clamp to that model's range, or switch model: 30s needs `doubao-seedance-2-5`; WAN 2.0 / Seedance 2.0 cap at 15; Seedance 1.5 Pro at 12. |
 
 ### Pydantic `InputValidationError` (before the call runs)
 
-If you call a tool with an out-of-range value the schema rejects, you get a validation error **before** any API call — e.g. `n` outside 1–15, or `duration_seconds` outside 4–15/`-1`, or an `aspect_ratio`/`resolution`/`audio_format` not in its allowed set. Fix: re-call with a value inside the documented range. (If invoking a deferred/namespaced tool, the schema must be loaded first.)
+If you call a tool with an out-of-range value the schema rejects, you get a validation error **before** any API call — e.g. `n` outside 1–15, or `duration_seconds` outside 4–30/`-1` (the schema allows the widest model's range; narrower per-model ceilings are rejected by the model itself, see above), or an `aspect_ratio`/`resolution`/`audio_format` not in its allowed set. Fix: re-call with a value inside the documented range. (If invoking a deferred/namespaced tool, the schema must be loaded first.)
 
 ### Generic non-cfgpu errors
 

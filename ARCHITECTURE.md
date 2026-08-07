@@ -282,7 +282,7 @@ from cfgpu_mcp.adapters import seedance_video, seedream, async_image, happyhorse
 2. 沿 `extends` 链**逐级向上**查找父 ID（`wan-2-0`）→ 找到 `SeedanceVideoAdapter`
 3. 用 `SeedanceVideoAdapter.from_config(merged_config)` 实例化，此时实例的 `adapter_id`、`cfgpu_model_id` 等已被 merged config 覆盖
 
-这就是 `wan-2-0-fast`、`doubao-seedance-2-0` / `-fast`、`doubao-seedance-1-5-pro` 如何复用 `SeedanceVideoAdapter` 的全部逻辑，不需要各自单独的 Python 文件。
+这就是 `wan-2-0-fast`、`doubao-seedance-2-0` / `-fast` / `-mini`、`doubao-seedance-2-5`、`doubao-seedance-1-5-pro` 如何复用 `SeedanceVideoAdapter` 的全部逻辑，不需要各自单独的 Python 文件。
 
 第 2 步必须沿整条链向上走，而不是只看一层父级。例如 `nano-banana-pro-premium` → `nano-banana-pro` → `nano-banana-2`：只有 `nano-banana-2` 注册了 `NanoBananaAdapter`，中间的 `nano-banana-pro` 没有。若只查一层，孙级变体会 fallback 到 `GenericAdapter`，由于没有 `payload_mapping` 而构建出空 payload，导致 API 报 `model参数不能为空`。`_instantiate()` 因此接收完整的 `raw_configs`，以便逐级追溯 `extends`。
 
@@ -459,6 +459,9 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── doubao-seedance-2-0-mini/
 │   │   ├── adapter.yaml        extends: doubao-seedance-2-0, card_base: ~（高性价比）
+│   │   └── card.md
+│   ├── doubao-seedance-2-5/
+│   │   ├── adapter.yaml        extends: doubao-seedance-2-0, card_base: ~（30s、50 参考素材、max_duration_seconds: 30）
 │   │   └── card.md
 │   ├── doubao-seedream-5-0-lite/
 │   │   ├── adapter.yaml
@@ -693,7 +696,7 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 - `watermark`：水印开关。类型为 `Optional[bool]`，**默认 `None` 表示不写入 payload、沿用各模型 API 自身默认**（避免覆盖 Seedream 4.5 的 `false` 等差异化默认）。支持的 adapter（`seedance_video`、`seedream`、`happyhorse`）在 `payload.update(req.model_specific)` **之前**写入 `payload["watermark"]`，因此 `model_specific` 仍可覆盖它；不支持的 adapter（`async_image` 下的 gpt-image-2 / nano-banana）不读取该字段，传入即被忽略。
 - `n`：图片组图数量（1-15），默认 1。仅 `SeedreamAdapter` 支持 `n>1`——会自动写入 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`async_image`（gpt-image-2 / nano-banana）的 `supports()` 对 `n>1` 直接拒绝。
 - `resolution`（视频）：开放 `1080p`，WAN 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
-- `duration_seconds`（视频）：允许 `-1`（智能时长，`SeedanceVideoAdapter` 直接透传）。`SeedanceVideoAdapter.supports()` 对 `doubao-seedance-1-5-pro` 额外限制显式时长 ≤12s；`happyhorse` 拒绝 `-1`。
+- `duration_seconds`（视频）：允许 `-1`（智能时长，`SeedanceVideoAdapter` 直接透传）。Pydantic 校验器只卡**全机队最宽**的范围 4–30（来自 `doubao-seedance-2-5`，单段 30 秒直出）；**每个模型真实的上限写在各自 `adapter.yaml` 的 `max_duration_seconds`**（缺省 15 = 2.5 之前的全局上限，故其余模型行为不变；`doubao-seedance-1-5-pro` 为 12），由 `ModelAdapter.supports()` 统一拒绝。这样超限在本地报错而不是被上游 POST 拒绝，且 `model="auto"` 能绕开时长不够的模型。`happyhorse` 另外拒绝 `-1`。
 - **能力校验（视频）**：CFGPU 上游 API 会**按 `content` 数组形态在服务端推导 `task_type`**（如带 `reference_video` → `r2v`），客户端从不传 `task_type`。`SeedanceVideoAdapter.supports()` 据此把场景映射成能力名（首帧+尾帧→`first_last_frame`、仅首帧→`image_to_video`、reference_images/videos/audios→`multi_modal_reference`、纯文本→`text_to_video`），若该能力不在模型 `capabilities` 内则本地直接拒绝（如 `doubao-seedance-1-5-pro` 无 `multi_modal_reference`，传 `reference_videos` 会得到清晰报错，而非上游 `the specified task_type r2v does not support model ...`）。这也让 `model="auto"` 路由跳过不支持该场景的模型。
 
 > 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark`、`n` 作为通用参数列在支持模型的顶层 args（`n` 仅列在 seedream 系；gpt/nano 均不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`response_format` 等）。新增/调整参数时同步该文件。

@@ -16,5 +16,8 @@ capabilities:
 cost_tier: 2
 speed_tier: 3
 
+# 1.5 Pro caps explicit durations at 12s, below the 15s the rest of the family allows.
+max_duration_seconds: 12
+
 poll_config:
   default_timeout: 400

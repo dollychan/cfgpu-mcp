@@ -1,0 +1,22 @@
+extends: doubao-seedance-2-0
+card_base: ~
+
+adapter_id: doubao-seedance-2-5
+display_name: "Doubao Seedance 2.5"
+cfgpu_model_id: doubao-seedance-2-5
+model_name: doubao-seedance-2-5
+
+# Capabilities, endpoint and the multimodal content array are identical to
+# Seedance 2.0 (and thus WAN 2.0) and are inherited through the extends chain.
+# 2.5 differs in scale, not in API shape: 30s single-shot output, up to 50
+# reference materials (30 images + 10 videos + 10 audios), stronger instruction
+# following / editing, and native narration in 10+ languages. Priced above the
+# 2.0 family, and a 30s render is the slowest job in the family.
+
+cost_tier: 4
+speed_tier: 2
+
+max_duration_seconds: 30
+
+poll_config:
+  default_timeout: 900

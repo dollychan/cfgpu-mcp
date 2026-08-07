@@ -62,6 +62,7 @@ class ModelAdapter(ABC):
     capabilities: set[str]
     cost_tier: int               # 1-5
     speed_tier: int              # 1-5
+    max_duration_seconds: int    # video only: longest explicit duration accepted
     poll_config: PollConfig | None
     extends: str | None          # parent adapter_id, or None
     card_base: str | None        # model dir to inherit card.md from; None = no inheritance
@@ -82,6 +83,12 @@ class ModelAdapter(ABC):
         instance.capabilities = set(config.get("capabilities", []))
         instance.cost_tier = config.get("cost_tier", 3)
         instance.speed_tier = config.get("speed_tier", 3)
+        # GenerateVideoInput's own validator allows the widest range any model in
+        # the fleet accepts (4–30, for Doubao Seedance 2.5). Every narrower model
+        # declares its real ceiling here so supports() can reject locally instead
+        # of letting the POST fail upstream. 15 was the schema-wide cap before
+        # 2.5 arrived, so it stays the default and no existing model changes.
+        instance.max_duration_seconds = config.get("max_duration_seconds", 15)
         pc = config.get("poll_config")
         instance.poll_config = PollConfig.from_dict(pc) if pc else None
         instance.extends = config.get("extends")
@@ -121,6 +128,16 @@ class ModelAdapter(ABC):
         for cls, tt in expected.items():
             if isinstance(req, cls) and self.task_type != tt:
                 return False, f"{self.adapter_id} is a {self.task_type} model, not a {tt} model"
+        if (
+            isinstance(req, GenerateVideoInput)
+            and req.duration_seconds != -1
+            and req.duration_seconds > self.max_duration_seconds
+        ):
+            return False, (
+                f"{self.adapter_id} supports explicit durations of "
+                f"4–{self.max_duration_seconds} seconds "
+                f"(or -1 for a model-chosen smart duration)"
+            )
         return True, ""
 
     def extract_task_id(self, resp: dict) -> str | None:
