@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from math import gcd
+from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
@@ -31,6 +32,12 @@ _SIZE_MAP: dict[tuple[str, str], str] = {
     ("1080p", "3:4"): "1080x1440",
     ("1080p", "21:9"): "2560x1080",
 }
+
+# Reverse of _SIZE_MAP: the pixel `size` the API echoes back → the aspect ratio it
+# came from. Exact for every size this adapter can emit; unknown sizes (a
+# model_specific override) fall back to gcd reduction, which is right for clean
+# ratios but would turn e.g. 854x480 into "427:240" — hence the table first.
+_RATIO_BY_SIZE: dict[str, str] = {size: ratio for (_res, ratio), size in _SIZE_MAP.items()}
 
 # Unified quality_tier → Kling generation mode.
 _MODE_MAP = {"fast": "std", "balanced": "std", "best": "pro"}
@@ -64,7 +71,8 @@ class KlingVideoAdapter(ModelAdapter):
     base ``extract_task_id`` / ``extract_status`` are reused. The poll response
     nests the result under ``taskResult.videos[]`` (``[{"id", "url", "duration"}]``)
     with the outcome in a top-level ``status`` (``completed``), so
-    ``parse_response`` reads that nested array.
+    ``parse_response`` reads that nested array. It carries no ``usage`` object —
+    ``_build_usage`` synthesizes one from ``seconds`` / ``size``.
     """
 
     adapter_id = "kling-video-o1"
@@ -116,18 +124,73 @@ class KlingVideoAdapter(ModelAdapter):
             for v in (payload.get("video_list") or [])
         )
 
+    @staticmethod
+    def _parse_size(size: Any) -> tuple[int | None, str | None]:
+        """``"1920x1080"`` → ``(1080, "16:9")`` — the short side and the aspect ratio.
+
+        ``sr`` is the short side, not the height: that is what the resolution tier
+        is measured on, so a portrait 1080x1920 bills at the same 1080 tier as its
+        landscape counterpart.
+        """
+        if not isinstance(size, str) or "x" not in size:
+            return None, None
+        w_s, _, h_s = size.partition("x")
+        try:
+            width, height = int(w_s), int(h_s)
+        except ValueError:
+            return None, None
+        if width <= 0 or height <= 0:
+            return None, None
+        ratio = _RATIO_BY_SIZE.get(size)
+        if ratio is None:
+            divisor = gcd(width, height)
+            ratio = f"{width // divisor}:{height // divisor}"
+        return min(width, height), ratio
+
+    def _build_usage(self, resp: dict, videos: list) -> dict | None:
+        """Synthesize the billing record Kling does not return.
+
+        Kling is billed per second at a rate that steps with output resolution, but
+        unlike 万相 / HappyHorse its task response carries no ``usage`` object at all —
+        the billing inputs sit in the top-level ``seconds`` and ``size`` (and, for an
+        edit whose length follows the source footage, only in
+        ``taskResult.videos[].duration``). Assemble them into the same
+        ``{duration, sr, ratio}`` shape the other per-second video models report, so a
+        consumer reads billing the same way across the family.
+        """
+        duration: Any = resp.get("seconds")
+        if duration is None and videos:
+            first = videos[0]
+            duration = first.get("duration") if isinstance(first, dict) else None
+        if isinstance(duration, str):  # the API sends "5"; report it as a number
+            try:
+                duration = int(duration)
+            except ValueError:
+                pass
+        sr, ratio = self._parse_size(resp.get("size"))
+        usage = {"duration": duration, "sr": sr, "ratio": ratio}
+        # Nothing extractable (e.g. a queued response) — report no usage rather than
+        # a record of three nulls.
+        if all(v is None for v in usage.values()):
+            return None
+        return usage
+
     def parse_response(self, resp: dict) -> NormalizedResult:
         task_result = resp.get("taskResult") or {}
         videos = task_result.get("videos") or []
         urls = [v["url"] for v in videos if isinstance(v, dict) and v.get("url")]
+        usage = self._build_usage(resp, videos)
         return NormalizedResult(
             urls=urls,
             expires_at=_default_expires_at(),
             task_id=resp.get("id"),
             model_used=resp.get("model"),
             seed=resp.get("seed"),
-            usage=resp.get("usage"),
-            aspect_ratio=resp.get("ratio"),  # resolved output ratio when the API reports it
+            usage=usage,
+            # Kling echoes a pixel `size`, never a `ratio` key — derive it from the
+            # size (same value usage.ratio carries) so the resolved output ratio is
+            # reported instead of falling back to the requested "adaptive".
+            aspect_ratio=resp.get("ratio") or (usage or {}).get("ratio"),
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

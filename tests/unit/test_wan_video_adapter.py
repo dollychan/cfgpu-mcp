@@ -101,7 +101,7 @@ def test_parse_response_reads_output_video_url():
             "videoUrl": "https://cdn/v.mp4",
             "seed": 42,
         },
-        "usage": {"totalTokens": 1000, "ratio": "9:16"},
+        "usage": {"duration": 5, "outputVideoDuration": 5, "sr": 1080, "ratio": "9:16"},
     }
     assert adapter.extract_status(resp) == "succeeded"
     result = adapter.parse_response(resp)
@@ -109,7 +109,47 @@ def test_parse_response_reads_output_video_url():
     assert result.task_id == "cgt-123"
     assert result.seed == 42
     assert result.aspect_ratio == "9:16"
-    assert result.usage == {"totalTokens": 1000, "ratio": "9:16"}
+    assert result.usage == {"duration": 5, "outputVideoDuration": 5, "sr": 1080, "ratio": "9:16"}
+
+
+def test_parse_response_real_poll_payload():
+    """Pins the authoritative 万相 poll response (see models/wan-2-7-t2v/card.md).
+
+    The billing-relevant values arrive as a ready-made per-second `usage`
+    (`duration` + `sr`), so unlike Kling this family needs no synthesis — the object
+    is passed through untouched.
+    """
+    adapter = _make_adapter()
+    resp = {
+        "requestId": "c6b9559f-4c28-98b0-86ea-2ed499172652",
+        "model": "wan2.7-t2v",
+        "output": {
+            "taskId": "36598b68-c4f5-423c-92a1-2d144692c1d0",
+            "taskStatus": "SUCCEEDED",
+            "submitTime": "2026-06-30 18:07:20.235",
+            "scheduledTime": "2026-06-30 18:07:20.275",
+            "endTime": "2026-06-30 18:10:08.044",
+            "origPrompt": "一段紧张刺激的侦探追查故事...",
+            "videoUrl": "https://dashscope-a717.oss-accelerate.aliyuncs.com/1d/84/v.mp4?Expires=1782900606",
+        },
+        "usage": {
+            "duration": 5,
+            "inputVideoDuration": 0,
+            "outputVideoDuration": 5,
+            "videoCount": 1,
+            "sr": 720,
+            "ratio": "16:9",
+        },
+    }
+    assert adapter.extract_status(resp) == "succeeded"
+    result = adapter.parse_response(resp)
+    assert result.urls == [resp["output"]["videoUrl"]]
+    assert result.task_id == "36598b68-c4f5-423c-92a1-2d144692c1d0"
+    assert result.usage == resp["usage"]          # passed through verbatim
+    assert result.usage["duration"] == 5          # 计费时长（秒）
+    assert result.usage["sr"] == 720              # 分辨率档位（短边）
+    assert result.aspect_ratio == "16:9"          # from usage.ratio
+    assert result.seed is None                    # this envelope carries no seed
 
 
 def test_extract_task_id_from_create_response():

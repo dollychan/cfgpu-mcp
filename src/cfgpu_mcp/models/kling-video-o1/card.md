@@ -89,7 +89,7 @@ adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `ref
 1. **创建任务**：POST `/video/generations`，返回 `id`（task_id）
 2. **查询状态**：GET `/video/tasks/{task_id}`
 3. **轮询等待**：任务 `running` 时持续查询
-4. **获取结果**：任务 `succeeded` 后从 `content.videoUrl` 取视频 URL（24 小时内有效）
+4. **获取结果**：任务 `completed` 后从 `taskResult.videos[].url` 取视频 URL（24 小时内有效）
 
 ## 示例
 
@@ -190,3 +190,15 @@ adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `ref
 },
 "error":null}
 ```
+
+### 计费字段（响应无 `usage`，由 adapter 组装）
+
+可灵按秒计费、单价随分辨率与是否有视频输入/音频分档，但任务响应里**没有 `usage` 对象**，计费数值散在顶层。adapter 将其组装为与万相 / HappyHorse 一致的形状：
+
+| 结果 `usage` 字段 | 来源 | 说明 |
+|---|---|---|
+| `duration` | `seconds`（字符串 `"5"`，转为数字） | 计费时长（秒）。视频编辑任务时长跟随源视频、不带 `seconds`，则取 `taskResult.videos[0].duration` |
+| `sr` | `size` 的**短边**（`"1920x1080"` → `1080`） | 分辨率档位按短边划分，竖屏与横屏同档 |
+| `ratio` | 由 `size` 反查 | 可灵只回传像素 `size`，不回传 `ratio`；该值同时用于结果的 `aspect_ratio` |
+
+例：`"seconds":"5"` + `"size":"1920x1080"` → `usage: {"duration": 5, "sr": 1080, "ratio": "16:9"}`。

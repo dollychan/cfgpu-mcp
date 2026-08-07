@@ -57,7 +57,40 @@
 
 ## 响应结构
 
-标准视频任务结构，关键字段 `content.videoUrl`、`status`、`usage.totalTokens`。
+创建任务响应（snake_case）：
+
+```json
+{"output":{
+  "task_status":"PENDING",
+  "task_id":"36598b68-c4f5-423c-92a1-2d144692c1d0"},
+  "request_id":"e25956ba-fa12-9eda-8bcb-a04225e8ef70"}
+```
+
+查询任务结果 GET `/video/tasks/{task_id}`（camelCase）：
+
+```json
+{"requestId":"c6b9559f-4c28-98b0-86ea-2ed499172652",
+"model":"wan2.6-t2v",
+"output":{"taskId":"36598b68-c4f5-423c-92a1-2d144692c1d0",
+"taskStatus":"SUCCEEDED",
+"submitTime":"2026-06-30 18:07:20.235",
+"scheduledTime":"2026-06-30 18:07:20.275",
+"endTime":"2026-06-30 18:10:08.044",
+"origPrompt":"...",
+"videoUrl":"https://dashscope-a717.oss-accelerate.aliyuncs.com/...mp4?Expires=1782900606&..."},
+"usage":{"duration":5,"inputVideoDuration":0,"outputVideoDuration":5,"videoCount":1,"sr":720,"ratio":"16:9"}
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `output.taskId` | 任务 ID（创建响应为 snake_case `output.task_id`） |
+| `output.taskStatus` | 任务状态：`PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED`（创建响应为 `output.task_status`；`CANCELED` / `UNKNOWN` 等同于失败） |
+| `output.videoUrl` | 生成的视频 URL（24 小时有效） |
+| `usage.duration` / `usage.outputVideoDuration` | 计费时长（秒） |
+| `usage.sr` / `usage.ratio` | 输出分辨率（短边，如 `720`）/ 宽高比 |
+
+> 本系列按秒计费、单价随分辨率分档，计费口径是 `usage.duration` + `usage.sr`，**不是** token。
 
 ## 约束与限制
 

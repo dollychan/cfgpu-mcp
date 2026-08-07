@@ -221,6 +221,74 @@ def test_parse_response_extracts_video_url():
     assert result.expires_at is not None
 
 
+# ── usage (synthesized: Kling returns no usage object) ───────────────────────
+
+def test_usage_synthesized_from_seconds_and_size():
+    """Kling bills per second at a resolution-tiered rate but returns no `usage`."""
+    adapter = _make_adapter()
+    resp = {
+        "id": "t1",
+        "status": "completed",
+        "seconds": "5",
+        "size": "1920x1080",
+        "taskResult": {"videos": [{"url": "https://cdn.example.com/v.mp4", "duration": "5"}]},
+    }
+    result = adapter.parse_response(resp)
+    assert result.usage == {"duration": 5, "sr": 1080, "ratio": "16:9"}
+
+
+def test_usage_sr_is_short_side_for_portrait():
+    adapter = _make_adapter()
+    resp = {"id": "t1", "status": "completed", "seconds": "10", "size": "1080x1920",
+            "taskResult": {"videos": [{"url": "https://cdn.example.com/v.mp4"}]}}
+    result = adapter.parse_response(resp)
+    assert result.usage == {"duration": 10, "sr": 1080, "ratio": "9:16"}
+
+
+def test_usage_ratio_uses_size_table_not_gcd():
+    """854x480 is 16:9 by the size table; a bare gcd reduction would say 427:240."""
+    adapter = _make_adapter()
+    resp = {"id": "t1", "status": "completed", "seconds": "5", "size": "854x480",
+            "taskResult": {"videos": [{"url": "https://cdn.example.com/v.mp4"}]}}
+    result = adapter.parse_response(resp)
+    assert result.usage["ratio"] == "16:9"
+    assert result.usage["sr"] == 480
+
+
+def test_usage_duration_falls_back_to_video_duration():
+    """A `base` video edit takes its length from the source, so no `seconds` is sent."""
+    adapter = _make_adapter()
+    resp = {"id": "t1", "status": "completed", "size": "1920x1080",
+            "taskResult": {"videos": [{"url": "https://cdn.example.com/v.mp4", "duration": "8"}]}}
+    result = adapter.parse_response(resp)
+    assert result.usage == {"duration": 8, "sr": 1080, "ratio": "16:9"}
+
+
+def test_usage_is_none_when_nothing_extractable():
+    adapter = _make_adapter()
+    result = adapter.parse_response({"id": "t1", "status": "queued"})
+    assert result.usage is None
+
+
+def test_aspect_ratio_derived_from_size():
+    adapter = _make_adapter()
+    resp = {"id": "t1", "status": "completed", "seconds": "5", "size": "720x1280",
+            "taskResult": {"videos": [{"url": "https://cdn.example.com/v.mp4"}]}}
+    result = adapter.parse_response(resp)
+    assert result.aspect_ratio == "9:16"
+
+
+def test_every_size_map_value_round_trips_to_its_ratio():
+    """The reverse table must cover every size build_payload can emit."""
+    from cfgpu_mcp.adapters.kling_video import _SIZE_MAP
+
+    adapter = _make_adapter()
+    for (_resolution, ratio), size in _SIZE_MAP.items():
+        sr, derived = adapter._parse_size(size)
+        assert derived == ratio, f"{size} → {derived}, expected {ratio}"
+        assert sr == min(int(size.split("x")[0]), int(size.split("x")[1]))
+
+
 def test_parse_response_multiple_videos():
     adapter = _make_adapter()
     resp = {

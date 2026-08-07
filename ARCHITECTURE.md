@@ -632,6 +632,10 @@ class MyModelAdapter(ModelAdapter):
 
 > **`model_used` 一律回填为 `model_name`**：adapter 的 `parse_response()` 常把 `resp.get("model")`（API 响应里回显的值，其实就是内部 `cfgpu_model_id`）写进 `model_used`，但这个值绝不能直接暴露给调用方。因此 `TaskManager` 在 `create()`（同步）和 `poll()`（异步）中，于 `parse_response()` **之后无条件覆盖**：`result.model_used = adapter.model_name`——不是"缺省才兜底"，而是每次都用公开标识覆盖掉 adapter 可能塞进来的内部 ID。这对 `model="auto"` 尤为关键——调用方唯一能得知 router 实际选中哪个模型的渠道就是 `model_used`，它必须是一个稳定、公开的 `model_name`。
 
+> **`usage` 与计费口径**：`usage` 默认**原样透传**上游的 `usage` 对象（`resp.get("usage")`），因为各 API 的计费结构差异过大，归一化只会丢信息。按 token 计费的模型（Seedance / 万相 2.0 家族）读 `usage.totalTokens`；按秒计费的模型（万相 2.6 / 2.7、HappyHorse）读 `usage.duration` + `usage.sr`（分辨率短边），上游都已回传。
+>
+> 唯一的例外是**可灵**（`KlingVideoAdapter`）：它同样按秒 × 分辨率档位计费，但任务响应里**根本没有 `usage` 对象**——计费数值散落在顶层 `seconds`（字符串 `"5"`）与 `size`（`"1920x1080"`）中。因此 `_build_usage()` 把它们组装成与按秒计费同族一致的 `{duration, sr, ratio}`：`duration` 转为数字，缺失时（视频编辑任务时长跟随源视频，payload 不带 `seconds`）退回 `taskResult.videos[0].duration`；`sr` 取 `size` 的**短边**（档位按短边划分）；`ratio` 由 `_RATIO_BY_SIZE`（`_SIZE_MAP` 的反表）查得，未收录的 size 才退回 gcd 约分——直接 gcd 会把 `854x480` 算成 `427:240` 而非 `16:9`。三项全为 `None` 时返回 `None`，避免产出一条全空的计费记录。这也是可灵唯一能拿到解析后 `ratio` 的来源（响应只有像素 `size`），故 `aspect_ratio` 也复用它。
+
 > **`aspect_ratio` 回传**：`aspect_ratio` 是回传给客户端的宽高比元数据，取值**优先用上游响应实际返回的 `ratio`**——部分 API（如 WAN，响应里带 `"ratio": "9:16"`）会回传解析后的真实宽高比，这在请求传 `adaptive` 时尤其有意义。各 adapter 的 `parse_response()` 在响应含 `ratio` 时即填入 `result.aspect_ratio`；仅当响应未回传时，才由 `TaskManager` 兜底为**请求**的 `aspect_ratio`（`if not result.aspect_ratio: ...`——这里是真正的"缺省才兜底"，与上面 `model_used` 的无条件覆盖不同）。
 >
 > 该请求兜底值并非来自响应，而异步模型的结果要到 `poll()` 才定型、此处已无请求对象，因此 `create()` 把请求的 `aspect_ratio` 暂存进**入库的** payload（保留键 `_requested_aspect_ratio`），`poll()` 再从 `task.payload` 取回。该保留键只进数据库、不会发往上游（POST 用的是干净的 payload），且 payload 仅供内部回读、从不重新提交，因此对上游与客户端均无影响，同时也让 `task_status` 重新轮询时仍能带上正确的宽高比。
