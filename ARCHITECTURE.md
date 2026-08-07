@@ -230,7 +230,9 @@ ModelAdapter (ABC, adapters/base.py)
     │       └── 万相 2.6（扁平 input 字段，无 media）：Wan26VideoT2VAdapter / Wan26VideoI2VAdapter（img_url/audio_url）/ Wan26VideoR2VAdapter（reference_urls）
     │
     └── KlingVideoAdapter         手写 Python，可灵 O1 的 flat payload
-            ├── resolution×ratio → size 像素串、quality_tier → std/pro mode；目前仅 text_to_video
+            ├── resolution×ratio → size 像素串、quality_tier → std/pro mode、with_audio → sound=on/off
+            ├── 素材走两个并列数组：image_list[{image,type:first_frame|end_frame}]（无 type = 参考图）
+            │   与 video_list[{video_url,refer_type:feature|base}]；refer_type=base（视频编辑）时不下发 seconds
             ├── 轮询响应把结果嵌在 taskResult.videos[].url（顶层 status=completed），parse_response 读该数组
             └── 同时服务 kling-video-o1 和 kling-v3-omni（通过 extends 链）
 ```
@@ -433,7 +435,7 @@ src/cfgpu_mcp/
 │   ├── seedream.py             Seedream 系列 Python Adapter（同步模型；5.0 lite / 5.0 Pro / 4.5 / 4.0 共用。Pro 为单图模型，n>1 报错；1K 档位透传 size="1K"）
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
-│   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds）
+│   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds/sound + image_list/video_list）
 │   ├── wan_video.py            万相 2.6/2.7 视频家族 Adapter（HappyHorse 风格请求 + Seedance 标准轮询；_build_input 钩子区分 2.6 扁平字段 / 2.7 media 数组）
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
 │   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）

@@ -12,7 +12,13 @@ def _make_adapter() -> KlingVideoAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {"text_to_video"},
+        "capabilities": {
+            "text_to_video",
+            "image_to_video",
+            "first_last_frame",
+            "multi_modal_reference",
+            "video_edit",
+        },
         "cost_tier": 4,
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 600},
@@ -70,6 +76,101 @@ def test_quality_tier_maps_to_mode(quality_tier, expected_mode):
     req = GenerateVideoInput(prompt="x", quality_tier=quality_tier)
     payload = adapter.build_payload(req)
     assert payload["mode"] == expected_mode
+
+
+def test_with_audio_maps_to_sound_flag():
+    adapter = _make_adapter()
+    assert adapter.build_payload(GenerateVideoInput(prompt="x"))["sound"] == "on"
+    assert adapter.build_payload(GenerateVideoInput(prompt="x", with_audio=False))["sound"] == "off"
+
+
+def test_text_only_payload_has_no_media_arrays():
+    adapter = _make_adapter()
+    payload = adapter.build_payload(GenerateVideoInput(prompt="x"))
+    assert "image_list" not in payload
+    assert "video_list" not in payload
+
+
+def test_first_frame_and_reference_images_share_image_list():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(
+        prompt="参考这些图生成视频",
+        first_frame="https://ref1.png",
+        reference_images=["https://ref2.png"],
+        resolution="720p",
+        aspect_ratio="9:16",
+    )
+    payload = adapter.build_payload(req)
+    assert payload["size"] == "720x1280"
+    # An untyped entry is a plain reference image
+    assert payload["image_list"] == [
+        {"image": "https://ref1.png", "type": "first_frame"},
+        {"image": "https://ref2.png"},
+    ]
+
+
+def test_first_and_last_frame_map_to_first_and_end_frame():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(
+        prompt="首帧变尾帧",
+        first_frame="https://start.png",
+        last_frame="https://end.png",
+        resolution="720p",
+        aspect_ratio="1:1",
+    )
+    payload = adapter.build_payload(req)
+    assert payload["size"] == "720x720"
+    assert payload["image_list"] == [
+        {"image": "https://start.png", "type": "first_frame"},
+        {"image": "https://end.png", "type": "end_frame"},
+    ]
+
+
+def test_reference_videos_default_to_feature_refer_type():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="跟随参考视频运镜", reference_videos=["https://ref.mp4"])
+    payload = adapter.build_payload(req)
+    assert payload["video_list"] == [
+        {"video_url": "https://ref.mp4", "refer_type": "feature"}
+    ]
+    assert payload["seconds"] == "5"  # a feature reference keeps the requested duration
+
+
+def test_base_video_edit_drops_seconds():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(
+        prompt="把背景换成沙滩",
+        first_frame="https://style.png",
+        quality_tier="best",
+        resolution="1080p",
+        aspect_ratio="16:9",
+        model_specific={
+            "video_list": [{"video_url": "https://src.mp4", "refer_type": "base"}]
+        },
+    )
+    payload = adapter.build_payload(req)
+    # Duration follows the source footage, so no `seconds` goes on the wire
+    assert "seconds" not in payload
+    assert payload["mode"] == "pro"
+    assert payload["size"] == "1920x1080"
+    assert payload["video_list"] == [
+        {"video_url": "https://src.mp4", "refer_type": "base"}
+    ]
+    assert payload["image_list"] == [
+        {"image": "https://style.png", "type": "first_frame"}
+    ]
+
+
+def test_explicit_seconds_survives_base_video_edit():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(
+        prompt="x",
+        model_specific={
+            "video_list": [{"video_url": "https://src.mp4", "refer_type": "base"}],
+            "seconds": "8",
+        },
+    )
+    assert adapter.build_payload(req)["seconds"] == "8"
 
 
 def test_cfgpu_model_id_only_in_model_field():
@@ -170,20 +271,46 @@ def test_supports_accepts_text_only():
     assert ok is True
 
 
-def test_supports_rejects_first_frame():
+def test_supports_accepts_first_frame():
     adapter = _make_adapter()
-    req = GenerateVideoInput(prompt="x", first_frame="https://example.com/f.jpg")
-    ok, reason = adapter.supports(req)
-    assert ok is False
-    assert "text-to-video only" in reason
+    ok, _ = adapter.supports(GenerateVideoInput(prompt="x", first_frame="https://example.com/f.jpg"))
+    assert ok is True
 
 
-def test_supports_rejects_reference_images():
+def test_supports_accepts_first_and_last_frame():
     adapter = _make_adapter()
-    req = GenerateVideoInput(prompt="x", reference_images=["https://example.com/r.jpg"])
+    req = GenerateVideoInput(
+        prompt="x", first_frame="https://example.com/f.jpg", last_frame="https://example.com/l.jpg"
+    )
+    ok, _ = adapter.supports(req)
+    assert ok is True
+
+
+def test_supports_accepts_reference_images_and_videos():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(
+        prompt="x",
+        reference_images=["https://example.com/r.jpg"],
+        reference_videos=["https://example.com/r.mp4"],
+    )
+    ok, _ = adapter.supports(req)
+    assert ok is True
+
+
+def test_supports_rejects_last_frame_without_first_frame():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", last_frame="https://example.com/l.jpg")
     ok, reason = adapter.supports(req)
     assert ok is False
-    assert "text-to-video only" in reason
+    assert "last_frame requires first_frame" in reason
+
+
+def test_supports_rejects_reference_audios():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", reference_audios=["https://example.com/a.mp3"])
+    ok, reason = adapter.supports(req)
+    assert ok is False
+    assert "reference_audios" in reason
 
 
 def test_supports_rejects_smart_duration():

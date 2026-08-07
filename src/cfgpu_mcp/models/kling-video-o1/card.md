@@ -8,7 +8,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `kling-video-o1` |
-| 能力标签 | text_to_video |
+| 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference, video_edit |
 | 成本档位 | 4/5 |
 | 速度档位 | 2/5 |
 
@@ -35,7 +35,10 @@
 | prompt | string | ✓ | - | 视频描述，支持中英文 |
 | size | string | - | 1280x720 | 输出像素尺寸 `宽x高`，由统一 Schema 的 `resolution` + `aspect_ratio` 映射得到 |
 | mode | string | - | std | 生成模式：`std`（标准）/ `pro`（高质量），由 `quality_tier` 映射（`best` → `pro`） |
-| seconds | string | ✓ | "5" | 视频时长（秒），字符串形式 |
+| seconds | string | ✓ | "5" | 视频时长（秒），字符串形式。视频编辑（`refer_type=base`）时不传，时长跟随源视频 |
+| sound | string | - | - | 是否生成有声视频：`on` / `off`，由 `with_audio` 映射 |
+| image_list | array | - | - | 图片输入数组，元素为 `{"image": url, "type": ...}`；`type` 可为 `first_frame`（首帧）/ `end_frame`（尾帧），**省略 `type` 即普通参考图**，带 `type` 与不带 `type` 的元素可混用 |
+| video_list | array | - | - | 视频输入数组，元素为 `{"video_url": url, "refer_type": ...}`；`refer_type` 为 `feature`（参考其运镜/风格）或 `base`（作为被编辑的源视频） |
 
 ## 与统一 Schema 的映射
 
@@ -45,7 +48,21 @@
 | resolution + aspect_ratio | size | 映射成像素 `宽x高`，`aspect_ratio=adaptive` 时按 16:9 处理 |
 | quality_tier | mode | `best` → `pro`，其余 → `std` |
 | duration_seconds | seconds | 转成字符串透传；不支持 `-1` 智能时长 |
+| with_audio | sound | `true` → `on`，`false` → `off` |
+| first_frame | image_list[] | `{"image": url, "type": "first_frame"}` |
+| last_frame | image_list[] | `{"image": url, "type": "end_frame"}`；需与 `first_frame` 同时给出 |
+| reference_images | image_list[] | `{"image": url}`（不带 `type`） |
+| reference_videos | video_list[] | `{"video_url": url, "refer_type": "feature"}` |
+| reference_audios | -（不支持） | 请求体没有音频输入槽位，`supports()` 直接拒绝 |
 | model_specific | -（合并到顶层） | 末位合并，可覆盖上述字段 |
+
+**视频编辑（`refer_type=base`）**：统一 Schema 只有一个 `reference_videos` 槽位，无法区分「参考」与「编辑」，因此默认按 `feature` 下发。要做视频编辑，用 `model_specific` 整体覆盖 `video_list`：
+
+```json
+{"model_specific": {"video_list": [{"video_url": "https://src.mp4", "refer_type": "base"}]}}
+```
+
+adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `refer_type=base` 则移除 `seconds`（除非调用方在 `model_specific` 里显式给了 `seconds`）。
 
 **分辨率 → size 对照（部分）：**
 
@@ -60,7 +77,9 @@
 
 ## 能力与限制
 
-- 目前 adapter 仅支持**文生视频**（text_to_video）。可灵 O1 的图片/视频/音频参考输入（图生视频、参考生视频）依赖尚未公开的字段约定，因此 `supports()` 会拒绝 `first_frame` / `last_frame` / `reference_*` 输入，待官方补齐文档后再扩展。
+- 支持文生视频、图生视频（首帧）、首尾帧、多图/视频参考、视频编辑。
+- 不支持 `reference_audios`：请求体没有音频输入槽位。
+- `last_frame` 必须与 `first_frame` 同时给出（尾帧 `end_frame` 依赖首帧）。
 - 需要显式时长，不支持 `duration_seconds=-1`。
 
 ## 异步任务流程
@@ -83,6 +102,55 @@
   "size": "1920x1080",
   "mode": "pro",
   "seconds": "5"
+}
+```
+
+### 首帧 + 参考图
+
+```json
+{
+  "model": "kling-video-o1",
+  "prompt": "参考这些图生成视频",
+  "mode": "std",
+  "size": "720x1280",
+  "seconds": "5",
+  "image_list": [
+    { "image": "https://ref1.png", "type": "first_frame" },
+    { "image": "https://ref2.png" }
+  ]
+}
+```
+
+### 首尾帧
+
+```json
+{
+  "model": "kling-video-o1",
+  "prompt": "首帧变尾帧",
+  "mode": "std",
+  "size": "720x720",
+  "seconds": "5",
+  "image_list": [
+    { "image": "https://start.png", "type": "first_frame" },
+    { "image": "https://end.png", "type": "end_frame" }
+  ]
+}
+```
+
+### 视频编辑（base 源视频 + 风格图，无 `seconds`）
+
+```json
+{
+  "model": "kling-video-o1",
+  "prompt": "把背景换成沙滩",
+  "mode": "pro",
+  "size": "1920x1080",
+  "video_list": [
+    { "video_url": "https://src.mp4", "refer_type": "base" }
+  ],
+  "image_list": [
+    { "image": "https://style.png", "type": "first_frame" }
+  ]
 }
 ```
 

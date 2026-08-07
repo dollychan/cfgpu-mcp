@@ -8,6 +8,10 @@ model_name: kling-v3-omni
 
 capabilities:
   - text_to_video
+  - image_to_video
+  - first_last_frame
+  - multi_modal_reference
+  - video_edit
 
 cost_tier: 5
 speed_tier: 2

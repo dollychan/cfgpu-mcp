@@ -424,36 +424,48 @@
       "adapterId": "kling-video-o1",
       "modelId": "kling-video-o1",
       "displayName": "Kling Video O1 (可灵 O1)",
-      "note": "Text-to-video only. resolution + aspect_ratio are mapped to a pixel size (adaptive -> 16:9); quality_tier maps to Kling mode (best -> pro, else std) and IS meaningful here. Does not use with_audio / watermark / reference media.",
+      "note": "Text-to-video, image-to-video, first/last frame, multimodal reference and video edit. resolution + aspect_ratio are mapped to a pixel size (adaptive -> 16:9); quality_tier maps to Kling mode (best -> pro, else std) and IS meaningful here. Media rides image_list (first_frame / end_frame / untyped reference) and video_list (refer_type feature | base). Does not use reference_audios / watermark.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "kling-video-o1", "writable": "false" },
+        "first_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: first_frame}]" },
+        "last_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: end_frame}]; requires first_frame" },
+        "reference_images": { "type": "url[]", "writable": "true", "note": "-> image_list[{image}] with no type; may be mixed with first_frame / last_frame" },
+        "reference_videos": { "type": "url[]", "writable": "true", "note": "-> video_list[{video_url, refer_type: feature}]; for an edit override video_list via model_specific with refer_type: base" },
+        "reference_audios": { "type": "url[]", "writable": "false", "note": "NOT supported (no audio input slot in the request body); adapter rejects" },
         "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive treated as 16:9; mapped with resolution to a pixel size" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped with aspect_ratio to a pixel size string" },
-        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects)" },
+        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects). Dropped from the payload when video_list carries a refer_type=base source video (duration follows the source)" },
+        "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off" },
         "quality_tier": { "type": "enum", "options": ["fast", "balanced", "best"], "default": "balanced", "writable": "true", "note": "maps to Kling mode: best -> pro, fast/balanced -> std" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level (can override size/mode/seconds); no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level (can override size/mode/seconds/sound/image_list/video_list); the documented use is video_list with refer_type: base for video editing" }
       }
     },
     {
       "adapterId": "kling-v3-omni",
       "modelId": "kling-v3-omni",
       "displayName": "Kling V3 Omni (可灵 V3 全能版)",
-      "note": "Text-to-video only (shares KlingVideoAdapter with O1). resolution + aspect_ratio map to a pixel size (adaptive -> 16:9); quality_tier maps to Kling mode (best -> pro, else std). Does not use with_audio / watermark / reference media.",
+      "note": "Text-to-video, image-to-video, first/last frame, multimodal reference and video edit (shares KlingVideoAdapter with O1). resolution + aspect_ratio map to a pixel size (adaptive -> 16:9); quality_tier maps to Kling mode (best -> pro, else std). Media rides image_list / video_list; with_audio maps to sound. Does not use reference_audios / watermark.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "kling-v3-omni", "writable": "false" },
+        "first_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: first_frame}]" },
+        "last_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: end_frame}]; requires first_frame" },
+        "reference_images": { "type": "url[]", "writable": "true", "note": "-> image_list[{image}] with no type; may be mixed with first_frame / last_frame" },
+        "reference_videos": { "type": "url[]", "writable": "true", "note": "-> video_list[{video_url, refer_type: feature}]; for an edit override video_list via model_specific with refer_type: base" },
+        "reference_audios": { "type": "url[]", "writable": "false", "note": "NOT supported (no audio input slot in the request body); adapter rejects" },
         "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive treated as 16:9; mapped with resolution to a pixel size" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped with aspect_ratio to a pixel size string" },
-        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects)" },
+        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects). Dropped from the payload when video_list carries a refer_type=base source video (duration follows the source)" },
+        "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off" },
         "quality_tier": { "type": "enum", "options": ["fast", "balanced", "best"], "default": "balanced", "writable": "true", "note": "maps to Kling mode: best -> pro, fast/balanced -> std" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level (can override size/mode/seconds); no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level (can override size/mode/seconds/sound/image_list/video_list); the documented use is video_list with refer_type: base for video editing" }
       }
     }
   ],

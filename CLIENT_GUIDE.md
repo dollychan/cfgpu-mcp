@@ -492,10 +492,21 @@ cfgpu generate video "身着旗袍的女性，低角度仰拍" \
   --reference-images https://example.com/ref1.jpg \
   --reference-images https://example.com/ref2.jpg
 
-# Kling Video O1（可灵 O1）/ Kling V3 Omni（可灵 V3 全能版）— 目前仅文生视频，resolution+aspect_ratio 自动映射为像素 size
+# Kling Video O1（可灵 O1）/ Kling V3 Omni（可灵 V3 全能版）— resolution+aspect_ratio 自动映射为像素 size
 cfgpu generate video "一只可爱的橘猫在阳光下奔跑，慢镜头，电影质感" \
   --model kling-video-o1 -r 1080p -d 5
 cfgpu generate video "..." --model kling-v3-omni -r 1080p -d 5
+
+# Kling — 首帧 / 首尾帧 / 参考图（都进 image_list），参考视频进 video_list（refer_type=feature）
+cfgpu generate video "首帧变尾帧" --model kling-video-o1 -r 720p \
+  --first-frame https://example.com/start.png \
+  --last-frame https://example.com/end.png
+cfgpu generate video "跟随参考视频运镜" --model kling-v3-omni -r 1080p \
+  --reference-videos https://example.com/ref.mp4
+# 视频编辑（把源视频当 base）：统一 Schema 无「编辑 vs 参考」之分，用 model_specific 覆盖 video_list
+#   {"video_list": [{"video_url": "https://src.mp4", "refer_type": "base"}]}
+#   此时 seconds 不下发，时长跟随源视频
+# 不支持 --reference-audios（请求体没有音频输入槽位）；--last-frame 必须与 --first-frame 同时给出
 
 # 万相 2.7（wan-2-7-t2v）— 文生视频，支持电影级分镜叙事；需显式时长（不支持 -1 智能时长）
 cfgpu generate video "侦探追查故事：第1个镜头[0-3秒]雨夜街头...第2个镜头[3-6秒]..." \

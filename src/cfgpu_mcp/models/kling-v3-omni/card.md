@@ -8,7 +8,7 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `kling-v3-omni` |
-| 能力标签 | text_to_video |
+| 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference, video_edit |
 | 成本档位 | 5/5 |
 | 速度档位 | 2/5 |
 
@@ -38,7 +38,10 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
 | prompt | string | ✓ | - | 视频描述，支持中英文 |
 | size | string | - | 1280x720 | 输出像素尺寸 `宽x高`，由统一 Schema 的 `resolution` + `aspect_ratio` 映射得到 |
 | mode | string | - | std | 生成模式：`std` / `pro`，由 `quality_tier` 映射（`best` → `pro`） |
-| seconds | string | ✓ | "5" | 视频时长（秒），字符串形式 |
+| seconds | string | ✓ | "5" | 视频时长（秒），字符串形式。视频编辑（`refer_type=base`）时不传，时长跟随源视频 |
+| sound | string | - | - | 是否生成有声视频：`on` / `off`，由 `with_audio` 映射 |
+| image_list | array | - | - | 图片输入数组，元素为 `{"image": url, "type": ...}`；`type` 可为 `first_frame` / `end_frame`，省略 `type` 即普通参考图 |
+| video_list | array | - | - | 视频输入数组，元素为 `{"video_url": url, "refer_type": ...}`；`refer_type` 为 `feature`（参考其运镜/风格）或 `base`（被编辑的源视频） |
 
 ## 与统一 Schema 的映射
 
@@ -48,11 +51,21 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
 | resolution + aspect_ratio | size | 映射成像素 `宽x高`，`aspect_ratio=adaptive` 时按 16:9 处理 |
 | quality_tier | mode | `best` → `pro`，其余 → `std` |
 | duration_seconds | seconds | 转成字符串透传；不支持 `-1` 智能时长 |
+| with_audio | sound | `true` → `on`，`false` → `off` |
+| first_frame | image_list[] | `{"image": url, "type": "first_frame"}` |
+| last_frame | image_list[] | `{"image": url, "type": "end_frame"}`；需与 `first_frame` 同时给出 |
+| reference_images | image_list[] | `{"image": url}`（不带 `type`） |
+| reference_videos | video_list[] | `{"video_url": url, "refer_type": "feature"}` |
+| reference_audios | -（不支持） | 请求体没有音频输入槽位 |
 | model_specific | -（合并到顶层） | 末位合并，可覆盖上述字段 |
+
+**视频编辑（`refer_type=base`）**：默认按 `feature` 下发，要做编辑用 `model_specific` 整体覆盖 `video_list`（详见 `kling-video-o1` 卡片）。
 
 ## 能力与限制
 
-- 目前 adapter 仅支持**文生视频**（text_to_video）。V3 Omni 的图生视频、视频编辑、多参考图一致性控制依赖尚未公开的字段约定，因此 `supports()` 会拒绝 `first_frame` / `last_frame` / `reference_*` 输入，待官方补齐文档后再扩展。
+- 支持文生视频、图生视频（首帧）、首尾帧、多图/视频参考一致性控制、视频编辑。
+- 不支持 `reference_audios`：请求体没有音频输入槽位。
+- `last_frame` 必须与 `first_frame` 同时给出。
 - 需要显式时长，不支持 `duration_seconds=-1`。
 
 ## 示例
@@ -66,6 +79,22 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
   "size": "1920x1080",
   "mode": "pro",
   "seconds": "5"
+}
+```
+
+### 参考视频运镜（有声）
+
+```json
+{
+  "model": "kling-v3-omni",
+  "prompt": "跟随参考视频运镜",
+  "mode": "pro",
+  "size": "1920x1080",
+  "seconds": "5",
+  "sound": "on",
+  "video_list": [
+    { "video_url": "https://ref.mp4", "refer_type": "feature" }
+  ]
 }
 ```
 
