@@ -29,7 +29,7 @@
 | 视频 | `doubao-seedance-2-0` | Doubao Seedance 2.0（多模态，API 等同 WAN 2.0） |
 | 视频 | `doubao-seedance-2-0-fast` | Doubao Seedance 2.0 fast |
 | 视频 | `doubao-seedance-2-0-mini` | Doubao Seedance 2.0 mini（高性价比） |
-| 视频 | `doubao-seedance-2-5` | Doubao Seedance 2.5（单段 30 秒、最多 50 个参考素材、多语言配音） |
+| 视频 | `doubao-seedance-2-5` | Doubao Seedance 2.5（单段 30 秒、最多 50 个参考素材、多语言配音；最高 720p） |
 | 视频 | `happyhorse-1-0-t2v` | happyhorse-1.0-t2v |
 | 视频 | `happyhorse-1-0-r2v` | happyhorse-1.0-r2v（参考生视频，最多 9 张参考图） |
 | 视频 | `happyhorse-1-0-video-edit` | happyhorse-1.0-video-edit（视频编辑，源视频 + 最多 5 张参考图） |

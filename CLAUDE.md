@@ -86,7 +86,10 @@ Each model lives in its own directory with `adapter.yaml` and `card.md`. Variant
 
 `_instantiate()` in the registry looks up `adapter_id` first, then follows `extends` to find the parent's class — this is how `wan-2-0-fast` reuses `SeedanceVideoAdapter` with its own `cfgpu_model_id`. The Seedance family (`wan-2-0`, `wan-2-0-fast`, `doubao-seedance-2-0`, `doubao-seedance-2-0-fast`, `doubao-seedance-2-0-mini`, `doubao-seedance-2-5`, `doubao-seedance-1-5-pro`) all share `SeedanceVideoAdapter` (registered under `wan-2-0`) — Seedance 2.0 is API-identical to WAN 2.0, and 2.5 differs in scale only (30s single-shot, up to 50 reference materials, multilingual audio), not in payload shape.
 
-Per-model video duration ceilings are declarative: `GenerateVideoInput`'s validator allows the fleet-wide widest range (4–30, set by Seedance 2.5), each `adapter.yaml` declares its real limit as `max_duration_seconds` (default 15 — the pre-2.5 global cap, so no existing model changed), and `ModelAdapter.supports()` enforces it. This keeps over-long requests failing locally and lets `model="auto"` route around a too-short model instead of hard-failing in the schema.
+Per-model video duration ceilings and resolution value sets are declarative, both enforced by `ModelAdapter.supports()` so an unsupported request fails locally and `model="auto"` routes around it:
+
+- `max_duration_seconds` — `GenerateVideoInput`'s validator allows the fleet-wide widest range (4–30, set by Seedance 2.5); each `adapter.yaml` declares its real limit (default 15, the pre-2.5 global cap, so no existing model changed).
+- `resolutions` — the allowed `resolution` values (Seedance 2.5 / 2.0 fast / 2.0 mini are `[480p, 720p]`; Seedance 2.0 is `[480p, 720p, 1080p]`). `None` (the default, and what every other model still has) means no local restriction. Without it the upstream failure is `the parameter resolution specified in the request is not valid for model X in i2v`. Note this is separate from the older, scenario-dependent `wan-2-0-fast` carve-out in `SeedanceVideoAdapter.supports()`, which bars 1080p only for text-to-video.
 
 ### Tool schema single source of truth
 

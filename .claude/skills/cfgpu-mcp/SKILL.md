@@ -135,6 +135,7 @@ These come from per-model `build_payload` validation, mostly as `invalid_params`
 | `media_download_failed` | a reference/first-frame URL was unreachable | Use a **publicly accessible** URL; check it loads in a browser. |
 | `n>1` rejected | `n>1` on a non-`doubao-seedream-*` image model | Use a `doubao-seedream-*` model for 组图, or set `n=1`. |
 | 1080p rejected on `wan-2-0-fast` t2v | WAN 2.0 Fast text-to-video maxes at 720p | Use 480p/720p, add an image input, or switch to `wan-2-0`. |
+| `does not support resolution 1080p` | `doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` only offer 480p/720p, in every scenario | Use 720p, or switch to `doubao-seedance-2-0` / `wan-2-0` for 1080p. Upstream raw form: `the parameter resolution specified in the request is not valid for model ... in i2v`. |
 | `does not support multi_modal_reference` | sent `reference_images`/`reference_videos`/`reference_audios` to a model lacking that capability (e.g. `doubao-seedance-1-5-pro`) | Switch to a reference-capable model (`doubao-seedance-2-0`, `wan-2-0`, or a `wan-2-*-r2v`/`-videoedit`), or drop the reference inputs. The upstream raw form is `the specified task_type r2v does not support model ...` — `task_type` is server-derived from the content shape, never a client param. |
 | `supports explicit durations of 4–N seconds` | `duration_seconds` above the chosen model's ceiling | Clamp to that model's range, or switch model: 30s needs `doubao-seedance-2-5`; WAN 2.0 / Seedance 2.0 cap at 15; Seedance 1.5 Pro at 12. |
 

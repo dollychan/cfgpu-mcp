@@ -43,7 +43,7 @@ Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性�
 | `reference_audios` | `content[].role=reference_audio` | 参考音频（0-3） |
 | `aspect_ratio` | 顶层 `ratio` | 宽高比，`adaptive` 自动匹配 |
 | `duration_seconds` | 顶层 `duration` | 时长 4–15 秒，`-1` 为智能时长 |
-| `resolution` | 顶层 `resolution` | 480p / 720p / 1080p |
+| `resolution` | 顶层 `resolution` | **仅 480p / 720p**，默认 720p（无 1080p，需要 1080p 请用 Seedance 2.0） |
 | `with_audio` | 顶层 `generate_audio` | 是否生成有声视频 |
 | `watermark` | 顶层 `watermark` | 是否添加水印 |
 

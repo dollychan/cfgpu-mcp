@@ -18,5 +18,11 @@ speed_tier: 2
 
 max_duration_seconds: 30
 
+# 2.5 只支持 480p / 720p（不支持 1080p）。传 1080p 上游会报
+# "the parameter resolution specified in the request is not valid for model
+# doubao-seedance-2-5 in i2v"，因此在本地拒绝。计价表也印证了这点——2.5 不按
+# 分辨率分档。
+resolutions: [480p, 720p]
+
 poll_config:
   default_timeout: 900

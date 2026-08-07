@@ -11,16 +11,17 @@ The job of this skill is to read the user's request, figure out what they actual
 
 | Model | Best for | Max duration | Reference materials | Resolutions | Reference video/audio · edit · extend |
 |---|---|---|---|---|---|
-| `doubao-seedance-2-5` | Long narrative, many references, multilingual voice | **30s** | **50** (30 img + 10 vid + 10 audio) | 480p/720p/1080p | ✅ |
-| `doubao-seedance-2-0` | Highest quality in the 2.0 tier, all capabilities | 15s | 15 (9 img + 3 vid + 3 audio) | 480p/720p/1080p | ✅ |
-| `doubao-seedance-2-0-fast` | Faster + cheaper, same capabilities | 12s | 15 (9 img + 3 vid + 3 audio) | 480p/720p/1080p | ✅ |
-| `doubao-seedance-2-0-mini` | Cheapest, high-frequency / at-scale, same capabilities | 15s | 15 (9 img + 3 vid + 3 audio) | 480p/720p/1080p | ✅ |
+| `doubao-seedance-2-5` | Long narrative, many references, multilingual voice | **30s** | **50** (30 img + 10 vid + 10 audio) | 480p/720p | ✅ |
+| `doubao-seedance-2-0` | Highest quality in the 2.0 tier, all capabilities | 15s | 15 (9 img + 3 vid + 3 audio) | 480p/720p/**1080p** | ✅ |
+| `doubao-seedance-2-0-fast` | Faster + cheaper, same capabilities | 12s | 15 (9 img + 3 vid + 3 audio) | 480p/720p | ✅ |
+| `doubao-seedance-2-0-mini` | Cheapest, high-frequency / at-scale, same capabilities | 15s | 15 (9 img + 3 vid + 3 audio) | 480p/720p | ✅ |
 | `doubao-seedance-1-5-pro` | 1080p with a fast preview mode | 12s | — | 480p/720p/1080p | ❌ (text / image-frame / audio-gen only) |
 
 How to decide, based on what the user signals:
 
 - Wants a video **longer than 15s**, more than ~9 reference images / 3 reference videos, **non-Chinese/English narration**, or precise editing of a long clip → `doubao-seedance-2-5` (the only model that can)
-- Wants **top quality** or "the best" → `doubao-seedance-2-5` for a showcase piece, `doubao-seedance-2-0` when 15s and 2.0's reference limits are enough (2.5 costs more per token and is slower)
+- Wants **1080p** → `doubao-seedance-2-0` (or `doubao-seedance-1-5-pro`); it is the only Seedance model that goes above 720p, so 1080p and 30s/50-references are mutually exclusive asks
+- Wants **top quality** or "the best" → `doubao-seedance-2-5` for a showcase piece, `doubao-seedance-2-0` when 15s, 1080p, and 2.0's reference limits are what matters (2.5 costs more per token and is slower)
 - Cares about **speed or cost** but wants the full feature set → `doubao-seedance-2-0-fast`
 - Wants the **cheapest** option or is generating **many videos / at scale** → `doubao-seedance-2-0-mini`
 - Needs a **reference video/audio**, wants to **edit** an existing video, or **extend/stitch** clips → must be a 2.0 or 2.5 model (1.5 Pro can't do these)
@@ -53,7 +54,7 @@ Pick values from what the user says (or implies); otherwise use the sensible def
 |---|---|---|
 | Duration | 5s | 4–15s (4–30s on 2.5; 12s max on fast / 1.5 Pro). Use `-1` for smart/auto when the user doesn't care. Longer for storytelling, shorter for loops/clips. Asking for >15s means picking 2.5. |
 | Aspect ratio | `adaptive` | `16:9` for landscape/cinematic, `9:16` for phone/social/vertical, `1:1` for square posts, `4:3`/`3:4`, `21:9` for ultra-wide. `adaptive` matches the input image. |
-| Resolution | 720p | `480p` for drafts/previews or speed/cost, `720p` general, `1080p` when quality matters. |
+| Resolution | 720p | `480p` for drafts/previews or speed/cost, `720p` general, `1080p` when quality matters — but **only `doubao-seedance-2-0` / `1-5-pro` accept 1080p**; on 2.5 / fast / mini it is rejected before the call. |
 | Audio | on | Keep on when the user wants sound, dialogue, music, or effects. Turn off for silent clips or to reduce cost. |
 | Watermark | model default | Turn off only if the user explicitly asks for no watermark. |
 | Sample mode | off | Turn on for 1.5 Pro when the user wants a fast cheap preview. |

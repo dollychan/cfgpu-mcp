@@ -303,8 +303,38 @@ def _make_2_5_adapter() -> SeedanceVideoAdapter:
         "cost_tier": 4,
         "speed_tier": 2,
         "max_duration_seconds": 30,
+        "resolutions": ["480p", "720p"],
     }
     return SeedanceVideoAdapter.from_config(config)
+
+
+def test_seedance_2_5_rejects_1080p():
+    # Upstream: "the parameter resolution specified in the request is not valid for
+    # model doubao-seedance-2-5 in i2v" — 2.5 tops out at 720p in every scenario,
+    # unlike wan-2-0-fast where 1080p is only barred for text-to-video.
+    adapter = _make_2_5_adapter()
+    for req in (
+        GenerateVideoInput(prompt="x", resolution="1080p"),
+        GenerateVideoInput(prompt="x", resolution="1080p", first_frame="https://e.com/f.jpg"),
+    ):
+        ok, reason = adapter.supports(req)
+        assert ok is False
+        assert "480p, 720p" in reason
+
+
+def test_seedance_2_5_accepts_720p():
+    adapter = _make_2_5_adapter()
+    ok, _ = adapter.supports(GenerateVideoInput(prompt="x", resolution="720p"))
+    assert ok is True
+
+
+def test_undeclared_resolutions_stay_unrestricted():
+    # A model that never declared its set (every model before `resolutions` existed)
+    # keeps passing anything the schema allows through to the API.
+    adapter = _make_adapter()
+    assert adapter.resolutions is None
+    ok, _ = adapter.supports(GenerateVideoInput(prompt="x", resolution="1080p"))
+    assert ok is True
 
 
 def test_seedance_2_5_accepts_30s_duration():

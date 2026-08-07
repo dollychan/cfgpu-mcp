@@ -2,7 +2,7 @@
 
 豆包大模型团队推出的新一代专业级多模态视频创作模型。支持单段 **30 秒**视频直出，单次最多可输入 **50 个参考素材**（30 张图 + 10 个视频 + 10 个音频），具备更强的指令控制、专业级可控的视频编辑与延长能力；同时原生支持生成 10 余种语言的人声叙事，让视频生成迈入「长叙事 × 强参考 × 准编辑 × 多语言」阶段。
 
-> **API 形态等同 WAN 2.0 / Seedance 2.0。** 请求体（`content` 多模态数组 + 顶层 `ratio` / `duration` / `resolution` / `generate_audio` / `watermark`）与返回结构完全一致，差异只在**规模**：更长时长、更多参考素材、更强编辑与多语言。完整的 content 输入类型、各场景示例与响应结构详见 `wan-video` 的 card.md，此处只列本模型的标识、容量与计价差异。
+> **API 形态等同 WAN 2.0 / Seedance 2.0。** 请求体（`content` 多模态数组 + 顶层 `ratio` / `duration` / `resolution` / `generate_audio` / `watermark`）与返回结构完全一致，差异在**规模**（更长时长、更多参考素材、更强编辑与多语言）**与分辨率上限**（2.5 只到 720p）。完整的 content 输入类型、各场景示例与响应结构详见 `wan-video` 的 card.md，此处只列本模型的标识、容量与计价差异。
 
 ## 基本信息
 
@@ -34,11 +34,14 @@
 | 参考视频 | 最多 3 个 | **最多 10 个** |
 | 参考音频 | 最多 3 段 | **最多 10 段** |
 | 单次参考素材总数 | ≤ 15 | **≤ 50** |
+| 分辨率 | 480p / 720p / 1080p（及 4k） | **仅 480p / 720p**（默认 720p，无 1080p） |
 | 多语言人声 | — | **原生支持 10 余种语言** |
 | 指令控制 / 编辑 | 专业级 | 更强的指令遵循与更精准的编辑、延长 |
 | 计价 | 按分辨率分档 | 不分辨率分档，按有无视频输入分档 |
 
-其余（首尾帧规则、`role` 取值、素材格式要求、ratio/resolution 取值、联网搜索、watermark、prompt 写法）与 Seedance 2.0 / WAN 2.0 一致。
+其余（首尾帧规则、`role` 取值、素材格式要求、ratio 取值、联网搜索、watermark、prompt 写法）与 Seedance 2.0 / WAN 2.0 一致。
+
+> **分辨率**：2.5 只支持 `480p`、`720p`（默认 `720p`）。传 `1080p` 上游会报 `the parameter resolution specified in the request is not valid for model doubao-seedance-2-5 in i2v`，本适配器在发请求前就会拒绝并提示可用值。需要 1080p 请改用 Seedance 2.0 / WAN 2.0。
 
 ## 能力说明
 
@@ -67,7 +70,7 @@
 | `reference_audios` | `content[].role=reference_audio` | 参考音频（0-10） |
 | `aspect_ratio` | 顶层 `ratio` | 宽高比，`adaptive` 自动匹配 |
 | `duration_seconds` | 顶层 `duration` | 时长 4–30 秒，`-1` 为智能时长 |
-| `resolution` | 顶层 `resolution` | 480p / 720p / 1080p |
+| `resolution` | 顶层 `resolution` | **仅 480p / 720p**，默认 720p |
 | `with_audio` | 顶层 `generate_audio` | 是否生成有声视频 |
 | `watermark` | 顶层 `watermark` | 是否添加水印 |
 

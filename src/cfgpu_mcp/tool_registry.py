@@ -283,10 +283,11 @@ class GenerateVideoInput(BaseModel):
     )
     resolution: Literal["480p", "720p", "1080p"] = Field(
         default="720p",
-        description="Video resolution. 1080p is supported by WAN 2.0, Doubao Seedance 1.5 Pro, "
-        "and HappyHorse (HappyHorse's own default is 1080p). WAN 2.0 Fast does NOT support 1080p "
-        "for text-to-video (only 480p/720p; 1080p works only with an image/video input). "
-        "HappyHorse does not support 480p (minimum 720p).",
+        description="Video resolution. 1080p is supported by WAN 2.0, Doubao Seedance 2.0, "
+        "Doubao Seedance 1.5 Pro, and HappyHorse (HappyHorse's own default is 1080p). "
+        "Doubao Seedance 2.5 / 2.0 fast / 2.0 mini top out at 720p (480p/720p only). "
+        "WAN 2.0 Fast does NOT support 1080p for text-to-video (only 480p/720p; 1080p works "
+        "only with an image/video input). HappyHorse does not support 480p (minimum 720p).",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")

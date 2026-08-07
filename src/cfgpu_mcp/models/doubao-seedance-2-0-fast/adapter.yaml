@@ -9,5 +9,8 @@ model_name: doubao-seedance-2-0-fast
 cost_tier: 2
 speed_tier: 4
 
+# fast 档只出 480p / 720p，没有 1080p。
+resolutions: [480p, 720p]
+
 poll_config:
   default_timeout: 300

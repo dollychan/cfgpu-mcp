@@ -583,6 +583,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
 > `duration_seconds` 的 schema 范围是 4–30，但 30 秒**只有 `doubao-seedance-2-5` 支持**；WAN 2.0 /
 > Seedance 2.0 系上限 15 秒，Seedance 1.5 Pro 上限 12 秒，超限由对应模型的 `supports()` 在发请求前拒绝。
+> 分辨率同理是逐模型的：`doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` **只支持 480p/720p**，
+> 传 `1080p` 会在发请求前被拒绝（需要 1080p 用 `doubao-seedance-2-0` / `wan-2-0`）。
 
 ### 视觉理解（图像理解 / 图像推理 / 视频理解）
 

@@ -13,5 +13,8 @@ model_name: doubao-seedance-2-0-mini
 cost_tier: 1
 speed_tier: 3
 
+# mini 档只出 480p / 720p，没有 1080p。
+resolutions: [480p, 720p]
+
 poll_config:
   default_timeout: 300
