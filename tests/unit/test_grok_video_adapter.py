@@ -110,10 +110,36 @@ def test_extract_task_id_from_data():
     assert adapter.extract_task_id(resp) == "d7f12675"
 
 
-def test_extract_task_id_tolerates_flat_and_snake_case():
+@pytest.mark.parametrize("resp", [
+    {"code": 200, "data": {"task_id": "abc", "status": "pending"}, "message": "success"},
+    {"code": 200, "data": {"taskId": "abc"}},
+    {"code": 200, "data": {"id": "abc"}},
+    {"code": 200, "data": "abc", "message": "success"},
+    {"id": "abc"},
+    {"task_id": "abc"},
+    {"taskId": "abc"},
+])
+def test_extract_task_id_tolerates_every_create_envelope(resp):
+    """A dropped task id means a billed job that can never be polled."""
+    assert _make_adapter().extract_task_id(resp) == "abc"
+
+
+@pytest.mark.parametrize("resp", [
+    {},
+    {"data": None},
+    {"data": {}},
+    {"data": {"task_id": ""}},
+    {"data": {"status": "pending"}},
+])
+def test_extract_task_id_returns_none_when_genuinely_absent(resp):
+    assert _make_adapter().extract_task_id(resp) is None
+
+
+def test_bare_id_create_response_is_treated_as_still_running():
     adapter = _make_adapter()
-    assert adapter.extract_task_id({"data": {"task_id": "abc"}}) == "abc"
-    assert adapter.extract_task_id({"id": "flat"}) == "flat"
+    resp = {"code": 200, "data": "abc"}
+    assert adapter.extract_task_id(resp) == "abc"
+    assert adapter.extract_status(resp) == "running"
 
 
 def test_extract_status_defaults_to_running():

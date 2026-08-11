@@ -216,8 +216,27 @@ async def test_async_create_raises_when_no_task_id():
     with pytest.raises(CFGPUError) as exc_info:
         await tm.create(adapter, req)
     assert exc_info.value.error_type == "unknown"
+    # The raw response rides the message: `original` is not surfaced by the tool
+    # layer, so without it the caller cannot tell WHICH shape came back.
+    assert '{"unexpected": "shape"}' in exc_info.value.user_message
     # No bogus pending row should have been written.
     assert await tm.list_running() == []
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_no_task_id_error_truncates_a_huge_response():
+    from cfgpu_mcp.errors import CFGPUError
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    adapter.extract_task_id.side_effect = lambda r: None
+    tm._client.post = AsyncMock(return_value={"blob": "x" * 5000})
+    with pytest.raises(CFGPUError) as exc_info:
+        await tm.create(adapter, GenerateVideoInput(prompt="x"))
+    assert len(exc_info.value.user_message) < 600
+    assert exc_info.value.user_message.endswith("…")
+    # The full body is still available to the server-side caller.
+    assert exc_info.value.original["response"] == {"blob": "x" * 5000}
     await db.close()
 
 

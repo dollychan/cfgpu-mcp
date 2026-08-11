@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 import uuid
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
@@ -76,6 +77,26 @@ _STATUS_MAP = {
     "pending": "pending",
     "processing": "running",
 }
+
+
+_RESPONSE_EXCERPT_CHARS = 400
+
+
+def _truncate_json(resp: dict) -> str:
+    """Compact JSON excerpt of an upstream response, for error messages.
+
+    A "couldn't parse the response" failure is undiagnosable without seeing what
+    actually came back — the raw body otherwise lives only in ``original``, which
+    the tool layer does not surface, and in DEBUG logs nobody has enabled. Bounded
+    so a large body can't flood the model's context.
+    """
+    try:
+        text = json.dumps(resp, ensure_ascii=False)
+    except (TypeError, ValueError):
+        text = repr(resp)
+    if len(text) > _RESPONSE_EXCERPT_CHARS:
+        text = text[:_RESPONSE_EXCERPT_CHARS] + "…"
+    return text
 
 
 def _extract_error_message(resp: dict) -> str | None:
@@ -207,6 +228,7 @@ class TaskManager:
                 error_type="unknown",
                 user_message=(
                     "提交任务成功但未能从响应中解析出 task_id，可能是 API 响应结构变化。"
+                    f"响应原文（截断）：{_truncate_json(resp)}"
                 ),
                 original={"adapter_id": adapter.adapter_id, "response": resp},
             )

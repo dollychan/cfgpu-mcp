@@ -68,11 +68,32 @@ class GrokVideoAdapter(ModelAdapter):
             payload.update(req.model_specific)
         return payload
 
+    _TASK_ID_KEYS = ("taskId", "task_id", "id")
+
     def extract_task_id(self, resp: dict) -> str | None:
-        data = self._data(resp)
-        return data.get("taskId") or data.get("task_id") or super().extract_task_id(resp)
+        """Read the task id out of whichever envelope the create response used.
+
+        The poll response is documented as ``{"data": {"taskId": ...}}``, but the
+        create response has been seen wrapping the id differently — under
+        ``data.task_id``, as a bare ``data`` string, or flat at the top level.
+        Losing the id costs a submitted (billed) job that can never be polled, so
+        accept every shape rather than pin one.
+        """
+        data = resp.get("data")
+        if isinstance(data, str) and data.strip():   # {"data": "<task-id>"}
+            return data.strip()
+        for container in (data if isinstance(data, dict) else None, resp):
+            if not container:
+                continue
+            for key in self._TASK_ID_KEYS:
+                value = container.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        return None
 
     def extract_status(self, resp: dict) -> str:
+        # A create response carrying only the bare id (no status) is still pending;
+        # "running" keeps the poll loop going, which is the same outcome.
         status = (self._data(resp).get("status") or "running").lower()
         # Not in task_manager's _STATUS_MAP; collapse to failed so polling converges.
         if status in ("canceled", "cancelled", "unknown"):
