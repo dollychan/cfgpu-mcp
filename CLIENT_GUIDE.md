@@ -598,6 +598,11 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 分辨率同理是逐模型的：`doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` **只支持 480p/720p**，
 > 传 `1080p` 会在发请求前被拒绝（需要 1080p 用 `doubao-seedance-2-0` / `wan-2-0`）。
 
+> **图片的 `resolution`（1K/2K/3K/4K）与视频不同：不做本地取值校验。** 统一 Schema 的取值集比
+> 单个模型宽，超出的值会原样上行、由上游 API 拒绝并回传原始报错。已知差异：`cf-image-2`
+> （GPT Image 2）只有 1K/2K/4K 三档，传 `3K` 会被上游拒绝；它的 `aspect_ratio` 也没有 `21:9`。
+> 分辨率直接影响计价（`cf-image-2` 三档分别为 0.105 / 0.16 / 0.21 元每张），需要哪档就显式传哪档。
+
 ### 视觉理解（图像理解 / 图像推理 / 视频理解）
 
 ```bash

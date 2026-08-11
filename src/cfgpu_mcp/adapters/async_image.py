@@ -61,8 +61,9 @@ class _AsyncImageBase(ModelAdapter):
 class GptImage2Adapter(_AsyncImageBase):
     """Adapter for GPT Image 2.
 
-    Payload: model + prompt + aspect_ratio + reference_images (optional).
-    Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16.
+    Payload: model + prompt + aspect_ratio + resolution + reference_images (optional).
+    Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16 — the unified
+    schema also offers 21:9, which goes up verbatim and is rejected upstream.
     """
 
     adapter_id = "gpt-image-2"
@@ -70,7 +71,15 @@ class GptImage2Adapter(_AsyncImageBase):
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)
         return self._finalize_payload(
-            {"model": self.cfgpu_model_id, "prompt": req.prompt, "aspect_ratio": req.aspect_ratio},
+            {
+                "model": self.cfgpu_model_id,
+                "prompt": req.prompt,
+                "aspect_ratio": req.aspect_ratio,
+                # The API spells its default tier as "" and names only 2K / 4K
+                # explicitly, so 1K has to be translated. 3K has no counterpart
+                # and goes up verbatim, to be rejected upstream.
+                "resolution": "" if req.resolution == "1K" else req.resolution,
+            },
             req,
         )
 

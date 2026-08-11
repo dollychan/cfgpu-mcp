@@ -702,6 +702,7 @@
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-image-2", "writable": "false" },
         "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"], "default": "1:1", "writable": "true" },
+        "resolution": { "type": "enum", "options": ["1K", "2K", "4K"], "default": "2K", "writable": "true", "note": "1K is sent as \"\" (the API's own default tier); the unified schema's 3K has no counterpart here and is rejected upstream" },
         "reference_images": { "type": "url_array", "writable": "true", "note": "presence switches to image-edit mode" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },

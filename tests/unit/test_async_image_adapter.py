@@ -46,3 +46,22 @@ def test_accepts_single_image(adapter):
     req = GenerateImageInput(prompt="x")
     ok, _ = adapter.supports(req)
     assert ok is True
+
+
+@pytest.mark.parametrize(
+    ("requested", "wire"), [("1K", ""), ("2K", "2K"), ("4K", "4K"), ("3K", "3K")]
+)
+def test_gpt_image_2_sends_resolution(requested, wire):
+    """The tier must reach the payload — the API bills per resolution band, so a
+    dropped field silently downgrades every call to the 1K default. 1K is spelled
+    "" on the wire; 3K has no counterpart and goes up as-is for upstream to reject.
+    """
+    payload = _gpt().build_payload(GenerateImageInput(prompt="x", resolution=requested))
+    assert payload["resolution"] == wire
+
+
+def test_gpt_image_2_passes_aspect_ratio_through():
+    """21:9 is in the unified schema but not in GPT Image 2's set — no local guard,
+    the request goes up and upstream rejects it."""
+    payload = _gpt().build_payload(GenerateImageInput(prompt="x", aspect_ratio="21:9"))
+    assert payload["aspect_ratio"] == "21:9"
