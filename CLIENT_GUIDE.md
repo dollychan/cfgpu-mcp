@@ -539,6 +539,18 @@ cfgpu generate video "少年说唱 rap" --model wan-2-6-i2v \
 cfgpu generate video "character1在沙发上开心地看电影" --model wan-2-6-r2v \
   --reference-videos https://example.com/vace.mp4 -r 720p -d 5
 
+# Grok Imagine Video（cf-imagine-video / cf-imagine-video-1.5）— 文生/图生短视频，恒定同步输出音频
+# 两者 API 形状相同，只差价格档位：cf-imagine-video 更便宜（0.275 / 0.385 元每秒，480P 以上统一价），
+# cf-imagine-video-1.5 分三档（0.44 / 0.77 / 1.32 元每秒）
+cfgpu generate video "镜头不动，石灯上的蚂蚁正在爬行，背景花草随风轻微晃动" \
+  --model cf-imagine-video -r 720p -d 10
+cfgpu generate video "..." --model cf-imagine-video-1.5 -r 720p -d 10
+# 图生视频：--first-frame 与 --reference-images 都进同一个 refer_images 数组（首帧排第一）
+cfgpu generate video "石灯上的蚂蚁正在爬行" --model cf-imagine-video-1.5 \
+  --first-frame https://example.com/stone.jpeg -r 720p -d 10
+# 不支持 --last-frame / --reference-videos / --reference-audios；需显式时长（不支持 -1）
+# --no-audio 不生效（请求体没有声音开关，音频恒定生成）
+
 # 去除水印（watermark 已是一等公民参数，无需走 model_specific）
 cfgpu generate video "..." --no-watermark
 cfgpu generate image "..." --no-watermark      # gpt-image-2 / nano-banana 不支持，忽略
@@ -667,12 +679,15 @@ done
 | `model_used` | `str \| null` | | 实际使用的模型公开标识（`model_name`，与 `list_models()`/`model` 参数同一套 id 空间；从不是内部的 `cfgpu_model_id`）。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
-| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null`。**例外：可灵（`kling-video-o1` / `kling-v3-omni`）按秒计费但响应里没有 `usage` 对象**，计费数值散落在顶层 `seconds` / `size`，故由 adapter 组装为 `{duration, sr, ratio}`（与万相 / HappyHorse 的按秒计费字段同形）—— 详见下方说明 |
+| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null`。**例外：可灵（`kling-video-o1` / `kling-v3-omni`）与 Grok（`cf-imagine-video` / `cf-imagine-video-1.5`）按秒计费但响应里没有 `usage` 对象**，计费数值散落在可灵的顶层 `seconds` / `size`、Grok 的 `data.videoLength` / `data.resolutionName`，故由 adapter 组装为 `{duration, sr, ratio}`（与万相 / HappyHorse 的按秒计费字段同形）—— 详见下方说明 |
 | `payload` | `object` | ✓ | **真实发送给该模型专属 API 的请求体**（即 `adapter.build_payload(req)` 的产物，而非通用工具入参）。便于 agent 看到底层 API 实际收到的字段（含 `cfgpu_model_id`、各模型私有字段等）。**始终返回，不受 `return_metadata` 影响**。内部用于异步轮询回显的 `_requested_aspect_ratio` 键不会出现在此 |
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
 
-> **`usage` 与计费**：视频模型分两种计费口径 —— Seedance / 万相 2.0 家族**按 token** 计费，读 `usage.totalTokens`；万相 2.6 / 2.7、HappyHorse、可灵**按秒**计费且单价随输出分辨率分档，读 `usage.duration`（计费时长，秒）与 `usage.sr`（分辨率短边，如 `1080`）。前两者上游直接回传 `usage`，原样透传；可灵的任务响应里没有 `usage`，由 adapter 从顶层 `"seconds": "5"` / `"size": "1920x1080"` 组装出 `{"duration": 5, "sr": 1080, "ratio": "16:9"}`：`duration` 转为数字（视频编辑任务时长跟随源视频、响应无 `seconds`，则退回 `taskResult.videos[0].duration`），`sr` 取**短边**（分辨率档位按短边划分，竖屏 1080x1920 与横屏 1920x1080 同档），`ratio` 由 `size` 反查得出（可灵只回传像素 `size`，不回传 `ratio`）。响应中三项都取不到时（如任务尚在排队）`usage` 为 `null`，而不是一个全空的记录。
+> **`usage` 与计费**：视频模型分两种计费口径 —— Seedance / 万相 2.0 家族**按 token** 计费，读 `usage.totalTokens`；万相 2.6 / 2.7、HappyHorse、可灵、Grok**按秒**计费且单价随输出分辨率分档，读 `usage.duration`（计费时长，秒）与 `usage.sr`（分辨率短边，如 `1080`）。万相 / HappyHorse 上游直接回传 `usage`，原样透传；可灵与 Grok 的任务响应里没有 `usage`，由各自 adapter 组装出同形的 `{duration, sr, ratio}`，三项都取不到时（如任务尚在排队）`usage` 为 `null`，而不是一个全空的记录：
+>
+> - **可灵**：从顶层 `"seconds": "5"` / `"size": "1920x1080"` 组装出 `{"duration": 5, "sr": 1080, "ratio": "16:9"}`。`duration` 转为数字（视频编辑任务时长跟随源视频、响应无 `seconds`，则退回 `taskResult.videos[0].duration`），`sr` 取**短边**（分辨率档位按短边划分，竖屏 1080x1920 与横屏 1920x1080 同档），`ratio` 由 `size` 反查得出（可灵只回传像素 `size`，不回传 `ratio`）。
+> - **Grok**：从 `data.videoLength` / `data.resolutionName` / `data.aspectRatio` 组装出 `{"duration": 10, "sr": 720, "ratio": "16:9"}`。`duration` 取 `videoLength`（字符串形式转为数字），`sr` 由分辨率档位名解析（`"720p"` → `720`），后两者响应常为 `null`，此时对应项为 `null`（结果顶层的 `aspect_ratio` 另有兜底，退回本次请求值）。
 
 > **视觉理解（`understand_vision`）的返回结构不同**：它返回的是文本而非媒体，沿用 chat-completion 结构 —— 结果顶层为 `id`（响应 id `chatcmpl-...`）、`model`（实际模型）、`message`（assistant 消息：`{role, content}`，回答在 `content`；Thinking 模型额外带 `reasoning_content` 推理过程）、`payload`（真实 API 请求体）。`return_metadata=True` 时追加 `usage`（token 用量）。没有 `urls` / `expires_at` / `task_id`，因此也不带 `artifact` 标记。
 >

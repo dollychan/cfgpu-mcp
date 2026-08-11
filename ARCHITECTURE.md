@@ -229,12 +229,20 @@ ModelAdapter (ABC, adapters/base.py)
     │       ├── 万相 2.7（media 数组）：WanVideoR2VAdapter / WanVideoT2VAdapter / WanVideoEditAdapter（type=video+reference_image）
     │       └── 万相 2.6（扁平 input 字段，无 media）：Wan26VideoT2VAdapter / Wan26VideoI2VAdapter（img_url/audio_url）/ Wan26VideoR2VAdapter（reference_urls）
     │
-    └── KlingVideoAdapter         手写 Python，可灵 O1 的 flat payload
-            ├── resolution×ratio → size 像素串、quality_tier → std/pro mode、with_audio → sound=on/off
-            ├── 素材走两个并列数组：image_list[{image,type:first_frame|end_frame}]（无 type = 参考图）
-            │   与 video_list[{video_url,refer_type:feature|base}]；refer_type=base（视频编辑）时不下发 seconds
-            ├── 轮询响应把结果嵌在 taskResult.videos[].url（顶层 status=completed），parse_response 读该数组
-            └── 同时服务 kling-video-o1 和 kling-v3-omni（通过 extends 链）
+    ├── KlingVideoAdapter         手写 Python，可灵 O1 的 flat payload
+    │       ├── resolution×ratio → size 像素串、quality_tier → std/pro mode、with_audio → sound=on/off
+    │       ├── 素材走两个并列数组：image_list[{image,type:first_frame|end_frame}]（无 type = 参考图）
+    │       │   与 video_list[{video_url,refer_type:feature|base}]；refer_type=base（视频编辑）时不下发 seconds
+    │       ├── 轮询响应把结果嵌在 taskResult.videos[].url（顶层 status=completed），parse_response 读该数组
+    │       └── 同时服务 kling-video-o1 和 kling-v3-omni（通过 extends 链）
+    │
+    └── GrokVideoAdapter          手写 Python，Grok Imagine Video 1.5 的第三种视频 API 形状
+            ├── 请求扁平 snake_case：prompt / aspect_ratio / video_length（字符串）/ resolution_name（小写）
+            │   / refer_images[]（first_frame 与 reference_images 共用这一个图片槽位，首帧排第一）
+            ├── 轮询响应包在 data 里（像异步图片模型），内部 camelCase：data.taskId / status / videoUrl
+            ├── 按秒计费但响应无 usage，_build_usage 由 data.videoLength / resolutionName / aspectRatio
+            │   组装出与可灵同形的 {duration, sr, ratio}
+            └── 同时服务 grok-imagine-video-1-5 和 grok-imagine-video（通过 extends 链，API 形状相同、仅价格档位不同）
 ```
 
 **选择 GenericAdapter 还是 Python Adapter？**
@@ -437,9 +445,10 @@ src/cfgpu_mcp/
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
 │   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds/sound + image_list/video_list）
 │   ├── wan_video.py            万相 2.6/2.7 视频家族 Adapter（HappyHorse 风格请求 + Seedance 标准轮询；_build_input 钩子区分 2.6 扁平字段 / 2.7 media 数组）
+│   ├── grok_video.py           Grok Imagine Video 1.5 的 Python Adapter（扁平 video_length/resolution_name/refer_images + data 包裹的轮询响应）
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
 │   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）
-│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、audio_tts、vision_chat 触发注册
+│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -510,6 +519,12 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── wan-2-6-r2v/
 │   │   ├── adapter.yaml        万相 2.6 参考生视频，Wan26VideoR2VAdapter（reference_urls 扁平列表）
+│   │   └── card.md
+│   ├── grok-imagine-video-1-5/
+│   │   ├── adapter.yaml        Grok Imagine Video 1.5，GrokVideoAdapter（公开 id cf-imagine-video-1.5）
+│   │   └── card.md
+│   ├── grok-imagine-video/
+│   │   ├── adapter.yaml        Grok Imagine Video，extends: grok-imagine-video-1-5, card_base: ~（更便宜，公开 id cf-imagine-video）
 │   │   └── card.md
 │   ├── seed-tts-2-0/
 │   │   ├── adapter.yaml        豆包语音合成 2.0（task_type=audio，异步，SeedTTSAdapter）

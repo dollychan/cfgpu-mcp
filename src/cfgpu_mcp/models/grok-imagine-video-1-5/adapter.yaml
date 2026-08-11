@@ -1,0 +1,23 @@
+adapter_id: grok-imagine-video-1-5
+display_name: "Grok Imagine Video 1.5"
+cfgpu_model_id: grok-imagine-video-1.5
+model_name: cf-imagine-video-1.5
+
+task_type: video
+endpoint: /video/generations
+is_async: true
+poll_endpoint: /video/tasks/{task_id}
+
+capabilities:
+  - text_to_video
+  - image_to_video
+  - multi_modal_reference
+
+cost_tier: 3
+speed_tier: 3
+
+poll_config:
+  base_interval: 5
+  max_interval: 20
+  backoff_factor: 1.3
+  default_timeout: 600

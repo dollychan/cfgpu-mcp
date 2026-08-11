@@ -6,6 +6,7 @@ from cfgpu_mcp.adapters import (  # noqa: F401
     happyhorse_video,
     kling_video,
     wan_video,
+    grok_video,
     audio_tts,
     vision_chat,
 )

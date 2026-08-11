@@ -1,0 +1,12 @@
+extends: grok-imagine-video-1-5
+card_base: ~
+
+adapter_id: grok-imagine-video
+display_name: "Grok Imagine Video"
+cfgpu_model_id: grok-imagine-video
+model_name: cf-imagine-video
+
+# Same API shape and capabilities as 1.5, roughly half the per-second price
+# (0.275 / 0.385 元/秒 vs 0.44 / 0.77 / 1.32).
+cost_tier: 2
+speed_tier: 4
