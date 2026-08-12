@@ -598,6 +598,12 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 分辨率同理是逐模型的：`doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` **只支持 480p/720p**，
 > 传 `1080p` 会在发请求前被拒绝（需要 1080p 用 `doubao-seedance-2-0` / `wan-2-0`）。
 
+> `quality_tier`（fast/balanced/best）**不只是 `model="auto"` 的路由偏好**：部分模型的 adapter
+> 会把它映射进真实请求，选定模型后依然生效——`cf-image-2` 映射为 API 的 `quality`
+> （`fast`→`low`、`balanced`→`medium`、`best`→`high`，默认 `balanced` 即 `medium`），
+> 可灵 `kling-video-o1` / `kling-v3-omni` 映射为 `mode`（`best`→`pro`，其余 `std`）。
+> 其余模型选定后忽略该参数。需要绕过映射时用 `model_specific`（最后合并，可覆盖）。
+
 > **图片的 `resolution`（1K/2K/3K/4K）与视频不同：不做本地取值校验。** 统一 Schema 的取值集比
 > 单个模型宽，超出的值会原样上行、由上游 API 拒绝并回传原始报错。已知差异：`cf-image-2`
 > （GPT Image 2）只有 1K/2K/4K 三档，传 `3K` 会被上游拒绝；它的 `aspect_ratio` 也没有 `21:9`。

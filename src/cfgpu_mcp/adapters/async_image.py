@@ -9,6 +9,12 @@ if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import GenerateVideoInput
 
 
+# Unified quality_tier → GPT Image 2's generation quality. The three tiers line
+# up one-to-one, so the tier the caller already sets steers the model instead of
+# a second near-synonymous parameter. Same shape as Kling's _MODE_MAP.
+_QUALITY_MAP = {"fast": "low", "balanced": "medium", "best": "high"}
+
+
 class _AsyncImageBase(ModelAdapter):
     """Shared response handling for image models that wrap responses under a 'data' key.
 
@@ -61,7 +67,9 @@ class _AsyncImageBase(ModelAdapter):
 class GptImage2Adapter(_AsyncImageBase):
     """Adapter for GPT Image 2.
 
-    Payload: model + prompt + aspect_ratio + resolution + reference_images (optional).
+    Payload: model + prompt + aspect_ratio + resolution + quality +
+    reference_images (optional). ``quality_tier`` maps to the API's
+    ``low`` / ``medium`` / ``high`` quality.
     Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16 — the unified
     schema also offers 21:9, which goes up verbatim and is rejected upstream.
     """
@@ -79,6 +87,7 @@ class GptImage2Adapter(_AsyncImageBase):
                 # explicitly, so 1K has to be translated. 3K has no counterpart
                 # and goes up verbatim, to be rejected upstream.
                 "resolution": "" if req.resolution == "1K" else req.resolution,
+                "quality": _QUALITY_MAP.get(req.quality_tier, "medium"),
             },
             req,
         )

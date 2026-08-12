@@ -60,6 +60,36 @@ def test_gpt_image_2_sends_resolution(requested, wire):
     assert payload["resolution"] == wire
 
 
+@pytest.mark.parametrize(
+    ("tier", "quality"), [("fast", "low"), ("balanced", "medium"), ("best", "high")]
+)
+def test_gpt_image_2_maps_quality_tier(tier, quality):
+    """quality_tier steers the API's own quality instead of a second, near-synonymous
+    tool parameter — same approach as Kling's quality_tier → std/pro mode."""
+    payload = _gpt().build_payload(GenerateImageInput(prompt="x", quality_tier=tier))
+    assert payload["quality"] == quality
+
+
+def test_gpt_image_2_quality_defaults_to_medium():
+    payload = _gpt().build_payload(GenerateImageInput(prompt="x"))
+    assert payload["quality"] == "medium"
+
+
+def test_gpt_image_2_model_specific_overrides_quality():
+    """model_specific merges last, so it stays the escape hatch for a value the
+    tier mapping can't express."""
+    payload = _gpt().build_payload(
+        GenerateImageInput(prompt="x", quality_tier="fast", model_specific={"quality": "high"})
+    )
+    assert payload["quality"] == "high"
+
+
+def test_nano_banana_has_no_quality():
+    """The field is GPT Image 2's; nano-banana's API has no counterpart."""
+    payload = _nano().build_payload(GenerateImageInput(prompt="x", quality_tier="best"))
+    assert "quality" not in payload
+
+
 def test_gpt_image_2_passes_aspect_ratio_through():
     """21:9 is in the unified schema but not in GPT Image 2's set — no local guard,
     the request goes up and upstream rejects it."""
