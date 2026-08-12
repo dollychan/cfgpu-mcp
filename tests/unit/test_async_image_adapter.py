@@ -48,16 +48,16 @@ def test_accepts_single_image(adapter):
     assert ok is True
 
 
-@pytest.mark.parametrize(
-    ("requested", "wire"), [("1K", ""), ("2K", "2K"), ("4K", "4K"), ("3K", "3K")]
-)
-def test_gpt_image_2_sends_resolution(requested, wire):
-    """The tier must reach the payload — the API bills per resolution band, so a
-    dropped field silently downgrades every call to the 1K default. 1K is spelled
-    "" on the wire; 3K has no counterpart and goes up as-is for upstream to reject.
+@pytest.mark.parametrize("requested", ["1K", "2K", "4K", "3K"])
+def test_gpt_image_2_sends_resolution(requested):
+    """The tier must reach the payload verbatim — the API bills per resolution band,
+    so a dropped field silently downgrades every call. It names all three tiers
+    literally and rejects anything else (an earlier revision translated 1K to "",
+    which upstream answered with "resolution 参数必须为 '1K'、'2K' 或 '4K'"); 3K has no
+    counterpart and goes up as-is for upstream to reject.
     """
     payload = _gpt().build_payload(GenerateImageInput(prompt="x", resolution=requested))
-    assert payload["resolution"] == wire
+    assert payload["resolution"] == requested
 
 
 @pytest.mark.parametrize(

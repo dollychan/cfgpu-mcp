@@ -83,10 +83,10 @@ class GptImage2Adapter(_AsyncImageBase):
                 "model": self.cfgpu_model_id,
                 "prompt": req.prompt,
                 "aspect_ratio": req.aspect_ratio,
-                # The API spells its default tier as "" and names only 2K / 4K
-                # explicitly, so 1K has to be translated. 3K has no counterpart
-                # and goes up verbatim, to be rejected upstream.
-                "resolution": "" if req.resolution == "1K" else req.resolution,
+                # The API names all three tiers literally (1K / 2K / 4K) and
+                # rejects anything else, empty string included, so the tier goes
+                # up verbatim. 3K has no counterpart and is rejected upstream.
+                "resolution": req.resolution,
                 "quality": _QUALITY_MAP.get(req.quality_tier, "medium"),
             },
             req,
