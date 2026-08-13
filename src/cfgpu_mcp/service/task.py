@@ -25,10 +25,18 @@ def _present(task: Any) -> dict[str, Any]:
     is supplied on ``generate_*`` but the artifact only exists here, one tool call later.
     Failed tasks are surfaced by raising ``CFGPUError`` — see ``_raise_if_failed`` — so
     the error shape matches ``task_wait`` and the ``generate_*`` tools exactly.
+
+    "Has an artifact" is ``urls`` **or** ``inline_media``, matching
+    ``annotate_artifact`` and ``TaskManager.poll``'s success guard: a synchronous model
+    that returns media inline instead of a URL (MiniMax speech) is still reachable here
+    via ``generate_audio(wait=False) → task_status``, and testing ``urls`` alone would
+    demote that finished task to the bare ``{task_id, status}`` envelope, dropping the
+    audio the caller came for.
     """
     request_id = task.payload.get(_REQUEST_ID_KEY)
     caption = task.payload.get(_CAPTION_KEY)
-    if task.status == "succeeded" and (task.result or {}).get("urls"):
+    result = task.result or {}
+    if task.status == "succeeded" and (result.get("urls") or result.get("inline_media")):
         return stamp_echo({**task.result, "payload": task.public_payload()}, request_id=request_id, caption=caption)
     return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption)
 

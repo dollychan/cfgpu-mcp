@@ -582,7 +582,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
   --model-specific '{"input": {"pronunciation_dict": {"tone": ["处理/(chu3)(li3)"]}}}'
 ```
 
-> `seed-tts-2-0` 为异步（提交后轮询 `/voice/tasks/{task_id}`），MiniMax 两款为同步（POST 直接返回音频 URL）。
+> `seed-tts-2-0` 为异步（提交后轮询 `/voice/tasks/{task_id}`，产物是音频 URL），MiniMax 两款为同步（POST 直接返回结果）。
+> **MiniMax 不返回 URL**：音频以十六进制字符串内联在 `output.data.audio`，服务端解码后放进 `inline_media`（见 §返回值格式），`urls` 为空数组。
 > `--speed/--volume/--pitch/--emotion` 仅 MiniMax 生效，seed-tts 会忽略；音频链接 24 小时内有效。
 > `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
@@ -686,6 +687,7 @@ done
 |------|------|:--------:|------|
 | `urls` | `list[str]` | ✓ | 生成的资源 URL 列表 |
 | `expires_at` | `str \| null` | ✓ | URL 过期时间（ISO 8601），通常 24 小时后失效 |
+| `inline_media` | `list[object]` | ✓（有才出现） | **内联产物**：部分模型不给下载链接，直接把媒体内容返回（目前仅 MiniMax 语音）。每项为 `{data, mime_type, filename}`，`data` 是 base64 编码的文件内容，可直接解码落盘。此时 `urls` 为空数组 —— `inline_media` 就是本次产物本身，因此与 `urls` 同级、**不受 `return_metadata` 影响**；无内联产物的模型不会出现该字段。MCP 下它走 `structuredContent` 侧信道（不进模型上下文），见 §content / structuredContent 拆分 |
 | `task_id` | `str \| null` | | 任务 ID；同步模型为 `null` |
 | `model_used` | `str \| null` | | 实际使用的模型公开标识（`model_name`，与 `list_models()`/`model` 参数同一套 id 空间；从不是内部的 `cfgpu_model_id`）。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
@@ -720,7 +722,9 @@ done
 > }
 > ```
 
-> **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`generate_audio`、`task_status`、`task_wait` 这五个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。这些工具成功时都返回同一套扁平结构（顶层 `urls`），无 URL 的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。
+> **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`generate_audio`、`task_status`、`task_wait` 这五个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls` **或** 非空 `inline_media`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。这些工具成功时都返回同一套扁平结构，无产物的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。两种产物形态同权：MiniMax 语音只有 `inline_media`、没有 URL，同样是一次成功的生成。
+>
+> **`inline_media` 走 structuredContent（仅 Mode A / MCP 工具）**：`generate_audio` / `task_status` / `task_wait` 的返回被拆成 LLM 可见的 `content` 与客户端可见的 `structuredContent`，`inline_media`（连同 `usage` / `payload`）只出现在后者 —— base64 音频数据对模型毫无用处，进上下文只会挤爆窗口。客户端从 `structuredContent.inline_media` 取数据落盘；模型那边靠 `content` 里的 `artifact: true` + `status` 就知道生成已完成。Mode B / B2 / B3 / CLI 直连 service 层，不做拆分，`inline_media` 就在结果顶层。
 
 > **`request_id`（调用方关联标识，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `request_id` 入参，服务端会将其**原样回显**在本次即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact / error 上（有值才出现，不传则响应结构完全不变）。用途——异步流程里 generate 与稍后返回 artifact 的 `task_status` / `task_wait` 分属**不同的 tool_call**，而 `task_id` 要等 POST 返回才有、同步模型更是没有 `task_id`；`request_id` 由调用方在**发起时**自选，从而在整条链路上提供一个稳定、可直接对应的关联键，用来把异步结果 / 失败 join 回原始请求。它只作关联用途，绝不进入上游 API 请求体（`payload` 中不出现）。此回显在 service 层完成，故 MCP、Agent dispatcher、CLI 三种模式一致生效。仅可能异步的 `generate_*` 支持；`understand_vision` 恒同步、单次返回，无关联缺口，故不设此参数。
 

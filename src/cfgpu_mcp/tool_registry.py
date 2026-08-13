@@ -551,6 +551,28 @@ def annotate_artifact(result: Any) -> Any:
     return result
 
 
+def lean_result(result: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    """Build the ``return_metadata=False`` result: the artifact, without the metadata.
+
+    What ``return_metadata`` suppresses is *metadata* (task_id / model_used /
+    aspect_ratio / seed / usage) — never the artifact itself. ``urls`` and
+    ``inline_media`` are the two shapes an artifact arrives in (see
+    ``annotate_artifact``), so both survive here; dropping ``inline_media`` would make
+    the lean shape return nothing at all for a model that has no URL to give (MiniMax
+    speech hands back a hex blob — see ``MiniMaxSpeechAdapter``). ``payload`` is
+    surfaced regardless, matching ``NormalizedResult.to_dict``'s split of artifact vs.
+    metadata. Shared by all three generate services so the shape cannot drift per tool.
+    """
+    lean: dict[str, Any] = {
+        "urls": result.get("urls", []),
+        "expires_at": result.get("expires_at"),
+        "payload": payload,
+    }
+    if result.get("inline_media"):  # absent for URL-returning models — shape unchanged
+        lean["inline_media"] = result["inline_media"]
+    return lean
+
+
 # ── Caller-supplied echo fields (service-layer data contract) ───────────────
 
 def stamp_echo(result: Any, *, request_id: str | None = None, caption: str | None = None) -> Any:

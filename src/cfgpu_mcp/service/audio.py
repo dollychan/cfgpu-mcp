@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.tool_registry import GenerateAudioInput, stamp_echo
+from cfgpu_mcp.tool_registry import GenerateAudioInput, lean_result, stamp_echo
 
 
 async def generate_audio(
@@ -81,9 +81,5 @@ async def generate_audio(
     # The real per-model API request is always surfaced, regardless of return_metadata.
     payload = task.public_payload()
     if not return_metadata:
-        return stamp_echo({
-            "urls": result.get("urls", []),
-            "expires_at": result.get("expires_at"),
-            "payload": payload,
-        }, request_id=request_id, caption=caption)
+        return stamp_echo(lean_result(result, payload), request_id=request_id, caption=caption)
     return stamp_echo({**result, "payload": payload}, request_id=request_id, caption=caption)

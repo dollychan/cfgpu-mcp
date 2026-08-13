@@ -16,7 +16,11 @@ def register(mcp: FastMCP) -> None:
         try:
             return split_structured(
                 annotate_artifact(await task_service.get_status(task_id)),
-                structured_keys=("usage", "payload"),
+                # inline_media for the same reason generate_audio splits it out: a
+                # sync inline-media task (MiniMax speech) is reachable here via
+                # generate_audio(wait=False), and its base64 blob must ride
+                # structuredContent rather than enter the model context.
+                structured_keys=("usage", "payload", "inline_media"),
             )
         except Exception as e:
             return tool_error_dict(e)
@@ -27,7 +31,11 @@ def register(mcp: FastMCP) -> None:
         try:
             return split_structured(
                 annotate_artifact(await task_service.wait_for_task(task_id, timeout)),
-                structured_keys=("usage", "payload"),
+                # inline_media for the same reason generate_audio splits it out: a
+                # sync inline-media task (MiniMax speech) is reachable here via
+                # generate_audio(wait=False), and its base64 blob must ride
+                # structuredContent rather than enter the model context.
+                structured_keys=("usage", "payload", "inline_media"),
             )
         except Exception as e:
             return tool_error_dict(e)
