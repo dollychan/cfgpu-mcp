@@ -392,6 +392,22 @@ while not done:
 
 每个模型的轮询参数在 `adapter.yaml` 的 `poll_config` 中配置，`SeedanceVideoAdapter` 还根据请求参数（时长、是否有参考媒体）动态延长 `estimate_poll_timeout()`。
 
+**轮询失败 ≠ 任务失败。** 一次 poll 打不通，只说明这条 socket 有问题；任务在上游照跑不误。所以 `wait()` 会**吸收可重试的**轮询错误（`CFGPUError.retryable`），真正的边界是**轮询超时**（`estimate_poll_timeout()`），不是第一次网络抖动：
+
+```python
+try:
+    task = await self.poll(task, adapter)
+except CFGPUError as e:
+    e.original.setdefault("task_id", task.id)    # 任何放弃路径都必须带回 task_id
+    if not e.retryable:
+        raise                                     # 4xx：token 错、任务不存在 —— 再问也不会变
+    consecutive_failures += 1                     # 连续 MAX_CONSECUTIVE_POLL_FAILURES(5) 次才放弃
+```
+
+计数是**连续**的，一次 poll 成功即清零 —— 「每隔一轮抖一下」是上游慢，不是上游没了，不该累积成放弃。
+
+之所以要这样：共置的 comfy-gateway 在上传产物时会冻住自己的事件循环（comfy-gateway PLAN.md D12），落在那个窗口里的 poll 必然超时。此前的行为是**直接判整个调用失败**——一条已经生成完的视频就此丢掉，而 `wait=True` 的调用方压根没拿到过 task_id，连补查都做不到。因此凡是放弃的路径（含非可重试的直接 `raise`），抛出的错误都被补上 `task_id`，`to_tool_result_dict()` 会把它透到结果顶层。
+
 ---
 
 ## 7. 错误处理

@@ -829,6 +829,10 @@ done
 
 `error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
 
+> **异步任务失败时，先看有没有 `task_id`。** 有的话任务多半仍在上游跑，用 `task_status` / `task_wait` 拿同一个 id 再查一次即可，**不要重新提交**——那是再烧一次 GPU。`wait=true` 的调用在放弃等待时一定会带回 `task_id`（无论是轮询超时，还是连续多次查询失败后放弃），这是这类调用唯一的补救入口。
+>
+> 单次轮询请求打不通不会立刻判失败：可重试的错误会被吸收，连续 5 次才放弃。真正的上限是该模型的轮询超时（`poll_config.default_timeout`，H3 是 1500s），与单次 HTTP 超时（`http_timeout`）是两回事。
+
 **Mode B service 层直接调用**：service 函数抛出 `CFGPUError`，需自行捕获：
 
 ```python

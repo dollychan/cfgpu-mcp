@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 import uuid
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
@@ -15,7 +16,21 @@ if TYPE_CHECKING:
     from cfgpu_mcp.adapters.base import ModelAdapter
     from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
 
+logger = logging.getLogger(__name__)
+
 ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
+
+#: How many *consecutive* retryable poll failures ``wait()`` absorbs before giving up.
+#:
+#: A poll failing is not the task failing — the job keeps running upstream whatever
+#: happens on this socket. Aborting on the first one turns any brief upstream hiccup
+#: (a co-located gateway that stops answering while it uploads an artifact, a proxy
+#: restart, one slow response past ``http_timeout``) into a lost 20-minute video that
+#: the caller cannot even resume, because with ``wait=True`` they never received the
+#: task_id. So transient poll errors are absorbed and the *poll deadline* is the real
+#: bound. This ceiling only exists so a genuinely dead upstream doesn't hold the caller
+#: for the full timeout; either way the error raised carries the task_id.
+MAX_CONSECUTIVE_POLL_FAILURES = 5
 
 #: Resolves the client for a given adapter's upstream — see ``config.client_for``.
 ClientResolver = Callable[["ModelAdapter"], CFGPUClient]
@@ -116,15 +131,20 @@ def _extract_error_message(resp: dict) -> str | None:
     """Best-effort failure reason from a poll response, tolerant of shape.
 
     Upstreams disagree on where the reason lives: WAN video carries a top-level
-    ``error`` that is ``null`` on success and a dict on failure; gpt-image-2 /
-    nano image tasks nest the reason under ``data.error_msg`` (e.g. an Azure
-    OpenAI safety-system rejection). Returns None when the upstream genuinely
-    gives nothing — callers supply a fallback. Deliberately ignores the
-    top-level ``message`` field because the image API sets it to "success" (the
-    query succeeded) even for failed tasks.
+    ``error`` that is ``null`` on success and a dict on failure; Submodel nests
+    it under ``task.error``; gpt-image-2 / nano image tasks nest the reason under
+    ``data.error_msg`` (e.g. an Azure OpenAI safety-system rejection). Returns
+    None when the upstream genuinely gives nothing — callers supply a fallback.
+    Deliberately ignores the top-level ``message`` field because the image API
+    sets it to "success" (the query succeeded) even for failed tasks.
     """
     data = resp.get("data")
-    for container in (resp, data if isinstance(data, dict) else None):
+    task = resp.get("task")
+    for container in (
+        resp,
+        data if isinstance(data, dict) else None,
+        task if isinstance(task, dict) else None,
+    ):
         if not container:
             continue
         err = container.get("error")
@@ -347,6 +367,7 @@ class TaskManager:
         backoff = poll_cfg.backoff_factor if poll_cfg else 1.3
 
         start = time.monotonic()
+        consecutive_failures = 0
 
         while task.status not in _TERMINAL_STATUSES:
             await asyncio.sleep(interval)
@@ -355,7 +376,39 @@ class TaskManager:
             if elapsed >= effective_timeout:
                 raise CFGPUError.timeout(task.id, elapsed)
 
-            task = await self.poll(task, adapter)
+            try:
+                task = await self.poll(task, adapter)
+            except CFGPUError as e:
+                # A failed poll says nothing about the task — it is still running
+                # upstream. Absorb the transient ones (see
+                # MAX_CONSECUTIVE_POLL_FAILURES) rather than destroying a job that
+                # is fine. Non-retryable ones (4xx: bad token, unknown task) will
+                # not fix themselves by asking again, so they still abort — but
+                # with the task_id attached, which is the caller's only way back
+                # to the artifact on a wait=True call.
+                e.original.setdefault("task_id", task.id)
+                if not e.retryable:
+                    raise
+                consecutive_failures += 1
+                logger.warning(
+                    "轮询任务 %s 失败（连续第 %d/%d 次，已等待 %ds）：%s",
+                    task.id, consecutive_failures, MAX_CONSECUTIVE_POLL_FAILURES,
+                    elapsed, e.user_message,
+                )
+                if consecutive_failures >= MAX_CONSECUTIVE_POLL_FAILURES:
+                    raise CFGPUError(
+                        error_type=e.error_type,
+                        user_message=(
+                            f"连续 {consecutive_failures} 次查询任务状态都失败，放弃等待。"
+                            f"任务 {task.id} 很可能仍在上游运行，可用 task_status 查询。"
+                            f"最后一次的原因：{e.user_message}"
+                        ),
+                        original={"task_id": task.id, "elapsed": elapsed, "last_error": e.original},
+                        retryable=True,
+                    ) from e
+                interval = min(interval * backoff, max_interval)
+                continue
+            consecutive_failures = 0
 
             if progress_callback:
                 await progress_callback({

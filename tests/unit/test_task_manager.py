@@ -396,6 +396,115 @@ async def test_wait_times_out_and_raises():
     await db.close()
 
 
+def _transient() -> CFGPUError:
+    """What CFGPUClient._request() raises when one HTTP call hangs past http_timeout."""
+    return CFGPUError(
+        error_type="timeout",
+        user_message="请求超时（60.0s），请稍后重试或在 config.yaml 增大 cfgpu_api.http_timeout。",
+        original={"url": "http://gw/v1/video/tasks/task-1", "timeout": 60.0},
+        retryable=True,
+    )
+
+
+async def _waiting_tm(get_side_effect):
+    """An async task mid-flight, with ``get`` (the poll) wired to ``get_side_effect``."""
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-1"})
+    req = GenerateVideoInput(prompt="x")
+    task = await tm.create(adapter, req)
+    tm._client_for(None).get = AsyncMock(side_effect=get_side_effect)
+    return tm, db, adapter, req, task
+
+
+@pytest.mark.asyncio
+async def test_wait_survives_a_transient_poll_failure():
+    """A poll failing is not the task failing — the job keeps running upstream.
+
+    The co-located comfy-gateway freezes its event loop while it uploads an artifact,
+    so the poll that lands in that window times out. Aborting there threw away a video
+    that had already been generated, and with wait=True the caller never held the
+    task_id, so it was unrecoverable.
+    """
+    from cfgpu_mcp.tool_registry import NormalizedResult
+
+    tm, db, adapter, req, task = await _waiting_tm(
+        [_transient(), {"id": "task-1", "status": "succeeded"}]
+    )
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/v.mp4"], expires_at=None, task_id="task-1",
+        model_used="wan-video", seed=None, usage=None,
+    )
+
+    result = await tm.wait(task, adapter, req)
+
+    assert result.status == "succeeded"
+    assert result.result["urls"] == ["https://cdn/v.mp4"]
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_wait_gives_up_after_repeated_failures_but_hands_back_the_task_id():
+    """A dead upstream must not hold the caller for the full poll timeout —
+    but whatever we raise has to carry the task_id, or the artifact is unreachable."""
+    from cfgpu_mcp.task_manager import MAX_CONSECUTIVE_POLL_FAILURES
+
+    tm, db, adapter, req, task = await _waiting_tm(
+        [_transient() for _ in range(MAX_CONSECUTIVE_POLL_FAILURES + 3)]
+    )
+
+    with pytest.raises(CFGPUError) as exc:
+        await tm.wait(task, adapter, req)
+
+    assert tm._client_for(None).get.await_count == MAX_CONSECUTIVE_POLL_FAILURES
+    assert exc.value.to_tool_result_dict()["task_id"] == "task-1"
+    assert "task_status" in exc.value.user_message
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_a_run_of_failures_resets_once_a_poll_gets_through():
+    """The ceiling counts *consecutive* failures. One flaky poll every other round is
+    an upstream that is merely slow, not one that is gone — that must not accumulate
+    into a give-up over a long video."""
+    from cfgpu_mcp.tool_registry import NormalizedResult
+    from cfgpu_mcp.task_manager import MAX_CONSECUTIVE_POLL_FAILURES
+
+    running = {"id": "task-1", "status": "running"}
+    flaky: list = []
+    for _ in range(MAX_CONSECUTIVE_POLL_FAILURES + 2):
+        flaky += [_transient(), running]
+    flaky.append({"id": "task-1", "status": "succeeded"})
+
+    tm, db, adapter, req, task = await _waiting_tm(flaky)
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/v.mp4"], expires_at=None, task_id="task-1",
+        model_used="wan-video", seed=None, usage=None,
+    )
+
+    result = await tm.wait(task, adapter, req)
+
+    assert result.status == "succeeded"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_wait_still_aborts_at_once_on_a_non_retryable_poll_error():
+    """A bad token or an unknown task will not fix itself by asking again."""
+    tm, db, adapter, req, task = await _waiting_tm(
+        CFGPUError(error_type="auth", user_message="token 无效", retryable=False)
+    )
+
+    with pytest.raises(CFGPUError) as exc:
+        await tm.wait(task, adapter, req)
+
+    assert exc.value.error_type == "auth"
+    assert tm._client_for(None).get.await_count == 1
+    # Still resumable: the caller needs the id even on the paths that abort.
+    assert exc.value.to_tool_result_dict()["task_id"] == "task-1"
+    await db.close()
+
+
 @pytest.mark.asyncio
 async def test_status_raises_for_unknown_task_id():
     tm, db = await _make_tm()
