@@ -2,16 +2,38 @@ import asyncio
 from pathlib import Path
 
 import pytest
+import yaml
 
 import cfgpu_mcp.config as cfg_module
 from cfgpu_mcp.config import get_task_repository, load_registry
+from cfgpu_mcp.settings import DEFAULT_PROVIDER
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
 
 
 def _expected_model_count() -> int:
-    """Derive from the model dirs so the count never goes stale when models grow."""
-    return sum(1 for p in MODELS_DIR.iterdir() if (p / "adapter.yaml").exists())
+    """Models a config.yaml with no ``providers:`` block can actually reach.
+
+    Derived from the model dirs so the count never goes stale when models grow.
+    "All models" means all *reachable* ones: a model declaring a provider this
+    deployment hasn't configured is dropped at load time rather than offered and
+    then failing at POST (see AdapterRegistry._has_provider), and the fixture
+    below writes a config with no providers.
+    """
+    n = 0
+    for p in sorted(MODELS_DIR.iterdir()):
+        f = p / "adapter.yaml"
+        if not f.exists():
+            continue
+        cfg = yaml.safe_load(f.read_text()) or {}
+        provider = cfg.get("provider")
+        if provider is None and cfg.get("extends"):
+            # A variant inherits its parent's provider through the merge.
+            parent = yaml.safe_load((MODELS_DIR / cfg["extends"] / "adapter.yaml").read_text()) or {}
+            provider = parent.get("provider")
+        if (provider or DEFAULT_PROVIDER) == DEFAULT_PROVIDER:
+            n += 1
+    return n
 
 
 @pytest.fixture

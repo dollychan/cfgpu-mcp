@@ -1,0 +1,20 @@
+# MiniMax H3 r2v (ref2va weights) via the co-located comfy-gateway.
+#
+# `extends` resolves against the parent's adapter_id (cfdream-minimax-h3), not its
+# model_name, and is preserved through the merge so _instantiate can walk the chain.
+# Here it also carries provider / resolutions / max_duration_seconds / poll_config —
+# they are the same weights family on the same machine, so they must not drift.
+extends: cfdream-minimax-h3
+card_base: ~                            # its own card; nothing inherited
+
+adapter_id: cfdream-minimax-h3-r2v
+display_name: "MiniMax H3 (参考素材生视频)"
+cfgpu_model_id: cfdream/minimax-h3-r2v
+model_name: cfdream/minimax-h3-r2v
+
+# A separate model id rather than a mode of the first one because these are a
+# different set of weights: fl2va and ref2va cannot be mixed, and the gateway
+# rejects first_frame/last_frame here just as it rejects reference_* there.
+capabilities:
+  - reference_to_video
+  - multi_modal_reference

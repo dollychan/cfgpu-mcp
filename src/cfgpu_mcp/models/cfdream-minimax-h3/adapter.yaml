@@ -1,0 +1,52 @@
+# MiniMax H3 (fl2va weights) via the co-located comfy-gateway.
+# Contract: comfy-gateway/API.md. Change that document before changing either side.
+#
+# Directory name flattens the slash in model_name — same convention as
+# minimax-speech-2-8-hd / MiniMax/speech-2.8-hd.
+adapter_id: cfdream-minimax-h3
+display_name: "MiniMax H3"
+cfgpu_model_id: cfdream/minimax-h3      # the `model` field sent to the gateway
+model_name: cfdream/minimax-h3          # the only public identifier
+
+# Not the CFGPU API. Requires a `providers.comfy` block in config.yaml — without
+# it this model is not registered at all, so it can never be offered or routed to
+# (see AdapterRegistry._has_provider).
+provider: comfy
+
+task_type: video
+endpoint: /video/generations
+is_async: true
+poll_endpoint: /video/tasks/{task_id}
+
+capabilities:
+  - text_to_video
+  - image_to_video
+  - first_last_frame
+
+# ── Calibration state, not capability ceilings ────────────────────────────────
+# 0.4MP (480p) is the only officially validated tier, and the durations past 5s
+# have not had their VRAM peak measured on the single co-located GPU. Both open
+# up after comfy-gateway PLAN.md S7. Keeping them narrow also keeps model="auto"
+# away from this model for an ordinary 720p request, which is deliberate: it is
+# one serial GPU, not a fleet.
+resolutions: ["480p"]
+max_duration_seconds: 15
+
+# Local weights on hardware we already pay for → cheap. ~96s of GPU for 5s of
+# video at steady state (+47s on a cold model load) → slow. Both tiers feed the
+# router's score, so being honest here is what keeps auto-selection sane.
+cost_tier: 1
+speed_tier: 1
+
+# No payload_mapping / response_url_key: this model uses a Python adapter
+# (adapters/cfdream_h3.py) so that `seed` and the real `expires_at` survive the
+# response, and so lists/bools go on the wire with their own types.
+
+poll_config:
+  base_interval: 5
+  max_interval: 20
+  backoff_factor: 1.3
+  # The gateway's own per-task ceiling is 1800s and is deliberately the larger of
+  # the two: when this side gives up, the task still runs to completion and lands
+  # in the gateway's DB, so a later task_status still returns the artifact.
+  default_timeout: 900

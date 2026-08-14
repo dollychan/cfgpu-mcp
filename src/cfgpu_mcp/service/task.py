@@ -68,12 +68,11 @@ def _raise_if_failed(task: Any) -> None:
 
 
 async def get_status(task_id: str) -> dict[str, Any]:
-    from cfgpu_mcp.config import get_client, get_task_repository, get_registry
+    from cfgpu_mcp.config import client_for, get_task_repository, get_registry
     from cfgpu_mcp.task_manager import TaskManager
 
     repo = await get_task_repository()
-    client = get_client()
-    tm = TaskManager(client, repo)
+    tm = TaskManager(client_for, repo)
     try:
         task = await tm.status(task_id)
     except KeyError as e:
@@ -117,13 +116,12 @@ async def wait_for_task(
     task_id: str,
     timeout: int | None = None,
 ) -> dict[str, Any]:
-    from cfgpu_mcp.config import get_client, get_task_repository, get_registry
+    from cfgpu_mcp.config import client_for, get_task_repository, get_registry
     from cfgpu_mcp.task_manager import TaskManager
 
     repo = await get_task_repository()
-    client = get_client()
     registry = get_registry()
-    tm = TaskManager(client, repo)
+    tm = TaskManager(client_for, repo)
 
     try:
         task = await tm.status(task_id)

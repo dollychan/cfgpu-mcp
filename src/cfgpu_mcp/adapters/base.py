@@ -55,6 +55,7 @@ class ModelAdapter(ABC):
     display_name: str
     cfgpu_model_id: str          # Only used in build_payload()
     model_name: str              # Public model identifier — the only one ever exposed to callers
+    provider: str                # Which upstream serves this model; see settings.ProviderSettings
     task_type: Literal["image", "video", "audio", "understand"]
     endpoint: str
     is_async: bool
@@ -77,6 +78,10 @@ class ModelAdapter(ABC):
         instance.cfgpu_model_id = config["cfgpu_model_id"]
         # Falls back to adapter_id for configs/fixtures predating model_name.
         instance.model_name = config.get("model_name", config["adapter_id"])
+        # Which upstream API serves this model. "cfgpu" is both the default and
+        # what every model declared before providers existed, so an absent key
+        # keeps the previous behaviour exactly.
+        instance.provider = config.get("provider", "cfgpu")
         instance.task_type = config["task_type"]
         instance.endpoint = config["endpoint"]
         instance.is_async = config.get("is_async", True)

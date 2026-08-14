@@ -28,11 +28,28 @@ class CFGPUClient:
         base_url: str | None = None,
         http_timeout: float | None = None,
         connect_timeout: float | None = None,
+        auth_scheme: str = "bearer",
+        token_env: str = "CFGPU_API_TOKEN",
+        use_request_token: bool = True,
+        provider: str = "cfgpu",
     ) -> None:
         # No raise here: in HTTP multi-tenant mode the token arrives per request
         # (ContextVar). ``api_token`` is only a fallback (stdio / direct use).
-        self._token = api_token or os.environ.get("CFGPU_API_TOKEN")
+        self._token = api_token or os.environ.get(token_env)
         self._base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
+        # "bearer" → `Authorization: Bearer <t>`; "raw" → `Authorization: <t>`.
+        # Not every upstream speaks Bearer: the co-located comfy-gateway matches
+        # the reverse proxy already on that machine, which takes a bare token.
+        self._auth_scheme = auth_scheme
+        self._token_env = token_env
+        # Whether the per-request ContextVar token (the *caller's* CFGPU
+        # credential, from the Authorization header in multi-tenant HTTP mode) may
+        # be used for this upstream. True only for CFGPU itself. Any other
+        # provider is a different host with a different trust relationship, and
+        # forwarding a tenant's CFGPU token there would hand a third party a
+        # credential that was issued for CFGPU (comfy-gateway API.md §1 / D1-d).
+        self._use_request_token = use_request_token
+        self._provider = provider
         # Distinguish "not supplied" (None) from a caller-provided value. settings
         # has already validated its values as positive, so we don't re-coerce 0 here.
         self._timeout = aiohttp.ClientTimeout(
@@ -50,14 +67,23 @@ class CFGPUClient:
 
         The shared session carries no auth header, so the token is injected per
         request — one connection pool serves every tenant.
+
+        For a non-cfgpu provider the ContextVar is skipped entirely (see
+        ``use_request_token``) and the only source is the provider's own
+        ``token_env``, which ``_parse_providers`` has already refused to let be
+        ``CFGPU_API_TOKEN``. So there is no path — not even a fallback one — by
+        which a caller's CFGPU credential reaches another host.
         """
-        token = get_request_token() or self._token
+        token = (get_request_token() if self._use_request_token else None) or self._token
         if not token:
-            raise CFGPUError(
-                error_type="auth",
-                user_message="缺少 CFGPU API Token：请在请求头携带 Authorization，或设置 CFGPU_API_TOKEN。",
-                original={},
-            )
+            if self._use_request_token:
+                msg = "缺少 CFGPU API Token：请在请求头携带 Authorization，或设置 CFGPU_API_TOKEN。"
+            else:
+                msg = (
+                    f"provider {self._provider!r} 缺少凭据：请设置环境变量 {self._token_env}。"
+                    f"（该 provider 不使用请求头里的用户 token，也不回退到 CFGPU_API_TOKEN。）"
+                )
+            raise CFGPUError(error_type="auth", user_message=msg, original={})
         return token
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -75,7 +101,8 @@ class CFGPUClient:
         url = f"{self._base_url}/{path.lstrip('/')}"
         if method == "POST" and os.getenv("CFGPU_DRY_RUN"):
             logger.info("DRY-RUN POST %s\n%s", url, _json.dumps(kwargs.get("json", {}), ensure_ascii=False, indent=2))
-        headers = {"Authorization": f"Bearer {self._resolve_token()}"}
+        token = self._resolve_token()
+        headers = {"Authorization": token if self._auth_scheme == "raw" else f"Bearer {token}"}
         session = await self._get_session()
         try:
             async with session.request(method, url, headers=headers, **kwargs) as resp:

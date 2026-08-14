@@ -24,6 +24,27 @@ cfgpu_api:
   http_timeout: 120            # per-request total timeout (seconds)
   connect_timeout: 10
 
+providers:                     # extra upstreams beyond CFGPU itself; omit if you have none
+  # `cfgpu` is built in and configured by the cfgpu_api block above — it does not
+  # belong here. This section is for models served by something else.
+  #
+  # A model whose adapter.yaml declares `provider: X` is NOT REGISTERED unless X
+  # appears here: it stays out of list_models and out of the tool's model enum, so
+  # model="auto" can never route to a host this deployment cannot reach. Adding the
+  # YAML but forgetting this block therefore looks like "the model didn't show up"
+  # — the startup log says which provider is missing.
+  #
+  # comfy:                     # co-located comfy-gateway (MiniMax H3 local weights)
+  #   base_url: https://<gateway-host>/v1
+  #   auth_scheme: raw         # bare token, not `Bearer <t>` — matches that host's proxy
+  #   token_env: COMFY_GATEWAY_TOKEN
+  #   http_timeout: 60
+  #
+  # token_env is the ONLY source of a non-cfgpu provider's credential. Such a
+  # provider never reads the per-request Authorization header (that token is the
+  # caller's CFGPU credential and belongs to CFGPU alone) and never falls back to
+  # CFGPU_API_TOKEN — naming CFGPU_API_TOKEN here is refused at load time.
+
 task_db:
   url: sqlite:///~/.cfgpu/tasks.db
   # url: postgresql://user:pass@host:5432/cfgpu   # multi-instance horizontal scaling

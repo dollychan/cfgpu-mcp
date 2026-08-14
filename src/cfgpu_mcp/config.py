@@ -2,18 +2,23 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
 from cfgpu_mcp.client.cfgpu_client import CFGPUClient
 from cfgpu_mcp.client.repository import TaskRepository, create_task_repository
-from cfgpu_mcp.settings import Settings, load_settings
+from cfgpu_mcp.errors import CFGPUError
+from cfgpu_mcp.settings import DEFAULT_PROVIDER, Settings, load_settings
+
+if TYPE_CHECKING:
+    from cfgpu_mcp.adapters.base import ModelAdapter
 
 _MODELS_DIR = Path(__file__).parent / "models"
 
 # Module-level singletons (lazy-initialized)
 _settings: Settings | None = None
 _registry: AdapterRegistry | None = None
-_client: CFGPUClient | None = None
+_clients: dict[str, CFGPUClient] = {}   # provider name → client (one pool each)
 _repo: TaskRepository | None = None
 
 # Serializes the async repo singleton init: without it, a burst of concurrent
@@ -41,7 +46,13 @@ def load_registry(enabled_models: list[str] | None = None) -> AdapterRegistry:
     if enabled_models is None:
         enabled_models = get_settings().enabled_models
 
-    registry = AdapterRegistry(model_dir=_MODELS_DIR, enabled_models=enabled_models)
+    registry = AdapterRegistry(
+        model_dir=_MODELS_DIR,
+        enabled_models=enabled_models,
+        # Models pointing at an unconfigured provider are dropped rather than
+        # offered — see AdapterRegistry._has_provider.
+        available_providers=set(get_settings().providers),
+    )
     registry.load()
     return registry
 
@@ -54,22 +65,62 @@ def get_registry(enabled_models: list[str] | None = None) -> AdapterRegistry:
     return _registry
 
 
-def get_client() -> CFGPUClient:
-    """Return module-level singleton HTTP client.
+def get_client(provider: str = DEFAULT_PROVIDER) -> CFGPUClient:
+    """Return the singleton HTTP client for ``provider`` (one pool per upstream).
 
-    Shared connection pool, no baked-in token — the token is resolved per
-    request from the ContextVar (see cfgpu_mcp.context). base_url/timeouts come
-    from settings (config.yaml); the token stays out of config entirely.
+    For the default ``cfgpu`` provider: shared connection pool, no baked-in token
+    — the token is resolved per request from the ContextVar (see
+    cfgpu_mcp.context). base_url/timeouts come from settings (config.yaml); the
+    token stays out of config entirely.
+
+    Other providers are separate hosts. They never read the request ContextVar
+    and never fall back to CFGPU_API_TOKEN; their credential comes only from
+    their own ``token_env`` (see CFGPUClient._resolve_token).
     """
-    global _client
-    if _client is None:
-        s = get_settings()
-        _client = CFGPUClient(
-            base_url=s.base_url,
-            http_timeout=s.http_timeout,
-            connect_timeout=s.connect_timeout,
+    client = _clients.get(provider)
+    if client is not None:
+        return client
+
+    s = get_settings()
+    cfg = s.providers.get(provider)
+    if cfg is None:
+        # Reachable only if a model declares a provider the registry did not
+        # filter out (e.g. a hand-built registry in a test). Say what to add.
+        raise CFGPUError(
+            error_type="invalid_params",
+            user_message=(
+                f"未配置 provider {provider!r}：请在 config.yaml 的 providers: 下声明它"
+                f"（base_url / auth_scheme / token_env）。"
+            ),
+            original={"provider": provider, "configured": sorted(s.providers)},
         )
-    return _client
+
+    is_cfgpu = provider == DEFAULT_PROVIDER
+    client = CFGPUClient(
+        base_url=cfg.base_url,
+        http_timeout=cfg.http_timeout if cfg.http_timeout is not None else s.http_timeout,
+        connect_timeout=(
+            cfg.connect_timeout if cfg.connect_timeout is not None else s.connect_timeout
+        ),
+        auth_scheme=cfg.auth_scheme,
+        token_env=cfg.token_env,
+        use_request_token=is_cfgpu,
+        provider=provider,
+    )
+    _clients[provider] = client
+    return client
+
+
+def client_for(adapter: "ModelAdapter") -> CFGPUClient:
+    """Resolve the client that serves ``adapter``'s upstream.
+
+    This is the resolver handed to ``TaskManager``. It has to be a *function of
+    the adapter* rather than a client chosen up front because ``task_status`` /
+    ``task_wait`` receive only a task_id: which provider owns that task is not
+    known until the DB row has been read and its adapter looked up, which happens
+    inside TaskManager.
+    """
+    return get_client(getattr(adapter, "provider", DEFAULT_PROVIDER))
 
 
 async def get_task_repository() -> TaskRepository:
@@ -92,10 +143,10 @@ async def get_task_repository() -> TaskRepository:
 
 async def close() -> None:
     """Close shared resources (call on shutdown)."""
-    global _client, _repo
-    if _client:
-        await _client.close()
-        _client = None
+    global _repo
+    for client in list(_clients.values()):
+        await client.close()
+    _clients.clear()
     if _repo:
         await _repo.close()
         _repo = None

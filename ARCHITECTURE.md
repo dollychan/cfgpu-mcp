@@ -96,6 +96,8 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 | `cfgpu_model_id` | `wan-video-fast` | **只在** `build_payload()` 里写入 API 请求体；**不对外暴露** |
 | `model_name` | `wan-video-fast` | 唯一对外公开的模型标识——`model=` 参数、`list_models()` 的 `model_id`、`model_used`、错误里的 `model_id` 一律用它 |
 
+此外每个模型还有一个 `provider`（**不是标识符**，是"谁来提供这个模型"）。缺省是 `cfgpu`，也就是本文其余部分默认的那个上游。详见 §3.4。
+
 `list_models()` 返回 `model_id`（即 `model_name`）+ `display_name`，**不回传 `adapter_id` 或 `cfgpu_model_id`**。新开发者最常见的错误：在 `build_payload()` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传给调用方/写进对外可见的结果。`registry.get()` 依次按 `model_name` → `adapter_id` → `cfgpu_model_id` → `display_name` 解析，因此旧调用方传 `adapter_id`/`cfgpu_model_id` 仍能命中，但工具 schema 的 `model` 枚举、`list_models`、`model_used`、错误 `model_id` 只会**出现** `model_name` 的取值。
 
 **四种 `task_type`**：`image` / `video` / `audio` 三类都是**媒体生成**（返回 `urls`），而 `understand`（视觉理解 / 图像推理 / 视频理解，如 Qwen3-VL）是**返回文本**的对话类任务——走 OpenAI 兼容的 `/model/v1/chat/completions`，结果落在 `NormalizedResult.message`（assistant 消息 `{role, content[, reasoning_content]}`，回答是 `content`、Thinking 模型的推理过程是 `reasoning_content`）与 `response_id`，`urls` 为空。其工具返回 chat-completion 结构 `{id, model, message, payload[, usage]}`（`usage` 受 `return_metadata` 控制）。路由、`supports()`、`select_model()` 都按 `task_type` 隔离，understand 请求永远不会选中媒体模型，反之亦然。
@@ -141,6 +143,39 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 ```
 
 这意味着：默认 balanced 模式下，低成本高速模型优先；中文 prompt 会偏向 Seedream；有参考媒体时优先选择支持多模态参考的模型。
+
+### 3.4 Provider —— 模型可以不来自 CFGPU
+
+`adapter.yaml` 的 `provider` 字段决定这个模型走哪个上游 API。缺省 `cfgpu`，即 CFGPU 平台本身；这也是本字段出现之前所有模型的取值，所以不写 `provider:` 的行为与从前完全一致。
+
+额外的 provider 在 config.yaml 的 `providers:` 段声明：
+
+```yaml
+providers:
+  comfy:                          # 自建 comfy-gateway（MiniMax H3 本地权重）
+    base_url: https://<gateway-host>/v1
+    auth_scheme: raw              # 裸 token，不是 `Bearer <t>`
+    token_env: COMFY_GATEWAY_TOKEN
+    http_timeout: 60
+```
+
+`cfgpu` 这个 provider **不在这里声明**，它由顶层 `cfgpu_api:` 段合成 —— 否则 `base_url` 就有了两个可以互相打架的来源。
+
+三条不显然的约束：
+
+**1. provider 没配 → 模型根本不注册。** `AdapterRegistry._has_provider()` 在加载时丢掉这类模型：注册了的话它会进 `list_models` 和工具 schema 的 `model` 枚举，`model="auto"` 就可能把一次真实生成路由到一个我们既没有地址也没有凭据的主机上，而失败发生在调用方已经选定模型之后。丢掉它等于说实话：这个部署上没有这个模型。启动日志会点名缺哪个 provider，免得"加了 YAML 但模型没出现"变成一场无头案。
+
+**2. 非 cfgpu 的 provider 不读请求 ContextVar，也不回退 `CFGPU_API_TOKEN`。** 多租户 HTTP 模式下，ContextVar 里那个 token 是**调用方的 CFGPU 凭据**，它是发给 CFGPU 的。原样转发给另一台主机，等于把用户的 CFGPU 凭据交给了一个第三方，而对方无从知道自己不该拿到它。所以 `CFGPUClient` 有 `use_request_token`，只有 cfgpu provider 为真；其余 provider 的凭据**只**来自各自的 `token_env`。`token_env` 若写成 `CFGPU_API_TOKEN`，配置加载期直接报错。
+
+**3. `TaskManager` 接的是 client **解析器**，不是 client。** 因为轮询路径上 provider 是**读完 DB 行才知道**的：
+
+```
+service/task.py   tm = TaskManager(client_for, repo)
+                  task = await tm.status(task_id)    ← 只有一个 task_id
+                  ...                                 ← 到 registry.get(task.adapter_id) 才知道是谁
+```
+
+`task_status` / `task_wait` 只拿得到 task_id，提前选定的 client 对任何非 CFGPU 模型都会是错的。单上游的调用方（以及测试）用 `task_manager.single_client(c)` 包一层。
 
 ---
 
@@ -193,7 +228,7 @@ service 返回 dict → 访问层格式化 → 用户
 `get_settings()` / `get_registry()` / `get_client()` / `get_task_repository()` 均为模块级单例，首次调用时初始化，后续调用直接返回已有实例。这避免了每次请求重新建立 HTTP 连接、重新解析 YAML 或重开数据库。
 
 - `get_settings()` 从 config.yaml 加载配置（`settings.py`）。
-- `get_client()` 构造的 `CFGPUClient` **不再持有 token**——共享连接池，token 逐请求从 ContextVar 解析；`base_url`/超时来自 settings。
+- `get_client(provider="cfgpu")` **按 provider 各持一个实例**（各自一个连接池），见 §3.4。默认 provider 的 `CFGPUClient` **不持有 token**——共享连接池，token 逐请求从 ContextVar 解析；`base_url`/超时来自 settings。非默认 provider 的 client 反过来：只认自己 `token_env` 里的服务端凭据，不看 ContextVar。`client_for(adapter)` 是给 `TaskManager` 用的解析器。`close()` 关闭全部 provider 的 client。
 - `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。该单例的初始化是 `async` 且首调时有 `await`，因此用 `asyncio.Lock` + 双重检查保护：否则一批并发工具调用会各自看到 `_repo is None` 并同时建仓库 / 跑建表 DDL，撞上 Postgres `CREATE TABLE` 的目录竞争（`pg_type_typname_nsp_index` 唯一键冲突 → `duplicate key (tasks)`）。跨实例同时启动的竞争则由 `PostgresTaskRepository._init_schema` 的事务级 advisory lock（`pg_advisory_xact_lock`）串行化建表，输家随后跑 `CREATE ... IF NOT EXISTS` 成空操作。
 
 程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 task 仓库（SQLite 连接 / Postgres 连接池）。各访问层各自负责调用：CLI 在 `_run()` 的 `finally` 中调用；stdio MCP server 通过 FastMCP 的 `lifespan` 上下文在关闭阶段调用。**不能用 `atexit` + `asyncio.run()`**——那会新建事件循环去关闭绑定在 server 原循环上的 `ClientSession`，触发 "Event loop is closed" 告警；lifespan 在 server 自身的事件循环内退出，确保 session 在它被创建的同一循环上关闭。
@@ -431,7 +466,7 @@ src/cfgpu_mcp/
 ├── settings.py                 config.yaml 加载（env override）→ Settings
 ├── context.py                  请求级 token ContextVar（streamable-http 多租户）
 ├── http_app.py                 RequestContextMiddleware（token + 清理）+ build_http_app()
-├── config.py                   单例资源管理（settings / registry / client / task_repository）
+├── config.py                   单例资源管理（settings / registry / 按 provider 的 client / task_repository）
 ├── tool_registry.py            Pydantic 输入模型 + get_anthropic_tools() + NormalizedResult
 ├── router.py                   model="auto" 评分选模型
 ├── task_manager.py             同步/异步任务创建、轮询、等待
@@ -450,7 +485,8 @@ src/cfgpu_mcp/
 │   ├── grok_video.py           Grok Imagine Video 1.5 的 Python Adapter（扁平 video_length/resolution_name/refer_images + data 包裹的轮询响应）
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
 │   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）
-│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat 触发注册
+│   ├── cfdream_h3.py           MiniMax H3（provider: comfy，自建 comfy-gateway）：t2v/i2v/flf2v 与 r2v 两套权重各一个类，互斥的素材槽位在 supports() 里判，使 auto 能在两者间路由
+│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -521,6 +557,12 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── wan-2-6-r2v/
 │   │   ├── adapter.yaml        万相 2.6 参考生视频，Wan26VideoR2VAdapter（reference_urls 扁平列表）
+│   │   └── card.md
+│   ├── cfdream-minimax-h3/
+│   │   ├── adapter.yaml        MiniMax H3（provider: comfy）t2v/i2v/flf2v，仅 480p（标定状态，非能力上限）
+│   │   └── card.md
+│   ├── cfdream-minimax-h3-r2v/
+│   │   ├── adapter.yaml        MiniMax H3 参考素材生视频，extends: cfdream-minimax-h3, card_base: ~（另一套权重，不与上者混用）
 │   │   └── card.md
 │   ├── grok-imagine-video-1-5/
 │   │   ├── adapter.yaml        Grok Imagine Video 1.5，GrokVideoAdapter（公开 id cf-imagine-video-1.5）

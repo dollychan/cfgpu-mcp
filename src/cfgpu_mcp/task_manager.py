@@ -17,6 +17,9 @@ if TYPE_CHECKING:
 
 ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
 
+#: Resolves the client for a given adapter's upstream — see ``config.client_for``.
+ClientResolver = Callable[["ModelAdapter"], CFGPUClient]
+
 # Echoed aspect_ratio prefers the value the upstream actually returned (some
 # APIs, e.g. WAN, report the resolved ratio in their response — important when
 # the request asked for "adaptive"). The adapter's parse_response() sets it when
@@ -185,9 +188,27 @@ class Task:
         }
 
 
+def single_client(client: CFGPUClient) -> ClientResolver:
+    """Adapt one client into a resolver, for single-upstream callers and tests."""
+    return lambda _adapter: client
+
+
 class TaskManager:
-    def __init__(self, client: CFGPUClient, repo: TaskRepository) -> None:
-        self._client = client
+    def __init__(self, client_for: ClientResolver, repo: TaskRepository) -> None:
+        """``client_for`` resolves the upstream client from the adapter in hand.
+
+        It is a *function of the adapter* rather than a client chosen up front
+        because of the polling path: ``task_status`` / ``task_wait`` start from a
+        bare task_id and only learn which adapter — hence which provider, hence
+        which base_url and credential — owns it after reading the DB row, which
+        happens inside this class. A client picked before that read would already
+        be the wrong one for any model not served by CFGPU itself.
+
+        Callers with a single upstream wrap it with ``single_client``. Accepting
+        both shapes here instead would mean sniffing "is this a client or a
+        factory?", which a test double satisfies both ways.
+        """
+        self._client_for = client_for
         self._repo = repo
 
     # ── Create ───────────────────────────────────────────────────────────────
@@ -202,7 +223,7 @@ class TaskManager:
 
         if not adapter.is_async:
             # Synchronous model: POST → parse response immediately
-            resp = await self._client.post(adapter.endpoint, payload)
+            resp = await self._client_for(adapter).post(adapter.endpoint, payload)
             result: NormalizedResult = adapter.parse_response(resp)
             # Always stamp the public model_name — adapters may set model_used from the
             # upstream response's echoed "model" field, which is the internal
@@ -218,7 +239,7 @@ class TaskManager:
             return Task(_now_row(task_id, adapter.adapter_id, "succeeded", stored_payload, result=result_dict))
 
         # Async model: POST → get task_id from CFGPU → write pending
-        resp = await self._client.post(adapter.endpoint, payload)
+        resp = await self._client_for(adapter).post(adapter.endpoint, payload)
         cfgpu_task_id = adapter.extract_task_id(resp)
         if not cfgpu_task_id:
             # Without a real task_id we'd poll a bogus URL until timeout and
@@ -241,7 +262,7 @@ class TaskManager:
     async def poll(self, task: Task, adapter: "ModelAdapter") -> Task:
         assert adapter.poll_endpoint, f"{adapter.adapter_id} has no poll_endpoint"
         path = adapter.poll_endpoint.replace("{task_id}", task.id)
-        resp = await self._client.get(path)
+        resp = await self._client_for(adapter).get(path)
 
         cfgpu_status: str = adapter.extract_status(resp)
         status = _STATUS_MAP.get(cfgpu_status, "running")

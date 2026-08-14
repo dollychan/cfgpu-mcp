@@ -29,12 +29,34 @@ task_db:
 enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
 ```
 
+### 可选：接入非 CFGPU 的上游（`providers:`）
+
+绝大多数模型由 CFGPU 平台提供，不需要这一段。个别模型跑在别的地方 —— 目前只有 `cfdream/minimax-h3*`（MiniMax H3 本地权重，由自建 comfy-gateway 提供）。
+
+```yaml
+providers:
+  comfy:
+    base_url: https://<gateway-host>/v1
+    auth_scheme: raw            # 裸 token，不是 `Bearer <t>`
+    token_env: COMFY_GATEWAY_TOKEN
+    http_timeout: 60
+```
+
+配套要在环境（或 `.env`）里放 `COMFY_GATEWAY_TOKEN=...`。
+
+三件要知道的事：
+
+- **没配这一段，那些模型就不存在**：不会出现在 `list_models`，不会出现在工具 schema 的 `model` 枚举，`model="auto"` 也永远选不到它们。这是有意的 —— 注册一个连不上的主机，只会让失败推迟到调用方已经选定模型之后。启动日志会写明是哪个 provider 缺失。
+- **`token_env` 是该 provider 凭据的唯一来源**。它不读多租户请求头里的用户 token（那是调用方的 **CFGPU** 凭据，只属于 CFGPU），也不回退 `CFGPU_API_TOKEN`；把 `token_env` 写成 `CFGPU_API_TOKEN` 会在加载配置时直接报错。
+- **`cfgpu` 自己不写在这里**，它由上面的 `cfgpu_api:` 段合成。
+
 ### 仅读环境变量的两个入口
 
 | 变量 | 说明 |
 |------|------|
 | `CFGPU_API_TOKEN` | 唯一 secret。stdio / HTTP 未带 `Authorization` 头时的回退 token |
 | `CFGPU_CONFIG` | config.yaml 路径（否则取 `./config.yaml`） |
+| 各 provider 的 `token_env` | 仅在配了 `providers:` 时需要，例如 `COMFY_GATEWAY_TOKEN`（见上文） |
 
 > `transport` / `http` / `cfgpu_api.*`（base_url、http_timeout、connect_timeout）/ `task_db.*` / `enabled_models` **只在 config.yaml 配置**，不再有对应的环境变量 override，避免多处设置。需要从环境读 DB URL 时，在 `task_db.url` 写 `$DATABASE_URL` / `${VAR}`（见上文）。
 

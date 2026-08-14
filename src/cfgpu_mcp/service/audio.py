@@ -25,7 +25,7 @@ async def generate_audio(
     request_id: str | None = None,
     caption: str | None = None,
 ) -> dict[str, Any]:
-    from cfgpu_mcp.config import get_client, get_task_repository, get_registry
+    from cfgpu_mcp.config import client_for, get_task_repository, get_registry
     from cfgpu_mcp.router import ModelRouter
     from cfgpu_mcp.task_manager import TaskManager
 
@@ -53,9 +53,8 @@ async def generate_audio(
     router = ModelRouter(registry)
     adapter = router.resolve(req)
 
-    client = get_client()
     repo = await get_task_repository()
-    tm = TaskManager(client, repo)
+    tm = TaskManager(client_for, repo)
 
     try:
         task = await tm.create(adapter, req)

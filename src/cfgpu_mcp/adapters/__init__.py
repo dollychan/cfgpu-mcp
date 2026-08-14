@@ -9,6 +9,7 @@ from cfgpu_mcp.adapters import (  # noqa: F401
     grok_video,
     audio_tts,
     vision_chat,
+    cfdream_h3,
 )
 
 from cfgpu_mcp.adapters.base import ModelAdapter, PollConfig, register_python_adapter

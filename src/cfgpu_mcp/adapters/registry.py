@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import yaml
@@ -10,12 +11,15 @@ from cfgpu_mcp.adapters.base import (
 )
 from cfgpu_mcp.adapters.generic import GenericAdapter
 
+logger = logging.getLogger(__name__)
+
 
 class AdapterRegistry:
     def __init__(
         self,
         model_dir: Path,
         enabled_models: list[str] | None = None,
+        available_providers: set[str] | None = None,
     ) -> None:
         self.model_dir = model_dir
         self.enabled_models: set[str] | None = (
@@ -23,6 +27,10 @@ class AdapterRegistry:
             if enabled_models is not None
             else None
         )
+        # Provider names this deployment can actually reach (from config.yaml's
+        # `providers:` plus the built-in cfgpu). None = don't filter, which is what
+        # tests and direct constructions get.
+        self.available_providers = available_providers
         self._by_adapter_id:     dict[str, ModelAdapter] = {}
         self._by_cfgpu_model_id: dict[str, ModelAdapter] = {}
         self._by_model_name:     dict[str, ModelAdapter] = {}
@@ -47,7 +55,7 @@ class AdapterRegistry:
                 ) from e
 
             adapter = self._instantiate(merged, raw_configs)
-            if self._is_enabled(adapter):
+            if self._has_provider(adapter) and self._is_enabled(adapter):
                 self._register(adapter)
 
     def _merge_extends(self, config: dict, all_configs: dict) -> dict:
@@ -85,6 +93,29 @@ class AdapterRegistry:
             cls = GenericAdapter
 
         return cls.from_config(config)
+
+    def _has_provider(self, adapter: ModelAdapter) -> bool:
+        """Drop models whose provider this deployment has not configured.
+
+        A model served by an unconfigured provider must not be registered: it
+        would appear in ``list_models`` and in the tool's ``model`` enum, and
+        ``model="auto"`` could route a real generation to a host we have neither
+        a URL nor a credential for. That failure lands at POST time, after the
+        caller has already committed to a model. Dropping it at load time instead
+        makes the model simply not exist on this deployment — which is the truth.
+
+        Warned rather than silent: "I added the YAML and the model didn't show up"
+        needs to point at the missing ``providers:`` block, not at the YAML.
+        """
+        if self.available_providers is None:
+            return True
+        if adapter.provider in self.available_providers:
+            return True
+        logger.warning(
+            "跳过模型 %s：它的 provider %r 未在 config.yaml 的 providers: 中配置",
+            adapter.model_name, adapter.provider,
+        )
+        return False
 
     def _is_enabled(self, adapter: ModelAdapter) -> bool:
         if self.enabled_models is None:

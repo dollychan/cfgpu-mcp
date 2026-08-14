@@ -3,7 +3,7 @@ import pytest
 import aiosqlite
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from cfgpu_mcp.task_manager import TaskManager, Task
+from cfgpu_mcp.task_manager import TaskManager, Task, single_client
 from cfgpu_mcp.tool_registry import GenerateVideoInput, GenerateImageInput
 
 
@@ -15,7 +15,7 @@ async def _make_tm() -> tuple[TaskManager, aiosqlite.Connection]:
     await db.commit()
     client = AsyncMock()
     from cfgpu_mcp.client.repository import SqliteTaskRepository
-    return TaskManager(client, SqliteTaskRepository(db)), db
+    return TaskManager(single_client(client), SqliteTaskRepository(db)), db
 
 
 def _sync_adapter():
@@ -61,7 +61,7 @@ def _async_adapter(task_id: str = "cfgpu-task-1"):
 async def test_sync_model_create_returns_succeeded():
     tm, db = await _make_tm()
     adapter = _sync_adapter()
-    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x")
     task = await tm.create(adapter, req)
     assert task.status == "succeeded"
@@ -86,7 +86,7 @@ async def test_sync_create_stamps_model_name():
         seed=None,
         usage={"total_tokens": 10},
     )
-    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x")
     task = await tm.create(adapter, req)
     assert task.result["model_used"] == "doubao-seedream-5-0-lite"
@@ -100,7 +100,7 @@ async def test_poll_stamps_model_name():
     tm, db = await _make_tm()
     adapter = _async_adapter()
     adapter.model_name = "cf-wan-video"  # distinct from cfgpu_model_id, to prove the override
-    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
 
@@ -112,7 +112,7 @@ async def test_poll_stamps_model_name():
         seed=None,
         usage=None,
     )
-    tm._client.get = AsyncMock(return_value={
+    tm._client_for(None).get = AsyncMock(return_value={
         "id": "task-abc", "status": "completed",
         "content": {"videoUrl": "https://cdn/v.mp4"},
     })
@@ -126,7 +126,7 @@ async def test_sync_create_echoes_aspect_ratio():
     """The requested aspect_ratio is echoed back in the result metadata."""
     tm, db = await _make_tm()
     adapter = _sync_adapter()
-    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x", aspect_ratio="16:9")
     task = await tm.create(adapter, req)
     assert task.result["aspect_ratio"] == "16:9"
@@ -141,7 +141,7 @@ async def test_poll_echoes_requested_aspect_ratio():
     from datetime import datetime, UTC, timedelta
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
     req = GenerateVideoInput(prompt="x", aspect_ratio="9:16")
     task = await tm.create(adapter, req)
 
@@ -153,7 +153,7 @@ async def test_poll_echoes_requested_aspect_ratio():
         seed=None,
         usage=None,
     )
-    tm._client.get = AsyncMock(return_value={
+    tm._client_for(None).get = AsyncMock(return_value={
         "id": "task-abc", "status": "completed",
         "content": {"videoUrl": "https://cdn/v.mp4"},
     })
@@ -170,7 +170,7 @@ async def test_poll_response_ratio_overrides_requested():
     from datetime import datetime, UTC, timedelta
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
     req = GenerateVideoInput(prompt="x", aspect_ratio="adaptive")
     task = await tm.create(adapter, req)
 
@@ -183,7 +183,7 @@ async def test_poll_response_ratio_overrides_requested():
         usage=None,
         aspect_ratio="9:16",  # API resolved "adaptive" → "9:16"
     )
-    tm._client.get = AsyncMock(return_value={
+    tm._client_for(None).get = AsyncMock(return_value={
         "id": "task-abc", "status": "completed", "ratio": "9:16",
         "content": {"videoUrl": "https://cdn/v.mp4"},
     })
@@ -196,7 +196,7 @@ async def test_poll_response_ratio_overrides_requested():
 async def test_async_model_create_returns_pending():
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "cfgpu-task-1"})
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
     assert task.status == "pending"
@@ -211,7 +211,7 @@ async def test_async_create_raises_when_no_task_id():
     adapter = _async_adapter()
     # Simulate an unexpected response shape: extract_task_id finds nothing.
     adapter.extract_task_id.side_effect = lambda r: None
-    tm._client.post = AsyncMock(return_value={"unexpected": "shape"})
+    tm._client_for(None).post = AsyncMock(return_value={"unexpected": "shape"})
     req = GenerateVideoInput(prompt="x")
     with pytest.raises(CFGPUError) as exc_info:
         await tm.create(adapter, req)
@@ -230,7 +230,7 @@ async def test_no_task_id_error_truncates_a_huge_response():
     tm, db = await _make_tm()
     adapter = _async_adapter()
     adapter.extract_task_id.side_effect = lambda r: None
-    tm._client.post = AsyncMock(return_value={"blob": "x" * 5000})
+    tm._client_for(None).post = AsyncMock(return_value={"blob": "x" * 5000})
     with pytest.raises(CFGPUError) as exc_info:
         await tm.create(adapter, GenerateVideoInput(prompt="x"))
     assert len(exc_info.value.user_message) < 600
@@ -244,7 +244,7 @@ async def test_no_task_id_error_truncates_a_huge_response():
 async def test_poll_updates_status():
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
 
@@ -258,7 +258,7 @@ async def test_poll_updates_status():
         seed=None,
         usage={"total_tokens": 100},
     )
-    tm._client.get = AsyncMock(return_value={
+    tm._client_for(None).get = AsyncMock(return_value={
         "id": "task-abc", "status": "completed", "model": "wan-video",
         "output": {"video_url": "https://cdn/v.mp4"}
     })
@@ -274,7 +274,7 @@ async def test_poll_success_without_urls_converges_to_failed():
     re-polled forever on every get_status."""
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
 
@@ -285,7 +285,7 @@ async def test_poll_success_without_urls_converges_to_failed():
         expires_at=datetime.now(UTC) + timedelta(hours=24),
         task_id="task-abc", model_used="wan-video", seed=None, usage=None,
     )
-    tm._client.get = AsyncMock(return_value={"id": "task-abc", "status": "completed"})
+    tm._client_for(None).get = AsyncMock(return_value={"id": "task-abc", "status": "completed"})
     task = await tm.poll(task, adapter)
     assert task.status == "failed"
     assert task.result is None
@@ -300,7 +300,7 @@ async def test_poll_success_with_inline_media_only_stays_succeeded():
     with annotate_artifact(), which counts urls OR inline_media as an artifact."""
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
 
@@ -312,7 +312,7 @@ async def test_poll_success_with_inline_media_only_stays_succeeded():
         task_id="task-abc", model_used="wan-video", seed=None, usage=None,
         inline_media=[{"data": "AAA=", "mime_type": "audio/mpeg"}],
     )
-    tm._client.get = AsyncMock(return_value={"id": "task-abc", "status": "completed"})
+    tm._client_for(None).get = AsyncMock(return_value={"id": "task-abc", "status": "completed"})
     task = await tm.poll(task, adapter)
     assert task.status == "succeeded"
     assert task.result["inline_media"] == [{"data": "AAA=", "mime_type": "audio/mpeg"}]
@@ -324,7 +324,7 @@ async def test_poll_success_with_inline_media_only_stays_succeeded():
 async def test_wait_sync_model_returns_immediately():
     tm, db = await _make_tm()
     adapter = _sync_adapter()
-    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x")
     task = await tm.create(adapter, req)
 
@@ -347,11 +347,11 @@ async def test_wait_times_out_and_raises():
     from cfgpu_mcp.errors import CFGPUError
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "task-timeout"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-timeout"})
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
 
-    tm._client.get = AsyncMock(return_value={"id": "task-timeout", "status": "running"})
+    tm._client_for(None).get = AsyncMock(return_value={"id": "task-timeout", "status": "running"})
     adapter.parse_response.return_value = None
 
     with pytest.raises(CFGPUError) as exc_info:
@@ -372,7 +372,7 @@ async def test_status_raises_for_unknown_task_id():
 async def test_list_running_excludes_completed():
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "task-run"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-run"})
     req = GenerateVideoInput(prompt="x")
     await tm.create(adapter, req)
 
@@ -400,7 +400,7 @@ async def test_sync_create_stashes_request_id_stripped_from_payload():
     upstream API request."""
     tm, db = await _make_tm()
     adapter = _sync_adapter()
-    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x", request_id="r-sync-1")
     task = await tm.create(adapter, req)
     assert task.payload[_REQUEST_ID_KEY] == "r-sync-1"      # stashed for later echo
@@ -412,7 +412,7 @@ async def test_sync_create_stashes_request_id_stripped_from_payload():
 async def test_async_create_stashes_request_id():
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "cfgpu-task-1"})
     req = GenerateVideoInput(prompt="x", request_id="r-async-1")
     task = await tm.create(adapter, req)
     assert task.payload[_REQUEST_ID_KEY] == "r-async-1"
@@ -425,7 +425,7 @@ async def test_create_without_request_id_leaves_payload_clean():
     """No request_id supplied → the reserved key is absent, result shape unchanged."""
     tm, db = await _make_tm()
     adapter = _sync_adapter()
-    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x")
     task = await tm.create(adapter, req)
     assert _REQUEST_ID_KEY not in task.payload
@@ -442,7 +442,7 @@ async def test_sync_create_stashes_caption_stripped_from_payload():
     """The label rides the stored payload but is never part of the upstream request."""
     tm, db = await _make_tm()
     adapter = _sync_adapter()
-    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     req = GenerateImageInput(prompt="x", caption="角色阿雅 第一版")
     task = await tm.create(adapter, req)
     assert task.payload[_CAPTION_KEY] == "角色阿雅 第一版"
@@ -456,7 +456,7 @@ async def test_async_create_stashes_caption():
     the artifact only appears at task_wait, one tool call later."""
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "cfgpu-task-1"})
     req = GenerateVideoInput(prompt="x", caption="开场镜头 v2")
     task = await tm.create(adapter, req)
     assert task.payload[_CAPTION_KEY] == "开场镜头 v2"
@@ -469,9 +469,9 @@ async def test_caption_does_not_reach_the_posted_body():
     """create() POSTs build_payload()'s clean output; only the stored copy is augmented."""
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "cfgpu-task-1"})
     await tm.create(adapter, GenerateVideoInput(prompt="x", caption="开场镜头 v2", request_id="r-1"))
-    posted_body = tm._client.post.await_args.args[1]
+    posted_body = tm._client_for(None).post.await_args.args[1]
     assert _CAPTION_KEY not in posted_body
     assert _REQUEST_ID_KEY not in posted_body
     await db.close()
@@ -481,7 +481,7 @@ async def test_caption_does_not_reach_the_posted_body():
 async def test_create_without_caption_leaves_payload_clean():
     tm, db = await _make_tm()
     adapter = _sync_adapter()
-    tm._client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
     task = await tm.create(adapter, GenerateImageInput(prompt="x"))
     assert _CAPTION_KEY not in task.payload
     await db.close()
@@ -530,11 +530,11 @@ async def test_poll_wan_null_error_failure_converges():
     (None.get('message')). It should converge to 'failed' with a fallback msg."""
     tm, db = await _make_tm()
     adapter = _async_adapter()
-    tm._client.post = AsyncMock(return_value={"id": "task-abc"})
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
 
-    tm._client.get = AsyncMock(return_value={"id": "task-abc", "status": "failed", "error": None})
+    tm._client_for(None).get = AsyncMock(return_value={"id": "task-abc", "status": "failed", "error": None})
     task = await tm.poll(task, adapter)
     assert task.status == "failed"
     assert task.error and "no error detail" in task.error
