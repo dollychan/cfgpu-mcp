@@ -70,6 +70,16 @@ def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
 # values like "completed" never reach here — they map to "succeeded" first.
 _TERMINAL_STATUSES = {"succeeded", "failed"}
 
+# Only media-producing tasks require a URL or inline blob. Vision understanding is
+# synchronous too, but its artifact is a text message and must not hit this guard.
+_MEDIA_TASK_TYPES = {"image", "video", "audio"}
+
+
+def _has_media_artifact(result: dict[str, Any]) -> bool:
+    """Return whether a normalized media result contains either artifact shape."""
+    return bool(result.get("urls") or result.get("inline_media"))
+
+
 _STATUS_MAP = {
     "completed": "succeeded",
     "succeed": "succeeded",
@@ -232,6 +242,23 @@ class TaskManager:
             if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
                 result.aspect_ratio = getattr(req, "aspect_ratio", None)  # audio reqs have none
             result_dict = result.to_dict(return_metadata=True)
+            if (
+                adapter.task_type in _MEDIA_TASK_TYPES
+                and not _has_media_artifact(result_dict)
+            ):
+                # Keep the synchronous path under the same success invariant as
+                # poll(): a media generation call cannot succeed without media. This
+                # also catches an upstream HTTP-200 business error whose response
+                # envelope an adapter does not yet recognise.
+                raise CFGPUError(
+                    error_type="task_failed",
+                    user_message=(
+                        "同步媒体 API 返回成功，但没有返回任何产物 URL 或内联媒体。"
+                        f"上游响应（截断）：{_truncate_json(resp)}"
+                    ),
+                    original={"adapter_id": adapter.adapter_id, "response": resp},
+                    retryable=False,
+                )
             stored_payload = _stash_internal(payload, req, aspect_ratio=False)
             await self._repo.insert_task(task_id, adapter.adapter_id, "succeeded", stored_payload)
             await self._repo.update_task(task_id, "succeeded", result=result_dict)
@@ -277,7 +304,7 @@ class TaskManager:
             if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
                 result.aspect_ratio = task.payload.get(_ASPECT_RATIO_KEY)
             result_dict = result.to_dict(return_metadata=True)
-            if not (result_dict.get("urls") or result_dict.get("inline_media")):
+            if not _has_media_artifact(result_dict):
                 # Upstream reports success but yields no artifact at all — treat as a
                 # terminal failure so it converges instead of re-polling forever.
                 # Both artifact shapes count: some providers return media inline

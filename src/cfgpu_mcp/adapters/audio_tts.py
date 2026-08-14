@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import GenerateAudioInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -205,6 +206,29 @@ class MiniMaxSpeechAdapter(ModelAdapter):
         return payload
 
     def parse_response(self, resp: dict) -> NormalizedResult:
+        # MiniMax reports business failures inside an HTTP-200 response. Treating that
+        # envelope as a successful synchronous result would otherwise produce the very
+        # misleading shape ``urls: []`` with neither inline media nor an error.
+        base_resp = _dig(resp, "output.base_resp")
+        if isinstance(base_resp, dict):
+            status_code = base_resp.get("status_code")
+            if status_code not in (None, 0, "0"):
+                status_msg = str(base_resp.get("status_msg") or "unknown MiniMax error")
+                # 2054 is a caller-fixable voice selection error. Other MiniMax
+                # business failures are generation failures unless/until their codes
+                # have a more precise stable classification.
+                error_type = (
+                    "invalid_params" if str(status_code) == "2054" else "task_failed"
+                )
+                raise CFGPUError(
+                    error_type=error_type,
+                    user_message=(
+                        f"MiniMax 语音生成失败（status_code={status_code}）：{status_msg}"
+                    ),
+                    original={"status_code": status_code, "status_msg": status_msg},
+                    retryable=False,
+                )
+
         url = _extract_audio_url(resp)
         # Prefer a real URL when present; otherwise capture the inline hex blob so the
         # consumer can materialise it (decode → its own OSS object_key). Keeping the

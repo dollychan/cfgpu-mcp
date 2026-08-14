@@ -10,6 +10,7 @@ from cfgpu_mcp.adapters.audio_tts import (
     _extract_audio_url,
     _extract_inline_audio,
 )
+from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import GenerateAudioInput
 
 
@@ -171,6 +172,26 @@ def test_minimax_inline_audio_when_no_url():
     ]
     # inline_media surfaces in the media dict (artifact payload, not gated by metadata).
     assert result.to_dict()["inline_media"] == result.inline_media
+
+
+def test_minimax_http_200_business_error_is_raised():
+    """MiniMax carries business failures inside a successful HTTP response."""
+    adapter = _minimax_adapter()
+    resp = {
+        "output": {
+            "base_resp": {"status_code": 2054, "status_msg": "voice id not exist"},
+        },
+        "request_id": "09c19313-2c20-93fd-b022-49b2b5d8dc78",
+    }
+
+    with pytest.raises(CFGPUError) as exc_info:
+        adapter.parse_response(resp)
+
+    error = exc_info.value
+    assert error.error_type == "invalid_params"
+    assert error.retryable is False
+    assert "voice id not exist" in error.user_message
+    assert error.original == {"status_code": 2054, "status_msg": "voice id not exist"}
 
 
 def test_minimax_prefers_url_over_inline():

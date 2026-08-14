@@ -4,7 +4,8 @@ import aiosqlite
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from cfgpu_mcp.task_manager import TaskManager, Task, single_client
-from cfgpu_mcp.tool_registry import GenerateVideoInput, GenerateImageInput
+from cfgpu_mcp.errors import CFGPUError
+from cfgpu_mcp.tool_registry import GenerateAudioInput, GenerateVideoInput, GenerateImageInput
 
 
 async def _make_tm() -> tuple[TaskManager, aiosqlite.Connection]:
@@ -66,6 +67,41 @@ async def test_sync_model_create_returns_succeeded():
     task = await tm.create(adapter, req)
     assert task.status == "succeeded"
     assert task.result is not None
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_sync_media_create_without_artifact_raises_error():
+    """HTTP success is not generation success when a sync media API returns no media."""
+    from cfgpu_mcp.tool_registry import NormalizedResult
+
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    adapter.task_type = "audio"
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=[],
+        inline_media=None,
+        expires_at=None,
+        task_id=None,
+        model_used="MiniMax/speech-2.8-hd",
+        seed=None,
+        usage=None,
+    )
+    upstream = {
+        "output": {
+            "base_resp": {"status_code": 2054, "status_msg": "voice id not exist"},
+        }
+    }
+    tm._client_for(None).post = AsyncMock(return_value=upstream)
+
+    with pytest.raises(CFGPUError) as exc_info:
+        await tm.create(adapter, GenerateAudioInput(text="x"))
+
+    error = exc_info.value
+    assert error.error_type == "task_failed"
+    assert error.retryable is False
+    assert "没有返回任何产物 URL 或内联媒体" in error.user_message
+    assert error.original["response"] == upstream
     await db.close()
 
 
