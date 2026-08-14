@@ -63,7 +63,8 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
 2. **`seed` 用 `model_specific: {"seed": N}` 复现**；不传则每次随机。
    **这个模型尤其重要**：H3 的参考图生效与否对 seed 敏感 —— 同一组素材换个 seed
    可能从"像"变成"不像"。拿到满意结果请立刻记下响应里的 `seed`。
-3. **只开放了 480p**，且不支持 `duration_seconds: -1`。
+3. **三档分辨率全开**，但耗时随像素数成倍涨（480p:720p:1080p ≈ 1:2.25:5，480p/5s 实测 ~96s），而这是一块串行的自建 GPU。默认 `480p`。
+4. **不支持 `duration_seconds: -1`**。
 
 ## 参数说明
 
@@ -74,7 +75,7 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
 | reference_videos | reference_videos | ≤3，24fps，单条 2–15s |
 | reference_audios | reference_audios | ≤3 |
 | duration_seconds | duration_seconds | 4–15，不支持 -1 |
-| resolution | resolution | 当前只接受 `480p` |
+| resolution | resolution | `480p` / `720p` / `1080p`，耗时约 1 : 2.25 : 5 |
 | aspect_ratio | aspect_ratio | `adaptive` 等价于 `16:9` |
 | with_audio | with_audio | 默认 true，原生立体声 |
 | model_specific | （顶层合并） | `seed` / `ref_image_size` / `steps` / `scheduler` |
@@ -120,7 +121,7 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
 
 单卡串行，同一时刻只跑一个任务，排队时间可能远大于生成时间。
 稳态 5s 视频约 96s GPU；**从 `cfdream/minimax-h3` 切换过来要换权重**，
-那一单会额外多约 47s。本侧轮询上限 900s，超时不取消任务 ——
+那一单会额外多约 47s；720p / 1080p 按像素数成倍往上。本侧轮询上限 1500s，超时不取消任务 ——
 网关那边跑完仍会落库，之后再 `task_status` 同一个 `task_id` 依然拿得到产物。
 
 ## 产物有效期

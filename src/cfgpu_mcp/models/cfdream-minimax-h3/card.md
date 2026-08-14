@@ -56,11 +56,16 @@ MiniMax H3 本地权重，由自建 comfy-gateway 提供（不是 CFGPU 平台�
 
 `seed` 在网关那边是顶层字段，`model_specific` 会被平铺上去，不用自己嵌套。
 
-### 3. 只开放了 480p
+### 3. 分辨率越高越慢，而且是成倍的
 
-`resolution` 目前只接受 `480p`（0.4MP 是唯一经过官方验证的档位）。
-720p / 1080p 的公式都在，但显存峰值还没标定，所以暂不开放 —— 这是**标定状态**，
-不是模型能力上限。请求 720p 会在本地被 `supports()` 拒绝，不会浪费一次 GPU。
+`480p` / `720p` / `1080p` 三档全部开放（2026-08-14；此前只开 480p，那是标定状态
+不是能力上限）。实际 `width` × `height` 由网关在运行时按 0.4 / 0.9 / 2.0 MP
+配合 `aspect_ratio` 算出，以响应 `usage` 里的值为准 —— 480p @ 16:9 是 864×480。
+
+**耗时随像素数走**：480p 的 5s 视频实测约 96s GPU，720p 约 2.25 倍，1080p 约 5 倍。
+1080p 配上 15s 时长在分钟量级的高位（~20min）。这是一块**串行**的自建 GPU，
+没有并发 —— 高档位请求会同时占住后面排队的所有人。默认给 `480p`，
+确有画质需要再往上抬。
 
 ## 参数说明
 
@@ -70,7 +75,7 @@ MiniMax H3 本地权重，由自建 comfy-gateway 提供（不是 CFGPU 平台�
 | first_frame | first_frame | 可选。图生视频的首帧 |
 | last_frame | last_frame | 可选。与 first_frame 同用则是首尾帧生视频 |
 | duration_seconds | duration_seconds | 4–15，**不支持 -1 智能时长**。见上文量化说明 |
-| resolution | resolution | 当前只接受 `480p` |
+| resolution | resolution | `480p` / `720p` / `1080p`，耗时约 1 : 2.25 : 5 |
 | aspect_ratio | aspect_ratio | `adaptive` 等价于 `16:9` |
 | with_audio | with_audio | 默认 true，原生立体声 |
 | model_specific | （顶层合并） | `seed` 走这里；另见下方调参旋钮 |
@@ -121,9 +126,11 @@ MiniMax H3 本地权重，由自建 comfy-gateway 提供（不是 CFGPU 平台�
 `task_id` 后自行 `task_status` / `task_wait`。
 
 单卡串行，同一时刻只跑一个任务，所以**排队时间可能远大于生成时间**。
-稳态 5s 视频约 96s GPU，冷启动（换权重）再加约 47s。本侧轮询上限 900s。
+稳态 5s 视频 @480p 约 96s GPU，冷启动（换权重）再加约 47s；720p / 1080p 按像素数
+成倍往上（约 2.25× / 5×）。本侧轮询上限 1500s —— 这个数是为最贵的组合
+（1080p + 15s，外推 ~20min）留的，不是常态耗时。
 
-超过 900s 本侧会报 timeout，但**任务不会被取消** —— 网关那边跑完仍会落库，
+超过 1500s 本侧会报 timeout，但**任务不会被取消** —— 网关那边跑完仍会落库，
 之后再 `task_status` 同一个 `task_id` 依然拿得到产物。
 
 ## 产物有效期

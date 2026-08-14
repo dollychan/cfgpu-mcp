@@ -23,13 +23,25 @@ capabilities:
   - image_to_video
   - first_last_frame
 
-# ── Calibration state, not capability ceilings ────────────────────────────────
-# 0.4MP (480p) is the only officially validated tier, and the durations past 5s
-# have not had their VRAM peak measured on the single co-located GPU. Both open
-# up after comfy-gateway PLAN.md S7. Keeping them narrow also keeps model="auto"
-# away from this model for an ordinary 720p request, which is deliberate: it is
-# one serial GPU, not a fleet.
-resolutions: ["480p"]
+# All three tiers, matching comfy-gateway's OPEN_RESOLUTIONS (0.4 / 0.9 / 2.0 MP).
+# Widened from ["480p"] on 2026-08-14: the narrow list was a calibration state,
+# never a capability ceiling — width/height have always been computed at run time
+# by the ResolutionSelector node, and all three megapixel values were already in
+# the gateway's table.
+#
+# ★ What widening this changed, and what had to move with it:
+#   - model="auto" can now land here for an ordinary 720p request. That used to be
+#     prevented by the resolution list as a side effect; it is now carried by
+#     speed_tier alone (see below), which is where it belongs — "one serial GPU"
+#     is a speed fact, not a resolution fact.
+#   - Run time scales with pixels: 480p/5s measured at ~96s, so 1080p/15s
+#     extrapolates to ~20min. poll_config.default_timeout was raised to match
+#     (see the bottom of this file) — otherwise the tiers that just opened would
+#     mostly report a timeout the gateway never had.
+# VRAM peak at 0.9/2.0 MP is still unmeasured. Exceeding it is an upstream OOM →
+# `failed` with the real message, which is an honest failure; guessing a ceiling
+# here would reject runs that actually fit.
+resolutions: ["480p", "720p", "1080p"]
 max_duration_seconds: 15
 
 # Local weights on hardware we already pay for → cheap. ~96s of GPU for 5s of
@@ -46,7 +58,17 @@ poll_config:
   base_interval: 5
   max_interval: 20
   backoff_factor: 1.3
-  # The gateway's own per-task ceiling is 1800s and is deliberately the larger of
-  # the two: when this side gives up, the task still runs to completion and lands
-  # in the gateway's DB, so a later task_status still returns the artifact.
-  default_timeout: 900
+  # Raised 900 → 1500 on 2026-08-14, together with the resolutions above.
+  #
+  # Run time tracks pixel count: 480p/5s measured at ~96s, so 720p is ~2.25x and
+  # 1080p ~5x that per second of video; 1080p at the 15s ceiling extrapolates to
+  # roughly 20 minutes. At 900s the tiers that just opened would have spent a full
+  # GPU run and *then* reported a timeout — the artifact exists, the caller is
+  # told it does not.
+  #
+  # ★ Still strictly below the gateway's own per-task ceiling (1800s,
+  # queue.task_timeout_seconds), and that ordering is the point, not the numbers:
+  # when this side gives up first the task keeps running, lands in the gateway's
+  # DB, and a later task_status returns the artifact. If the gateway's ceiling
+  # ever drops, this has to drop with it.
+  default_timeout: 1500

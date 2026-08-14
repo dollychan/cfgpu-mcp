@@ -203,10 +203,33 @@ def test_smart_duration_is_rejected_by_both(t2v, r2v):
                                  reference_images=["https://x/1.jpg"]))[0]
 
 
-def test_unopened_resolutions_fail_locally(t2v):
-    """Rejected here rather than upstream, so an un-calibrated tier never costs
-    a GPU run to discover."""
-    ok, reason = t2v.supports(_req(resolution="720p"))
+@pytest.mark.parametrize("res", ["480p", "720p", "1080p"])
+def test_all_three_tiers_are_open(t2v, r2v, res):
+    """Widened from 480p-only on 2026-08-14, matching the gateway's
+    OPEN_RESOLUTIONS. Both models, since r2v inherits the list through extends."""
+    assert t2v.supports(_req(resolution=res))[0]
+    assert r2v.supports(_req(resolution=res, reference_images=["https://x/1.jpg"]))[0]
+
+
+def test_the_declared_list_now_matches_the_fleet_enum_exactly(t2v):
+    """★ Widening made this model's ``resolutions`` a no-op — say so out loud.
+
+    ``GenerateVideoInput.resolution`` is a Literal of exactly these three, so no
+    request can now carry a value H3 would reject; the declaration constrains
+    nothing today. It is kept rather than deleted because it is the record of
+    what the *gateway* accepts (its ``OPEN_RESOLUTIONS``, three megapixel values),
+    and the two lists are maintained in different repos. The day the fleet enum
+    gains a tier — a 2K model arrives, say — this declaration goes back to being
+    load-bearing with no code change, exactly as ``max_duration_seconds`` did when
+    Seedance 2.5 pushed the schema-wide ceiling from 15 to 30.
+    """
+    from typing import get_args
+
+    fleet = set(get_args(GenerateVideoInput.model_fields["resolution"].annotation))
+    assert set(t2v.resolutions) == fleet == {"480p", "720p", "1080p"}
+
+    # And the guard itself still works, for when the two do diverge again.
+    ok, reason = t2v.supports(GenerateVideoInput.model_construct(prompt="x", resolution="2k"))
     assert not ok and "480p" in reason
 
 
@@ -237,11 +260,21 @@ def test_auto_picks_t2v_for_a_plain_prompt(registry):
 
 
 def test_fleet_auto_does_not_land_on_h3_for_a_default_request(registry):
-    """A default generate_video asks for 720p, which H3 has not opened. That is
-    what keeps a single serial GPU out of the path of ordinary traffic — if the
-    resolutions list ever widens (PLAN.md S7), revisit cost/speed tiers too."""
-    chosen = ModelRouter(registry).resolve(GenerateVideoInput(prompt="a cat"))
-    assert not chosen.model_name.startswith("cfdream/")
+    """★ One serial GPU must stay out of the path of ordinary traffic.
+
+    This used to hold for the wrong reason: a default generate_video asks for
+    720p, and H3 had only opened 480p, so it was filtered out before scoring ever
+    ran. Since 2026-08-14 all three tiers are open and H3 *is* a candidate — the
+    property is now carried by ``speed_tier: 1`` alone, which is where it belongs
+    ("~96s of GPU for 5s of video" is a speed fact, not a resolution fact).
+
+    So this test now exercises the scoring path rather than the filter, and it is
+    the thing that fails if someone "fixes" the tiers to look more flattering.
+    """
+    router = ModelRouter(registry)
+    req = GenerateVideoInput(prompt="a cat")
+    assert registry.get("cfdream/minimax-h3").supports(req)[0], "候选资格是前提，不是结论"
+    assert not router.resolve(req).model_name.startswith("cfdream/")
 
 
 def test_named_model_still_gets_the_friendly_reason(registry):
