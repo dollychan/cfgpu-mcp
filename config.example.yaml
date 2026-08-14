@@ -1,7 +1,7 @@
 # cfgpu-mcp configuration template.
 #
 # Copy to `config.yaml` and edit. The runtime `config.yaml` is gitignored.
-# The ONLY secret is CFGPU_API_TOKEN — keep it in the environment, not here.
+# Keep all API tokens in environment variables, not here.
 #
 # Precedence: environment override > config.yaml > built-in defaults.
 # Point at this file with the CFGPU_CONFIG env var, or place config.yaml in CWD.
@@ -39,6 +39,11 @@ providers:                     # extra upstreams beyond CFGPU itself; omit if yo
   #   auth_scheme: raw         # bare token, not `Bearer <t>` — matches that host's proxy
   #   token_env: COMFY_GATEWAY_TOKEN
   #   http_timeout: 60
+  submodel:                    # hosted MiniMax H3 video API
+    base_url: https://h3.submodel.ai
+    auth_scheme: bearer
+    token_env: SUBMODEL_API_TOKEN
+    http_timeout: 120
   #
   # token_env is the ONLY source of a non-cfgpu provider's credential. Such a
   # provider never reads the per-request Authorization header (that token is the
