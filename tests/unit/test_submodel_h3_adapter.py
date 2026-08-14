@@ -66,6 +66,17 @@ def test_reference_content_uses_submodel_roles(adapter):
     assert payload["ratio"] == "adaptive"
 
 
+def test_flat_create_response_yields_task_id(adapter):
+    """Create and query disagree on shape, and only query is nested.
+
+    ``POST /v2/video_generation`` answers with a bare ``{"task_id": ...}`` while
+    the query wraps everything in ``task``. The base extract_task_id covers the
+    flat form, so the adapter deliberately does not override it — pinned here
+    because the nested query response makes the opposite look self-evident.
+    """
+    assert adapter.extract_task_id({"task_id": "task_01K2..."}) == "task_01K2..."
+
+
 def test_nested_poll_response_is_parsed(adapter):
     response = {
         "task": {

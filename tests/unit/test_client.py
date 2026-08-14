@@ -5,6 +5,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from cfgpu_mcp.client.cfgpu_client import (
+    ACCEPT_ENCODING,
     DEFAULT_CONNECT_TIMEOUT,
     DEFAULT_HTTP_TIMEOUT,
     CFGPUClient,
@@ -77,6 +78,28 @@ async def test_per_request_token_from_context_overrides_fallback():
         reset_request_token(tok)
 
     assert captured["headers"]["Authorization"] == "Bearer ctx-token"
+
+
+@pytest.mark.asyncio
+async def test_accept_encoding_excludes_brotli():
+    """Every request pins gzip/deflate instead of letting aiohttp negotiate.
+
+    aiohttp advertises `br` whenever the optional Brotli package happens to be
+    importable on the host, and Cloudflare (which fronts the submodel provider)
+    brotli-encodes JSON the moment it's offered — a failing decode there surfaced
+    as ClientPayloadError("400, message:\\n  Can not decode content-encoding: br")
+    on healthy polls. Nothing here is big enough for brotli to earn its keep.
+    """
+    client = _client()
+    captured: dict = {}
+    session = MagicMock()
+    session.request.side_effect = lambda method, url, **kw: (captured.update(kw), _FakeResp())[1]
+
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        await client.get("/v1/x")
+
+    assert captured["headers"]["Accept-Encoding"] == ACCEPT_ENCODING
+    assert "br" not in captured["headers"]["Accept-Encoding"]
 
 
 @pytest.mark.asyncio

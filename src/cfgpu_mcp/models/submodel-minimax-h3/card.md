@@ -58,5 +58,22 @@
 }
 ```
 
+## 响应结构
+
+创建响应是**平铺**的，只有一个 `task_id`：
+
+```json
+{"task_id": "task_01K2..."}
+```
+
+这一层用基类的 `ModelAdapter.extract_task_id()`（`resp.get("id") or resp.get("task_id")`）
+即可取到，所以 `SubmodelH3Adapter` 不覆写它 —— 注意它与下面的查询响应**形状不同**：
+查询把一切套在 `task` 下（`task.id`），创建则没有这层信封。
+
+查询响应结构
+```json
+{"task":{"id":"task_0003ZHE0T90P1H3RDD8HHHA65P","task_type":"generation","status":"succeeded","model":"MiniMax-H3","created_at":1786691126,"updated_at":1786691333,"content":{"url":"https://h3.submodel.ai/output/h3-resul.../result.mp4"},"resolution":"768P","duration":5,"ratio":"16:9","usage":{"total_seconds":5,"input_seconds":0,"output_seconds":5,"input_image_count":0}}}
+```
+
 创建成功后保存 `task_id`；查询响应的 `task.status` 会被标准化，成功时
 `task.content.url` 作为视频 URL 返回，`task.usage` 原样保留为 usage 元数据。

@@ -20,6 +20,21 @@ DEFAULT_BASE_URL = "https://www.cfgpu.com/userapi/v1"
 DEFAULT_HTTP_TIMEOUT = 120.0
 DEFAULT_CONNECT_TIMEOUT = 10.0
 
+# What we advertise on every request, deliberately excluding `br` / `zstd`.
+#
+# aiohttp derives Accept-Encoding from whichever optional codecs happen to be
+# importable on the host (`Brotli`, `zstandard`), so the wire format silently
+# depends on the deployment's transitive dependencies — and if that decode then
+# fails, aiohttp raises ContentEncodingError("Can not decode content-encoding:
+# br"), which surfaces as a bogus "网络请求失败" on an otherwise healthy poll.
+# Submodel sits behind Cloudflare, which brotli-encodes JSON as soon as the
+# client offers `br`, so that path was live in production.
+#
+# Every body here is small JSON (a task envelope, a URL); gzip already covers it
+# and is stdlib-backed, so pinning the set costs nothing and makes the wire
+# format identical on every host.
+ACCEPT_ENCODING = "gzip, deflate"
+
 
 class CFGPUClient:
     def __init__(
@@ -102,7 +117,10 @@ class CFGPUClient:
         if method == "POST" and os.getenv("CFGPU_DRY_RUN"):
             logger.info("DRY-RUN POST %s\n%s", url, _json.dumps(kwargs.get("json", {}), ensure_ascii=False, indent=2))
         token = self._resolve_token()
-        headers = {"Authorization": token if self._auth_scheme == "raw" else f"Bearer {token}"}
+        headers = {
+            "Authorization": token if self._auth_scheme == "raw" else f"Bearer {token}",
+            "Accept-Encoding": ACCEPT_ENCODING,
+        }
         session = await self._get_session()
         try:
             async with session.request(method, url, headers=headers, **kwargs) as resp:
