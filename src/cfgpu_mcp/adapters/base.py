@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import (
@@ -60,6 +60,12 @@ class ModelAdapter(ABC):
     endpoint: str
     is_async: bool
     poll_endpoint: str | None
+    #: Never hold a tool call open for this model, whatever the caller passed for
+    #: `wait`. For a model whose latency is dominated by an unbounded serial-GPU
+    #: queue, blocking is structurally wrong: the wait outlives every MCP client
+    #: timeout, so the caller loses the connection *and* the task_id, and can no
+    #: longer reach a job that is running fine. See service/video.py.
+    force_async: bool
     capabilities: set[str]
     cost_tier: int               # 1-5
     speed_tier: int              # 1-5
@@ -86,6 +92,8 @@ class ModelAdapter(ABC):
         instance.endpoint = config["endpoint"]
         instance.is_async = config.get("is_async", True)
         instance.poll_endpoint = config.get("poll_endpoint")
+        # Opt-in per model. Absent = previous behaviour (honour the caller's `wait`).
+        instance.force_async = bool(config.get("force_async", False))
         instance.capabilities = set(config.get("capabilities", []))
         instance.cost_tier = config.get("cost_tier", 3)
         instance.speed_tier = config.get("speed_tier", 3)
@@ -164,6 +172,15 @@ class ModelAdapter(ABC):
     def extract_status(self, resp: dict) -> str:
         """Extract status string from poll response. Override for non-standard response shapes."""
         return resp.get("status", "running")
+
+    def extract_eta(self, resp: dict) -> dict[str, Any] | None:
+        """Upstream's own ETA for a freshly submitted task, or None if it reports none.
+
+        Override where the upstream returns one. Most do not, and inventing a number
+        here would be worse than saying nothing: the caller would pace its polling
+        against a guess.
+        """
+        return None
 
     def estimate_poll_timeout(
         self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput"

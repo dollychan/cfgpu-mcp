@@ -396,6 +396,57 @@ async def test_wait_times_out_and_raises():
     await db.close()
 
 
+@pytest.mark.asyncio
+async def test_wait_is_clamped_to_the_hard_ceiling():
+    """★ A wait longer than MAX_WAIT_SECONDS is never honoured, however it was asked for.
+
+    The binding constraint isn't ours — it's the MCP client's own request timeout,
+    which is far shorter. Waiting past it doesn't buy patience, it destroys the call:
+    the client disconnects, the session is torn down, and the timeout error we would
+    have raised (carrying the task_id, the caller's only way back to a job that is
+    running fine) is never delivered. So an over-large budget must be cut, not obeyed.
+    """
+
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-clamp"})
+    req = GenerateVideoInput(prompt="x")
+    task = await tm.create(adapter, req)
+    tm._client_for(None).get = AsyncMock(return_value={"id": "task-clamp", "status": "running"})
+
+    # Ceiling pulled down to 0 so the clamp is observable without touching the
+    # clock (time.monotonic is the event loop's own, patching it globally breaks
+    # asyncio). Unclamped, min() would keep 99999 and this would poll forever.
+    with patch("cfgpu_mcp.task_manager.MAX_WAIT_SECONDS", 0):
+        with pytest.raises(CFGPUError) as exc:
+            await tm.wait(task, adapter, req, timeout=99999)
+
+    assert exc.value.error_type == "timeout"
+    assert exc.value.original["task_id"] == "task-clamp"   # the handle always survives
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_adapter_default_timeout_is_clamped_too():
+    """Same ceiling when the number comes from poll_config rather than the caller —
+    a misconfigured adapter must not be able to reintroduce an unbounded wait."""
+
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    adapter.estimate_poll_timeout.return_value = 99999
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-clamp-2"})
+    req = GenerateVideoInput(prompt="x")
+    task = await tm.create(adapter, req)
+    tm._client_for(None).get = AsyncMock(return_value={"id": "task-clamp-2", "status": "running"})
+
+    with patch("cfgpu_mcp.task_manager.MAX_WAIT_SECONDS", 0):
+        with pytest.raises(CFGPUError) as exc:
+            await tm.wait(task, adapter, req)
+
+    assert exc.value.error_type == "timeout"
+    await db.close()
+
+
 def _transient() -> CFGPUError:
     """What CFGPUClient._request() raises when one HTTP call hangs past http_timeout."""
     return CFGPUError(

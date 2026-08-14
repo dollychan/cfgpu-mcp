@@ -32,6 +32,23 @@ ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]]
 #: for the full timeout; either way the error raised carries the task_id.
 MAX_CONSECUTIVE_POLL_FAILURES = 5
 
+#: Hard ceiling on how long a single tool call may block, whatever the adapter's
+#: ``poll_config.default_timeout`` says and whatever the caller passes as ``timeout``.
+#:
+#: ★ The bound that matters is not ours — it is the MCP client's own request timeout,
+#: which is typically 60s and never minutes. Blocking past it does not buy patience;
+#: it destroys the call: the client gives up, the session is torn down, and the
+#: ``CFGPUError.timeout`` we would have raised (task_id and all) is never delivered.
+#: The caller is then left waiting on a job it can no longer name, resume, or cancel.
+#: That is exactly what happened on 2026-08-14 — see the incident note in
+#: models/cfdream-minimax-h3/adapter.yaml.
+#:
+#: 10 minutes is already far past any client's patience; it exists only so a
+#: misconfigured ``default_timeout`` cannot reintroduce an unbounded wait. Models
+#: whose real latency approaches this should set ``force_async: true`` instead of
+#: raising it — waiting longer is not the fix, not waiting is.
+MAX_WAIT_SECONDS = 600
+
 #: Resolves the client for a given adapter's upstream — see ``config.client_for``.
 ClientResolver = Callable[["ModelAdapter"], CFGPUClient]
 
@@ -60,6 +77,15 @@ _ASPECT_RATIO_KEY = "_requested_aspect_ratio"
 # the stored copy, and public_payload() strips them, so they never reach the upstream API.
 _REQUEST_ID_KEY = "_request_id"
 _CAPTION_KEY = "_caption"
+
+# The upstream's own ETA for this submission, captured from the POST response by
+# adapter.extract_eta(). Stashed like the keys above so the force-async return path
+# and later task_status calls can both surface it.
+#
+# ★ Deliberately the *upstream's* number, never one computed here. The dominant term
+# is queue depth on a single serial GPU, which only the gateway can see; a duplicate
+# formula on this side would drift from the one that actually schedules the work.
+_ETA_KEY = "_eta"
 
 
 def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
@@ -301,6 +327,16 @@ class TaskManager:
                 original={"adapter_id": adapter.adapter_id, "response": resp},
             )
         stored_payload = _stash_internal(payload, req, aspect_ratio=True)
+        # Validated, not trusted: the stored payload is json.dumps()'d straight into
+        # the repository, so anything unserializable here fails the *insert* and loses
+        # the task outright — the caller would be told the submission failed while the
+        # job runs on upstream, unreachable. An ETA is never worth that, so keep only
+        # plain numbers and drop the rest silently.
+        eta = adapter.extract_eta(resp)
+        if isinstance(eta, dict):
+            clean = {k: v for k, v in eta.items() if isinstance(v, int | float)}
+            if clean:
+                stored_payload = {**stored_payload, _ETA_KEY: clean}
         await self._repo.insert_task(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload)
         return Task(_now_row(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload))
 
@@ -360,7 +396,17 @@ class TaskManager:
         if not adapter.is_async:
             return task
 
-        effective_timeout = timeout if timeout is not None else adapter.estimate_poll_timeout(req)
+        requested = timeout if timeout is not None else adapter.estimate_poll_timeout(req)
+        # Clamped even when the caller named the number explicitly: a wait that
+        # outlives the MCP client's own timeout cannot deliver its result, so
+        # honouring a larger value would only convert a returnable answer into a
+        # dropped connection. See MAX_WAIT_SECONDS.
+        effective_timeout = min(requested, MAX_WAIT_SECONDS)
+        if requested > effective_timeout:
+            logger.info(
+                "任务 %s 的等待预算 %ds 收敛到上限 %ds；超出部分请改用 task_status 轮询",
+                task.id, requested, effective_timeout,
+            )
         poll_cfg = adapter.poll_config
         interval = poll_cfg.base_interval if poll_cfg else 5.0
         max_interval = poll_cfg.max_interval if poll_cfg else 20.0

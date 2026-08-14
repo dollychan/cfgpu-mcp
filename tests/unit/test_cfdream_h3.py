@@ -58,9 +58,38 @@ def test_yaml_resolves_to_the_python_adapters(t2v, r2v):
 def test_r2v_inherits_the_shared_fields_through_extends(t2v, r2v):
     """These describe the same weights family on the same GPU — they must not drift."""
     for field in ("provider", "task_type", "endpoint", "poll_endpoint", "resolutions",
-                  "max_duration_seconds", "is_async"):
+                  "max_duration_seconds", "is_async", "force_async"):
         assert getattr(r2v, field) == getattr(t2v, field), field
     assert r2v.poll_config.default_timeout == t2v.poll_config.default_timeout
+
+
+def test_both_h3_models_never_block_the_caller(t2v, r2v):
+    """★ Both sit behind the same single serial GPU, so both must return a handle.
+
+    Inheriting this via `extends` is the point: if r2v ever stopped inheriting it,
+    half the family would go back to holding a tool call open for a queue whose
+    depth nobody can bound — and the caller would lose the task_id with it.
+    """
+    assert t2v.force_async is True
+    assert r2v.force_async is True
+
+
+def test_the_h3_eta_is_the_gateways_own_number(t2v):
+    """The ETA is read from the gateway's POST response, never recomputed here.
+
+    Its dominant term is queue depth on one serial GPU, which no client can see,
+    and the execution half is re-derived from real measurements upstream. A second
+    formula on this side would drift from the one that actually schedules the work.
+    """
+    assert t2v.extract_eta(
+        {"id": "t", "eta_seconds": 3800, "estimated_seconds": 143, "queue_ahead_seconds": 3657}
+    ) == {"eta_seconds": 3800, "estimated_seconds": 143, "queue_ahead_seconds": 3657}
+
+    # An upstream that reports nothing must yield nothing — never a guess.
+    assert t2v.extract_eta({"id": "t", "status": "pending"}) is None
+    # Non-numeric junk is dropped rather than stored: the payload is json.dumps'd
+    # into the repository, and a failed insert would lose the task itself.
+    assert t2v.extract_eta({"id": "t", "eta_seconds": "soon"}) is None
 
 
 def test_public_ids_never_expose_the_directory_name(t2v, r2v):

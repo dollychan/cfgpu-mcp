@@ -30,7 +30,7 @@ Python repr.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
@@ -99,6 +99,22 @@ class CfdreamH3Adapter(ModelAdapter):
             payload["first_frame"] = req.first_frame
         if req.last_frame:
             payload["last_frame"] = req.last_frame
+
+    def extract_eta(self, resp: dict) -> dict[str, Any] | None:
+        """The gateway's own ETA from ``POST /v1/video/generations`` (its API.md §2).
+
+        ``queue_ahead_seconds`` is the half that matters and the half no client can
+        compute: one serial GPU means the wait is dominated by whatever is already
+        in line, which only the gateway can see. Recomputing the execution estimate
+        here would also fork the gateway's calibration — it is re-derived from real
+        measurements and drifts (comfy-gateway DESIGN.md §10.10).
+        """
+        eta = {
+            k: resp[k]
+            for k in ("eta_seconds", "estimated_seconds", "queue_ahead_seconds")
+            if isinstance(resp.get(k), int | float)
+        }
+        return eta or None
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         data = resp.get("data") or []

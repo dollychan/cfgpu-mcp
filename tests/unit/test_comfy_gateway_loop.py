@@ -25,6 +25,7 @@ import pytest
 
 import cfgpu_mcp.config as cfg_module
 from cfgpu_mcp.context import reset_request_token, set_request_token
+from cfgpu_mcp.service import task as task_service
 from cfgpu_mcp.service import video as video_service
 from cfgpu_mcp.settings import ProviderSettings, load_settings
 
@@ -112,15 +113,55 @@ async def loop_env(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_generate_video_round_trips_through_the_gateway(loop_env):
+async def test_generate_video_returns_a_handle_and_never_blocks(loop_env):
+    """★ `force_async`: H3 hands the task_id back at once, even for wait=True.
+
+    Blocking here cannot be tuned into working — latency is dominated by an
+    unbounded serial-GPU queue, so any wait outlives the MCP client's own request
+    timeout and the response carrying the task_id never lands. On 2026-08-14 that
+    left a caller waiting on a video that had already been generated and published.
+    """
     tok = set_request_token(TENANT_TOKEN)   # as multi-tenant HTTP mode would
     try:
-        result = await video_service.generate_video(
+        handle = await video_service.generate_video(
+            prompt="waves crashing at dusk",
+            model="cfdream/minimax-h3",
+            resolution="480p",
+            duration_seconds=5,
+            wait=True,                     # ← asked to block; deliberately overridden
+        )
+    finally:
+        reset_request_token(tok)
+
+    assert handle["task_id"] == "gw-task-1"
+    assert handle["status"] == "pending"
+    assert "task_status" in handle["next_step"]   # the way back must be spelled out
+    assert handle["note"]                         # and overriding `wait` must be explained
+
+    # Exactly one call — the POST. Not one poll: nothing blocked.
+    assert len(loop_env) == 1
+    post_method, post_url, post_kw = loop_env[0]
+    assert (post_method, post_url) == ("POST", f"{GATEWAY}/video/generations")
+    assert post_kw["json"]["model"] == "cfdream/minimax-h3"
+    assert post_kw["json"]["duration_seconds"] == 5
+
+
+@pytest.mark.asyncio
+async def test_task_status_drives_the_handle_to_the_finished_artifact(loop_env):
+    """The other half: the handle must actually lead to the result.
+
+    Returning a task_id is only an improvement if polling it converges — otherwise
+    we have merely moved where the caller gets stuck.
+    """
+    tok = set_request_token(TENANT_TOKEN)
+    try:
+        handle = await video_service.generate_video(
             prompt="waves crashing at dusk",
             model="cfdream/minimax-h3",
             resolution="480p",
             duration_seconds=5,
         )
+        result = await task_service.get_status(handle["task_id"])
     finally:
         reset_request_token(tok)
 
@@ -131,11 +172,6 @@ async def test_generate_video_round_trips_through_the_gateway(loop_env):
     assert result["usage"]["actual_duration"] == 5.167
     assert result["model_used"] == "cfdream/minimax-h3"   # public id, never adapter_id
     assert result["expires_at"].startswith("2026-08-14T11:20")
-
-    post_method, post_url, post_kw = loop_env[0]
-    assert (post_method, post_url) == ("POST", f"{GATEWAY}/video/generations")
-    assert post_kw["json"]["model"] == "cfdream/minimax-h3"
-    assert post_kw["json"]["duration_seconds"] == 5
 
     poll_method, poll_url, _ = loop_env[1]
     assert (poll_method, poll_url) == ("GET", f"{GATEWAY}/video/tasks/gw-task-1")

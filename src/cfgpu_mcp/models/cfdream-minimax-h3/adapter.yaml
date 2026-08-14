@@ -18,6 +18,23 @@ endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
+# ★ Always return the handle immediately, even when the caller passes wait=True.
+#
+# Added 2026-08-14 after a run where everything downstream worked and the caller
+# still got nothing: the gateway finished the job and published it to OSS while
+# generate_video(wait=True) sat blocked, and the MCP session was torn down long
+# before the wait budget elapsed — so the response, the only thing carrying the
+# task_id, was never delivered. The caller was left waiting on a finished video it
+# could not name, poll, or cancel. Two rows sat at `pending` in this side's DB for
+# hours while the gateway had them succeeded.
+#
+# Why blocking cannot be tuned into working here: latency is dominated by queue
+# depth on ONE serial GPU, so it is unbounded by construction — a single 1080p job
+# ahead of you is an hour by itself. No fixed budget can be right, and every
+# candidate value is far past the MCP client's own request timeout. poll_config
+# below still governs task_wait, which is the explicit and resumable way to block.
+force_async: true
+
 capabilities:
   - text_to_video
   - image_to_video
