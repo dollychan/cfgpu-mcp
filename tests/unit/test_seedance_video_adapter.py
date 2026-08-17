@@ -303,29 +303,140 @@ def _make_2_5_adapter() -> SeedanceVideoAdapter:
         "cost_tier": 4,
         "speed_tier": 2,
         "max_duration_seconds": 30,
-        "resolutions": ["480p", "720p"],
+        "default_duration_seconds": -1,
+        "resolutions": ["480p", "720p", "1080p"],
+        "max_reference_images": 30,
+        "max_reference_videos": 10,
+        "max_reference_audios": 10,
+        "allow_audio_only_reference": True,
     }
     return SeedanceVideoAdapter.from_config(config)
 
 
-def test_seedance_2_5_rejects_1080p():
-    # Upstream: "the parameter resolution specified in the request is not valid for
-    # model doubao-seedance-2-5 in i2v" — 2.5 tops out at 720p in every scenario,
-    # unlike wan-2-0-fast where 1080p is only barred for text-to-video.
+def test_seedance_2_5_accepts_1080p():
     adapter = _make_2_5_adapter()
     for req in (
         GenerateVideoInput(prompt="x", resolution="1080p"),
         GenerateVideoInput(prompt="x", resolution="1080p", first_frame="https://e.com/f.jpg"),
     ):
-        ok, reason = adapter.supports(req)
-        assert ok is False
-        assert "480p, 720p" in reason
+        ok, _ = adapter.supports(req)
+        assert ok is True
+
+
+def test_seedance_2_5_rejects_4k():
+    ok, reason = _make_2_5_adapter().supports(
+        GenerateVideoInput(prompt="x", resolution="4k")
+    )
+    assert ok is False
+    assert "480p, 720p, 1080p" in reason
 
 
 def test_seedance_2_5_accepts_720p():
     adapter = _make_2_5_adapter()
     ok, _ = adapter.supports(GenerateVideoInput(prompt="x", resolution="720p"))
     assert ok is True
+
+
+def _make_seedance_2_0_adapter(
+    adapter_id: str = "doubao-seedance-2-0",
+    resolutions: list[str] | None = None,
+) -> SeedanceVideoAdapter:
+    config = {
+        "adapter_id": adapter_id,
+        "display_name": adapter_id,
+        "cfgpu_model_id": adapter_id,
+        "model_name": adapter_id,
+        "task_type": "video",
+        "endpoint": "/video/generations",
+        "is_async": True,
+        "poll_endpoint": "/video/tasks/{task_id}",
+        "capabilities": {
+            "text_to_video", "image_to_video", "first_last_frame",
+            "multi_modal_reference", "video_edit", "video_extend", "audio_generate",
+        },
+        "resolutions": resolutions or ["480p", "720p", "1080p", "4k"],
+        "max_reference_images": 9,
+        "max_reference_videos": 3,
+        "max_reference_audios": 3,
+        "allow_audio_only_reference": False,
+    }
+    return SeedanceVideoAdapter.from_config(config)
+
+
+def test_seedance_2_0_accepts_4k():
+    ok, _ = _make_seedance_2_0_adapter().supports(
+        GenerateVideoInput(prompt="x", resolution="4k")
+    )
+    assert ok is True
+
+
+@pytest.mark.parametrize("variant", ["doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini"])
+@pytest.mark.parametrize("resolution", ["1080p", "4k"])
+def test_seedance_2_0_fast_and_mini_reject_above_720p(variant, resolution):
+    adapter = _make_seedance_2_0_adapter(variant, ["480p", "720p"])
+    ok, reason = adapter.supports(GenerateVideoInput(prompt="x", resolution=resolution))
+    assert ok is False
+    assert "480p, 720p" in reason
+
+
+def test_seedance_2_0_fast_and_mini_default_to_720p():
+    req = GenerateVideoInput(prompt="x")
+    assert req.resolution == "720p"
+    for variant in ("doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini"):
+        assert _make_seedance_2_0_adapter(variant, ["480p", "720p"]).supports(req)[0]
+
+
+def test_seedance_2_0_rejects_audio_only_reference():
+    req = GenerateVideoInput(reference_audios=["https://example.com/a.mp3"])
+    ok, reason = _make_seedance_2_0_adapter().supports(req)
+    assert ok is False
+    assert "audio-only" in reason
+
+
+def test_seedance_2_5_accepts_audio_only_reference_without_prompt():
+    req = GenerateVideoInput(reference_audios=["https://example.com/a.mp3"])
+    assert req.prompt == ""
+    assert _make_2_5_adapter().supports(req)[0]
+
+
+@pytest.mark.parametrize(
+    ("field", "limit"),
+    [("reference_images", 9), ("reference_videos", 3), ("reference_audios", 3)],
+)
+def test_seedance_2_0_reference_limits(field, limit):
+    values = [f"https://example.com/{i}" for i in range(limit + 1)]
+    kwargs = {field: values[:limit]}
+    if field == "reference_audios":
+        kwargs["reference_images"] = ["https://example.com/image.jpg"]
+    assert _make_seedance_2_0_adapter().supports(
+        GenerateVideoInput(prompt="x", **kwargs)
+    )[0]
+    kwargs[field] = values
+    ok, reason = _make_seedance_2_0_adapter().supports(GenerateVideoInput(prompt="x", **kwargs))
+    assert ok is False
+    assert f"at most {limit}" in reason
+
+
+@pytest.mark.parametrize(
+    ("field", "limit"),
+    [("reference_images", 30), ("reference_videos", 10), ("reference_audios", 10)],
+)
+def test_seedance_2_5_reference_limits(field, limit):
+    values = [f"https://example.com/{i}" for i in range(limit + 1)]
+    assert _make_2_5_adapter().supports(
+        GenerateVideoInput(prompt="x", **{field: values[:limit]})
+    )[0]
+    ok, reason = _make_2_5_adapter().supports(
+        GenerateVideoInput(prompt="x", **{field: values})
+    )
+    assert ok is False
+    assert f"at most {limit}" in reason
+
+
+def test_text_to_video_still_requires_prompt():
+    ok, reason = _make_2_5_adapter().supports(GenerateVideoInput())
+    assert ok is False
+    assert "non-empty prompt" in reason
 
 
 def test_undeclared_resolutions_stay_unrestricted():
@@ -343,6 +454,12 @@ def test_seedance_2_5_accepts_30s_duration():
     ok, _ = adapter.supports(req)
     assert ok is True
     assert adapter.build_payload(req)["duration"] == 30
+
+
+def test_seedance_2_5_omitted_duration_uses_smart_default():
+    req = GenerateVideoInput(prompt="x")
+    assert req.duration_seconds is None
+    assert _make_2_5_adapter().build_payload(req)["duration"] == -1
 
 
 def test_seedance_2_5_builds_the_same_content_array_as_2_0():

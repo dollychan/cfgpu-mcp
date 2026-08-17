@@ -59,7 +59,7 @@ class GrokVideoAdapter(ModelAdapter):
             "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
             "prompt": req.prompt,
             "aspect_ratio": req.aspect_ratio if req.aspect_ratio != "adaptive" else _DEFAULT_RATIO,
-            "video_length": str(req.duration_seconds),
+            "video_length": str(self.resolve_duration_seconds(req)),
             "resolution_name": req.resolution,   # lowercase tier, e.g. "720p"
         }
         if refer_images:
@@ -168,6 +168,6 @@ class GrokVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} does not support reference_videos"
         if req.reference_audios:
             return False, f"{self.adapter_id} does not support reference_audios"
-        if req.duration_seconds == -1:
+        if self.resolve_duration_seconds(req) == -1:
             return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""

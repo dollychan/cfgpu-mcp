@@ -29,14 +29,14 @@ def _handle(task: "Task", *, forced: bool) -> dict[str, Any]:
 
 
 async def generate_video(
-    prompt: str,
+    prompt: str = "",
     model: str | list[str] = "auto",
     first_frame: str | None = None,
     last_frame: str | None = None,
     reference_images: list[str] | None = None,
     reference_videos: list[str] | None = None,
     reference_audios: list[str] | None = None,
-    duration_seconds: int = 5,
+    duration_seconds: int | None = None,
     aspect_ratio: str = "adaptive",
     resolution: str = "720p",
     with_audio: bool = True,

@@ -206,7 +206,11 @@ class GenerateImageInput(BaseModel):
 class GenerateVideoInput(BaseModel):
     """Generate video from text prompt, image, or multimodal references using CFGPU models."""
 
-    prompt: str = Field(description="Text description of the video to generate")
+    prompt: str = Field(
+        default="",
+        description="Text description of the video. Required for text-to-video; optional "
+        "for Seedance image/reference-driven tasks, including Seedance 2.5 audio-only input.",
+    )
     model: str | list[str] = Field(
         default="auto",
         description="A single model_id from list_models (e.g. 'wan-video'), "
@@ -255,9 +259,11 @@ class GenerateVideoInput(BaseModel):
         arity="many",
         accepts=["https_url", "asset_url"],
     )
-    duration_seconds: int = Field(
-        default=5,
-        description="Video duration in seconds: 4–30 (Doubao Seedance 2.5), 4–15 (WAN 2.0, "
+    duration_seconds: Optional[int] = Field(
+        default=None,
+        description="Video duration in seconds. None uses the selected model's default "
+        "(-1 smart duration for Doubao Seedance 2.5; 5 seconds for existing models). "
+        "Explicit ranges: 4–30 (Doubao Seedance 2.5), 4–15 (WAN 2.0, "
         "WAN 2.0 Fast, the Doubao Seedance 2.0 family, HappyHorse) or 4–12 (Doubao Seedance "
         "1.5 Pro). Use -1 for a model-chosen 'smart' duration (supported by WAN 2.0 and the "
         "Doubao Seedance family).",
@@ -265,11 +271,11 @@ class GenerateVideoInput(BaseModel):
 
     @field_validator("duration_seconds")
     @classmethod
-    def _validate_duration(cls, v: int) -> int:
+    def _validate_duration(cls, v: Optional[int]) -> Optional[int]:
         # 30 is the fleet-wide maximum (Doubao Seedance 2.5); narrower per-model
         # ceilings are enforced by each adapter's supports(), so model="auto" can
         # route around them instead of hard-failing here.
-        if v != -1 and not (4 <= v <= 30):
+        if v is not None and v != -1 and not (4 <= v <= 30):
             raise ValueError(
                 f"duration_seconds={v} is out of range. Use 4–30 seconds, or -1 for a "
                 f"model-chosen 'smart' duration (WAN 2.0 / Doubao Seedance). Note only "
@@ -281,11 +287,12 @@ class GenerateVideoInput(BaseModel):
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",
     )
-    resolution: Literal["480p", "720p", "1080p"] = Field(
+    resolution: Literal["480p", "720p", "1080p", "4k"] = Field(
         default="720p",
-        description="Video resolution. 1080p is supported by WAN 2.0, Doubao Seedance 2.0, "
-        "Doubao Seedance 1.5 Pro, and HappyHorse (HappyHorse's own default is 1080p). "
-        "Doubao Seedance 2.5 / 2.0 fast / 2.0 mini top out at 720p (480p/720p only). "
+        description="Video resolution. Doubao Seedance 2.0 supports 480p/720p/1080p/4k; "
+        "Doubao Seedance 2.5 supports 480p/720p/1080p; Doubao Seedance 2.0 fast and "
+        "2.0 mini support 480p/720p only. 1080p is also supported by WAN 2.0, Doubao "
+        "Seedance 1.5 Pro, and HappyHorse (HappyHorse's own default is 1080p). "
         "WAN 2.0 Fast does NOT support 1080p for text-to-video (only 480p/720p; 1080p works "
         "only with an image/video input). HappyHorse does not support 480p (minimum 720p).",
     )

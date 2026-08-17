@@ -2,7 +2,7 @@
 
 豆包大模型团队推出的新一代专业级多模态视频创作模型。支持单段 **30 秒**视频直出，单次最多可输入 **50 个参考素材**（30 张图 + 10 个视频 + 10 个音频），具备更强的指令控制、专业级可控的视频编辑与延长能力；同时原生支持生成 10 余种语言的人声叙事，让视频生成迈入「长叙事 × 强参考 × 准编辑 × 多语言」阶段。
 
-> **API 形态等同 WAN 2.0 / Seedance 2.0。** 请求体（`content` 多模态数组 + 顶层 `ratio` / `duration` / `resolution` / `generate_audio` / `watermark`）与返回结构完全一致，差异在**规模**（更长时长、更多参考素材、更强编辑与多语言）**与分辨率上限**（2.5 只到 720p）。完整的 content 输入类型、各场景示例与响应结构详见 `wan-video` 的 card.md，此处只列本模型的标识、容量与计价差异。
+> **API 形态等同 WAN 2.0 / Seedance 2.0。** 请求体（`content` 多模态数组 + 顶层 `ratio` / `duration` / `resolution` / `generate_audio` / `watermark`）与返回结构完全一致，差异在**规模**（更长时长、更多参考素材、更强编辑与多语言）和参数范围。完整的 content 输入类型、各场景示例与响应结构详见 `wan-video` 的 card.md，此处只列本模型的标识、容量与计价差异。
 
 ## 基本信息
 
@@ -30,18 +30,18 @@
 | 维度 | Seedance 2.0 | **Seedance 2.5** |
 |------|--------------|------------------|
 | 单段时长 | 4–15 秒（或 `-1` 智能） | **4–30 秒**（或 `-1` 智能） |
-| 参考图片 | 1–9 张 | **最多 30 张** |
+| 参考图片 | 0–9 张 | **0–30 张** |
 | 参考视频 | 最多 3 个 | **最多 10 个** |
 | 参考音频 | 最多 3 段 | **最多 10 段** |
 | 单次参考素材总数 | ≤ 15 | **≤ 50** |
-| 分辨率 | 480p / 720p / 1080p（及 4k） | **仅 480p / 720p**（默认 720p，无 1080p） |
+| 分辨率 | 480p / 720p / 1080p / 4k | **480p / 720p / 1080p**（默认 720p） |
 | 多语言人声 | — | **原生支持 10 余种语言** |
 | 指令控制 / 编辑 | 专业级 | 更强的指令遵循与更精准的编辑、延长 |
 | 计价 | 按分辨率分档 | 不分辨率分档，按有无视频输入分档 |
 
 其余（首尾帧规则、`role` 取值、素材格式要求、ratio 取值、联网搜索、watermark、prompt 写法）与 Seedance 2.0 / WAN 2.0 一致。
 
-> **分辨率**：2.5 只支持 `480p`、`720p`（默认 `720p`）。传 `1080p` 上游会报 `the parameter resolution specified in the request is not valid for model doubao-seedance-2-5 in i2v`，本适配器在发请求前就会拒绝并提示可用值。需要 1080p 请改用 Seedance 2.0 / WAN 2.0。
+> **分辨率**：2.5 支持 `480p`、`720p`、`1080p`，默认 `720p`。
 
 ## 能力说明
 
@@ -56,23 +56,29 @@
 | **audio_generate** | 生成与画面同步的有声视频（人声、音效、背景音乐），原生支持 10 余种语言 |
 | **web_search** | 联网搜索增强（仅文生视频支持） |
 
-> 音频不可单独输入，必须至少包含 1 个参考视频或图片（同 2.0）。
+> 支持仅传入参考音频；文本提示词可选。
 
 ## 参数与统一 Schema 映射
 
 | 统一 Schema 字段 | API 字段 | 说明 |
 |------------------|----------|------|
-| `prompt` | `content[].type=text` | 视频描述文本；30 秒长叙事建议按 `[0-10秒] / [10-20秒] / [20-30秒]` 分段描述 |
+| `prompt` | `content[].type=text` | 文生视频必填；其余任务可选。30 秒长叙事建议按 `[0-10秒] / [10-20秒] / [20-30秒]` 分段描述 |
 | `first_frame` | `content[].role=first_frame` | 首帧图片 |
 | `last_frame` | `content[].role=last_frame` | 尾帧图片（需与 first_frame 同用） |
 | `reference_images` | `content[].role=reference_image` | 参考图片（0-30，与首/尾帧互斥） |
 | `reference_videos` | `content[].role=reference_video` | 参考视频（0-10） |
 | `reference_audios` | `content[].role=reference_audio` | 参考音频（0-10） |
 | `aspect_ratio` | 顶层 `ratio` | 宽高比，`adaptive` 自动匹配 |
-| `duration_seconds` | 顶层 `duration` | 时长 4–30 秒，`-1` 为智能时长 |
-| `resolution` | 顶层 `resolution` | **仅 480p / 720p**，默认 720p |
+| `duration_seconds` | 顶层 `duration` | 默认 `-1`；取值 4–30 秒，或 `-1` 智能选择 |
+| `resolution` | 顶层 `resolution` | 480p / 720p / 1080p，默认 720p |
 | `with_audio` | 顶层 `generate_audio` | 是否生成有声视频 |
 | `watermark` | 顶层 `watermark` | 是否添加水印 |
+
+### 视频编辑任务的 duration 限制
+
+- `duration_seconds` 仅允许设置为 `-1`，不支持指定具体输出时长。
+- 待编辑源视频时长必须在 `[4, 30]` 秒内，否则上游会报错。
+- 当前统一输入用同一个 `reference_videos` 字段承载“参考生视频”和“视频编辑”，任务由上游按内容与意图判定；本地无法仅凭 URL 可靠读取源视频时长。
 
 ## Prompt 建议（30 秒长叙事）
 

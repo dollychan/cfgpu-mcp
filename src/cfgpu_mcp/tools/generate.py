@@ -52,14 +52,14 @@ def register(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def generate_video(
-        prompt: str,
+        prompt: str = "",
         model: str | list[str] = "auto",
         first_frame: Optional[str] = None,
         last_frame: Optional[str] = None,
         reference_images: Optional[list[str]] = None,
         reference_videos: Optional[list[str]] = None,
         reference_audios: Optional[list[str]] = None,
-        duration_seconds: int = 5,
+        duration_seconds: Optional[int] = None,
         aspect_ratio: str = "adaptive",
         resolution: str = "720p",
         with_audio: bool = True,
@@ -149,5 +149,4 @@ def register(mcp: FastMCP) -> None:
             )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
             return tool_error_dict(e)
-
 

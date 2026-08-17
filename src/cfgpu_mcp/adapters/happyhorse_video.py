@@ -34,8 +34,9 @@ class HappyHorseVideoAdapter(ModelAdapter):
             parameters["resolution"] = req.resolution.upper()  # 720p → 720P
         if req.aspect_ratio and req.aspect_ratio != "adaptive":
             parameters["ratio"] = req.aspect_ratio
-        if req.duration_seconds:
-            parameters["duration"] = req.duration_seconds
+        duration_seconds = self.resolve_duration_seconds(req)
+        if duration_seconds:
+            parameters["duration"] = duration_seconds
 
         return self._finalize_payload(inp, parameters, req)
 
@@ -91,7 +92,7 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} does not support reference_audios"
         if req.resolution == "480p":
             return False, f"{self.adapter_id} minimum resolution is 720p"
-        if req.duration_seconds == -1:
+        if self.resolve_duration_seconds(req) == -1:
             return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         if req.first_frame and req.reference_images:
             return False, "first_frame and reference_images are mutually exclusive"

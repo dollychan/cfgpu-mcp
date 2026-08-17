@@ -63,7 +63,7 @@ class SubmodelH3Adapter(ModelAdapter):
             "model": self.cfgpu_model_id,
             "content": content,
             "resolution": _RESOLUTION_MAP[req.resolution],
-            "duration": req.duration_seconds,
+            "duration": self.resolve_duration_seconds(req),
         }
         # Submodel infers image-to-video geometry from the first frame. Reference
         # inputs may use adaptive; text-to-video was checked for an explicit ratio
@@ -107,7 +107,7 @@ class SubmodelH3Adapter(ModelAdapter):
 
         if not req.prompt.strip():
             return False, f"{self.model_name} requires at least one non-empty text prompt"
-        if req.duration_seconds == -1:
+        if self.resolve_duration_seconds(req) == -1:
             return False, f"{self.model_name} requires an explicit duration from 4 to 15 seconds"
 
         has_frames = bool(req.first_frame or req.last_frame)

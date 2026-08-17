@@ -75,7 +75,7 @@ class SeedanceVideoAdapter(ModelAdapter):
             "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
             "content": content,
             "ratio": req.aspect_ratio,
-            "duration": req.duration_seconds,
+            "duration": self.resolve_duration_seconds(req),
             "resolution": req.resolution,
             "generate_audio": req.with_audio,
         }
@@ -128,6 +128,22 @@ class SeedanceVideoAdapter(ModelAdapter):
                 f"{self.adapter_id} does not support {needed} "
                 f"(capabilities: {', '.join(sorted(self.capabilities))})"
             )
+        for field, values, limit in (
+            ("reference_images", req.reference_images, self.max_reference_images),
+            ("reference_videos", req.reference_videos, self.max_reference_videos),
+            ("reference_audios", req.reference_audios, self.max_reference_audios),
+        ):
+            if values and limit is not None and len(values) > limit:
+                return False, f"{self.adapter_id} accepts at most {limit} {field}"
+        if (
+            req.reference_audios
+            and not self.allow_audio_only_reference
+            and not (req.reference_images or req.reference_videos)
+        ):
+            return False, (
+                f"{self.adapter_id} does not allow audio-only reference input; "
+                "include at least one reference image or video"
+            )
         # WAN 2.0 Fast (doubao-seedance-2-0-fast) does not support 1080p in
         # text-to-video; the API rejects it post-submit. Catch it here so
         # model="auto" routing can fall back to the full wan-2-0 instead.
@@ -157,7 +173,7 @@ class SeedanceVideoAdapter(ModelAdapter):
             base = 400
         if req.reference_videos or req.reference_images:
             base = 500
-        duration_extra = max(0, req.duration_seconds - 5) * 20
+        duration_extra = max(0, self.resolve_duration_seconds(req) - 5) * 20
         if self.poll_config:
             return self.poll_config.default_timeout + duration_extra
         return base + duration_extra

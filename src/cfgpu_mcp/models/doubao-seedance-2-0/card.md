@@ -2,7 +2,7 @@
 
 豆包大模型团队推出的新一代专业级多模态创作视频模型 Seedance 2.0，支持图像、视频、音频等多模态作为参考输入生成视频，还具备视频编辑、延长等能力，能高精度还原各类细节并稳定角色特征，具备极致拟真的视听稳定性，深度适配商业广告、影视制作与社交媒体营销等核心场景。
 
-> **API 完全等同 WAN 2.0。** Seedance 2.0 与 WAN 2.0 的模型能力、参数类型、API 请求体与返回结构完全一致。完整的 content 输入数组、各多模态场景示例与字段映射详见 `wan-video` 的 card.md，此处仅列出本模型的标识与计价差异。
+> **API 请求形态与 WAN 2.0 相同。** 两者使用相同的 content 多模态数组和返回结构，但应以本卡列出的 Seedance 2.0 参数范围为准。完整的 content 输入数组和各多模态场景示例详见 `wan-video` 的 card.md。
 
 ## 基本信息
 
@@ -55,7 +55,7 @@
 
 | 统一 Schema 字段 | API 字段 | 说明 |
 |------------------|----------|------|
-| `prompt` | `content[].type=text` | 视频描述文本 |
+| `prompt` | `content[].type=text` | 文生视频必填；图生视频、首尾帧和全模态参考任务可选 |
 | `first_frame` | `content[].role=first_frame` | 首帧图片 |
 | `last_frame` | `content[].role=last_frame` | 尾帧图片（需与 first_frame 同用） |
 | `reference_images` | `content[].role=reference_image` | 参考图片（0-9，与首/尾帧互斥） |
@@ -63,9 +63,11 @@
 | `reference_audios` | `content[].role=reference_audio` | 参考音频（0-3） |
 | `aspect_ratio` | 顶层 `ratio` | 宽高比，`adaptive` 自动匹配 |
 | `duration_seconds` | 顶层 `duration` | 时长 4–15 秒，`-1` 为智能时长 |
-| `resolution` | 顶层 `resolution` | 480p / 720p / 1080p |
+| `resolution` | 顶层 `resolution` | 480p / 720p / 1080p / 4k，默认 720p |
 | `with_audio` | 顶层 `generate_audio` | 是否生成有声视频 |
 | `watermark` | 顶层 `watermark` | 是否添加水印 |
+
+> 参考音频不可单独输入；使用 `reference_audios` 时，至少还需传入 1 张参考图片或 1 个参考视频。
 
 ## 示例
 

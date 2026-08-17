@@ -152,13 +152,12 @@ def test_seedance_2_5_inherits_the_wan_chain_and_raises_its_duration_cap():
 
 
 def test_seedance_resolution_sets_are_per_model():
-    """1080p is Seedance 2.0 only — the fast/mini/2.5 children each override the
-    inherited list, so the child must not pick up the parent's 1080p."""
+    """Each Seedance tier keeps its documented resolution set after inheritance."""
     registry = _load()
-    assert registry.get("doubao-seedance-2-0").resolutions == ["480p", "720p", "1080p"]
-    for model_id in ("doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini", "doubao-seedance-2-5"):
+    assert registry.get("doubao-seedance-2-0").resolutions == ["480p", "720p", "1080p", "4k"]
+    assert registry.get("doubao-seedance-2-5").resolutions == ["480p", "720p", "1080p"]
+    for model_id in ("doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini"):
         assert registry.get(model_id).resolutions == ["480p", "720p"], model_id
-    # Models that never declared a set stay unrestricted (pre-existing behaviour).
     assert registry.get("wan-2-0").resolutions is None
 
 

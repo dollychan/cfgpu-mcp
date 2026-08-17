@@ -2,7 +2,7 @@
 
 Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性价比视频生成模型。在保持竞争力效果的同时，将视频生成能力带入更低门槛、更高频、更规模化的应用场景。
 
-> **API 完全等同 WAN 2.0 / Seedance 2.0。** 模型能力、参数类型、API 请求体与返回结构完全一致。完整的 content 输入数组、各多模态场景示例与字段映射详见 `wan-video` 的 card.md，此处仅列出本模型的标识与计价差异。
+> **API 请求形态与 WAN 2.0 / Seedance 2.0 相同。** 使用相同的 content 多模态数组和返回结构；分辨率等模型专属范围以本卡为准。完整场景示例详见 `wan-video` 的 card.md。
 
 ## 基本信息
 
@@ -35,7 +35,7 @@ Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性�
 
 | 统一 Schema 字段 | API 字段 | 说明 |
 |------------------|----------|------|
-| `prompt` | `content[].type=text` | 视频描述文本 |
+| `prompt` | `content[].type=text` | 文生视频必填；图生视频、首尾帧和全模态参考任务可选 |
 | `first_frame` | `content[].role=first_frame` | 首帧图片 |
 | `last_frame` | `content[].role=last_frame` | 尾帧图片（需与 first_frame 同用） |
 | `reference_images` | `content[].role=reference_image` | 参考图片（0-9，与首/尾帧互斥） |
@@ -46,6 +46,8 @@ Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性�
 | `resolution` | 顶层 `resolution` | **仅 480p / 720p**，默认 720p（无 1080p，需要 1080p 请用 Seedance 2.0） |
 | `with_audio` | 顶层 `generate_audio` | 是否生成有声视频 |
 | `watermark` | 顶层 `watermark` | 是否添加水印 |
+
+> 参考音频不可单独输入；使用 `reference_audios` 时，至少还需传入 1 张参考图片或 1 个参考视频。
 
 ## 示例
 

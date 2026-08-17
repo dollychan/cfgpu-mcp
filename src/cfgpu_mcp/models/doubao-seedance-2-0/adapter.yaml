@@ -12,6 +12,10 @@ model_name: doubao-seedance-2-0
 cost_tier: 3
 speed_tier: 2
 
-# 2.0 是 Seedance 家族里唯一支持 1080p 的（另有 4k，统一 schema 的 resolution
-# 枚举尚未开放该值，需要时先扩 GenerateVideoInput.resolution 再加到这里）。
-resolutions: [480p, 720p, 1080p]
+max_reference_images: 9
+max_reference_videos: 3
+max_reference_audios: 3
+allow_audio_only_reference: false
+
+# Seedance 2.0 完整版支持 4k；fast / mini 会在各自配置中收窄到 480p / 720p。
+resolutions: [480p, 720p, 1080p, 4k]

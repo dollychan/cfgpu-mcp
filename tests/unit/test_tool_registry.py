@@ -116,6 +116,18 @@ def test_video_resolution_accepts_1080p():
     assert req.resolution == "1080p"
 
 
+def test_video_resolution_accepts_seedance_2_0_4k():
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+    req = GenerateVideoInput(prompt="x", resolution="4k")
+    assert req.resolution == "4k"
+
+
+def test_video_prompt_is_optional_for_reference_driven_tasks():
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+    req = GenerateVideoInput(reference_audios=["https://example.com/a.mp3"])
+    assert req.prompt == ""
+
+
 def test_image_n_accepts_group_size():
     from cfgpu_mcp.tool_registry import GenerateImageInput
     req = GenerateImageInput(prompt="x", n=15)

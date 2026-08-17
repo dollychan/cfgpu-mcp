@@ -70,7 +70,12 @@ class ModelAdapter(ABC):
     cost_tier: int               # 1-5
     speed_tier: int              # 1-5
     max_duration_seconds: int    # video only: longest explicit duration accepted
+    default_duration_seconds: int
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
+    max_reference_images: int | None  # video only: per-model reference material limits
+    max_reference_videos: int | None
+    max_reference_audios: int | None
+    allow_audio_only_reference: bool
     poll_config: PollConfig | None
     extends: str | None          # parent adapter_id, or None
     card_base: str | None        # model dir to inherit card.md from; None = no inheritance
@@ -103,12 +108,19 @@ class ModelAdapter(ABC):
         # of letting the POST fail upstream. 15 was the schema-wide cap before
         # 2.5 arrived, so it stays the default and no existing model changes.
         instance.max_duration_seconds = config.get("max_duration_seconds", 15)
+        instance.default_duration_seconds = config.get("default_duration_seconds", 5)
         # Resolution is a per-model value set, not a fleet-wide one: asking a model
         # for a resolution it does not offer fails upstream as "the parameter
         # resolution specified in the request is not valid for model X in i2v".
         # Models that have documented their set list it here; None means "no local
         # restriction", which is what every model did before this existed.
         instance.resolutions = config.get("resolutions")
+        instance.max_reference_images = config.get("max_reference_images")
+        instance.max_reference_videos = config.get("max_reference_videos")
+        instance.max_reference_audios = config.get("max_reference_audios")
+        instance.allow_audio_only_reference = bool(
+            config.get("allow_audio_only_reference", False)
+        )
         pc = config.get("poll_config")
         instance.poll_config = PollConfig.from_dict(pc) if pc else None
         instance.extends = config.get("extends")
@@ -149,10 +161,16 @@ class ModelAdapter(ABC):
             if isinstance(req, cls) and self.task_type != tt:
                 return False, f"{self.adapter_id} is a {self.task_type} model, not a {tt} model"
         if isinstance(req, GenerateVideoInput):
-            if (
-                req.duration_seconds != -1
-                and req.duration_seconds > self.max_duration_seconds
+            if not req.prompt.strip() and not (
+                req.first_frame
+                or req.last_frame
+                or req.reference_images
+                or req.reference_videos
+                or req.reference_audios
             ):
+                return False, "text-to-video requires a non-empty prompt"
+            duration_seconds = self.resolve_duration_seconds(req)
+            if duration_seconds != -1 and duration_seconds > self.max_duration_seconds:
                 return False, (
                     f"{self.adapter_id} supports explicit durations of "
                     f"4–{self.max_duration_seconds} seconds "
@@ -164,6 +182,12 @@ class ModelAdapter(ABC):
                     f"{req.resolution} (supported: {', '.join(self.resolutions)})"
                 )
         return True, ""
+
+    def resolve_duration_seconds(self, req: "GenerateVideoInput") -> int:
+        """Resolve an omitted unified duration to this model's real default."""
+        if req.duration_seconds is None:
+            return self.default_duration_seconds
+        return req.duration_seconds
 
     def extract_task_id(self, resp: dict) -> str | None:
         """Extract task_id from POST response. Override for non-standard response shapes."""

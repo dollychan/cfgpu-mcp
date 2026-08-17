@@ -240,25 +240,15 @@ def test_all_three_tiers_are_open(t2v, r2v, res):
     assert r2v.supports(_req(resolution=res, reference_images=["https://x/1.jpg"]))[0]
 
 
-def test_the_declared_list_now_matches_the_fleet_enum_exactly(t2v):
-    """★ Widening made this model's ``resolutions`` a no-op — say so out loud.
-
-    ``GenerateVideoInput.resolution`` is a Literal of exactly these three, so no
-    request can now carry a value H3 would reject; the declaration constrains
-    nothing today. It is kept rather than deleted because it is the record of
-    what the *gateway* accepts (its ``OPEN_RESOLUTIONS``, three megapixel values),
-    and the two lists are maintained in different repos. The day the fleet enum
-    gains a tier — a 2K model arrives, say — this declaration goes back to being
-    load-bearing with no code change, exactly as ``max_duration_seconds`` did when
-    Seedance 2.5 pushed the schema-wide ceiling from 15 to 30.
-    """
+def test_declared_resolution_list_rejects_the_new_seedance_4k_tier(t2v):
+    """The fleet enum includes Seedance 2.0's 4k, while H3 remains capped at 1080p."""
     from typing import get_args
 
     fleet = set(get_args(GenerateVideoInput.model_fields["resolution"].annotation))
-    assert set(t2v.resolutions) == fleet == {"480p", "720p", "1080p"}
+    assert fleet == {"480p", "720p", "1080p", "4k"}
+    assert set(t2v.resolutions) == {"480p", "720p", "1080p"}
 
-    # And the guard itself still works, for when the two do diverge again.
-    ok, reason = t2v.supports(GenerateVideoInput.model_construct(prompt="x", resolution="2k"))
+    ok, reason = t2v.supports(GenerateVideoInput(prompt="x", resolution="4k"))
     assert not ok and "480p" in reason
 
 
