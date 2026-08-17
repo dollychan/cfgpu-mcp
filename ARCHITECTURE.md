@@ -331,7 +331,23 @@ from cfgpu_mcp.adapters import seedance_video, seedream, async_image, happyhorse
 
 第 2 步必须沿整条链向上走，而不是只看一层父级。例如 `nano-banana-pro-premium` → `nano-banana-pro` → `nano-banana-2`：只有 `nano-banana-2` 注册了 `NanoBananaAdapter`，中间的 `nano-banana-pro` 没有。若只查一层，孙级变体会 fallback 到 `GenericAdapter`，由于没有 `payload_mapping` 而构建出空 payload，导致 API 报 `model参数不能为空`。`_instantiate()` 因此接收完整的 `raw_configs`，以便逐级追溯 `extends`。
 
-### 5.4 Model Card 合并
+### 5.4 裁剪暴露面：`disabled_models` / `disabled_tools`
+
+两个都在 config.yaml，都是**黑名单**，都是「省略 / null / `[]` = 全量」。
+
+**`disabled_models`（模型）** 由 `AdapterRegistry._is_enabled()` 在 `load()` 期执行：命中的 adapter 干脆不注册，于是它同时从 `list_models`、工具 schema 的 `model` 枚举、以及 `model="auto"` 的候选集里消失——和 `_has_provider()` 丢弃不可达 provider 的模型是同一种手法（§3.4）。可以写 `model_name` / `adapter_id` / `cfgpu_model_id` 中任意一个，与 `registry.get()` 认的键一致。
+
+黑名单而非白名单，是因为模型只增不减：「列出要排除的」在新增模型后依然表达运维本意，而白名单会把每个新模型默默挡在外面，直到有人想起来补一笔——这个失败是静默的。旧的 `enabled_models` 白名单已移除；config.yaml 里残留**非空**的 `enabled_models` 会在 `load_settings()` 直接报错（`_reject_enabled_models`），因为两者含义相反，静默忽略等于把本该关掉的模型全放出来；残留空值只警告，升级不会弄坏任何部署。
+
+代码入口 `get_registry()` / `load_registry()` 仍保留 `enabled_models` 白名单参数（嵌入方常常明确知道自己只要哪几个），config.yaml 那侧只有黑名单。两者可同时给，先过白名单再过黑名单，**黑名单赢**。
+
+禁用一个被别人 `extends:` 的父模型是安全的：`_merge_extends()` 读的是 `raw_configs`（原始 YAML），不是注册后的 adapter，所以父模型被禁用后变体照常继承它的字段和 Python Adapter 类。`test_disabled_parent_still_supplies_extends_fields` 钉住这一点。
+
+**`disabled_tools`（MCP 工具）** 由 `server._apply_disabled_tools()` 在模块导入期执行，紧跟 `register()` 之后、三个 schema 注入器之前（给马上要消失的工具刷枚举和注解没有意义）。用的是 `ToolManager.remove_tool()`——**注销**而非从 `tools/list` 里隐藏，所以硬调一个被禁用的名字得到的是 "unknown tool"，而不是一个还活着的 handler。存在意义是「只做图的部署不该把视频/音频/理解工具塞进每一次模型上下文」。
+
+未知的工具名**直接抛错**、启动失败：这个字段的全部意义是「某个工具不暴露」，而拼错却静默通过恰好等于没生效——正是运维写这行配置想避免的状态。这一层只作用于 Mode A；Mode B / C 直连 service 层，各自用 `get_anthropic_tools(tools=[...])` 筛选。
+
+### 5.5 Model Card 合并
 
 `get_model_card()` 读取 `card.md`，如果 `adapter.yaml` 中有 `extends` 或 `card_base`，则将变体的 card 与父模型的 card 合并：同名 `##` 节标题，子模型覆盖；子模型独有节，追加到末尾。
 

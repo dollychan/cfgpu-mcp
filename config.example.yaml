@@ -57,6 +57,31 @@ task_db:
   pool_min: 1                  # Postgres connection pool (ignored by SQLite)
   pool_max: 10
 
-enabled_models:                # whitelist override; omit / null = load all models
+disabled_models:               # blacklist; omit / null / [] = load all models
+  # Models listed here are not registered: they stay out of list_models, out of
+  # each tool's `model` enum, and out of `model="auto"` routing. Name a model by
+  # its model_name (what the tools take), or by adapter_id / cfgpu_model_id.
+  #
+  # A blacklist, not a whitelist: the fleet keeps growing, and a config naming
+  # what to drop stays correct when a model is added — a whitelist would hide
+  # every new model until someone remembered to extend it.
+  #
+  # Disabling a model that other models `extends:` is safe — variants inherit
+  # from the YAML, not from the registered adapter.
   # - wan-2-0-fast
   # - doubao-seedream-5-0-lite
+
+disabled_tools:                # MCP tools to not expose; omit / null / [] = all
+  # Trims the tool surface this server registers, e.g. an image-only deployment
+  # that shouldn't spend context on video/audio tools. A disabled tool is
+  # unregistered, so calling it returns "unknown tool".
+  #
+  # Valid names (an unknown one fails at startup):
+  #   generate_image  generate_video  generate_audio  understand_vision
+  #   task_status  task_wait  list_models  get_model_card
+  #
+  # Note task_status / task_wait are how async generation results are collected —
+  # disabling them alongside generate_video leaves callers with no way to finish
+  # a task started with wait=false.
+  # - generate_audio
+  # - understand_vision

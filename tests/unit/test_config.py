@@ -6,7 +6,7 @@ import yaml
 
 import cfgpu_mcp.config as cfg_module
 from cfgpu_mcp.config import get_task_repository, load_registry
-from cfgpu_mcp.settings import DEFAULT_PROVIDER
+from cfgpu_mcp.settings import DEFAULT_PROVIDER, load_settings
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
 
@@ -37,43 +37,82 @@ def _expected_model_count() -> int:
 
 
 @pytest.fixture
-def load(monkeypatch, tmp_path):
-    """Load a registry in isolation from the developer's ambient config.yaml.
+def write_config(monkeypatch, tmp_path):
+    """Pin CFGPU_CONFIG at a temp config.yaml and drop the Settings singleton.
 
-    enabled_models is the single config.yaml field (no env override). The temp
-    config is pinned via CFGPU_CONFIG so ./config.yaml in the repo never leaks in,
-    and the cached Settings singleton is dropped so the temp file is actually read.
+    Keeps the developer's ambient ./config.yaml from leaking into these tests
+    (disabled_models / disabled_tools have no env override — config.yaml is their
+    single source, so the file that gets read has to be ours).
     """
     monkeypatch.setattr(cfg_module, "_MODELS_DIR", MODELS_DIR)
 
-    def _load(enabled_models=None, yaml_enabled=None):
-        body = "" if yaml_enabled is None else "enabled_models:\n" + "".join(
-            f"  - {m}\n" for m in yaml_enabled
-        )
+    def _write(body: str = ""):
         cfg = tmp_path / "config.yaml"
         cfg.write_text(body)
         monkeypatch.setenv("CFGPU_CONFIG", str(cfg))
         cfg_module._settings = None
-        return len(load_registry(enabled_models=enabled_models))
+        return cfg
 
-    yield _load
+    yield _write
     cfg_module._settings = None  # don't leak our temp settings into later tests
 
 
-def test_yaml_list_filters_models(load):
-    assert load(yaml_enabled=["wan-2-0", "wan-2-0-fast"]) == 2
+@pytest.fixture
+def load(write_config):
+    def _load(enabled_models=None, yaml_disabled=None):
+        body = "" if yaml_disabled is None else "disabled_models:\n" + "".join(
+            f"  - {m}\n" for m in yaml_disabled
+        )
+        write_config(body)
+        return len(load_registry(enabled_models=enabled_models))
+
+    return _load
 
 
-def test_code_arg_overrides_yaml(load):
-    assert load(enabled_models=["doubao-seedream-5-0-lite"], yaml_enabled=["wan-2-0"]) == 1
+def test_yaml_list_drops_models(load):
+    assert load(yaml_disabled=["wan-2-0", "wan-2-0-fast"]) == _expected_model_count() - 2
 
 
-def test_no_enabled_models_loads_all(load):
+def test_yaml_blocklist_applies_on_top_of_code_allowlist(load):
+    """The two compose — the blocklist is not bypassed by an explicit allowlist."""
+    assert load(enabled_models=["wan-2-0", "wan-2-0-fast"], yaml_disabled=["wan-2-0"]) == 1
+
+
+def test_no_disabled_models_loads_all(load):
     assert load() == _expected_model_count()
 
 
 def test_empty_yaml_list_loads_all(load):
-    assert load(yaml_enabled=[]) == _expected_model_count()
+    assert load(yaml_disabled=[]) == _expected_model_count()
+
+
+def test_leftover_enabled_models_is_rejected(write_config):
+    """A stale whitelist means the *opposite* of what the key now says — fail loudly."""
+    write_config("enabled_models:\n  - wan-2-0\n")
+    with pytest.raises(ValueError, match="disabled_models"):
+        load_settings()
+
+
+def test_empty_leftover_enabled_models_is_tolerated(write_config):
+    """An empty leftover excluded nothing, so upgrading must not break the server."""
+    write_config("enabled_models:\n")
+    assert load_settings().disabled_models is None
+
+
+def test_disabled_models_scalar_is_tolerated(write_config):
+    write_config("disabled_models: wan-2-0\n")
+    assert load_settings().disabled_models == ["wan-2-0"]
+
+
+def test_disabled_tools_parsed(write_config):
+    write_config("disabled_tools:\n  - generate_audio\n  - understand_vision\n")
+    assert load_settings().disabled_tools == ["generate_audio", "understand_vision"]
+
+
+def test_disabled_tools_wrong_type_rejected(write_config):
+    write_config("disabled_tools:\n  generate_audio: true\n")
+    with pytest.raises(ValueError, match="disabled_tools"):
+        load_settings()
 
 
 @pytest.mark.asyncio

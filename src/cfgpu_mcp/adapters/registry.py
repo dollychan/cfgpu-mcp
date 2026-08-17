@@ -14,19 +14,26 @@ from cfgpu_mcp.adapters.generic import GenericAdapter
 logger = logging.getLogger(__name__)
 
 
+def _name_set(names: list[str] | None) -> set[str] | None:
+    """Trim + drop blanks; None stays None (= no filter)."""
+    if names is None:
+        return None
+    return {n.strip() for n in names if n and n.strip()}
+
+
 class AdapterRegistry:
     def __init__(
         self,
         model_dir: Path,
         enabled_models: list[str] | None = None,
         available_providers: set[str] | None = None,
+        disabled_models: list[str] | None = None,
     ) -> None:
         self.model_dir = model_dir
-        self.enabled_models: set[str] | None = (
-            set(m.strip() for m in enabled_models if m.strip())
-            if enabled_models is not None
-            else None
-        )
+        # Allowlist: code-level only (embedders passing get_registry(enabled_models=…)).
+        # config.yaml carries the blocklist instead — see Settings.disabled_models.
+        self.enabled_models: set[str] | None = _name_set(enabled_models)
+        self.disabled_models: set[str] = _name_set(disabled_models) or set()
         # Provider names this deployment can actually reach (from config.yaml's
         # `providers:` plus the built-in cfgpu). None = don't filter, which is what
         # tests and direct constructions get.
@@ -118,12 +125,23 @@ class AdapterRegistry:
         return False
 
     def _is_enabled(self, adapter: ModelAdapter) -> bool:
-        if self.enabled_models is None:
-            return True
-        return bool(
-            self.enabled_models
-            & {adapter.adapter_id, adapter.cfgpu_model_id, adapter.model_name}
-        )
+        """Apply the (optional) allowlist, then the blocklist — blocklist wins.
+
+        Either list may name a model by ``adapter_id`` / ``cfgpu_model_id`` /
+        ``model_name``, the same keys ``get()`` resolves, so an operator can copy
+        whichever id they have at hand.
+
+        Disabling a model that others ``extends:`` is safe: the merge reads the
+        raw YAML configs, not the registered adapters, so a disabled parent still
+        supplies its fields to variants that stay enabled.
+        """
+        ids = {adapter.adapter_id, adapter.cfgpu_model_id, adapter.model_name}
+        if self.enabled_models is not None and not (self.enabled_models & ids):
+            return False
+        if self.disabled_models & ids:
+            logger.info("跳过模型 %s：已在 disabled_models 中禁用", adapter.model_name)
+            return False
+        return True
 
     def _register(self, adapter: ModelAdapter) -> None:
         self._by_adapter_id[adapter.adapter_id] = adapter

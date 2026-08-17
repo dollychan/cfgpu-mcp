@@ -35,20 +35,27 @@ def get_settings() -> Settings:
     return _settings
 
 
-def load_registry(enabled_models: list[str] | None = None) -> AdapterRegistry:
+def load_registry(
+    enabled_models: list[str] | None = None,
+    disabled_models: list[str] | None = None,
+) -> AdapterRegistry:
     """Create and load an AdapterRegistry.
 
-    Priority: code argument > config.yaml (enabled_models) > all models.
+    ``enabled_models`` is an optional allowlist for embedders (config.yaml has no
+    equivalent — it carries the blocklist instead); ``disabled_models`` defaults
+    to config.yaml's ``disabled_models``. Both may be given, and the blocklist
+    wins on a model named by both.
     """
     # Importing adapters package triggers @register_python_adapter decorators
     import cfgpu_mcp.adapters  # noqa: F401
 
-    if enabled_models is None:
-        enabled_models = get_settings().enabled_models
+    if disabled_models is None:
+        disabled_models = get_settings().disabled_models
 
     registry = AdapterRegistry(
         model_dir=_MODELS_DIR,
         enabled_models=enabled_models,
+        disabled_models=disabled_models,
         # Models pointing at an unconfigured provider are dropped rather than
         # offered — see AdapterRegistry._has_provider.
         available_providers=set(get_settings().providers),
@@ -57,11 +64,14 @@ def load_registry(enabled_models: list[str] | None = None) -> AdapterRegistry:
     return registry
 
 
-def get_registry(enabled_models: list[str] | None = None) -> AdapterRegistry:
+def get_registry(
+    enabled_models: list[str] | None = None,
+    disabled_models: list[str] | None = None,
+) -> AdapterRegistry:
     """Return module-level singleton registry (created on first call)."""
     global _registry
     if _registry is None:
-        _registry = load_registry(enabled_models)
+        _registry = load_registry(enabled_models, disabled_models)
     return _registry
 
 

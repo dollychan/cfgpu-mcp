@@ -39,6 +39,35 @@ tasks.register(mcp)
 models.register(mcp)
 
 
+def _apply_disabled_tools(server: FastMCP) -> None:
+    """Unregister the tools named by config.yaml's ``disabled_tools``.
+
+    Trims the MCP surface a deployment offers — a host that only wants image
+    generation should not be shipping the video/audio/understand tools into every
+    model context. Removal (not just hiding from ``tools/list``) so a client that
+    calls a disabled name gets "unknown tool" rather than a live tool.
+
+    An unknown name is a hard error: the whole point of the field is that
+    something is *not* exposed, and a typo would silently leave it exposed —
+    exactly the condition the operator wrote the config to prevent.
+
+    Runs before the schema injectors: no point stamping enums and annotations
+    onto tools that are about to disappear.
+    """
+    names = config.get_settings().disabled_tools
+    if not names:
+        return
+    registered = {tool.name for tool in server._tool_manager.list_tools()}
+    unknown = sorted(set(names) - registered)
+    if unknown:
+        raise ValueError(
+            f"config.yaml 的 disabled_tools 含未知工具名 {unknown}；"
+            f"可用工具：{sorted(registered)}"
+        )
+    for name in names:
+        server._tool_manager.remove_tool(name)
+
+
 def _inject_param_descriptions(server: FastMCP) -> None:
     """FastMCP builds each tool's input schema from the wrapper's bare signature, which
     carries no per-parameter docs. Backfill them from the Pydantic models in
@@ -78,6 +107,7 @@ def _inject_media_annotations(server: FastMCP) -> None:
         apply_media_annotations(tool.parameters, tool.name)
 
 
+_apply_disabled_tools(mcp)
 _inject_param_descriptions(mcp)
 _inject_model_enums(mcp)
 _inject_media_annotations(mcp)

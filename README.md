@@ -89,7 +89,7 @@ pip install "cfgpu-mcp[cli]"
 | `CFGPU_DOTENV` | | 启动时自动加载的 `.env` 路径（默认 `./.env`） |
 | `CFGPU_DRY_RUN` | | 置 1 时记录请求但仍发送，用于调试 |
 
-> 模型白名单（`enabled_models`）、API base URL、超时、`task_db.url`、`transport` 等均只在 **config.yaml** 配置（见 `config.example.yaml`），不再有环境变量 override。需要从环境读 DB URL 时，在 `task_db.url` 写 `$DATABASE_URL`。
+> 模型黑名单（`disabled_models`）、工具黑名单（`disabled_tools`）、API base URL、超时、`task_db.url`、`transport` 等均只在 **config.yaml** 配置（见 `config.example.yaml`），不再有环境变量 override。需要从环境读 DB URL 时，在 `task_db.url` 写 `$DATABASE_URL`。
 
 ## CLI 用法
 

@@ -15,9 +15,13 @@ def _expected_model_count() -> int:
     return sum(1 for p in MODELS_DIR.iterdir() if (p / "adapter.yaml").exists())
 
 
-def _load(enabled_models=None) -> AdapterRegistry:
+def _load(enabled_models=None, disabled_models=None) -> AdapterRegistry:
     import cfgpu_mcp.adapters  # trigger registration
-    registry = AdapterRegistry(model_dir=MODELS_DIR, enabled_models=enabled_models)
+    registry = AdapterRegistry(
+        model_dir=MODELS_DIR,
+        enabled_models=enabled_models,
+        disabled_models=disabled_models,
+    )
     registry.load()
     return registry
 
@@ -68,6 +72,46 @@ def test_enabled_models_allowlist_by_cfgpu_model_id():
 def test_enabled_models_none_registers_all():
     registry = _load(enabled_models=None)
     assert len(registry) == _expected_model_count()
+
+
+def test_disabled_models_blocklist_by_adapter_id():
+    registry = _load(disabled_models=["wan-2-0", "wan-2-0-fast"])
+    assert len(registry) == _expected_model_count() - 2
+    with pytest.raises(KeyError):
+        registry.get("wan-2-0-fast")
+    registry.get("doubao-seedream-5-0-lite")  # everything else still loads
+
+
+def test_disabled_models_blocklist_by_cfgpu_model_id():
+    registry = _load(disabled_models=["doubao-seedream-5-0-260128"])
+    assert len(registry) == _expected_model_count() - 1
+    with pytest.raises(KeyError):
+        registry.get("doubao-seedream-5-0-lite")
+
+
+def test_disabled_models_none_registers_all():
+    registry = _load(disabled_models=None)
+    assert len(registry) == _expected_model_count()
+
+
+def test_disabled_parent_still_supplies_extends_fields():
+    """A blocked model that others `extends:` must not take its variants with it.
+
+    The merge reads the raw YAML configs, so wan-2-0-fast keeps inheriting from a
+    disabled wan-2-0 — otherwise disabling one model would silently break others.
+    """
+    registry = _load(disabled_models=["wan-2-0"])
+    with pytest.raises(KeyError):
+        registry.get("wan-2-0")
+    fast = registry.get("wan-2-0-fast")
+    assert isinstance(fast, SeedanceVideoAdapter)     # class resolved through the chain
+    assert fast.task_type == "video"                  # field inherited from the parent
+
+
+def test_disabled_wins_over_enabled():
+    registry = _load(enabled_models=["wan-2-0", "wan-2-0-fast"], disabled_models=["wan-2-0"])
+    assert len(registry) == 1
+    registry.get("wan-2-0-fast")
 
 
 def test_wan_fast_uses_seedance_video_adapter_class():

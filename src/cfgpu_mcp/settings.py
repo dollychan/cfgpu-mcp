@@ -14,11 +14,14 @@ zero-config.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_BASE_URL = "https://www.cfgpu.com/userapi/v1"
 _DEFAULT_TASK_DB_URL = "sqlite:///~/.cfgpu/tasks.db"
@@ -70,7 +73,13 @@ class Settings:
     task_db_url: str = _DEFAULT_TASK_DB_URL
     task_db_pool_min: int = 1   # Postgres connection pool (ignored by SQLite)
     task_db_pool_max: int = 10
-    enabled_models: list[str] | None = None  # None / [] = load all (whitelist override)
+    #: Models to keep out of this deployment. None / [] = load every model.
+    #: A blacklist rather than a whitelist because the fleet grows and a config
+    #: that names what to *drop* stays correct when a model is added; a whitelist
+    #: silently hides every new model until someone remembers to extend it.
+    disabled_models: list[str] | None = None
+    #: MCP tools to leave unregistered. None / [] = expose the whole surface.
+    disabled_tools: list[str] | None = None
     #: Keyed by provider name; always contains DEFAULT_PROVIDER.
     providers: dict[str, ProviderSettings] = field(default_factory=dict)
 
@@ -137,6 +146,45 @@ def _load_dotenv() -> None:
         load_dotenv(path, override=False)
 
 
+def _parse_name_list(raw: object, key: str) -> list[str] | None:
+    """Normalize a ``disabled_*`` config entry to a list of names, or None.
+
+    ``[]`` / ``null`` (the shape a key left with no entries takes) both mean
+    "nothing is disabled" and collapse to None. A bare scalar is tolerated —
+    forgetting YAML list syntax for a single entry is the common slip and reading
+    it as a one-item list is unambiguous. Anything else fails at load time.
+    """
+    if isinstance(raw, str):
+        raw = [raw]
+    elif raw is not None and not isinstance(raw, list):
+        raise ValueError(f"{key} must be a string or list, got {type(raw).__name__}")
+    if not raw:
+        return None
+    return [str(item).strip() for item in raw if str(item).strip()] or None
+
+
+def _reject_enabled_models(data: dict) -> None:
+    """Fail on the removed ``enabled_models`` whitelist instead of ignoring it.
+
+    It was replaced by ``disabled_models``, whose meaning is *inverted*. Silently
+    ignoring a leftover whitelist would load the models it was written to exclude
+    — the opposite of the operator's intent, and invisible until something routes
+    to a model that was supposed to be off. An empty/null leftover key excluded
+    nothing anyway, so it only warns: no deployment breaks on the upgrade.
+    """
+    if "enabled_models" not in data:
+        return
+    message = (
+        "config.yaml 的 enabled_models 已被 disabled_models 取代，含义相反："
+        "现在列出的是要**排除**的模型，省略 / 留空 = 全量加载。"
+    )
+    if data.get("enabled_models"):
+        raise ValueError(
+            f"{message} 请把 {data['enabled_models']!r} 改写为要禁用的模型列表，或直接删除该字段。"
+        )
+    logger.warning("%s 该字段当前为空，可直接删除。", message)
+
+
 def load_settings() -> Settings:
     """Build Settings from defaults < config.yaml < environment overrides."""
     _load_dotenv()
@@ -167,14 +215,9 @@ def load_settings() -> Settings:
 
         s.providers = _parse_providers(data.get("providers") or {})
 
-        enabled = data.get("enabled_models")
-        if isinstance(enabled, str):
-            enabled = [enabled]  # tolerate a scalar (forgot YAML list syntax)
-        elif enabled is not None and not isinstance(enabled, list):
-            raise ValueError(
-                f"enabled_models must be a string or list, got {type(enabled).__name__}"
-            )
-        s.enabled_models = enabled or None  # [] / null → load all
+        _reject_enabled_models(data)
+        s.disabled_models = _parse_name_list(data.get("disabled_models"), "disabled_models")
+        s.disabled_tools = _parse_name_list(data.get("disabled_tools"), "disabled_tools")
 
     # The cfgpu provider is synthesized from the top-level cfgpu_api settings
     # rather than declared under `providers:`. Those fields predate providers and

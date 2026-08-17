@@ -84,3 +84,58 @@ def test_hallucinated_model_id_is_rejected_by_enum():
     prop = _model_schema("understand_vision")
     string_branch = next(b for b in prop["anyOf"] if b.get("type") == "string")
     assert "qwen-3-vl-plus" not in string_branch["enum"]
+
+
+# ── ③ disabled_tools (config.yaml trims the exposed MCP surface) ─────────────
+
+
+def _fresh_server():
+    """A second FastMCP with the same tools, so tests can trim it without
+    mutating the module-level singleton the other tests read."""
+    from mcp.server.fastmcp import FastMCP
+
+    from cfgpu_mcp.tools import generate, models, tasks, understand
+
+    fresh = FastMCP("cfdream-test")
+    for module in (generate, understand, tasks, models):
+        module.register(fresh)
+    return fresh
+
+
+def _apply(monkeypatch, disabled_tools):
+    monkeypatch.setattr(
+        "cfgpu_mcp.config.get_settings",
+        lambda: Settings(disabled_tools=disabled_tools),
+    )
+    fresh = _fresh_server()
+    server._apply_disabled_tools(fresh)
+    return {tool.name for tool in fresh._tool_manager.list_tools()}
+
+
+def test_disabled_tools_are_unregistered(monkeypatch):
+    names = _apply(monkeypatch, ["generate_audio", "understand_vision"])
+    assert "generate_audio" not in names
+    assert "understand_vision" not in names
+    assert {"generate_image", "generate_video", "task_wait"} <= names
+
+
+def test_no_disabled_tools_keeps_full_surface(monkeypatch):
+    assert _apply(monkeypatch, None) == {t.name for t in _fresh_server()._tool_manager.list_tools()}
+
+
+def test_unknown_disabled_tool_fails_at_startup(monkeypatch):
+    """A typo would silently leave the tool exposed — the one thing the field
+    exists to prevent — so it must not be tolerated."""
+    with pytest.raises(ValueError, match="generate_gif"):
+        _apply(monkeypatch, ["generate_gif"])
+
+
+def test_disabled_tool_is_not_callable(monkeypatch):
+    """Removed, not merely hidden from tools/list: a client that calls the name
+    anyway gets 'unknown tool' rather than reaching a live handler."""
+    monkeypatch.setattr(
+        "cfgpu_mcp.config.get_settings", lambda: Settings(disabled_tools=["generate_audio"])
+    )
+    fresh = _fresh_server()
+    server._apply_disabled_tools(fresh)
+    assert fresh._tool_manager.get_tool("generate_audio") is None

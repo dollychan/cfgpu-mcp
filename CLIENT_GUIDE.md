@@ -26,7 +26,8 @@ task_db:
   url: sqlite:///~/.cfgpu/tasks.db        # 或 postgresql://user:pass@host:5432/cfgpu；亦可写 $DATABASE_URL / ${VAR} 从环境变量读取（变量未设置则启动报错）
   pool_min: 1                              # Postgres 连接池（SQLite 忽略）
   pool_max: 10
-enabled_models: []            # 白名单覆盖；空 / 省略 = 全量加载
+disabled_models: []           # 模型黑名单；空 / 省略 = 全量加载
+disabled_tools: []            # 不注册的 MCP 工具；空 / 省略 = 全量暴露
 ```
 
 ### 可选：接入非 CFGPU 的上游（`providers:`）
@@ -58,7 +59,7 @@ providers:
 | `CFGPU_CONFIG` | config.yaml 路径（否则取 `./config.yaml`） |
 | 各 provider 的 `token_env` | 仅在配了 `providers:` 时需要，例如 `COMFY_GATEWAY_TOKEN`（见上文） |
 
-> `transport` / `http` / `cfgpu_api.*`（base_url、http_timeout、connect_timeout）/ `task_db.*` / `enabled_models` **只在 config.yaml 配置**，不再有对应的环境变量 override，避免多处设置。需要从环境读 DB URL 时，在 `task_db.url` 写 `$DATABASE_URL` / `${VAR}`（见上文）。
+> `transport` / `http` / `cfgpu_api.*`（base_url、http_timeout、connect_timeout）/ `task_db.*` / `disabled_models` / `disabled_tools` **只在 config.yaml 配置**，不再有对应的环境变量 override，避免多处设置。需要从环境读 DB URL 时，在 `task_db.url` 写 `$DATABASE_URL` / `${VAR}`（见上文）。
 
 ### 仅环境变量（无 config.yaml 对应项）
 
@@ -111,15 +112,39 @@ providers:
 
 > **MCP 工具命名**：MCP server 内部名称为 `cfgpu`。Claude Desktop 等 MCP Host 直接以原始名称展示工具（`generate_image` 等）。如果使用 `langchain-mcp-adapters` 之类的第三方 MCP 客户端加载工具，客户端通常会自动拼接 server 名作为前缀，工具名变为 `cfgpu_generate_image`、`cfgpu_generate_video` 等。若需与 Mode B 的 `get_langgraph_tools()` 保持命名一致，建议直接使用 Mode B3，跳过 MCP 协议层。
 
-### 可选：限制加载的模型
+### 可选：屏蔽部分模型
 
-在 config.yaml 的 `enabled_models` 白名单里列出要加载的 `adapter_id`（或 `model_name` / `cfgpu_model_id`，省略 / 留空 = 全量）：
+在 config.yaml 的 `disabled_models` 黑名单里列出**不要加载**的模型 —— 写 `model_name`（工具参数用的那个）即可，`adapter_id` / `cfgpu_model_id` 也认；省略 / 留空 = 全量加载：
 
 ```yaml
-enabled_models:
-  - wan-2-0-fast
+disabled_models:
+  - wan-video-fast
   - doubao-seedream-5-0-lite
 ```
+
+被禁用的模型不会注册：不出现在 `list_models`，不出现在工具 schema 的 `model` 枚举，`model="auto"` 也永远选不到它。
+
+这里是黑名单而不是白名单：模型只会越来越多，「列出要排除的」在新增模型后依然正确，而白名单会把每个新模型都默默挡住，直到有人想起来去补一笔。
+
+禁用一个被别的模型 `extends:` 的父模型是安全的 —— 变体是从 YAML 继承字段，不是从注册后的 adapter。
+
+> 旧的 `enabled_models` 白名单已被移除。config.yaml 里如果还留着**非空**的 `enabled_models`，启动会直接报错（两者含义相反，静默忽略会把本该关掉的模型全部放出来）；留着空值只是一条警告。
+
+### 可选：裁剪暴露的 MCP 工具
+
+在 config.yaml 的 `disabled_tools` 里列出**不要注册**的工具，例如只做图的部署不必把视频/音频工具塞进每一次模型上下文：
+
+```yaml
+disabled_tools:
+  - generate_audio
+  - understand_vision
+```
+
+可用的名字：`generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`task_status`、`task_wait`、`list_models`、`get_model_card`。写错名字会在启动时报错 —— 这个字段的意义就是「某个工具不暴露」，拼错却静默通过，恰好等于没生效。
+
+被禁用的工具是**注销**而非隐藏：客户端硬调它会得到 "unknown tool"。注意 `task_status` / `task_wait` 是异步任务取结果的唯一入口，和 `generate_video` 一起留着才有意义。
+
+该配置只作用于 MCP（Mode A）。Mode B / Mode C 直接调 service 层，用 `get_anthropic_tools(tools=[...])` 自行筛选。
 
 ### 使用 MCP Inspector 调试
 
@@ -235,14 +260,19 @@ tools = get_anthropic_tools(tools=["generate_image", "list_models"])
 
 ### 只加载部分模型
 
-在 config.yaml 的 `enabled_models` 白名单里指定，或在代码中提前初始化 registry：
+在 config.yaml 的 `disabled_models` 黑名单里排除，或在代码中提前初始化 registry：
 
 ```python
 from cfgpu_mcp.config import get_registry
 
 # 只加载两个模型（影响 auto 路由和 list_models 结果）
 get_registry(enabled_models=["wan-2-0-fast", "doubao-seedream-5-0-lite"])
+
+# 或反过来，排除若干模型
+get_registry(disabled_models=["wan-2-0-fast"])
 ```
+
+`enabled_models` 白名单只保留在代码入口（嵌入方常常明确知道自己要哪几个），config.yaml 那侧只有黑名单。两者可以同时给，同一个模型被两边点到时**黑名单赢**。
 
 ### 直接调用 service 层（不经过 Agent）
 

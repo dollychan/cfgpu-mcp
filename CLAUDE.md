@@ -159,7 +159,7 @@ Both are reclassified from `task_failed` to `invalid_params` (`_MINIMAX_CALLER_F
 - `tool_registry.py` — Pydantic schemas + `get_anthropic_tools()` + `NormalizedResult`
 - `adapters/base.py` — `ModelAdapter` ABC + `@register_python_adapter` decorator
 - `adapters/registry.py` — YAML loading, `extends` merge, Python class resolution
-- `config.py` — Singleton registry/client/DB; `load_registry()` reads `enabled_models` from config.yaml
+- `config.py` — Singleton registry/client/DB; `load_registry()` reads `disabled_models` from config.yaml
 - `router.py` — Scores adapters for `model="auto"` requests; Chinese prompts bias toward Seedream
 - `task_manager.py` — Sync/async dispatch, exponential backoff polling, DB persistence
 - `agent/dispatcher.py` — `dispatch_tool(name, inputs)` entry point for Mode B (Anthropic SDK)
@@ -168,7 +168,14 @@ Both are reclassified from `task_failed` to `invalid_params` (`_MINIMAX_CALLER_F
 
 ### Configuration
 
-Non-secret config lives **only** in `config.yaml` (single source — see `config.example.yaml`): `transport`, `http.*`, `cfgpu_api.*` (base_url, http_timeout, connect_timeout), `task_db.*`, `enabled_models`. There are no per-field environment overrides. `task_db.url` may reference the environment via `$VAR` / `${VAR}` (e.g. `url: $DATABASE_URL`).
+Non-secret config lives **only** in `config.yaml` (single source — see `config.example.yaml`): `transport`, `http.*`, `cfgpu_api.*` (base_url, http_timeout, connect_timeout), `task_db.*`, `disabled_models`, `disabled_tools`. There are no per-field environment overrides. `task_db.url` may reference the environment via `$VAR` / `${VAR}` (e.g. `url: $DATABASE_URL`).
+
+### Trimming what's exposed — `disabled_models` / `disabled_tools`
+
+Both are config.yaml **blocklists**; omitted / null / `[]` all mean "nothing disabled". Blocklists rather than allowlists because the fleet only grows: a config naming what to *drop* stays correct when a model is added, while a whitelist silently hides every new model until someone extends it. The old `enabled_models` whitelist is gone — a leftover **non-empty** one raises at `load_settings()` (`_reject_enabled_models`), since the two mean opposite things and ignoring it would load exactly the models it was written to exclude; a leftover empty one only warns, so no deployment breaks on upgrade.
+
+- **`disabled_models`** filters in `AdapterRegistry._is_enabled()` at load time, so a blocked model leaves `list_models`, the tools' `model` enum, and `model="auto"` routing at once — the same mechanism as `_has_provider()`. Names may be `model_name` / `adapter_id` / `cfgpu_model_id` (whatever `registry.get()` resolves). `get_registry()` / `load_registry()` still take an `enabled_models` allowlist for embedders — config.yaml has only the blocklist; both may be given and the blocklist wins. Disabling a model that others `extends:` is safe: `_merge_extends()` reads the raw YAML configs, not the registered adapters (`test_disabled_parent_still_supplies_extends_fields`).
+- **`disabled_tools`** runs in `server._apply_disabled_tools()` at import time, after `register()` and *before* the three schema injectors. It calls `ToolManager.remove_tool()` — unregistered, not hidden from `tools/list`, so calling a disabled name returns "unknown tool". An unknown name raises at startup: the field exists to make a tool *not* exposed, and a typo passing silently is exactly the failure it was written to prevent. Mode A only; Mode B / C reach the service layer directly and filter with `get_anthropic_tools(tools=[...])`.
 
 Environment variables (no config.yaml equivalent):
 
