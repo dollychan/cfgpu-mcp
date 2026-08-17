@@ -240,3 +240,94 @@ def test_turbo_reuses_class_with_own_model_id():
 ])
 def test_extract_audio_url(resp, expected):
     assert _extract_audio_url(resp) == expected
+
+
+# ── MiniMax business-error translation ───────────────────────────────────────
+# The upstream status_msg names the offending field and stops there ("invalid
+# params: voice_setting emotion"). That tells a caller *that* it failed, not what
+# to do next, and the two codes we see in production need opposite advice: 2054
+# has an authoritative list to copy from, 2013 names a field the card never
+# enumerates. These pin that each carries its own remedy.
+
+def _minimax_error(status_code, status_msg=""):
+    adapter = _minimax_adapter()
+    resp = {"output": {"base_resp": {"status_code": status_code, "status_msg": status_msg}}}
+    with pytest.raises(CFGPUError) as exc_info:
+        adapter.parse_response(resp)
+    return exc_info.value
+
+
+def test_emotion_rejection_is_classified_caller_fixable():
+    """2013 is a bad argument, not a generation failure — task_failed misleads."""
+    error = _minimax_error(2013, "invalid params, invalid params: voice_setting emotion")
+
+    assert error.error_type == "invalid_params"
+    assert error.retryable is False
+
+
+def test_emotion_rejection_names_the_actionable_fix():
+    error = _minimax_error(2013, "invalid params, invalid params: voice_setting emotion")
+
+    # Says what to do, not just what broke.
+    assert "emotion" in error.user_message
+    assert "省略" in error.user_message
+    # The card-documented alternative that cannot fail this way.
+    assert "(laughs)" in error.user_message
+
+
+def test_emotion_rejection_suppresses_the_card_hint():
+    """The card documents the field but publishes no enum — the hint is a dead end."""
+    error = _minimax_error(2013, "invalid params, invalid params: voice_setting emotion")
+    message = error.to_tool_result_dict()["message"]
+
+    assert "get_model_card" not in message
+
+
+def test_generic_2013_without_emotion_stays_actionable_but_keeps_card_hint():
+    """A 2013 about some other field has no special remedy; the card may well help."""
+    error = _minimax_error(2013, "invalid params: audio_setting sample_rate")
+    error.model_id = "MiniMax/speech-2.8-hd"
+
+    assert error.error_type == "invalid_params"
+    assert "get_model_card" in error.to_tool_result_dict()["message"]
+
+
+def test_voice_rejection_explains_cross_family_reuse():
+    """The top cause of 2054 is a seed-tts speaker sent to MiniMax."""
+    error = _minimax_error(2054, "voice id not exist")
+
+    assert "_uranus_bigtts" in error.user_message
+    assert "seed-tts" in error.user_message
+
+
+def test_voice_rejection_offers_the_documented_default():
+    error = _minimax_error(2054, "voice id not exist")
+
+    assert "male-qn-qingse" in error.user_message
+
+
+def test_voice_rejection_keeps_the_card_hint():
+    """Unlike emotion, the card really does carry the full 系统音色列表."""
+    error = _minimax_error(2054, "voice id not exist")
+    error.model_id = "MiniMax/speech-2.8-hd"
+
+    assert "get_model_card" in error.to_tool_result_dict()["message"]
+
+
+def test_unknown_status_code_keeps_generic_failure_classification():
+    """Only codes we understand get reclassified; the rest stay as they were."""
+    error = _minimax_error(1002, "rate limit")
+
+    assert error.error_type == "task_failed"
+    assert "1002" in error.user_message
+    assert "rate limit" in error.user_message
+
+
+def test_translated_errors_preserve_the_raw_upstream_payload():
+    """The remedy is added to the message; the original is never rewritten."""
+    error = _minimax_error(2054, "voice id not exist")
+
+    assert error.original == {"status_code": 2054, "status_msg": "voice id not exist"}
+    # The upstream wording is still quoted for the human reading the log.
+    assert "voice id not exist" in error.user_message
+    assert "2054" in error.user_message

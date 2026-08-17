@@ -137,6 +137,17 @@ The two diverge on **failures**: `CFGPUError` carries `request_id` (`CFGPUError.
 
 `-> dict` tool annotations produce no `outputSchema`, so FastMCP (`convert_result`) and the lowlevel server pass a returned `CallToolResult` through verbatim with no output validation. Error dicts (`error` truthy) and non-dict results pass through `split_structured` unchanged, so the model still sees the full failure reason. The split is **MCP-tool-layer only** — Mode B (agent dispatcher) and Mode C (CLI) call the service layer directly and are unaffected.
 
+### Upstream error translation (`card_hint`)
+
+`CFGPUError.to_tool_result_dict()` appends "请调用 get_model_card …" for the types in `_CARD_HINT_TYPES`. That sentence assumes the card can answer the question — pass `card_hint=False` when it can't, and state the concrete remedy in `user_message` instead. The flag only ever **suppresses**; a type with no hint never gains one.
+
+The MiniMax speech adapter is the worked example (`adapters/audio_tts.py`). MiniMax returns parameter rejections inside an HTTP-200 body whose `status_msg` names the offending field and stops there (`invalid params: voice_setting emotion`) — that says *what* broke and nothing about what to do, so the caller retries with another guess. `_minimax_remedy()` maps `(status_code, status_msg)` to an actionable sentence appended after the verbatim upstream wording, and the two production codes need **opposite** advice:
+
+- **2054** (`voice id not exist`) — an authoritative list exists (the card's `系统音色列表`), so the remedy points at it and names the two mistakes behind most of these: reusing a seed-tts speaker (`*_uranus_bigtts` / `saturn_*`) on MiniMax, and "normalising" an id that legitimately contains a trailing space / full-width bracket / irregular casing. Card hint **kept**.
+- **2013** (`voice_setting emotion`) — no authoritative list exists anywhere: the card documents the field but never enumerates its values. Pointing at the card sends the caller after something that isn't written down and implies a correct value is discoverable, which invites the very retry loop this is meant to stop. Card hint **suppressed**; the remedy is to omit the field (auto-inference is the design) or carry the emotion via the card-documented inline text markers, which cannot fail this way.
+
+Both are reclassified from `task_failed` to `invalid_params` (`_MINIMAX_CALLER_FIXABLE_CODES`) — `task_failed` reads as "generation failed" and invites a retry that can never succeed. Codes outside the table keep their previous classification; guessing at an unknown code is worse than the status quo. The upstream wording is always quoted first and `original` is never rewritten, so a report stays joinable with MiniMax's own logs.
+
 ### Adding a new model
 
 1. Create `src/cfgpu_mcp/models/<adapter-id>/adapter.yaml` (use `extends:` if similar to an existing model)

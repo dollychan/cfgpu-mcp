@@ -128,3 +128,34 @@ def test_request_id_echoed_in_tool_result():
 def test_request_id_absent_when_not_set():
     err = CFGPUError(error_type="task_failed", user_message="失败")
     assert "request_id" not in err.to_tool_result_dict()
+
+
+# ── card_hint suppression ────────────────────────────────────────────────────
+# Some invalid_params failures name a field the model card does not document at
+# all (MiniMax's ``emotion`` has no published enum). Pointing the caller at the
+# card there sends it to look up something that isn't written down, so the flag
+# lets a raiser that already knows the remedy turn the generic hint off.
+
+def test_card_hint_suppressed_when_explicitly_disabled():
+    err = CFGPUError(
+        error_type="invalid_params",
+        user_message="参数错误",
+        model_id="MiniMax/speech-2.8-hd",
+        card_hint=False,
+    )
+    d = err.to_tool_result_dict()
+    assert "get_model_card" not in d["message"]
+    # The model is still reported — only the hint sentence is dropped.
+    assert d["model_id"] == "MiniMax/speech-2.8-hd"
+
+
+def test_card_hint_defaults_to_error_type_behaviour():
+    """Omitting the flag preserves the existing per-error_type default exactly."""
+    err = CFGPUError(error_type="invalid_params", user_message="参数错误", model_id="wan-2-0")
+    assert "get_model_card" in err.to_tool_result_dict()["message"]
+
+
+def test_card_hint_true_does_not_force_hint_on_unhinted_type():
+    """The flag can only suppress; it never adds a hint to a type that has none."""
+    err = CFGPUError(error_type="auth", user_message="Token 无效", model_id="wan-2-0", card_hint=True)
+    assert "get_model_card" not in err.to_tool_result_dict()["message"]

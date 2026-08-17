@@ -66,6 +66,7 @@ class CFGPUError(Exception):
         retryable: bool | None = None,
         model_id: str | None = None,
         request_id: str | None = None,
+        card_hint: bool | None = None,
     ) -> None:
         super().__init__(user_message)
         self.error_type: ErrorType = error_type
@@ -81,6 +82,18 @@ class CFGPUError(Exception):
         # the only echo field carried here: the sibling ``caption`` labels an artifact,
         # and a failed call produced none.
         self.request_id: str | None = request_id
+        # Opt-out for the generic "call get_model_card" sentence. ``None`` (the
+        # default) keeps the per-error_type behaviour; ``False`` suppresses it.
+        #
+        # The hint assumes the card can answer the question, which is not always
+        # true: MiniMax's ``emotion`` is *documented* on the card but never
+        # *enumerated* there, so an invalid_params failure naming that field would
+        # send the caller to look up something that isn't written down — and, worse,
+        # would read as if a correct value were discoverable. A raiser that already
+        # knows the concrete remedy sets this to False and states it instead.
+        #
+        # It can only ever suppress: a type that has no hint never gains one.
+        self.card_hint: bool | None = card_hint
 
     def __repr__(self) -> str:
         return f"CFGPUError(type={self.error_type!r}, retryable={self.retryable}, msg={self.user_message!r})"
@@ -131,7 +144,7 @@ class CFGPUError(Exception):
 
     def to_tool_result_dict(self) -> dict:
         message = self.user_message
-        if self.model_id and self.error_type in _CARD_HINT_TYPES:
+        if self.card_hint is not False and self.model_id and self.error_type in _CARD_HINT_TYPES:
             message += f" 请调用 get_model_card 获取模型 {self.model_id} 的详细参数说明和使用示例。"
         result: dict = {
             "error": True,
