@@ -129,6 +129,26 @@ def test_minimax_emotion_only_when_set():
     assert vs["emotion"] == "happy"
 
 
+@pytest.mark.parametrize(
+    "emotion",
+    [
+        "happy",
+        "sad",
+        "angry",
+        "fearful",
+        "disgusted",
+        "surprised",
+        "calm",
+        "fluent",
+        "whisper",
+    ],
+)
+def test_minimax_supports_every_documented_emotion(emotion):
+    adapter = _minimax_adapter()
+    ok, reason = adapter.supports(GenerateAudioInput(text="x", emotion=emotion))
+    assert ok, reason
+
+
 def test_minimax_voice_speed_overrides():
     adapter = _minimax_adapter()
     req = GenerateAudioInput(text="x", voice="female-1", speed=1.5, volume=2.0, pitch=3,
@@ -245,9 +265,8 @@ def test_extract_audio_url(resp, expected):
 # ── MiniMax business-error translation ───────────────────────────────────────
 # The upstream status_msg names the offending field and stops there ("invalid
 # params: voice_setting emotion"). That tells a caller *that* it failed, not what
-# to do next, and the two codes we see in production need opposite advice: 2054
-# has an authoritative list to copy from, 2013 names a field the card never
-# enumerates. These pin that each carries its own remedy.
+# to do next. Both fields now have authoritative ranges, so each rejection should
+# return its concrete valid set instead of inviting another guess.
 
 def _minimax_error(status_code, status_msg=""):
     adapter = _minimax_adapter()
@@ -271,16 +290,18 @@ def test_emotion_rejection_names_the_actionable_fix():
     # Says what to do, not just what broke.
     assert "emotion" in error.user_message
     assert "省略" in error.user_message
+    assert "fearful" in error.user_message
+    assert "whisper" in error.user_message
     # The card-documented alternative that cannot fail this way.
     assert "(laughs)" in error.user_message
 
 
-def test_emotion_rejection_suppresses_the_card_hint():
-    """The card documents the field but publishes no enum — the hint is a dead end."""
+def test_emotion_rejection_keeps_the_card_hint_for_the_documented_enum():
     error = _minimax_error(2013, "invalid params, invalid params: voice_setting emotion")
+    error.model_id = "MiniMax/speech-2.8-hd"
     message = error.to_tool_result_dict()["message"]
 
-    assert "get_model_card" not in message
+    assert "get_model_card" in message
 
 
 def test_generic_2013_without_emotion_stays_actionable_but_keeps_card_hint():

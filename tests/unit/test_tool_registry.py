@@ -85,6 +85,22 @@ def test_generate_video_schema_has_model_specific():
     assert "model_specific" in props
 
 
+def test_generate_audio_schema_has_exact_emotion_enum():
+    tools = get_anthropic_tools(tools=["generate_audio"])
+    emotion = tools[0]["input_schema"]["properties"]["emotion"]
+    assert set(emotion["anyOf"][0]["enum"]) == {
+        "happy",
+        "sad",
+        "angry",
+        "fearful",
+        "disgusted",
+        "surprised",
+        "calm",
+        "fluent",
+        "whisper",
+    }
+
+
 
 
 # ── Schema validation for newly-exposed capabilities ──────────────────────────

@@ -1,4 +1,3 @@
-import pytest
 from cfgpu_mcp.errors import CFGPUError
 
 
@@ -131,10 +130,9 @@ def test_request_id_absent_when_not_set():
 
 
 # ── card_hint suppression ────────────────────────────────────────────────────
-# Some invalid_params failures name a field the model card does not document at
-# all (MiniMax's ``emotion`` has no published enum). Pointing the caller at the
-# card there sends it to look up something that isn't written down, so the flag
-# lets a raiser that already knows the remedy turn the generic hint off.
+# Some invalid_params failures name opaque upstream-only fields the model card
+# cannot explain. The flag lets a raiser with a concrete remedy turn the generic
+# hint off.
 
 def test_card_hint_suppressed_when_explicitly_disabled():
     err = CFGPUError(

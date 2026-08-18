@@ -16,6 +16,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
 from cfgpu_mcp.errors import CFGPUError
@@ -516,6 +517,62 @@ async def test_audio_validate_only_accepts_exact_system_voice_ids(model, voice):
         )
 
     assert result["validated"] is True
+
+
+@pytest.mark.parametrize(
+    "emotion",
+    [
+        "happy",
+        "sad",
+        "angry",
+        "fearful",
+        "disgusted",
+        "surprised",
+        "calm",
+        "fluent",
+        "whisper",
+    ],
+)
+@pytest.mark.asyncio
+async def test_audio_validate_only_accepts_every_minimax_emotion(emotion):
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(
+            text="hello",
+            model="MiniMax/speech-2.8-hd",
+            emotion=emotion,
+            validate_only=True,
+        )
+
+    assert result["validated"] is True
+    assert result["payload"]["input"]["voice_setting"]["emotion"] == emotion
+
+
+@pytest.mark.asyncio
+async def test_audio_validate_only_rejects_emotion_outside_enum():
+    with pytest.raises(ValidationError):
+        await audio_service.generate_audio(
+            text="hello",
+            model="MiniMax/speech-2.8-hd",
+            emotion="excited",
+            validate_only=True,
+        )
+
+
+@pytest.mark.asyncio
+async def test_audio_validate_only_silently_drops_emotion_for_seed_tts():
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(
+            text="hello",
+            model="seed-tts-2.0",
+            emotion="happy",
+            validate_only=True,
+        )
+
+    assert result["validated"] is True
+    assert result["corrected_args"]["emotion"] is None
+    assert "emotion" not in result["payload"]["req_params"]
 
 
 @pytest.mark.parametrize(

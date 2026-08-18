@@ -98,6 +98,9 @@ def _voice_ids_from_card(model_dir: str) -> frozenset[str]:
 
 _SEED_SYSTEM_VOICES = _voice_ids_from_card("seed-tts-2-0")
 _MINIMAX_SYSTEM_VOICES = _voice_ids_from_card("minimax-speech-2-8-hd")
+_MINIMAX_EMOTIONS = frozenset(
+    {"happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent", "whisper"}
+)
 
 
 def _invalid_voice_reason(model_name: str, voice: str, voices: frozenset[str]) -> str:
@@ -151,13 +154,9 @@ def _extract_inline_audio(resp: dict) -> dict | None:
 #   ``系统音色列表``. The remedy points there, plus the two mistakes that produce
 #   most of these — reusing a seed-tts speaker on MiniMax, and "normalising" an id
 #   that legitimately contains odd bytes (trailing space, full-width bracket).
-# * **2013 (emotion)** has no authoritative answer anywhere. The card documents
-#   the field but never enumerates its values, so pointing at the card sends the
-#   caller after something that isn't written down — and reads as if a correct
-#   value were discoverable, which invites exactly the retry loop we're trying to
-#   stop. The remedy is to drop the field (auto-inference is the designed default)
-#   or carry the emotion in the text via the card-documented inline markers, which
-#   cannot fail this way. Hence ``card_hint=False`` on that branch.
+# * **2013 (emotion)** has a fixed nine-value enum. The remedy lists it and also
+#   preserves the automatic-inference option for callers that do not need explicit
+#   control. The model card carries the same authoritative list.
 #
 # Codes outside this table keep their existing generic classification: guessing at
 # an unknown code's meaning would be worse than the status quo.
@@ -170,17 +169,15 @@ _MINIMAX_VOICE_REMEDY = (
 )
 
 _MINIMAX_EMOTION_REMEDY = (
-    "emotion 取值被拒。该字段没有公开的取值枚举（模型卡只举例、不列举全集），"
-    "因此无处可查，也不要再换一个值重试："
-    "省略 emotion 让模型按文本自动推断语气（推荐），"
-    "或把情绪写进 text 的内嵌标记（如「今天真开心(laughs)」）——后者不会触发本错误。"
-    "确需显式指定时，只用模型卡示范过的 happy / sad / angry。"
+    "emotion 仅支持 happy / sad / angry / fearful / disgusted / surprised / "
+    "calm / fluent / whisper。也可以省略 emotion，让模型按文本自动推断语气，"
+    "或把情绪写进 text 的内嵌标记（如「今天真开心(laughs)」）。"
 )
 
 # status_msg 里出现的字段名 → 该字段的专用建议；先按字段匹配，命中即用。
-# 第三项是「是否保留 get_model_card 提示」——见上方对 emotion 的说明。
+# 第三项是「是否保留 get_model_card 提示」。
 _MINIMAX_FIELD_REMEDIES: tuple[tuple[str, str, bool], ...] = (
-    ("emotion", _MINIMAX_EMOTION_REMEDY, False),
+    ("emotion", _MINIMAX_EMOTION_REMEDY, True),
     ("voice", _MINIMAX_VOICE_REMEDY, True),
 )
 
@@ -225,6 +222,8 @@ class SeedTTSAdapter(ModelAdapter):
             corrected["audio_format"] = "mp3"
         if req.voice is not None and req.voice != req.voice.strip():
             corrected["voice"] = req.voice.strip()
+        if req.emotion is not None:
+            corrected["emotion"] = None
         return corrected
 
     def supports(self, req: "GenerateAudioInput") -> tuple[bool, str]:
@@ -334,6 +333,11 @@ class MiniMaxSpeechAdapter(ModelAdapter):
             return False, f"{self.adapter_id} requires non-empty text"
         if req.voice is not None and req.voice not in _MINIMAX_SYSTEM_VOICES:
             return False, _invalid_voice_reason(self.model_name, req.voice, _MINIMAX_SYSTEM_VOICES)
+        if req.emotion is not None and req.emotion not in _MINIMAX_EMOTIONS:
+            return False, (
+                f"{self.adapter_id} does not support emotion {req.emotion!r} "
+                f"(supported: {', '.join(sorted(_MINIMAX_EMOTIONS))})"
+            )
         if req.audio_format not in {"mp3", "wav", "flac"}:
             return False, f"{self.adapter_id} supports audio_format mp3, wav, or flac"
         if req.sample_rate is not None and req.sample_rate <= 0:

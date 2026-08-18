@@ -403,10 +403,22 @@ class GenerateAudioInput(BaseModel):
     speed: float = Field(default=1.0, description="Speech speed multiplier (MiniMax only)")
     volume: float = Field(default=1.0, description="Speech volume multiplier (MiniMax only)")
     pitch: int = Field(default=0, description="Speech pitch offset (MiniMax only)")
-    emotion: Optional[str] = Field(
+    emotion: Optional[
+        Literal[
+            "happy",
+            "sad",
+            "angry",
+            "fearful",
+            "disgusted",
+            "surprised",
+            "calm",
+            "fluent",
+            "whisper",
+        ]
+    ] = Field(
         default=None,
-        description="Emotion hint such as 'happy', 'sad', 'angry' (MiniMax only). "
-        "None lets the model infer emotion from the text.",
+        description="MiniMax emotion control: happy, sad, angry, fearful, disgusted, "
+        "surprised, calm, fluent, or whisper. None lets the model infer emotion from text.",
     )
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
     wait: bool = Field(default=True, description="Wait for task completion before returning")

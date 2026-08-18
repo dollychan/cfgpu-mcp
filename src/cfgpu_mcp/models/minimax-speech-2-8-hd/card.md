@@ -35,13 +35,15 @@ MiniMax 语音大模型能够根据上下文，智能预测文本的情绪、语
 | speed | input.voice_setting.speed | 1.0 | 语速 |
 | volume | input.voice_setting.vol | 1.0 | 音量 |
 | pitch | input.voice_setting.pitch | 0 | 音调 |
-| emotion | input.voice_setting.emotion | （自动推断） | 情绪，如 happy/sad/angry |
+| emotion | input.voice_setting.emotion | （自动推断） | `happy` / `sad` / `angry` / `fearful` / `disgusted` / `surprised` / `calm` / `fluent` / `whisper` |
 | sample_rate | input.audio_setting.sample_rate | 32000 | 采样率 |
 | bitrate | input.audio_setting.bitrate | 128000 | 比特率 |
 | audio_format | input.audio_setting.format | mp3 | 输出格式 |
 | model_specific | （顶层合并） | - | 其他直传参数，如 pronunciation_dict、subtitle_enable |
 
 > 文本中可内嵌情绪/事件标记，如 `今天是不是很开心呀(laughs)，当然了！`
+
+`emotion` 的 9 个枚举依次用于控制：高兴、悲伤、愤怒、害怕、厌恶、惊讶、中性、生动、低语。
 
 ## 示例
 

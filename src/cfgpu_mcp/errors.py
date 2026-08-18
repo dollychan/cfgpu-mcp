@@ -86,11 +86,8 @@ class CFGPUError(Exception):
         # default) keeps the per-error_type behaviour; ``False`` suppresses it.
         #
         # The hint assumes the card can answer the question, which is not always
-        # true: MiniMax's ``emotion`` is *documented* on the card but never
-        # *enumerated* there, so an invalid_params failure naming that field would
-        # send the caller to look up something that isn't written down — and, worse,
-        # would read as if a correct value were discoverable. A raiser that already
-        # knows the concrete remedy sets this to False and states it instead.
+        # true for opaque upstream-only fields. A raiser that already knows the
+        # concrete remedy may set this to False and state it instead.
         #
         # It can only ever suppress: a type that has no hint never gains one.
         self.card_hint: bool | None = card_hint
