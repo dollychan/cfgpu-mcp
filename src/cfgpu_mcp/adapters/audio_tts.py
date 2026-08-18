@@ -284,6 +284,14 @@ class SeedTTSAdapter(ModelAdapter):
     def parse_response(self, resp: dict) -> NormalizedResult:
         data = resp.get("data") or {}
         url = _extract_audio_url(resp)
+        synthesize_text_length = data.get("synthesizeTextLength")
+        if synthesize_text_length is None:
+            synthesize_text_length = data.get("reqTextLength")
+        usage = (
+            {"characters": synthesize_text_length}
+            if synthesize_text_length is not None
+            else None
+        )
         # Prefer the upstream url expiry (epoch seconds) when present.
         expire = data.get("urlExpireTime")
         expires_at = (
@@ -297,7 +305,7 @@ class SeedTTSAdapter(ModelAdapter):
             task_id=data.get("taskId") or data.get("task_id") or resp.get("id"),
             model_used=resp.get("model"),
             seed=None,
-            usage=resp.get("usage"),
+            usage=usage,
         )
 
 

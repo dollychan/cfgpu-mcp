@@ -89,6 +89,14 @@ GET /voice/tasks/{task_id}
 "failure":false}
 ```
 
+查询结果中的 `data.synthesizeTextLength` 是实际合成的计费字符数。adapter 会将其
+转换为统一结果字段；如果该字段缺失，则回退读取 `data.reqTextLength`，两者均缺失时
+不生成 usage：
+
+```json
+{"usage":{"characters":20}}
+```
+
 ## 约束与限制
 
 | 限制项 | 值 |

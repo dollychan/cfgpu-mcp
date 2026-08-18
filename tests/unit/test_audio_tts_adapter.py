@@ -92,11 +92,32 @@ def test_seed_is_async_response_task_id():
     result = adapter.parse_response({
         "code": 20000000, "message": "ok",
         "data": {"taskId": "vt-123", "taskStatus": 2, "audioUrl": "https://x/a.mp3",
+                 "reqTextLength": 21, "synthesizeTextLength": 20,
                  "urlExpireTime": 1782895148},
     })
     assert result.urls == ["https://x/a.mp3"]
     assert result.task_id == "vt-123"
     assert result.expires_at.timestamp() == 1782895148
+    assert result.usage == {"characters": 20}
+
+
+def test_seed_usage_is_none_without_synthesize_text_length():
+    adapter = _seed_adapter()
+    result = adapter.parse_response({"data": {"taskId": "vt-123", "taskStatus": 1}})
+    assert result.usage is None
+
+
+@pytest.mark.parametrize("req_text_length", [20, 0])
+def test_seed_usage_falls_back_to_req_text_length(req_text_length):
+    adapter = _seed_adapter()
+    result = adapter.parse_response({
+        "data": {
+            "taskId": "vt-123",
+            "taskStatus": 2,
+            "reqTextLength": req_text_length,
+        },
+    })
+    assert result.usage == {"characters": req_text_length}
 
 
 def test_seed_model_specific_merges_top_level():
