@@ -347,6 +347,11 @@ class GenerateVideoInput(BaseModel):
         default=None,
         description="Add a watermark. None keeps each model's own default. Supported by all video models.",
     )
+    prompt_extend: bool = Field(
+        default=True,
+        description="Use an LLM to rewrite and expand the prompt before generation. "
+        "Used by WAN 2.6/2.7; disabling it reduces latency and preserves the original prompt.",
+    )
     wait: bool = Field(default=True, description="Wait for task completion before returning")
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
     return_metadata: bool = Field(default=True, description="Include seed, model_used, usage in response")

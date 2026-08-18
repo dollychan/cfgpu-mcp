@@ -56,6 +56,8 @@ def generate() -> None:
               default="balanced", show_default=True)
 @click.option("--watermark/--no-watermark", default=None,
               help="Add/remove watermark (default: model's own default)")
+@click.option("--prompt-extend/--no-prompt-extend", default=True,
+              help="Enable/disable WAN 2.6/2.7 LLM prompt expansion")
 @click.option("--no-wait", is_flag=True,
               help="Return task_id immediately without waiting for completion")
 @click.option("--timeout", type=int, default=None,
@@ -143,7 +145,7 @@ def image_cmd(
 def video_cmd(
     prompt, model, first_frame, last_frame, reference_images, reference_videos,
     reference_audios, duration_seconds, aspect_ratio, resolution, no_audio,
-    quality_tier, watermark, no_wait, timeout, metadata, json_mode, model_specific,
+    quality_tier, watermark, prompt_extend, no_wait, timeout, metadata, json_mode, model_specific,
 ) -> None:
     """Generate a video from PROMPT."""
     from cfgpu_mcp.service import video as svc
@@ -164,6 +166,7 @@ def video_cmd(
             with_audio=not no_audio,
             quality_tier=quality_tier,
             watermark=watermark,
+            prompt_extend=prompt_extend,
             wait=not no_wait,
             timeout=timeout,
             return_metadata=metadata,

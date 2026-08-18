@@ -70,6 +70,7 @@ def test_generate_video_schema_has_reference_fields():
     assert "reference_videos" in props
     assert "reference_audios" in props
     assert "reference_images" in props
+    assert props["prompt_extend"]["default"] is True
 
 
 def test_generate_image_schema_has_model_specific():

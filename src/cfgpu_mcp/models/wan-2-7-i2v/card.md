@@ -36,6 +36,8 @@
 | prompt | input.prompt | 文本提示词 |
 | first_frame | input.media[]（type=first_frame） | 首帧图片 URL（必填） |
 | resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
+| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
+| watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
 | model_specific | （顶层合并） | 透传额外参数 |
 
@@ -62,6 +64,8 @@
   },
   "parameters": {
     "resolution": "720P",
+    "prompt_extend": true,
+    "watermark": false,
     "duration": 5
   }
 }

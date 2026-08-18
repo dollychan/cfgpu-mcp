@@ -67,6 +67,7 @@ def register(mcp: FastMCP) -> None:
         with_audio: bool = True,
         quality_tier: str = "balanced",
         watermark: Optional[bool] = None,
+        prompt_extend: bool = True,
         wait: bool = True,
         timeout: Optional[int] = None,
         return_metadata: bool = True,
@@ -99,6 +100,7 @@ def register(mcp: FastMCP) -> None:
                 with_audio=with_audio,
                 quality_tier=quality_tier,
                 watermark=watermark,
+                prompt_extend=prompt_extend,
                 wait=wait,
                 timeout=timeout,
                 return_metadata=return_metadata,
@@ -155,4 +157,3 @@ def register(mcp: FastMCP) -> None:
             )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
             return tool_error_dict(e)
-

@@ -17,7 +17,8 @@ class WanVideoAdapter(ModelAdapter):
     ``SeedanceVideoAdapter`` (WAN 2.0 / Seedance) nor ``HappyHorseVideoAdapter``:
 
     - **Request** uses the DashScope-style nested envelope like HappyHorse —
-      ``{"model", "input": {...}, "parameters": {"resolution", "duration"}}`` —
+      ``{"model", "input": {...}, "parameters": {"resolution", "ratio",
+      "prompt_extend", "watermark", "duration"}}`` —
       *not* Seedance's flat ``content[]`` array. The ``input`` shape differs per
       member and is built by the ``_build_input`` hook:
         * 万相 2.7 (i2v/r2v/t2v/videoedit): ``{"prompt", "media": [{"type","url"}]}``
@@ -37,6 +38,36 @@ class WanVideoAdapter(ModelAdapter):
 
     adapter_id = "wan-2-7-i2v"
 
+    _ALLOWED_RATIOS = frozenset({"16:9", "9:16", "1:1", "4:3", "3:4"})
+    _RATIOLESS_ADAPTERS = frozenset({"wan-2-6-i2v", "wan-2-7-i2v"})
+
+    def _uses_ratio(self) -> bool:
+        return self.adapter_id not in self._RATIOLESS_ADAPTERS
+
+    def validation_corrections(self, req: "GenerateVideoInput") -> dict:
+        corrected = super().validation_corrections(req)
+        if self._uses_ratio() and req.aspect_ratio not in self._ALLOWED_RATIOS:
+            corrected["aspect_ratio"] = "16:9"
+        return corrected
+
+    def _supports_common(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
+        ok, reason = ModelAdapter.supports(self, req)
+        if not ok:
+            return False, reason
+        assert isinstance(req, GenerateVideoInput)
+        # ``adaptive`` is the unified schema default and maps to this API's 16:9
+        # default. Other unsupported ratios are only corrected by validate_only.
+        if (
+            self._uses_ratio()
+            and req.aspect_ratio != "adaptive"
+            and req.aspect_ratio not in self._ALLOWED_RATIOS
+        ):
+            return False, (
+                f"{self.adapter_id} does not support aspect_ratio {req.aspect_ratio} "
+                f"(supported: {', '.join(sorted(self._ALLOWED_RATIOS))})"
+            )
+        return True, ""
+
     def _output(self, resp: dict) -> dict:
         return resp.get("output") or {}
 
@@ -54,13 +85,20 @@ class WanVideoAdapter(ModelAdapter):
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
+        parameters: dict = {
+            "resolution": req.resolution.upper(),   # 720p → 720P
+            "prompt_extend": req.prompt_extend,
+            "watermark": req.watermark if req.watermark is not None else False,
+            "duration": self.resolve_duration_seconds(req),
+        }
+        if self._uses_ratio():
+            parameters["ratio"] = (
+                req.aspect_ratio if req.aspect_ratio in self._ALLOWED_RATIOS else "16:9"
+            )
         payload: dict = {
             "model": self.cfgpu_model_id,           # Only place cfgpu_model_id is used
             "input": self._build_input(req),
-            "parameters": {
-                "resolution": req.resolution.upper(),   # 720p → 720P
-                "duration": self.resolve_duration_seconds(req),
-            },
+            "parameters": parameters,
         }
         if req.model_specific:
             payload.update(req.model_specific)
@@ -95,7 +133,7 @@ class WanVideoAdapter(ModelAdapter):
         )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
-        ok, reason = super().supports(req)
+        ok, reason = self._supports_common(req)
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
@@ -139,7 +177,7 @@ class WanVideoR2VAdapter(WanVideoAdapter):
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
         # Skip WanVideoAdapter.supports (it requires first_frame); go to base.
-        ok, reason = ModelAdapter.supports(self, req)
+        ok, reason = self._supports_common(req)
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
@@ -168,7 +206,7 @@ class WanVideoT2VAdapter(WanVideoAdapter):
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
         # Skip WanVideoAdapter.supports (it requires first_frame); go to base.
-        ok, reason = ModelAdapter.supports(self, req)
+        ok, reason = self._supports_common(req)
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
@@ -201,7 +239,7 @@ class WanVideoEditAdapter(WanVideoAdapter):
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
         # Skip WanVideoAdapter.supports (it requires first_frame); go to base.
-        ok, reason = ModelAdapter.supports(self, req)
+        ok, reason = self._supports_common(req)
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
@@ -231,7 +269,7 @@ class Wan26VideoT2VAdapter(WanVideoAdapter):
         return {"prompt": req.prompt}
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
-        ok, reason = ModelAdapter.supports(self, req)
+        ok, reason = self._supports_common(req)
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
@@ -262,7 +300,7 @@ class Wan26VideoI2VAdapter(WanVideoAdapter):
         return inp
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
-        ok, reason = ModelAdapter.supports(self, req)
+        ok, reason = self._supports_common(req)
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
@@ -296,7 +334,7 @@ class Wan26VideoR2VAdapter(WanVideoAdapter):
         return {"prompt": req.prompt, "reference_urls": reference_urls}
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
-        ok, reason = ModelAdapter.supports(self, req)
+        ok, reason = self._supports_common(req)
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)

@@ -459,6 +459,47 @@ def test_every_video_model_checks_4k_against_its_resolution_set(
 
 
 @pytest.mark.parametrize(
+    "model,extra",
+    [
+        ("wan2.6-t2v", {}),
+        ("wan2.6-r2v", {"reference_images": ["m_image"]}),
+        ("wan2.7-t2v", {}),
+        ("wan2.7-r2v", {"reference_images": ["m_image"]}),
+        ("wan2.7-videoedit", {"reference_videos": ["m_video"]}),
+    ],
+)
+def test_wan_2_6_and_2_7_fall_back_to_supported_resolution_and_ratio(model, extra):
+    registry = _real_registry()
+    req = GenerateVideoInput(
+        prompt="x", model=model, resolution="480p", aspect_ratio="21:9", **extra
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    result = validate_request(adapter, req)
+
+    assert result["corrected_args"]["resolution"] == "720p"
+    assert result["corrected_args"]["aspect_ratio"] == "16:9"
+    assert result["payload"]["parameters"]["ratio"] == "16:9"
+
+
+@pytest.mark.parametrize("model", ["wan2.6-i2v", "wan2.7-i2v"])
+def test_wan_i2v_ignores_aspect_ratio_because_api_has_no_ratio_parameter(model):
+    registry = _real_registry()
+    req = GenerateVideoInput(
+        prompt="x",
+        model=model,
+        first_frame="m_image",
+        aspect_ratio="21:9",
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    result = validate_request(adapter, req)
+
+    assert "aspect_ratio" not in result["corrected_args"]
+    assert "ratio" not in result["payload"]["parameters"]
+
+
+@pytest.mark.parametrize(
     "model,voice",
     [
         ("seed-tts-2.0", "zh_female_xiaohe_uranus_bigtts"),

@@ -34,6 +34,9 @@
 | prompt | input.prompt | 文本提示词，可引用 character1 等 |
 | reference_videos + reference_images | input.reference_urls | 合并为一个 URL 列表（视频在前，图片在后） |
 | resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
+| aspect_ratio | parameters.ratio | `16:9` / `9:16` / `1:1` / `4:3` / `3:4`，默认 `16:9` |
+| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
+| watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
 | model_specific | （顶层合并） | 透传额外参数 |
 
@@ -46,7 +49,13 @@
     "prompt": "character1在沙发上开心地看电影",
     "reference_urls": ["https://.../vace.mp4"]
   },
-  "parameters": {"resolution": "720P", "duration": 5}
+  "parameters": {
+    "resolution": "720P",
+    "ratio": "16:9",
+    "prompt_extend": true,
+    "watermark": false,
+    "duration": 5
+  }
 }
 ```
 

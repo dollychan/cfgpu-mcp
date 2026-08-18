@@ -75,8 +75,31 @@ def test_payload_nested_envelope():
     assert payload["input"]["media"] == [
         {"type": "first_frame", "url": "https://example.com/cat.jpg"}
     ]
-    # resolution is upper-cased; duration passes through
-    assert payload["parameters"] == {"resolution": "720P", "duration": 5}
+    assert payload["parameters"] == {
+        "resolution": "720P",
+        "prompt_extend": True,
+        "watermark": False,
+        "duration": 5,
+    }
+
+
+def test_i2v_parameters_omit_ratio_but_map_prompt_extend_and_watermark():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(
+        prompt="x",
+        first_frame="https://example.com/f.jpg",
+        aspect_ratio="9:16",
+        prompt_extend=False,
+        watermark=True,
+        duration_seconds=15,
+    )
+
+    assert adapter.build_payload(req)["parameters"] == {
+        "resolution": "720P",
+        "prompt_extend": False,
+        "watermark": True,
+        "duration": 15,
+    }
 
 
 def test_model_specific_merges_at_top_level():
@@ -208,7 +231,13 @@ def test_r2v_media_videos_then_images_in_order():
         {"type": "reference_video", "url": "https://v2.mp4"},
         {"type": "reference_image", "url": "https://i3.png"},
     ]
-    assert payload["parameters"] == {"resolution": "720P", "duration": 5}
+    assert payload["parameters"] == {
+        "resolution": "720P",
+        "ratio": "16:9",
+        "prompt_extend": True,
+        "watermark": False,
+        "duration": 5,
+    }
 
 
 def test_r2v_inherits_output_envelope_parse():
@@ -272,7 +301,20 @@ def test_t2v_payload_has_no_media_key():
     assert payload["model"] == "wan2.7-t2v"
     assert payload["input"] == {"prompt": "雨夜的纽约街头"}
     assert "media" not in payload["input"]
-    assert payload["parameters"] == {"resolution": "720P", "duration": 5}
+    assert payload["parameters"] == {
+        "resolution": "720P",
+        "ratio": "16:9",
+        "prompt_extend": True,
+        "watermark": False,
+        "duration": 5,
+    }
+
+
+def test_t2v_maps_supported_ratio():
+    adapter = _make_t2v_adapter()
+    req = GenerateVideoInput(prompt="x", aspect_ratio="4:3", duration_seconds=5)
+
+    assert adapter.build_payload(req)["parameters"]["ratio"] == "4:3"
 
 
 def test_t2v_text_only_supported():
@@ -316,7 +358,13 @@ def test_videoedit_media_uses_type_video_then_reference_image():
         {"type": "video", "url": "https://src.mp4"},
         {"type": "reference_image", "url": "https://clothes.png"},
     ]
-    assert payload["parameters"] == {"resolution": "720P", "duration": 5}
+    assert payload["parameters"] == {
+        "resolution": "720P",
+        "ratio": "16:9",
+        "prompt_extend": True,
+        "watermark": False,
+        "duration": 5,
+    }
 
 
 @pytest.mark.parametrize(
@@ -349,7 +397,13 @@ def test_wan26_t2v_flat_input():
     )
     assert payload["model"] == "wan2.6-t2v"
     assert payload["input"] == {"prompt": "侦探故事"}
-    assert payload["parameters"] == {"resolution": "720P", "duration": 5}
+    assert payload["parameters"] == {
+        "resolution": "720P",
+        "ratio": "16:9",
+        "prompt_extend": True,
+        "watermark": False,
+        "duration": 5,
+    }
 
 
 def test_wan26_i2v_img_url_and_optional_audio():
@@ -370,6 +424,7 @@ def test_wan26_i2v_img_url_and_optional_audio():
         "img_url": "https://rap.png",
         "audio_url": "https://rap.mp3",
     }
+    assert "ratio" not in payload["parameters"]
     # without audio → no audio_url key
     payload2 = adapter.build_payload(
         GenerateVideoInput(prompt="x", first_frame="https://f.png", duration_seconds=5)
