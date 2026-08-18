@@ -2,7 +2,7 @@ extends: grok-imagine-video-1-5
 card_base: ~
 
 adapter_id: grok-imagine-video
-display_name: "Grok Imagine Video"
+display_name: "CF Imagine Video"
 cfgpu_model_id: grok-imagine-video
 model_name: cf-imagine-video
 

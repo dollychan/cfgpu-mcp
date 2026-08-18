@@ -1,8 +1,8 @@
-# Grok Imagine Video
+# CF Imagine Video
 
-Grok‑Imagine‑Video 是 xAI 开发的文生 / 图生视频生成模型，采用 Aurora 自回归帧架构，可根据文字或图片生成数秒 720p 短视频，并**同步输出音频**。属于生视频多模态模型。
+CF‑Imagine‑Video 是 xAI 开发的文生 / 图生视频生成模型，采用 Aurora 自回归帧架构，可根据文字或图片生成数秒 720p 短视频，并**同步输出音频**。属于生视频多模态模型。
 
-与同家族的 [Grok Imagine Video 1.5](../grok-imagine-video-1-5/card.md) **API 形状完全一致**（同一个 `GrokVideoAdapter`），差别只在价格档位：本模型更便宜，且 480P 以上不再细分（1.5 在 720P 以上另有一档）。
+与同家族的 [CF Imagine Video 1.5](../grok-imagine-video-1-5/card.md) **API 形状完全一致**（同一个 `GrokVideoAdapter`），差别只在价格档位：本模型更便宜，且 480P 以上不再细分（1.5 在 720P 以上另有一档）。
 
 ## 基本信息
 
