@@ -1,4 +1,8 @@
-"""Integration tests — require CFGPU_API_TOKEN, skipped in CI by conftest."""
+"""Integration tests — submit real, billed generations.
+
+Opt in with CFGPU_RUN_INTEGRATION=1; see tests/integration/conftest.py for why
+the gate is an explicit switch and not the presence of a credential.
+"""
 import pytest
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.errors import CFGPUError

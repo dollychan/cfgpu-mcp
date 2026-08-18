@@ -17,8 +17,10 @@ pytest tests/unit/test_adapter_registry.py -v
 # Run a single test
 pytest tests/unit/test_adapter_registry.py::test_extends_chain_resolves_python_class -v
 
-# Run integration tests (requires CFGPU_API_TOKEN in environment)
-CFGPU_API_TOKEN=sk-... pytest tests/integration/ -v
+# Run integration tests — these submit REAL, BILLED generations, so they are
+# opt-in by an explicit switch (a credential in .env is not consent to spend).
+# Also needs a reachable DATABASE_URL: every generate path writes a task row.
+CFGPU_RUN_INTEGRATION=1 pytest tests/integration/ -v
 
 # Run the MCP server (stdio transport)
 cfgpu-mcp
