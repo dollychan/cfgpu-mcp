@@ -68,7 +68,7 @@
 | `reference_images` | `content[].role=reference_image` | 参考图片（0-30，与首/尾帧互斥） |
 | `reference_videos` | `content[].role=reference_video` | 参考视频（0-10） |
 | `reference_audios` | `content[].role=reference_audio` | 参考音频（0-10） |
-| `aspect_ratio` | 顶层 `ratio` | 宽高比，`adaptive` 自动匹配 |
+| `aspect_ratio` | 顶层 `ratio` | 文生/普通参考任务支持指定宽高比或 `adaptive`；首帧/首尾帧任务仅支持 `adaptive`，输出比例跟随首帧 |
 | `duration_seconds` | 顶层 `duration` | 默认 `-1`；取值 4–30 秒，或 `-1` 智能选择 |
 | `resolution` | 顶层 `resolution` | 480p / 720p / 1080p，默认 720p |
 | `with_audio` | 顶层 `generate_audio` | 是否生成有声视频 |
@@ -79,6 +79,8 @@
 - `duration_seconds` 仅允许设置为 `-1`，不支持指定具体输出时长。
 - 待编辑源视频时长必须在 `[4, 30]` 秒内，否则上游会报错。
 - 当前统一输入用同一个 `reference_videos` 字段承载“参考生视频”和“视频编辑”，任务由上游按内容与意图判定；本地无法仅凭 URL 可靠读取源视频时长。
+
+同理，视频编辑/延长任务的输出比例跟随源视频，仅支持 `ratio=adaptive`；但它和普通参考视频共用 `reference_videos`，且没有显式任务类型字段，本地无法仅凭请求结构可靠区分。`validate_only` 会可靠修正可识别的首帧/首尾帧任务；编辑/延长场景请调用方传入 `aspect_ratio="adaptive"`。
 
 ## Prompt 建议（30 秒长叙事）
 

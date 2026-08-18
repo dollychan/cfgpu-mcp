@@ -352,6 +352,57 @@ async def test_validate_only_corrects_an_unsupported_resolution():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "frames",
+    [
+        {"first_frame": "m_first"},
+        {"first_frame": "m_first", "last_frame": "m_last"},
+    ],
+    ids=["first-frame", "first-last-frame"],
+)
+async def test_seedance_2_5_validate_only_corrects_frame_ratio_to_adaptive(frames):
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="镜头缓慢推近",
+            model="doubao-seedance-2-5",
+            aspect_ratio="16:9",
+            validate_only=True,
+            **frames,
+        )
+
+    assert result["validated"] is True
+    assert result["corrected_args"] == {"aspect_ratio": "adaptive"}
+    assert result["payload"]["ratio"] == "adaptive"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "model,media",
+    [
+        ("doubao-seedance-2-5", {}),
+        ("doubao-seedance-2-5", {"reference_videos": ["m_video"]}),
+        ("doubao-seedance-2-0", {"first_frame": "m_first"}),
+        ("doubao-seedance-1-5-pro", {"first_frame": "m_first"}),
+    ],
+    ids=["2.5-t2v", "2.5-reference-video", "2.0-first-frame", "1.5-first-frame"],
+)
+async def test_seedance_validate_only_preserves_supported_explicit_ratios(model, media):
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="x",
+            model=model,
+            aspect_ratio="16:9",
+            validate_only=True,
+            **media,
+        )
+
+    assert "aspect_ratio" not in result["corrected_args"]
+    assert result["payload"]["ratio"] == "16:9"
+
+
+@pytest.mark.asyncio
 async def test_validate_only_runs_build_payload():
     """Why the short-circuit sits *after* build_payload rather than after the router.
 

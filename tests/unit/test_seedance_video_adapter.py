@@ -363,6 +363,64 @@ def _make_seedance_2_0_adapter(
     return SeedanceVideoAdapter.from_config(config)
 
 
+@pytest.mark.parametrize(
+    "frames",
+    [
+        {"first_frame": "https://example.com/first.jpg"},
+        {
+            "first_frame": "https://example.com/first.jpg",
+            "last_frame": "https://example.com/last.jpg",
+        },
+    ],
+    ids=["first-frame", "first-last-frame"],
+)
+def test_seedance_2_5_requires_adaptive_ratio_for_frame_driven_video(frames):
+    req = GenerateVideoInput(prompt="x", aspect_ratio="16:9", **frames)
+
+    ok, reason = _make_2_5_adapter().supports(req)
+
+    assert ok is False
+    assert "aspect_ratio=adaptive" in reason
+    assert "follows the first frame" in reason
+
+
+@pytest.mark.parametrize(
+    "scene",
+    [
+        {},
+        {"reference_images": ["https://example.com/reference.jpg"]},
+        {"reference_videos": ["https://example.com/reference.mp4"]},
+    ],
+    ids=["text-to-video", "reference-image", "reference-video"],
+)
+def test_seedance_2_5_keeps_explicit_ratio_for_supported_scenes(scene):
+    req = GenerateVideoInput(prompt="x", aspect_ratio="16:9", **scene)
+
+    assert _make_2_5_adapter().supports(req)[0] is True
+
+
+@pytest.mark.parametrize(
+    "adapter",
+    [_make_seedance_2_0_adapter, _make_no_reference_adapter],
+    ids=["seedance-2.0", "seedance-1.5-pro"],
+)
+@pytest.mark.parametrize(
+    "frames",
+    [
+        {"first_frame": "https://example.com/first.jpg"},
+        {
+            "first_frame": "https://example.com/first.jpg",
+            "last_frame": "https://example.com/last.jpg",
+        },
+    ],
+    ids=["first-frame", "first-last-frame"],
+)
+def test_earlier_seedance_versions_allow_explicit_ratio_for_frame_video(adapter, frames):
+    req = GenerateVideoInput(prompt="x", aspect_ratio="16:9", **frames)
+
+    assert adapter().supports(req)[0] is True
+
+
 def test_seedance_2_0_accepts_4k():
     ok, _ = _make_seedance_2_0_adapter().supports(
         GenerateVideoInput(prompt="x", resolution="4k")

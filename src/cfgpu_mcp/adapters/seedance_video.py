@@ -28,6 +28,16 @@ class SeedanceVideoAdapter(ModelAdapter):
     ) -> dict[str, Any]:
         corrected = super().validation_corrections(req)
         assert isinstance(req, GenerateVideoInput)
+        # Seedance 2.5 derives first-frame / first+last-frame output geometry from
+        # the first image. Unlike text-to-video and ordinary reference-to-video,
+        # those scenes do not accept an independently selected ratio. ``adaptive``
+        # is therefore the safe validate_only fallback.
+        if (
+            self.adapter_id == "doubao-seedance-2-5"
+            and req.first_frame
+            and req.aspect_ratio != "adaptive"
+        ):
+            corrected["aspect_ratio"] = "adaptive"
         is_t2v = not (
             req.first_frame
             or req.last_frame
@@ -126,6 +136,16 @@ class SeedanceVideoAdapter(ModelAdapter):
             return False, "first/last_frame and reference media are mutually exclusive"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
+        if (
+            self.adapter_id == "doubao-seedance-2-5"
+            and req.first_frame
+            and req.aspect_ratio != "adaptive"
+        ):
+            return False, (
+                "doubao-seedance-2-5 only supports aspect_ratio=adaptive for "
+                "first-frame and first/last-frame video generation; the output "
+                "ratio follows the first frame"
+            )
         # Validate the requested scene type against the model's declared
         # capabilities. The CFGPU API derives task_type server-side from the
         # content array shape (e.g. a reference_video → r2v); a model that lacks
