@@ -202,7 +202,7 @@ def test_seedance_resolution_sets_are_per_model():
     assert registry.get("doubao-seedance-2-5").resolutions == ["480p", "720p", "1080p"]
     for model_id in ("doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini"):
         assert registry.get(model_id).resolutions == ["480p", "720p"], model_id
-    assert registry.get("wan-2-0").resolutions is None
+    assert registry.get("wan-2-0").resolutions == ["480p", "720p", "1080p"]
 
 
 def test_unknown_model_raises_key_error():

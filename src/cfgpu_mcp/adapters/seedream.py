@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateImageInput, NormalizedResult
@@ -37,6 +37,49 @@ class SeedreamAdapter(ModelAdapter):
     """
 
     adapter_id = "doubao-seedream-5-0-lite"
+
+    def validation_corrections(
+        self, req: "GenerateImageInput | GenerateVideoInput"
+    ) -> dict[str, Any]:
+        assert isinstance(req, GenerateImageInput)
+        is_pro = self.adapter_id == "doubao-seedream-5-0-pro"
+        allowed_resolutions = {"1K", "2K"} if is_pro else {"2K", "3K", "4K"}
+        resolution = req.resolution if req.resolution in allowed_resolutions else "2K"
+        corrected: dict[str, Any] = {}
+        if resolution != req.resolution:
+            corrected["resolution"] = resolution
+
+        # 1K Pro is a semantic tier: the model chooses geometry itself.  Every
+        # other tier is emitted as an exact pixel pair and therefore must exist
+        # in the table.  Fall back to the same tier's square size, never to a
+        # different unreported geometry.
+        if not (is_pro and resolution == "1K") and (resolution, req.aspect_ratio) not in _SIZE_MAP:
+            corrected["aspect_ratio"] = "1:1"
+        return corrected
+
+    def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
+        ok, reason = super().supports(req)
+        if not ok:
+            return False, reason
+        assert isinstance(req, GenerateImageInput)
+        if not req.prompt.strip():
+            return False, f"{self.adapter_id} requires a non-empty prompt"
+        is_pro = self.adapter_id == "doubao-seedream-5-0-pro"
+        max_refs = 10 if is_pro else 14
+        reference_count = len(req.reference_images or [])
+        if reference_count > max_refs:
+            return False, f"{self.adapter_id} accepts at most {max_refs} reference_images"
+        if is_pro and req.n > 1:
+            return False, (
+                "doubao-seedream-5-0-pro does not support n>1 (group images); "
+                "use doubao-seedream-5-0-lite for group generation"
+            )
+        if not is_pro and reference_count + req.n > 15:
+            return False, (
+                f"{self.adapter_id} requires reference_images count + n <= 15 "
+                f"(got {reference_count} + {req.n})"
+            )
+        return True, ""
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)

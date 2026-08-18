@@ -22,6 +22,9 @@ from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
+from cfgpu_mcp.router import ModelRouter
+from cfgpu_mcp.task_manager import validate_request
+from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
 
@@ -117,6 +120,15 @@ async def test_validate_only_resolves_auto_to_a_concrete_model():
     # Enough to price the approval: whether it returns a handle, and the cost signal.
     assert isinstance(result["is_async"], bool)
     assert isinstance(result["cost_tier"], int)
+
+
+@pytest.mark.asyncio
+async def test_validate_only_rejects_an_empty_model_candidate_list():
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c, pytest.raises(CFGPUError) as exc:
+        await image_service.generate_image(prompt="猫", model=[], validate_only=True)
+
+    assert exc.value.error_type == "invalid_params"
 
 
 # ── corrected_args: what to change before submitting for real ────────────────
@@ -323,19 +335,19 @@ async def test_validate_only_rejects_what_supports_would_reject():
 
 
 @pytest.mark.asyncio
-async def test_validate_only_rejects_an_unsupported_resolution():
-    """The other declarative per-model gate, for the same reason."""
+async def test_validate_only_corrects_an_unsupported_resolution():
+    """A safe enum fallback is applied to the payload and made reproducible."""
     a, b, c = _patched_real_registry(_client(), AsyncMock())
     with a, b, c:
-        with pytest.raises(CFGPUError) as exc:
-            await video_service.generate_video(
-                prompt="海浪",
-                model="doubao-seedance-2-0-fast",  # 480p/720p only
-                resolution="4k",
-                validate_only=True,
-            )
+        result = await video_service.generate_video(
+            prompt="海浪",
+            model="doubao-seedance-2-0-fast",  # 480p/720p only
+            resolution="4k",
+            validate_only=True,
+        )
 
-    assert exc.value.error_type == "invalid_params"
+    assert result["corrected_args"] == {"resolution": "720p"}
+    assert result["payload"]["resolution"] == "720p"
 
 
 @pytest.mark.asyncio
@@ -353,6 +365,8 @@ async def test_validate_only_runs_build_payload():
     adapter.is_async = False
     adapter.cost_tier = 1
     adapter.speed_tier = 1
+    adapter.validation_corrections.return_value = {}
+    adapter.supports.return_value = (True, "")
     adapter.build_payload.side_effect = CFGPUError(
         error_type="invalid_params", user_message="adapter-level rejection"
     )
@@ -369,6 +383,168 @@ async def test_validate_only_runs_build_payload():
             await image_service.generate_image(prompt="x", validate_only=True)
 
     adapter.build_payload.assert_called_once()
+
+
+# ── Fleet-wide model ranges and safe fallbacks ───────────────────────────────
+
+@pytest.mark.parametrize(
+    "model,resolution,aspect_ratio,expected",
+    [
+        ("doubao-seedream-4-0", "1K", "1:1", {"resolution": "2K"}),
+        ("doubao-seedream-4-5", "1K", "1:1", {"resolution": "2K"}),
+        ("doubao-seedream-5-0-lite", "1K", "1:1", {"resolution": "2K"}),
+        ("doubao-seedream-5-0-pro", "4K", "1:1", {"resolution": "2K"}),
+        ("cf-image-2", "3K", "21:9", {"resolution": "2K", "aspect_ratio": "1:1"}),
+        ("cf2", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
+        ("cf-pro", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
+        ("cf-pro-official", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
+        ("cf-pro-premium", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
+    ],
+)
+def test_every_image_model_reports_safe_enum_fallbacks(model, resolution, aspect_ratio, expected):
+    registry = _real_registry()
+    req = GenerateImageInput(
+        prompt="x", model=model, resolution=resolution, aspect_ratio=aspect_ratio
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    result = validate_request(adapter, req)
+
+    assert result["corrected_args"] == expected
+
+
+@pytest.mark.parametrize(
+    "model,extra,expected_resolution",
+    [
+        ("wan-video", {}, "1080p"),
+        ("wan-video-fast", {}, "720p"),
+        ("doubao-seedance-1-5-pro", {}, "1080p"),
+        ("doubao-seedance-2-0", {}, None),
+        ("doubao-seedance-2-0-fast", {}, "720p"),
+        ("doubao-seedance-2-0-mini", {}, "720p"),
+        ("doubao-seedance-2-5", {}, "1080p"),
+        ("happyhorse-1.0-t2v", {}, "1080p"),
+        ("happyhorse-1.0-i2v", {"first_frame": "m_image"}, "1080p"),
+        ("happyhorse-1.0-r2v", {"reference_images": ["m_image"]}, "1080p"),
+        ("happyhorse-1.0-video-edit", {"reference_videos": ["m_video"]}, "1080p"),
+        ("kling-video-o1", {}, "1080p"),
+        ("kling-v3-omni", {}, "1080p"),
+        ("wan2.7-t2v", {}, "1080p"),
+        ("wan2.7-i2v", {"first_frame": "m_image"}, "1080p"),
+        ("wan2.7-r2v", {"reference_images": ["m_image"]}, "1080p"),
+        ("wan2.7-videoedit", {"reference_videos": ["m_video"]}, "1080p"),
+        ("wan2.6-t2v", {}, "1080p"),
+        ("wan2.6-i2v", {"first_frame": "m_image"}, "1080p"),
+        ("wan2.6-r2v", {"reference_images": ["m_image"]}, "1080p"),
+        ("cf-imagine-video", {}, "1080p"),
+        ("cf-imagine-video-1.5", {}, "1080p"),
+        ("cfdream/minimax-h3", {}, "1080p"),
+        ("cfdream/minimax-h3-r2v", {"reference_images": ["m_image"]}, "1080p"),
+        ("submodel/minimax-h3", {"aspect_ratio": "16:9"}, "1080p"),
+    ],
+)
+def test_every_video_model_checks_4k_against_its_resolution_set(
+    model, extra, expected_resolution
+):
+    registry = _real_registry()
+    req = GenerateVideoInput(prompt="x", model=model, resolution="4k", **extra)
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    result = validate_request(adapter, req)
+
+    if expected_resolution is None:
+        assert "resolution" not in result["corrected_args"]
+    else:
+        assert result["corrected_args"]["resolution"] == expected_resolution
+
+
+@pytest.mark.parametrize(
+    "model,voice",
+    [
+        ("seed-tts-2.0", "zh_female_xiaohe_uranus_bigtts"),
+        ("MiniMax/speech-2.8-hd", "male-qn-qingse"),
+        ("MiniMax/speech-2.8-turbo", "Santa_Claus"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_audio_validate_only_accepts_exact_system_voice_ids(model, voice):
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(
+            text="hello", model=model, voice=voice, validate_only=True
+        )
+
+    assert result["validated"] is True
+
+
+@pytest.mark.parametrize(
+    "model,voice",
+    [
+        ("seed-tts-2.0", "male-qn-qingse"),
+        ("MiniMax/speech-2.8-hd", "zh_female_xiaohe_uranus_bigtts"),
+        ("MiniMax/speech-2.8-turbo", "Santa_Claus_typo"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_audio_validate_only_rejects_voice_outside_selected_catalog(model, voice):
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c, pytest.raises(CFGPUError) as exc:
+        await audio_service.generate_audio(
+            text="hello", model=model, voice=voice, validate_only=True
+        )
+
+    assert exc.value.error_type == "invalid_params"
+    assert "system voice catalog" in exc.value.user_message
+
+
+@pytest.mark.asyncio
+async def test_audio_validate_only_strips_voice_surrounding_whitespace():
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(
+            text="hello",
+            model="MiniMax/speech-2.8-turbo",
+            voice=" Santa_Claus ",
+            validate_only=True,
+        )
+
+    assert result["validated"] is True
+    assert result["corrected_args"] == {"voice": "Santa_Claus"}
+    assert result["payload"]["input"]["voice_setting"]["voice_id"] == "Santa_Claus"
+
+
+@pytest.mark.parametrize(
+    "voice,expected_model",
+    [
+        ("zh_female_xiaohe_uranus_bigtts", "seed-tts-2.0"),
+        ("male-qn-qingse", "MiniMax/speech-2.8-turbo"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_audio_auto_routes_only_to_a_model_owning_the_voice(voice, expected_model):
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(
+            text="hello", model="auto", voice=voice, validate_only=True
+        )
+
+    assert result["model_used"] == expected_model
+    assert result["corrected_args"]["model"] == expected_model
+
+
+@pytest.mark.asyncio
+async def test_audio_pcm_falls_back_and_reports_the_effective_format():
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(
+            text="hello",
+            model="MiniMax/speech-2.8-hd",
+            audio_format="pcm",
+            validate_only=True,
+        )
+
+    assert result["corrected_args"] == {"audio_format": "mp3"}
+    assert result["payload"]["input"]["audio_setting"]["format"] == "mp3"
 
 
 # ── The MCP layer ────────────────────────────────────────────────────────────

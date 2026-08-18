@@ -4,6 +4,7 @@ cfgpu_model_id: wan2.7-i2v
 model_name: wan2.7-i2v
 
 task_type: video
+resolutions: [480p, 720p, 1080p]
 endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}

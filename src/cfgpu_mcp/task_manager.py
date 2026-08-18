@@ -249,7 +249,11 @@ def single_client(client: CFGPUClient) -> ClientResolver:
     return lambda _adapter: client
 
 
-def _corrected_args(adapter: "ModelAdapter", req: Any) -> dict[str, Any]:
+def _corrected_args(
+    adapter: "ModelAdapter",
+    req: Any,
+    adapter_corrections: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """The tool-argument overrides a caller should apply before submitting for real.
 
     Expressed in *tool* parameter names, so a caller merges it over the original
@@ -258,11 +262,9 @@ def _corrected_args(adapter: "ModelAdapter", req: Any) -> dict[str, Any]:
     (``cfgpu_model_id``, ``video_length``, ``resolution_name``) and would have to be
     translated back.
 
-    Only a *delegated* choice is written back. ``model="auto"`` — and a candidate list,
-    which is "auto within this subset" — hands model selection to the router, so the
-    outcome has to be pinned: an approval card cannot show "auto" (it names nothing a
-    human can weigh on cost or latency), and pinning is also what guarantees the
-    submitted call runs the same model this preflight validated.
+    Adapter-provided safe fallbacks (for example an unsupported resolution mapped to
+    the nearest supported tier) are written first. A delegated model choice is also
+    pinned so the approval and billed calls use the same concrete model.
 
     An explicitly named model is **never** rewritten, not even normalized to
     ``model_name``. ``AdapterRegistry.get`` already resolves adapter_id /
@@ -274,9 +276,10 @@ def _corrected_args(adapter: "ModelAdapter", req: Any) -> dict[str, Any]:
     candidate. That is the intended trade — an approval only means something if it
     names what runs — and the failure is loud and retryable.
     """
+    corrected = dict(adapter_corrections or {})
     if isinstance(req.model, list) or req.model == "auto":
-        return {"model": adapter.model_name}
-    return {}
+        corrected["model"] = adapter.model_name
+    return corrected
 
 
 def validate_request(
@@ -286,14 +289,10 @@ def validate_request(
     """Run a request to the edge of the upstream POST and report what it would send.
 
     This is the ``validate_only`` path (see ``tool_registry.validate_only_field``). By
-    the time it is called the caller has already been through the two checks that reject
-    most bad requests — the Pydantic validators, and ``router.resolve()``, which runs
-    ``ModelAdapter.supports()`` on an explicitly named model and filters on it when
-    routing ``auto``. What is left, and the reason this goes one step further rather
-    than stopping at the router, is ``build_payload()``: several adapters do their real
-    per-model checking there (Kling's ``video_list`` shape, HappyHorse's scenario rules),
-    so a preflight that skipped it would pass requests the billed call rejects — the one
-    outcome that would make this feature worse than not having it.
+    the time it is called the Pydantic validators and model resolution have run. Here
+    the chosen adapter applies safe enum fallbacks, runs ``supports()`` against the
+    effective request, and finally calls ``build_payload()``. The returned payload and
+    ``corrected_args`` therefore describe the same request.
 
     Deliberately synchronous and free of both collaborators ``create()`` needs: it
     performs no IO, so it needs no client, and it writes no task row, so it needs no
@@ -304,7 +303,17 @@ def validate_request(
     Raises whatever ``build_payload`` raises, unchanged; the service layer stamps
     ``model_id`` / ``request_id`` onto it exactly as it does for the billed path.
     """
-    payload = adapter.build_payload(req)
+    adapter_corrections = adapter.validation_corrections(req)
+    effective_req = req.model_copy(update=adapter_corrections) if adapter_corrections else req
+    ok, reason = adapter.supports(effective_req)
+    if not ok:
+        raise CFGPUError(
+            error_type="invalid_params",
+            user_message=reason,
+            original={"model": req.model},
+            model_id=adapter.model_name,
+        )
+    payload = adapter.build_payload(effective_req)
     return {
         "validated": True,
         # The concrete model, so `model="auto"` reports what routing actually picked —
@@ -321,7 +330,7 @@ def validate_request(
         # What to change before submitting for real; empty when nothing needs changing.
         # `model_used` reports, this one instructs — a caller merging blindly gets the
         # right call, and never has to decide for itself whether a rewrite is allowed.
-        "corrected_args": _corrected_args(adapter, req),
+        "corrected_args": _corrected_args(adapter, req, adapter_corrections),
         # The exact upstream request. Routed to structuredContent by the MCP layer's
         # `split_structured`, like every other `payload`, so it stays out of the model's
         # context while remaining available to the host rendering the approval.

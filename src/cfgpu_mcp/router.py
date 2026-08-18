@@ -38,14 +38,23 @@ class ModelRouter:
             ) from e
 
     def resolve(
-        self, req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput
+        self,
+        req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput,
+        *,
+        for_validation: bool = False,
     ) -> "ModelAdapter":
         """Resolve req.model (single id, candidate list, or 'auto') to one adapter."""
         model = req.model
         if isinstance(model, list):
-            return self.select_model(req, allowed=model)
+            if not model:
+                raise CFGPUError(
+                    error_type="invalid_params",
+                    user_message="model candidate list must not be empty; use 'auto' explicitly",
+                    original={"model": model},
+                )
+            return self.select_model(req, allowed=model, for_validation=for_validation)
         if model == "auto":
-            return self.select_model(req)
+            return self.select_model(req, for_validation=for_validation)
         # Explicit single model: the auto/list paths filter on supports(), but a
         # directly named model would otherwise bypass it and surface a task-type /
         # capability mismatch as a raw AssertionError from build_payload(). Validate
@@ -66,6 +75,12 @@ class ModelRouter:
                 )
                 return self.select_model(req)
             raise
+        # validate_only may safely normalize a model-specific enum (for example
+        # 4k -> this model's highest supported tier).  Let validate_request apply
+        # that correction before supports(); the billed path still rejects the raw
+        # invalid request unless the caller merges the returned corrected_args.
+        if for_validation:
+            return adapter
         ok, reason = adapter.supports(req)
         if not ok:
             raise CFGPUError(
@@ -80,6 +95,8 @@ class ModelRouter:
         self,
         req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput,
         allowed: list[str] | None = None,
+        *,
+        for_validation: bool = False,
     ) -> "ModelAdapter":
         if isinstance(req, GenerateImageInput):
             task_type = "image"
@@ -118,10 +135,15 @@ class ModelRouter:
 
         scored: list[tuple[int, "ModelAdapter"]] = []
         for adapter in candidates:
-            ok, _ = adapter.supports(req)
+            candidate_req = req
+            if for_validation:
+                corrections = adapter.validation_corrections(req)
+                if corrections:
+                    candidate_req = req.model_copy(update=corrections)
+            ok, _ = adapter.supports(candidate_req)
             if not ok:
                 continue
-            score = self._score(adapter, req)
+            score = self._score(adapter, candidate_req)
             scored.append((score, adapter))
 
         if not scored:

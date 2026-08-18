@@ -160,7 +160,7 @@ MiniMax 语音大模型能够根据上下文，智能预测文本的情绪、语
 | 62 | 中文 (粤语) | `Cantonese_PlayfulMan` | 活泼男声 |
 | 63 | 中文 (粤语) | `Cantonese_CuteGirl` | 可爱女孩 |
 | 64 | 中文 (粤语) | `Cantonese_KindWoman` | 善良女声 |
-| 65 | 英文 | `Santa_Claus ` | Santa Claus |
+| 65 | 英文 | `Santa_Claus` | Santa Claus |
 | 66 | 英文 | `Grinch` | Grinch |
 | 67 | 英文 | `Rudolph` | Rudolph |
 | 68 | 英文 | `Arnold` | Arnold |

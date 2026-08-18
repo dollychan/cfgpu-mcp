@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
@@ -12,6 +12,17 @@ if TYPE_CHECKING:
 @register_python_adapter
 class HappyHorseVideoAdapter(ModelAdapter):
     adapter_id = "happyhorse-1-0-t2v"
+
+    def validation_corrections(
+        self, req: "GenerateImageInput | GenerateVideoInput"
+    ) -> dict[str, Any]:
+        corrected = super().validation_corrections(req)
+        assert isinstance(req, GenerateVideoInput)
+        if self.adapter_id != "happyhorse-1-0-video-edit" and req.aspect_ratio not in {
+            "16:9", "9:16", "1:1", "4:3", "3:4"
+        }:
+            corrected["aspect_ratio"] = "16:9"
+        return corrected
 
     def _output(self, resp: dict) -> dict:
         return resp.get("output") or {}
@@ -84,6 +95,18 @@ class HappyHorseVideoAdapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
+        if not req.prompt.strip():
+            return False, f"{self.adapter_id} requires a non-empty prompt"
+        if self.adapter_id == "happyhorse-1-0-i2v":
+            if not req.first_frame:
+                return False, f"{self.adapter_id} requires first_frame"
+            if req.reference_images:
+                return False, f"{self.adapter_id} does not support reference_images"
+        elif self.adapter_id == "happyhorse-1-0-r2v":
+            if req.first_frame:
+                return False, f"{self.adapter_id} does not support first_frame"
+            if not req.reference_images:
+                return False, f"{self.adapter_id} requires at least one reference_image"
         if req.last_frame:
             return False, f"{self.adapter_id} does not support last_frame"
         if req.reference_videos:
@@ -135,6 +158,8 @@ class HappyHorseVideoEditAdapter(HappyHorseVideoAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
+        if not req.prompt.strip():
+            return False, f"{self.adapter_id} requires a non-empty prompt"
         if not req.reference_videos:
             return False, f"{self.adapter_id} requires a source video (reference_videos)"
         if len(req.reference_videos) > 1:

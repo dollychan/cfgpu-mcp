@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
@@ -22,6 +22,22 @@ class SeedanceVideoAdapter(ModelAdapter):
     """
 
     adapter_id = "wan-2-0"
+
+    def validation_corrections(
+        self, req: "GenerateImageInput | GenerateVideoInput"
+    ) -> dict[str, Any]:
+        corrected = super().validation_corrections(req)
+        assert isinstance(req, GenerateVideoInput)
+        is_t2v = not (
+            req.first_frame
+            or req.last_frame
+            or req.reference_images
+            or req.reference_videos
+            or req.reference_audios
+        )
+        if self.adapter_id == "wan-2-0-fast" and is_t2v and req.resolution in {"1080p", "4k"}:
+            corrected["resolution"] = "720p"
+        return corrected
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
@@ -105,9 +121,9 @@ class SeedanceVideoAdapter(ModelAdapter):
         assert isinstance(req, GenerateVideoInput)
         # Validate mutual exclusivity of scene types
         has_first_last = bool(req.first_frame or req.last_frame)
-        has_refs = bool(req.reference_images)
+        has_refs = bool(req.reference_images or req.reference_videos or req.reference_audios)
         if has_first_last and has_refs:
-            return False, "first/last_frame and reference_images are mutually exclusive"
+            return False, "first/last_frame and reference media are mutually exclusive"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
         # Validate the requested scene type against the model's declared

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateImageInput, NormalizedResult
@@ -52,12 +52,30 @@ class _AsyncImageBase(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateImageInput)
+        if not req.prompt.strip():
+            return False, f"{self.adapter_id} requires a non-empty prompt"
         if req.n and req.n > 1:
             return False, (
                 f"{self.adapter_id} generates a single image; n>1 (组图 / group image "
                 f"generation) is only supported by doubao-seedream-* models"
             )
         return True, ""
+
+    def validation_corrections(
+        self, req: "GenerateImageInput | GenerateVideoInput"
+    ) -> dict[str, Any]:
+        assert isinstance(req, GenerateImageInput)
+        corrected: dict[str, Any] = {}
+        if req.resolution == "3K":
+            corrected["resolution"] = "2K"
+        allowed_ratios = (
+            {"1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"}
+            if self.adapter_id == "gpt-image-2"
+            else {"1:1", "3:4", "4:3", "9:16", "16:9", "21:9"}
+        )
+        if req.aspect_ratio not in allowed_ratios:
+            corrected["aspect_ratio"] = "1:1"
+        return corrected
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         raise NotImplementedError

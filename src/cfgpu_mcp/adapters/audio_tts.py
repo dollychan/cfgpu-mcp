@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import base64
+import difflib
+import re
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
@@ -64,6 +67,48 @@ _AUDIO_MIME_BY_FORMAT = {
 }
 
 
+def _voice_ids_from_card(model_dir: str) -> frozenset[str]:
+    """Load the exact system voice ids from a model card's voice table.
+
+    The cards are already shipped runtime data (``get_model_card`` reads the same
+    files).  Keeping one authoritative list avoids copying hundreds of ids into
+    Python. Voice ids are stripped of surrounding whitespace while meaningful
+    characters such as full-width punctuation and letter casing are preserved.
+    """
+    card = Path(__file__).resolve().parent.parent / "models" / model_dir / "card.md"
+    text = card.read_text(encoding="utf-8")
+    marker = "## 系统音色列表"
+    if marker not in text:
+        raise RuntimeError(f"voice catalog section missing from {card}")
+    section = text.split(marker, 1)[1]
+    section = section.split("\n## ", 1)[0]
+    voices: set[str] = set()
+    for line in section.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        matches = re.findall(r"`([^`]+)`", line)
+        if matches:
+            voice = matches[0].strip()
+            if voice:
+                voices.add(voice)
+    if not voices:
+        raise RuntimeError(f"voice catalog table is empty in {card}")
+    return frozenset(voices)
+
+
+_SEED_SYSTEM_VOICES = _voice_ids_from_card("seed-tts-2-0")
+_MINIMAX_SYSTEM_VOICES = _voice_ids_from_card("minimax-speech-2-8-hd")
+
+
+def _invalid_voice_reason(model_name: str, voice: str, voices: frozenset[str]) -> str:
+    nearby = difflib.get_close_matches(voice, voices, n=3, cutoff=0.65)
+    suggestion = f" Closest system voices: {', '.join(repr(v) for v in nearby)}." if nearby else ""
+    return (
+        f"voice {voice!r} is not in {model_name}'s system voice catalog."
+        f"{suggestion} Omit voice to use the model default."
+    )
+
+
 def _extract_inline_audio(resp: dict) -> dict | None:
     """Decode MiniMax's inline hex audio blob into an ``inline_media`` descriptor.
 
@@ -120,8 +165,7 @@ def _extract_inline_audio(resp: dict) -> dict | None:
 _MINIMAX_VOICE_REMEDY = (
     "该 voice 不在此模型的音色表中。两个语音模型族的音色互不通用："
     "形如 xxx_uranus_bigtts 或 saturn_xxx 的是 seed-tts 的 speaker，MiniMax 一律不接受。"
-    "音色 id 必须逐字节照抄（部分 id 含尾随空格、全角括号或不规则大小写，"
-    "自行规范化就会变成不存在的 id）。"
+    "音色 id 会去除首尾空格；全角括号、不规则大小写等其他字符仍须准确照抄。"
     "不需要特定音色时省略 voice 即可，默认为 male-qn-qingse。"
 )
 
@@ -174,6 +218,32 @@ class SeedTTSAdapter(ModelAdapter):
 
     _DEFAULT_VOICE = "zh_female_xiaohe_uranus_bigtts"
     _DEFAULT_SAMPLE_RATE = 24000
+
+    def validation_corrections(self, req: "GenerateAudioInput") -> dict[str, Any]:
+        corrected: dict[str, Any] = {}
+        if req.audio_format == "pcm":
+            corrected["audio_format"] = "mp3"
+        if req.voice is not None and req.voice != req.voice.strip():
+            corrected["voice"] = req.voice.strip()
+        return corrected
+
+    def supports(self, req: "GenerateAudioInput") -> tuple[bool, str]:
+        ok, reason = super().supports(req)
+        if not ok:
+            return False, reason
+        if not req.text.strip():
+            return False, f"{self.adapter_id} requires non-empty text"
+        if req.voice is not None and req.voice not in _SEED_SYSTEM_VOICES:
+            return False, _invalid_voice_reason(self.model_name, req.voice, _SEED_SYSTEM_VOICES)
+        if req.audio_format not in {"mp3", "wav", "flac"}:
+            return False, f"{self.adapter_id} supports audio_format mp3, wav, or flac"
+        if req.sample_rate is not None and req.sample_rate <= 0:
+            return False, "sample_rate must be a positive integer"
+        if req.bitrate is not None:
+            return False, f"{self.adapter_id} does not support bitrate"
+        if req.speed != 1.0 or req.volume != 1.0 or req.pitch != 0 or req.emotion is not None:
+            return False, f"{self.adapter_id} does not support speed, volume, pitch, or emotion"
+        return True, ""
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput") -> dict:
         assert isinstance(req, GenerateAudioInput)
@@ -247,6 +317,32 @@ class MiniMaxSpeechAdapter(ModelAdapter):
     _DEFAULT_VOICE = "male-qn-qingse"
     _DEFAULT_SAMPLE_RATE = 32000
     _DEFAULT_BITRATE = 128000
+
+    def validation_corrections(self, req: "GenerateAudioInput") -> dict[str, Any]:
+        corrected: dict[str, Any] = {}
+        if req.audio_format == "pcm":
+            corrected["audio_format"] = "mp3"
+        if req.voice is not None and req.voice != req.voice.strip():
+            corrected["voice"] = req.voice.strip()
+        return corrected
+
+    def supports(self, req: "GenerateAudioInput") -> tuple[bool, str]:
+        ok, reason = super().supports(req)
+        if not ok:
+            return False, reason
+        if not req.text.strip():
+            return False, f"{self.adapter_id} requires non-empty text"
+        if req.voice is not None and req.voice not in _MINIMAX_SYSTEM_VOICES:
+            return False, _invalid_voice_reason(self.model_name, req.voice, _MINIMAX_SYSTEM_VOICES)
+        if req.audio_format not in {"mp3", "wav", "flac"}:
+            return False, f"{self.adapter_id} supports audio_format mp3, wav, or flac"
+        if req.sample_rate is not None and req.sample_rate <= 0:
+            return False, "sample_rate must be a positive integer"
+        if req.bitrate is not None and req.bitrate <= 0:
+            return False, "bitrate must be a positive integer"
+        if req.speed <= 0 or req.volume <= 0:
+            return False, "speed and volume must be positive"
+        return True, ""
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput") -> dict:
         assert isinstance(req, GenerateAudioInput)

@@ -15,6 +15,7 @@ capabilities:
 
 cost_tier: 3
 speed_tier: 3
+resolutions: [480p, 720p, 1080p]
 
 poll_config:
   base_interval: 5

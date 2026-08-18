@@ -47,7 +47,7 @@ async def generate_image(
 
     registry = get_registry()
     router = ModelRouter(registry)
-    adapter = router.resolve(req)
+    adapter = router.resolve(req, for_validation=validate_only)
 
     if validate_only:
         # Before the repository is acquired: a request that is never submitted must not

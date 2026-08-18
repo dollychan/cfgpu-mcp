@@ -53,7 +53,7 @@ async def generate_audio(
 
     registry = get_registry()
     router = ModelRouter(registry)
-    adapter = router.resolve(req)
+    adapter = router.resolve(req, for_validation=validate_only)
 
     if validate_only:
         # Branches before the repository is acquired so an unsubmitted request leaves no

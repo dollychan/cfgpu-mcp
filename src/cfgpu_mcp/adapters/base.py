@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -182,6 +182,35 @@ class ModelAdapter(ABC):
                     f"{req.resolution} (supported: {', '.join(self.resolutions)})"
                 )
         return True, ""
+
+    def validation_corrections(
+        self,
+        req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput",
+    ) -> dict[str, Any]:
+        """Safe tool-argument fallbacks used by ``validate_only``.
+
+        Corrections are deliberately limited to ordered output tiers.  Dropping a
+        reference, inventing a missing frame, or changing a voice would alter the
+        caller's creative intent, so those remain hard validation errors.  A resolution
+        fallback is different: adapters already have a concrete supported tier to use,
+        and reporting it in ``corrected_args`` makes that previously silent choice
+        explicit and reproducible on the billed call.
+        """
+        from cfgpu_mcp.tool_registry import GenerateVideoInput
+
+        if not isinstance(req, GenerateVideoInput):
+            return {}
+        if self.resolutions is None or req.resolution in self.resolutions:
+            return {}
+
+        order = {"480p": 0, "720p": 1, "1080p": 2, "4k": 3}
+        supported = [value for value in self.resolutions if value in order]
+        if not supported:
+            return {}
+        requested_rank = order[req.resolution]
+        lower = [value for value in supported if order[value] <= requested_rank]
+        fallback = max(lower, key=order.__getitem__) if lower else min(supported, key=order.__getitem__)
+        return {"resolution": fallback}
 
     def resolve_duration_seconds(self, req: "GenerateVideoInput") -> int:
         """Resolve an omitted unified duration to this model's real default."""
