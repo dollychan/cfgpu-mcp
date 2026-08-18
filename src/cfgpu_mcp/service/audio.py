@@ -24,10 +24,11 @@ async def generate_audio(
     model_specific: dict | None = None,
     request_id: str | None = None,
     caption: str | None = None,
+    validate_only: bool = False,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import client_for, get_task_repository, get_registry
     from cfgpu_mcp.router import ModelRouter
-    from cfgpu_mcp.task_manager import TaskManager
+    from cfgpu_mcp.task_manager import TaskManager, validate_request
 
     req = GenerateAudioInput(
         text=text,
@@ -47,11 +48,23 @@ async def generate_audio(
         model_specific=model_specific,
         request_id=request_id,
         caption=caption,
+        validate_only=validate_only,
     )
 
     registry = get_registry()
     router = ModelRouter(registry)
     adapter = router.resolve(req)
+
+    if validate_only:
+        # Branches before the repository is acquired so an unsubmitted request leaves no
+        # task row; see the same block in service/image.py for the full rationale.
+        try:
+            preflight = validate_request(adapter, req)
+        except CFGPUError as e:
+            e.model_id = adapter.model_name
+            e.request_id = request_id
+            raise
+        return stamp_echo(preflight, request_id=request_id)
 
     repo = await get_task_repository()
     tm = TaskManager(client_for, repo)

@@ -141,6 +141,50 @@ def caption_field() -> Any:
     )
 
 
+# ── Validate-only (preflight) ───────────────────────────────────────────────
+#
+# A caller that gates generation behind human approval has an ordering problem this
+# server is the only party able to solve. Approval must come *before* the billed call,
+# but the parameters are only checked *inside* it — so an approval card is shown for a
+# request that per-model validation will reject seconds later. The user approves, it
+# fails, and the next card is read with less trust. Retrying costs an LLM round trip;
+# a wasted approval costs human attention, which is the scarcer resource.
+#
+# ``validate_only`` runs the request through the identical resolution path — the same
+# Pydantic validators, the same router (so ``model="auto"`` resolves to a concrete
+# model), the same ``ModelAdapter.supports()``, the same ``build_payload()`` — and
+# returns just before the upstream POST. Nothing is created, nothing is billed, no task
+# row is written.
+#
+# **Failures are the point, so they must be indistinguishable from the real ones.** The
+# preflight raises the same ``CFGPUError`` the billed path would, with the same
+# ``error_type`` / ``card_hint`` / adapter-specific translation, so a caller cannot end
+# up in the state this exists to prevent: a preflight that passes what the real call
+# rejects, or the reverse.
+#
+# Named ``validate_only`` and not ``dry_run`` deliberately: ``CFGPU_DRY_RUN`` already
+# exists as a debug env var meaning "log the request **and still send it**". Reusing the
+# word for the opposite behaviour would make a billing question ("did this send?")
+# answerable only by reading which spelling was used.
+
+def validate_only_field() -> Any:
+    """Declare the preflight switch (kept in one place so the three copies can't drift)."""
+    return Field(
+        default=False,
+        description="Preflight only: resolve the model, validate every parameter against "
+        "it, and build the real upstream payload — then return **without sending it**. "
+        "No task is created, nothing is generated, nothing is billed. Returns "
+        "`{validated: true, model_used, task_type, is_async, cost_tier, speed_tier, "
+        "payload}` where `model_used` is the concrete model (so `model=\"auto\"` reports "
+        "what routing picked) and `payload` is the exact request the real call would "
+        "send. On any problem it raises the identical error the real call would, so a "
+        "pass here means the parameters are accepted. Intended for hosts that confirm "
+        "with a human before spending: validate first, show the approval, then call "
+        "again without this flag. Not a preview of the *output* — it says the request "
+        "is well-formed, not that generation will succeed.",
+    )
+
+
 # ── Input Models (single source of truth for all tool schemas) ─────────────
 
 class GenerateImageInput(BaseModel):
@@ -201,6 +245,7 @@ class GenerateImageInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    validate_only: bool = validate_only_field()
 
 
 class GenerateVideoInput(BaseModel):
@@ -320,6 +365,7 @@ class GenerateVideoInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    validate_only: bool = validate_only_field()
 
 
 class GenerateAudioInput(BaseModel):
@@ -376,6 +422,7 @@ class GenerateAudioInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    validate_only: bool = validate_only_field()
 
 
 class UnderstandVisionInput(BaseModel):

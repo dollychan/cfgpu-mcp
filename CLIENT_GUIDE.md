@@ -784,6 +784,22 @@ done
 >
 > 三条约束：①它是**标签不是第二个 prompt**——写清主体与版本即可，不要复述生成 prompt；②超过 200 字符会被**截断而非报错**（标签不影响出图，为它失败一整次调用不划算）；③绝不进入上游 API 请求体（`payload` 中不出现），对生成结果零影响。与 `request_id` 的唯一差异在**失败路径**：错误结果带 `request_id`（关联标识正是用来把失败 join 回原请求的），但不带 `caption`——调用失败即没有产物可标注。
 
+> **`validate_only`（预检，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受 `validate_only: bool = false`。置 `true` 时走**完全相同**的解析链路——Pydantic 校验 → 路由（`model="auto"` 在此解析成具体模型）→ `supports()` 逐参数校验 → 构建真实上游 payload——然后**在发出 POST 之前返回**。不创建任务、不生成、不计费、不写任务表。
+>
+> 返回：`{"validated": true, "model_used": "<具体模型>", "task_type", "is_async", "cost_tier", "speed_tier", "corrected_args": {...}, "payload": {<真实上游请求>}}`（Mode A 下 `payload` 随既有拆分进 `structuredContent`，不进模型上下文；`corrected_args` 留在 `content`，它是要照做的指令）。
+>
+> 用途——**给需要人工确认的调用方解决顺序问题**：审批必须在计费调用之前呈现，而参数校验只发生在调用内部，于是用户批准了一个几秒后就被拒的请求。重试只花一次模型往返，白批一次卡片花的却是人的注意力，而且下一张卡片会被更不信任地阅读。正确顺序是：`validate_only=true` 预检 → 通过才呈现审批 → 用户批准后不带该参数再调一次。
+>
+> **`corrected_args`：正式提交前要改的参数。** 用**工具参数名**表达，调用方直接 `{**原参数, **corrected_args}` 覆盖即可，不需要自己掌握任何 per-model 知识（`payload` 承担不了这个用途：它说的是上游方言 `cfgpu_model_id` / `video_length` / `resolution_name`，得反向翻译）。
+>
+> 当前它**只在模型选择被委托出去时**含 `model` 一键——即 `model="auto"` 或 `model=["a","b"]`（候选列表本质是"在这个子集里 auto"）。此时路由结果必须钉死：审批卡片上写 `auto` 等于没写，用户无从判断费用与时长；钉死也保证了正式提交跑的就是预检验过的那个模型。**显式指定的 model 一律不改写**，连规范化成 `model_name` 都不做——`adapter_id` / `cfgpu_model_id` / `display_name` 本就能解析到同一个 adapter，改写只会让卡片显示一个调用方没写过的名字。`model_used` 负责**报告**，`corrected_args` 负责**指令**，两个字段各司其职。
+>
+> 代价要知道：钉死 `model` 换掉了 `auto` 的 failover——预检与提交之间该模型若不可用，原本会自动路由到下一个候选，现在直接硬失败。这是有意的取舍：审批只有在它指名了真正会跑的东西时才有意义，而这种失败是显式且可重试的。
+>
+> 三条要点：①**失败与真实调用完全一致**——抛的是同一个 `CFGPUError`，`error_type` / `card_hint` / 各模型专有的错误回译都相同，所以预检通过即意味着参数被接受；②它校验的是**请求合法**，不保证**生成成功**（远端 5xx、限流、内容审核仍可能发生），预检不是产物预览；③回显 `request_id` 但不回显 `caption`——与错误路径同理，预检没有产物可标注。`understand_vision` 恒同步、便宜、可重跑，且未知模型会回退 auto，故不设此参数。
+>
+> ⚠️ 与环境变量 `CFGPU_DRY_RUN` 无关且语义相反：后者是"打印请求日志但**照常发送**"的调试开关。
+
 ### 等待完成（`wait=True`）
 
 ```json

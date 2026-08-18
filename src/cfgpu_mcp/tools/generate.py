@@ -28,6 +28,7 @@ def register(mcp: FastMCP) -> None:
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
         caption: Optional[str] = None,
+        validate_only: bool = False,
     ) -> dict:
         """Generate image from text prompt using CFGPU models."""
         try:
@@ -46,6 +47,7 @@ def register(mcp: FastMCP) -> None:
                 model_specific=model_specific,
                 request_id=request_id,
                 caption=caption,
+                validate_only=validate_only,
             )), structured_keys=("usage", "payload"))
         except Exception as e:
             return tool_error_dict(e)
@@ -71,6 +73,7 @@ def register(mcp: FastMCP) -> None:
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
         caption: Optional[str] = None,
+        validate_only: bool = False,
     ) -> dict:
         """Generate video from text prompt, image, or multimodal references using CFGPU models.
 
@@ -102,6 +105,7 @@ def register(mcp: FastMCP) -> None:
                 model_specific=model_specific,
                 request_id=request_id,
                 caption=caption,
+                validate_only=validate_only,
             )), structured_keys=("usage", "payload"))
         except Exception as e:
             return tool_error_dict(e)
@@ -125,6 +129,7 @@ def register(mcp: FastMCP) -> None:
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
         caption: Optional[str] = None,
+        validate_only: bool = False,
     ) -> dict:
         """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
         try:
@@ -146,6 +151,7 @@ def register(mcp: FastMCP) -> None:
                 model_specific=model_specific,
                 request_id=request_id,
                 caption=caption,
+                validate_only=validate_only,
             )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
             return tool_error_dict(e)

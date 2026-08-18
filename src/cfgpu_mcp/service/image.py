@@ -21,10 +21,11 @@ async def generate_image(
     model_specific: dict | None = None,
     request_id: str | None = None,
     caption: str | None = None,
+    validate_only: bool = False,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import client_for, get_task_repository, get_registry
     from cfgpu_mcp.router import ModelRouter
-    from cfgpu_mcp.task_manager import TaskManager
+    from cfgpu_mcp.task_manager import TaskManager, validate_request
 
     req = GenerateImageInput(
         prompt=prompt,
@@ -41,11 +42,27 @@ async def generate_image(
         model_specific=model_specific,
         request_id=request_id,
         caption=caption,
+        validate_only=validate_only,
     )
 
     registry = get_registry()
     router = ModelRouter(registry)
     adapter = router.resolve(req)
+
+    if validate_only:
+        # Before the repository is acquired: a request that is never submitted must not
+        # leave a task row behind. Errors are stamped exactly as on the billed path, so
+        # a preflight failure is indistinguishable from the real one.
+        try:
+            preflight = validate_request(adapter, req)
+        except CFGPUError as e:
+            e.model_id = adapter.model_name
+            e.request_id = request_id
+            raise
+        # request_id only: it joins this preflight to the caller's request. `caption`
+        # labels an artifact, and a preflight produced none — the same asymmetry
+        # CFGPUError already encodes.
+        return stamp_echo(preflight, request_id=request_id)
 
     repo = await get_task_repository()
     tm = TaskManager(client_for, repo)

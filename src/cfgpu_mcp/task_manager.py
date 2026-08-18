@@ -249,6 +249,86 @@ def single_client(client: CFGPUClient) -> ClientResolver:
     return lambda _adapter: client
 
 
+def _corrected_args(adapter: "ModelAdapter", req: Any) -> dict[str, Any]:
+    """The tool-argument overrides a caller should apply before submitting for real.
+
+    Expressed in *tool* parameter names, so a caller merges it over the original
+    arguments (``{**args, **corrected_args}``) and needs no per-model knowledge to do
+    so. ``payload`` cannot serve this purpose: it speaks the upstream dialect
+    (``cfgpu_model_id``, ``video_length``, ``resolution_name``) and would have to be
+    translated back.
+
+    Only a *delegated* choice is written back. ``model="auto"`` — and a candidate list,
+    which is "auto within this subset" — hands model selection to the router, so the
+    outcome has to be pinned: an approval card cannot show "auto" (it names nothing a
+    human can weigh on cost or latency), and pinning is also what guarantees the
+    submitted call runs the same model this preflight validated.
+
+    An explicitly named model is **never** rewritten, not even normalized to
+    ``model_name``. ``AdapterRegistry.get`` already resolves adapter_id /
+    cfgpu_model_id / display_name to the same adapter, so rewriting would change the
+    name on the card without changing what runs — the one edit with cost and no effect.
+
+    Pinning does trade away ``auto``'s failover: a model that becomes unavailable
+    between preflight and submission now fails hard instead of routing on to the next
+    candidate. That is the intended trade — an approval only means something if it
+    names what runs — and the failure is loud and retryable.
+    """
+    if isinstance(req.model, list) or req.model == "auto":
+        return {"model": adapter.model_name}
+    return {}
+
+
+def validate_request(
+    adapter: "ModelAdapter",
+    req: Any,
+) -> dict[str, Any]:
+    """Run a request to the edge of the upstream POST and report what it would send.
+
+    This is the ``validate_only`` path (see ``tool_registry.validate_only_field``). By
+    the time it is called the caller has already been through the two checks that reject
+    most bad requests — the Pydantic validators, and ``router.resolve()``, which runs
+    ``ModelAdapter.supports()`` on an explicitly named model and filters on it when
+    routing ``auto``. What is left, and the reason this goes one step further rather
+    than stopping at the router, is ``build_payload()``: several adapters do their real
+    per-model checking there (Kling's ``video_list`` shape, HappyHorse's scenario rules),
+    so a preflight that skipped it would pass requests the billed call rejects — the one
+    outcome that would make this feature worse than not having it.
+
+    Deliberately synchronous and free of both collaborators ``create()`` needs: it
+    performs no IO, so it needs no client, and it writes no task row, so it needs no
+    repository. That is not an optimization — a task that was never submitted must not
+    appear in the task table, or ``task_status`` gains rows for work nobody started.
+    Callers therefore branch to it *before* acquiring the repository.
+
+    Raises whatever ``build_payload`` raises, unchanged; the service layer stamps
+    ``model_id`` / ``request_id`` onto it exactly as it does for the billed path.
+    """
+    payload = adapter.build_payload(req)
+    return {
+        "validated": True,
+        # The concrete model, so `model="auto"` reports what routing actually picked —
+        # this is what an approval card must show, since "auto" names nothing a human
+        # can weigh. `model_name` is the only public identifier (never adapter_id).
+        "model_used": adapter.model_name,
+        "task_type": adapter.task_type,
+        # Both carried because they change what approving this means: an async task
+        # returns a handle to poll rather than a result, and the tiers are the closest
+        # thing to a cost signal available before the call.
+        "is_async": adapter.is_async,
+        "cost_tier": adapter.cost_tier,
+        "speed_tier": adapter.speed_tier,
+        # What to change before submitting for real; empty when nothing needs changing.
+        # `model_used` reports, this one instructs — a caller merging blindly gets the
+        # right call, and never has to decide for itself whether a rewrite is allowed.
+        "corrected_args": _corrected_args(adapter, req),
+        # The exact upstream request. Routed to structuredContent by the MCP layer's
+        # `split_structured`, like every other `payload`, so it stays out of the model's
+        # context while remaining available to the host rendering the approval.
+        "payload": payload,
+    }
+
+
 class TaskManager:
     def __init__(self, client_for: ClientResolver, repo: TaskRepository) -> None:
         """``client_for`` resolves the upstream client from the adapter in hand.
