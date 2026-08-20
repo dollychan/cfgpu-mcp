@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cfgpu_mcp.adapters.base import ModelAdapter, register_python_adapter
+from cfgpu_mcp.adapters.regions import output_contract, render_prompt
 from cfgpu_mcp.tool_registry import NormalizedResult, UnderstandVisionInput
 
 if TYPE_CHECKING:
@@ -29,6 +30,14 @@ class QwenVisionAdapter(ModelAdapter):
 
     Registered under ``qwen-3-6-plus``; sibling Qwen3.6 models reuse
     this class via the registry extends-chain with their own ``cfgpu_model_id``.
+
+    Reads regions (``region_understand``) the same way the Seedream editor writes them:
+    a ``<bbox>`` tag on the [0, 999] grid, embedded in the prompt. That symmetry is the
+    load-bearing part — asking "what is inside this box" and then editing that box are
+    one conversation, and both ends speak the same coordinates, so nothing between them
+    has to translate. It is also why marking up an image never requires rendering the
+    marks *onto* it: rasterising a box so a model can infer it back out of the pixels is
+    a lossy round trip past a number it will happily read directly.
     """
 
     adapter_id = "qwen-3-6-plus"
@@ -39,7 +48,21 @@ class QwenVisionAdapter(ModelAdapter):
     ) -> dict:
         assert isinstance(req, UnderstandVisionInput)
 
-        content: list[dict] = [{"type": "text", "text": req.prompt}]
+        prompt = req.prompt
+        if req.regions:
+            if "region_understand" not in self.capabilities:
+                raise ValueError(
+                    f"{self.adapter_id} does not support regions, and regions are never "
+                    f"silently ignored — an answer about the whole image, presented as "
+                    f"an answer about the marked one, is worse than no answer."
+                )
+            # Names and notes are included here (unlike the editing path): this model
+            # reads rather than paints, so there is nothing to leak into, and an answer
+            # phrased as "标记3 里是…" hands back the caller's own word for the region.
+            prompt = render_prompt(prompt, req.regions, req.image_refs, include_names=True)
+            prompt = f"{prompt}\n\n{output_contract(req.regions)}"
+
+        content: list[dict] = [{"type": "text", "text": prompt}]
         for url in req.images or []:
             content.append({"type": "image_url", "image_url": {"url": url}})
         if req.video:

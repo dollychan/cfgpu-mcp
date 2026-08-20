@@ -32,6 +32,21 @@ def get_python_adapters() -> dict[str, type["ModelAdapter"]]:
     return _PYTHON_ADAPTERS
 
 
+def models_with_capability(capability: str) -> list[str]:
+    """Public ``model_name``s carrying ``capability``, or ``[]`` if the registry is unreachable.
+
+    For refusal messages that need to name the alternatives. Read from the registry rather
+    than hard-coded so the advice cannot go stale as the fleet changes — and never allowed
+    to raise, because building a nicer error is not a reason to lose the real one.
+    """
+    try:
+        from cfgpu_mcp.config import get_registry
+
+        return sorted(a.model_name for a in get_registry().list_all() if capability in a.capabilities)
+    except Exception:  # pragma: no cover - defensive: advice must never break validation
+        return []
+
+
 @dataclass
 class PollConfig:
     base_interval: float = 5.0
@@ -72,6 +87,12 @@ class ModelAdapter(ABC):
     max_duration_seconds: int    # video only: longest explicit duration accepted
     default_duration_seconds: int
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
+    #: How many marked regions this model accepts on a single image, or None for no
+    #: local limit. Declarative because it is per-model while the ``regions`` schema is
+    #: per-tool: writing the tightest model's cap into the schema would present one
+    #: model's limit as a universal and reject calls that are legal on the model
+    #: actually selected.
+    max_regions_per_image: int | None
     max_reference_images: int | None  # video only: per-model reference material limits
     max_reference_videos: int | None
     max_reference_audios: int | None
@@ -115,6 +136,7 @@ class ModelAdapter(ABC):
         # Models that have documented their set list it here; None means "no local
         # restriction", which is what every model did before this existed.
         instance.resolutions = config.get("resolutions")
+        instance.max_regions_per_image = config.get("max_regions_per_image")
         instance.max_reference_images = config.get("max_reference_images")
         instance.max_reference_videos = config.get("max_reference_videos")
         instance.max_reference_audios = config.get("max_reference_audios")
@@ -144,6 +166,7 @@ class ModelAdapter(ABC):
         self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput"
     ) -> tuple[bool, str]:
         """Return (ok, reason). Subclasses can override for fine-grained checks."""
+        from cfgpu_mcp.adapters.regions import check_regions
         from cfgpu_mcp.tool_registry import (
             GenerateAudioInput,
             GenerateImageInput,
@@ -160,6 +183,13 @@ class ModelAdapter(ABC):
         for cls, tt in expected.items():
             if isinstance(req, cls) and self.task_type != tt:
                 return False, f"{self.adapter_id} is a {self.task_type} model, not a {tt} model"
+        # Regions are checked here, for every adapter, rather than in the two adapters
+        # that accept them — the gate exists precisely for the models that do *not*, and
+        # one left unguarded silently drops the coordinates and bills for the wrong
+        # picture.
+        ok, reason = check_regions(self, req)
+        if not ok:
+            return False, reason
         if isinstance(req, GenerateVideoInput):
             if not req.prompt.strip() and not (
                 req.first_frame

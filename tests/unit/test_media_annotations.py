@@ -28,7 +28,7 @@ from cfgpu_mcp.tool_registry import (
 # The expected slot inventory, spelled out rather than derived — this is the list a host
 # integrates against, so it should be impossible to add or drop one without editing a test.
 _EXPECTED_SLOTS: dict[str, dict[str, str]] = {
-    "generate_image": {"reference_images": "image"},
+    "generate_image": {"reference_images": "image", "regions": "region"},
     "generate_video": {
         "first_frame": "image",
         "last_frame": "image",
@@ -37,7 +37,7 @@ _EXPECTED_SLOTS: dict[str, dict[str, str]] = {
         "reference_audios": "audio",
     },
     "generate_audio": {},
-    "understand_vision": {"images": "image", "video": "video"},
+    "understand_vision": {"images": "image", "video": "video", "regions": "region"},
     "task_status": {},
     "task_wait": {},
     "list_models": {},
@@ -69,11 +69,16 @@ def test_every_registered_tool_is_covered_by_the_inventory():
 @pytest.mark.parametrize("tool_name", sorted(_EXPECTED_SLOTS))
 def test_arity_matches_the_declared_python_type(tool_name):
     """``arity`` is what tells a host whether to resolve a scalar or iterate — it must
-    agree with the field's actual type, or the host resolves the wrong shape."""
+    agree with the field's actual type, or the host resolves the wrong shape.
+
+    Matched on ``list[`` rather than ``list[str]``: a slot's element type is not always
+    a string (a region slot carries ``list[RegionSpec]``), but arity is about how many,
+    not about what.
+    """
     model = next(m for name, m in _REGISTRY if name == tool_name)
     for fname, spec in get_media_slots(tool_name).items():
         annotation = str(model.model_fields[fname].annotation)
-        is_list = "list[str]" in annotation
+        is_list = "list[" in annotation
         assert is_list == (spec["arity"] == "many"), (
             f"{tool_name}.{fname}: arity={spec['arity']!r} contradicts type {annotation}"
         )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.tool_registry import UnderstandVisionInput
+from cfgpu_mcp.tool_registry import RegionSpec, UnderstandVisionInput
 
 
 async def understand_vision(
@@ -11,6 +11,8 @@ async def understand_vision(
     model: str | list[str] = "auto",
     images: list[str] | None = None,
     video: str | None = None,
+    regions: list[RegionSpec] | list[dict] | None = None,
+    image_refs: list[str] | None = None,
     system_prompt: str | None = None,
     max_tokens: int | None = None,
     temperature: float | None = None,
@@ -26,6 +28,8 @@ async def understand_vision(
         model=model,
         images=images,
         video=video,
+        regions=regions,
+        image_refs=image_refs,
         system_prompt=system_prompt,
         max_tokens=max_tokens,
         temperature=temperature,

@@ -65,13 +65,25 @@
 | 2K | 3:4 | 1728x2304 |
 | 2K | 16:9 | 2848x1600 |
 | 2K | 9:16 | 1600x2848 |
+| 2K | 3:2 | 2496x1664 |
+| 2K | 2:3 | 1664x2496 |
 | 2K | 21:9 | 3136x1344 |
 | 3K | 1:1 | 3072x3072 |
+| 3K | 4:3 | 3456x2592 |
+| 3K | 3:4 | 2592x3456 |
 | 3K | 16:9 | 4096x2304 |
 | 3K | 9:16 | 2304x4096 |
+| 3K | 3:2 | 3744x2496 |
+| 3K | 2:3 | 2496x3744 |
+| 3K | 21:9 | 4704x2016 |
 | 4K | 1:1 | 4096x4096 |
+| 4K | 4:3 | 4704x3520 |
+| 4K | 3:4 | 3520x4704 |
 | 4K | 16:9 | 5504x3040 |
 | 4K | 9:16 | 3040x5504 |
+| 4K | 3:2 | 4992x3328 |
+| 4K | 2:3 | 3328x4992 |
+| 4K | 21:9 | 6240x2656 |
 
 ### 参考图参数
 
@@ -102,6 +114,20 @@ data:image/<格式>;base64,<Base64编码>
 
 **组图数量约束：**
 - 输入参考图数量 + 生成的图片数量 ≤ 15 张
+
+**`n` 是上限，不是张数。** `sequential_image_generation: auto` 的语义是「模型自主判断
+**是否**返回组图、以及组图**包含几张**」，`max_images` 只是封顶。所以 `n=4` 可能返回
+1/2/3/4 张，**少于请求数是正常结果不是失败**，上游也没有任何参数能强制精确张数。
+调用方在拿到结果前不要向用户承诺具体张数。
+
+**组图可能部分失败。** 组图响应里每个槽位可以带自己的 `error` 而整个请求仍是 HTTP 200：
+
+- 审核不通过：**会继续**请求下一张，即不影响同请求内其他图片；
+- 内部服务异常（500）：**不会继续**，剩下的槽位根本没有被尝试。
+
+两者要求调用方做相反的事（改 prompt vs 重试），所以 adapter 把它们收进
+`partial_errors: [{index, code, message}]` 与 `urls` 并列返回，而不是只交回一个变短的
+url 列表。全部失败则由 TaskManager 的「成功但无产物」不变量兜底为硬错。
 
 ### 输出控制参数
 
@@ -261,5 +287,5 @@ data:image/<格式>;base64,<Base64编码>
 | aspect_ratio | size（方式1） | 作为提示词辅助，模型自动判断 |
 | resolution | size | 2K/3K/4K 档位映射 |
 | reference_images | image | URL 数组 |
-| n | sequential_image_generation_options.max_images | 组图数量 |
+| n | sequential_image_generation_options.max_images | 组图张数**上限**；n>1 时同时置 sequential_image_generation=auto，n=1 整个 key 都不发（上游默认即 disabled） |
 | model_specific | - | 可传入 output_format, tools, optimize_prompt_options 等 |

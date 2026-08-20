@@ -183,6 +183,12 @@ class ModelRouter:
                 or "multi_image_group" in adapter.capabilities
             ):
                 score += 3
+            # Region editing does not need to be *filtered* for here — supports() already
+            # rejects every model without the capability, so a regions request cannot
+            # reach a model that would ignore it. This is only a tie-break preference,
+            # same magnitude as the fusion bonus above.
+            if req.regions and "region_edit" in adapter.capabilities:
+                score += 3
         elif isinstance(req, GenerateVideoInput):
             if req.reference_images and "multi_modal_reference" in adapter.capabilities:
                 score += 3

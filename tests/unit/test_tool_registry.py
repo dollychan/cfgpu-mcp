@@ -441,3 +441,40 @@ def test_understand_vision_end_to_end_split():
     # reasoning_content, usage, payload are client-only
     assert set(out.structuredContent) == {"reasoning_content", "usage", "payload"}
     assert out.structuredContent["reasoning_content"] == "thinking trace"
+
+
+# ── partial group failures reach the caller ─────────────────────────────────
+
+
+def test_partial_errors_ride_the_llm_facing_content():
+    """`partial_errors` explains why the artifact list is shorter than requested, so it
+    belongs next to `urls` rather than in the client-only side channel — the model is the
+    one that has to decide whether to rewrite the prompt or retry."""
+    from cfgpu_mcp.tool_registry import NormalizedResult
+
+    result = NormalizedResult(
+        urls=["https://cdn/a.jpg"], expires_at=None, task_id=None, model_used="m",
+        seed=None, usage=None,
+        partial_errors=[{"index": 1, "code": "content_blocked", "message": "审核不通过"}],
+    )
+    assert result.to_dict()["partial_errors"][0]["code"] == "content_blocked"
+    # and it survives return_metadata=False, which drops metadata but not the reason
+    from cfgpu_mcp.tool_registry import lean_result
+
+    assert "partial_errors" in lean_result(result.to_dict(), payload={})
+
+
+def test_a_partial_result_is_not_announced_as_plain_success():
+    """A bare 'Success.' reads as the summary and would be believed. The qualifier has to
+    sit next to the shortened url list, not only in a separate field."""
+    from cfgpu_mcp.tool_registry import annotate_artifact
+
+    full = annotate_artifact({"urls": ["https://cdn/a.jpg"]})
+    partial = annotate_artifact({
+        "urls": ["https://cdn/a.jpg"],
+        "partial_errors": [{"index": 1, "code": "content_blocked", "message": "x"}],
+    })
+    assert full["artifact"] is True and partial["artifact"] is True
+    assert full["status"].startswith("Success.")
+    assert partial["status"].startswith("Partial success.")
+    assert "partial_errors" in partial["status"]
