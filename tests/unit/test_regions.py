@@ -99,7 +99,48 @@ def test_label_placeholder_is_replaced_in_place():
         ["m_a1"],
         include_names=False,
     )
-    assert out == "把<bbox>0 0 999 999</bbox>换成一只猫"
+    assert out == "把图1 <bbox>0 0 999 999</bbox>换成一只猫"
+
+
+def test_every_box_names_the_image_it_is_on():
+    """A composite edit puts boxes from two pictures in one sentence.
+
+    Observed in production: "站立着[[标记2]]" with 标记2 on the second image rendered as a
+    bare <bbox>, so the soldier's box on 图2 read as a patch of 图1's landscape. The model
+    cannot recover the image from the numbers, and guessing wrong still returns a picture
+    and still bills for it.
+    """
+    regions = [
+        _region(0, label="山顶", box=[0.0, 0.0, 0.5, 0.5]),
+        _region(1, label="士兵", box=[0.5, 0.5, 1.0, 1.0]),
+    ]
+    out = render_prompt(
+        "在[[山顶]]的位置，站立着[[士兵]]", regions, ["m_a1", "m_7c"], include_names=False
+    )
+    assert out == "在图1 <bbox>0 0 499 499</bbox>的位置，站立着图2 <bbox>500 500 999 999</bbox>"
+
+
+def test_the_ordinal_is_emitted_even_with_one_image():
+    """Redundant on a single image, but the alternative is a branch whose dangerous side
+    (several images) is the one exercised least."""
+    out = render_prompt("改[[标记1]]", [_region(label="标记1")], ["m_a1"], include_names=False)
+    assert "图1 <bbox>" in out
+
+
+def test_inline_and_suffix_render_a_box_identically():
+    """Same box, two placements — the only difference may be where it sits in the text.
+
+    The ordinal used to live in the suffix builder alone, so the two paths disagreed
+    about whether a box says which image it is on — and the load-bearing one (in-place
+    substitution, the only coordinate channel Seedream has) was the one missing it.
+    """
+    box = [0.0, 0.0, 0.5, 0.5]
+    inline = render_prompt("改[[标记1]]", [_region(0, label="标记1", box=box)], ["m_a1"], include_names=False)
+    suffix = render_prompt("调暖一点", [_region(0, label="标记1", box=box)], ["m_a1"], include_names=False)
+    piece = "图1 <bbox>0 0 499 499</bbox>"
+    assert piece in inline
+    assert suffix.endswith(f"参考区域：{piece}。")
+    assert "图1 图1" not in suffix          # the builder must not prepend a second one
 
 
 def test_image_handle_placeholder_becomes_that_dialects_ordinal():
@@ -195,9 +236,41 @@ def test_the_vision_prompt_carries_names_notes_and_an_output_contract():
         image_refs=["m_a1"],
     )
     text = _qwen().build_payload(req)["messages"][1]["content"][0]["text"]
-    assert "标记3<bbox>" in text
+    assert "图1 标记3<bbox>" in text
     assert "沙发左下角" in text
     assert "不要在回答中输出 bbox 坐标" in text
+
+
+def test_a_reading_model_is_told_which_image_each_mark_is_on():
+    """Same fix, the other dialect: names alone do not identify a box across images.
+
+    Every image restarts at 标记1, so two images in one question legitimately carry the
+    same name. The prompt half is now unambiguous; the answer half is not (see the
+    output contract, which still quotes a bare label).
+    """
+    req = UnderstandVisionInput(
+        prompt="[[m_a1#标记1]]和[[m_7c#标记1]]是同一种材质吗？",
+        images=["https://example.com/a.jpg", "https://example.com/b.jpg"],
+        image_refs=["m_a1", "m_7c"],
+        regions=[
+            _region(0, label="标记1", box=[0.0, 0.0, 0.5, 0.5]),
+            _region(1, label="标记1", box=[0.5, 0.5, 1.0, 1.0]),
+        ],
+    )
+    text = _qwen().build_payload(req)["messages"][1]["content"][0]["text"]
+    assert "图1 标记1<bbox>0 0 499 499</bbox>" in text
+    assert "图2 标记1<bbox>500 500 999 999</bbox>" in text
+
+
+def test_an_unlabelled_region_reads_the_way_the_output_contract_asks_for_it():
+    """The fallback name is per-image, so 图N + 第K个区域 matches 「图N的第K个区域」."""
+    out = render_prompt(
+        "看看这些",
+        [_region(1, box=[0.0, 0.0, 0.2, 0.2]), _region(1, box=[0.5, 0.5, 1.0, 1.0])],
+        ["m_a1", "m_7c"],
+        include_names=True,
+    )
+    assert "图2 第1个区域<bbox>" in out and "图2 第2个区域<bbox>" in out
 
 
 def test_the_output_contract_quotes_a_real_label():

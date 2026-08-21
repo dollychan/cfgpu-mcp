@@ -11,8 +11,11 @@ The caller's half of the contract is a `[[label]]` placeholder in the prompt, wh
 *where in the sentence* a region belongs. Position carries meaning in these dialects —
 "put the subject of 图1 <bbox>…</bbox> at 图2 <bbox>…</bbox>" is not the same request
 with the boxes swapped — and only the caller knows the sentence, so only the caller can
-place them. Regions that no placeholder mentions are appended as a structured suffix:
-never dropped, because a dropped region produces a plausible, billed, wrong picture.
+place them. *Which* image a box is on, however, is ours to say and not the caller's:
+image ordinals follow the slot order we were handed, so every rendered box names its own
+image (see `_render_region`). Regions that no placeholder mentions are appended as a
+structured suffix: never dropped, because a dropped region produces a plausible, billed,
+wrong picture.
 
 A structured dialect (one with its own ``bbox_list`` field) would reuse the placeholder
 resolution here with coordinate substitution replaced by neutral wording, so the
@@ -89,13 +92,28 @@ def _region_name(region: "RegionSpec", fallback_ordinal: int) -> str:
 def _render_region(region: "RegionSpec", *, include_names: bool, fallback_ordinal: int) -> str:
     """One region as the dialect writes it, with or without its human-authored text.
 
+    The image ordinal is part of the region, not decoration placed around it. A box is a
+    position *on a particular picture*, and one request routinely carries boxes from two
+    of them — "stand the figure from 图2 <bbox>…</bbox> at 图1 <bbox>…</bbox>" is a normal
+    composite edit, and it is the form the model's own documentation uses. Emitting bare
+    coordinates leaves the model to guess which image each box addresses, and a wrong
+    guess is the worst failure available here: a plausible, billed picture edited in the
+    wrong place. Coordinates from the second image silently land on the first.
+
+    The ordinal goes out unconditionally rather than only when several images are in
+    play. On a single image it is redundant wording; the conditional version would put
+    the dangerous case on the branch that runs least and is therefore tested least. A
+    caller that also wrote ``[[<ref>]]`` next to the mark gets "图1的图1 <bbox>…</bbox>" —
+    wordy but correct, and the alternative (guessing from surrounding text whether an
+    ordinal is already there) is the open-matching problem this module exists to avoid.
+
     ``include_names`` is what separates a reading model from a painting one. A
     generation model is given coordinates and nothing else: a label or a user note in
     its prompt is text it may well render *into the picture*, which is precisely what
     marks are meant not to become. A vision model only reads, so it gets the name (the
     answer comes back saying "标记3", which is the word the user used) and the note.
     """
-    parts: list[str] = []
+    parts: list[str] = [f"{_ordinal(region.image_index)} "]
     if include_names:
         parts.append(_region_name(region, fallback_ordinal))
     parts.append(format_bbox(region.box))
@@ -205,9 +223,11 @@ def render_prompt(
     leftovers = [i for i in range(len(regions)) if i not in used]
     if leftovers:
         heading = "标注区域" if include_names else "参考区域"
+        # No ordinal is prepended here: _render_region already carries it, and the two
+        # paths must render a box identically — a suffix box and an inline box differ
+        # only in where the caller put it, never in what it says.
         items = [
-            f"{_ordinal(regions[i].image_index)} "
-            f"{_render_region(regions[i], include_names=include_names, fallback_ordinal=ordinals[i])}"
+            _render_region(regions[i], include_names=include_names, fallback_ordinal=ordinals[i])
             for i in leftovers
         ]
         rendered = f"{rendered}\n\n{heading}：" + "；".join(items) + "。"
