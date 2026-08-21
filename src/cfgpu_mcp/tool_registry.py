@@ -417,7 +417,12 @@ class GenerateImageInput(BaseModel):
         "models carrying the `region_edit` capability — check with list_models / "
         "get_model_card; passing regions to a model without it is a hard error, never a "
         "silent whole-image edit. Point at a region from `prompt` with a `[[label]]` "
-        "placeholder so the coordinates land in the right clause.",
+        "placeholder so the coordinates land in the right clause. A placeholder is a "
+        "substitution site, not a mention: only the marks passed here are replaced, and "
+        "any other `[[...]]` reaches the model verbatim as literal text it may paint into "
+        "the picture. To refer to an area you are NOT editing, describe it in words — a "
+        "region edit already changes only what is marked, so listing the untouched marks "
+        "is unnecessary and invites edits to them.",
         role="region",
         arity="many",
         accepts=["region_spec"],
@@ -718,7 +723,9 @@ class UnderstandVisionInput(BaseModel):
         "models carrying the `region_understand` capability — passing regions to a model "
         "without it is a hard error, never a silently whole-image answer. Reading a "
         "region and then describing it in words is also how you edit with a model that "
-        "cannot take regions itself.",
+        "cannot take regions itself. A `[[label]]` placeholder is a substitution site, "
+        "not a mention: only the marks passed here are replaced, and any other `[[...]]` "
+        "reaches the model verbatim as literal text. To ask about a region, pass it.",
         role="region",
         arity="many",
         accepts=["region_spec"],
