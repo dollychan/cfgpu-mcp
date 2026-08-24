@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.tool_registry import GenerateImageInput, lean_result, stamp_echo
+from cfgpu_mcp.tool_registry import GenerateImageInput, RegionSpec, lean_result, stamp_echo
 
 
 async def generate_image(
@@ -12,6 +12,8 @@ async def generate_image(
     aspect_ratio: str = "1:1",
     resolution: str = "2K",
     reference_images: list[str] | None = None,
+    regions: list[RegionSpec] | list[dict] | None = None,
+    image_refs: list[str] | None = None,
     n: int = 1,
     quality_tier: str = "balanced",
     watermark: bool | None = None,
@@ -33,6 +35,8 @@ async def generate_image(
         aspect_ratio=aspect_ratio,
         resolution=resolution,
         reference_images=reference_images,
+        regions=regions,
+        image_refs=image_refs,
         n=n,
         quality_tier=quality_tier,
         watermark=watermark,

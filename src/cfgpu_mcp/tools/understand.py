@@ -6,7 +6,7 @@ from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import vision as vision_service
-from cfgpu_mcp.tool_registry import reshape_vision_result, split_structured
+from cfgpu_mcp.tool_registry import RegionSpec, reshape_vision_result, split_structured
 
 
 def register(mcp: FastMCP) -> None:
@@ -16,6 +16,8 @@ def register(mcp: FastMCP) -> None:
         model: str | list[str] = "auto",
         images: Optional[list[str]] = None,
         video: Optional[str] = None,
+        regions: Optional[list[RegionSpec]] = None,
+        image_refs: Optional[list[str]] = None,
         system_prompt: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
@@ -29,6 +31,8 @@ def register(mcp: FastMCP) -> None:
                 model=model,
                 images=images,
                 video=video,
+                regions=regions,
+                image_refs=image_refs,
                 system_prompt=system_prompt,
                 max_tokens=max_tokens,
                 temperature=temperature,

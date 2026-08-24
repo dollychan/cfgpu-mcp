@@ -7,6 +7,9 @@ task_type: understand
 endpoint: /model/v1/chat/completions
 is_async: false
 
+# region_understand is named apart from region_edit on purpose: being able to *read* a
+# marked region does not imply being able to edit by it, and one capability covering
+# both would let a reader be routed an editing job.
 capabilities:
   - image_understanding
   - image_reasoning
@@ -16,6 +19,12 @@ capabilities:
   - tool_calling
   - visual_agent
   - long_context
+  - region_understand
+
+# No documented ceiling. This is what makes reading the escape hatch for editors that do
+# have one: five regions can be understood in a single call and then edited across
+# however many calls the editing model's own limit requires.
+max_regions_per_image: ~
 
 cost_tier: 2
 speed_tier: 4

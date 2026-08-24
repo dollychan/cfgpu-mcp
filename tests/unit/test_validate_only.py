@@ -442,10 +442,23 @@ async def test_validate_only_runs_build_payload():
 @pytest.mark.parametrize(
     "model,resolution,aspect_ratio,expected",
     [
-        ("doubao-seedream-4-0", "1K", "1:1", {"resolution": "2K"}),
+        # 4.0's pixel floor is 921600, so 1K is genuinely inside its range and must not
+        # be "corrected" up into a bigger, pricier image nobody asked for. 4.5 and 5.0
+        # lite floor at 3686400, where 1K does not fit.
+        ("doubao-seedream-4-0", "1K", "1:1", {}),
         ("doubao-seedream-4-5", "1K", "1:1", {"resolution": "2K"}),
         ("doubao-seedream-5-0-lite", "1K", "1:1", {"resolution": "2K"}),
         ("doubao-seedream-5-0-pro", "4K", "1:1", {"resolution": "2K"}),
+        # 1.5K exists on Pro alone; everyone else falls back to their own nearest tier
+        # at or below it — never upward.
+        ("doubao-seedream-5-0-pro", "1.5K", "1:1", {}),
+        ("doubao-seedream-5-0-lite", "1.5K", "1:1", {"resolution": "2K"}),
+        ("doubao-seedream-4-0", "1.5K", "1:1", {"resolution": "1K"}),
+        # 3K/4K at a non-square ratio used to be reported as an aspect_ratio correction,
+        # because the table only carried 1:1 / 16:9 / 9:16 at those tiers. All eight
+        # published ratios are present now, so there is nothing to correct.
+        ("doubao-seedream-5-0-lite", "4K", "21:9", {}),
+        ("doubao-seedream-5-0-lite", "3K", "3:2", {}),
         ("cf-image-2", "3K", "21:9", {"resolution": "2K", "aspect_ratio": "1:1"}),
         ("cf2", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
         ("cf-pro", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),

@@ -8,7 +8,7 @@ from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
-from cfgpu_mcp.tool_registry import annotate_artifact, split_structured
+from cfgpu_mcp.tool_registry import RegionSpec, annotate_artifact, split_structured
 
 
 def register(mcp: FastMCP) -> None:
@@ -19,6 +19,8 @@ def register(mcp: FastMCP) -> None:
         aspect_ratio: str = "1:1",
         resolution: str = "2K",
         reference_images: Optional[list[str]] = None,
+        regions: Optional[list[RegionSpec]] = None,
+        image_refs: Optional[list[str]] = None,
         n: int = 1,
         quality_tier: str = "balanced",
         watermark: Optional[bool] = None,
@@ -38,6 +40,8 @@ def register(mcp: FastMCP) -> None:
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
                 reference_images=reference_images,
+                regions=regions,
+                image_refs=image_refs,
                 n=n,
                 quality_tier=quality_tier,
                 watermark=watermark,
