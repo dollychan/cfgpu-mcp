@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 #
 # The API takes `size` two ways and they cannot be mixed: an exact `WxH` pixel pair, or
 # a tier name ("2K") whose geometry the model then infers from the prompt. Our unified
-# schema always has an explicit `aspect_ratio`, so honouring it means emitting pixels —
-# with one deliberate exception below.
+# schema always has an explicit `aspect_ratio`, and only pixels honour it, so every
+# family/tier here emits pixels — the tier name is never sent.
 #
 # The tables are per-family, not shared. That is not redundancy: Seedream 5.0 Pro and
 # the Lite/4.x line publish *different* pixel values for the same tier and ratio (2K
@@ -59,20 +59,24 @@ _SIZE_MAP_4_0: dict[tuple[str, str], str] = {
                     "720x1280", "1248x832", "832x1248", "1512x648")),
 }
 
-# Pro's own 2K table. 1K and 1.5K are not here on purpose — see _PASSTHROUGH_TIERS.
-_SIZE_MAP_PRO: dict[tuple[str, str], str] = _table(
-    "2K", ("2048x2048", "2368x1776", "1776x2368", "2816x1584",
-           "1584x2816", "2496x1664", "1664x2496", "3136x1344"),
-)
-
-#: Tiers sent as a tier name rather than a pixel pair. Pro's price steps at 1K, and its
-#: documentation states 1.5K is billed at the 1K rate — which can only hold if the tier
-#: name is what billing reads, since 1.5K's pixel count sits well inside the upper band.
-#: Emitting exact pixels for these two would therefore double the price of the call to
-#: buy an exact aspect ratio the model is expected to infer from the prompt anyway. The
-#: caller's `aspect_ratio` is consequently advisory at these tiers.
-_PASSTHROUGH_TIERS: dict[str, frozenset[str]] = {
-    "pro": frozenset({"1K", "1.5K"}),
+# Pro's own three tables. All three tiers are published as pixels, and Pro's values
+# differ from every other family's at both tiers they share a name on (1K 16:9 is
+# 1424x800 here, 1280x720 on 4.0; 2K 16:9 is 2816x1584 here, 2848x1600 on Lite).
+#
+# Note what emitting pixels at 1K/1.5K costs: Pro's price steps at 1K ((0,1K] vs
+# (1K,∞]) and 1.5K is documented as billed at the 1K rate — an equivalence that can
+# only hold if the *tier name* is what billing reads, since 1.5K's pixel count (e.g.
+# 2048x1152 = 2,359,296) sits well inside the upper band. Sending pixels therefore
+# buys an exact aspect ratio at the risk of the higher rate at 1.5K. That is the
+# deliberate choice: `aspect_ratio` is a schema-level promise, and a tier name leaves
+# it to the model to infer from the prompt.
+_SIZE_MAP_PRO: dict[tuple[str, str], str] = {
+    **_table("1K", ("1024x1024", "1152x864", "864x1152", "1424x800",
+                    "800x1424", "1248x832", "832x1248", "1568x672")),
+    **_table("1.5K", ("1536x1536", "1792x1344", "1344x1792", "2048x1152",
+                      "1152x2048", "1872x1248", "1248x1872", "2352x1008")),
+    **_table("2K", ("2048x2048", "2368x1776", "1776x2368", "2816x1584",
+                    "1584x2816", "2496x1664", "1664x2496", "3136x1344")),
 }
 
 _TIER_TABLE: dict[str, dict[tuple[str, str], str]] = {
@@ -124,10 +128,7 @@ class SeedreamAdapter(ModelAdapter):
         return "lite"
 
     def _resolve_size(self, resolution: str, aspect_ratio: str) -> str:
-        family = self._family
-        if resolution in _PASSTHROUGH_TIERS.get(family, frozenset()):
-            return resolution
-        table = _TIER_TABLE[family]
+        table = _TIER_TABLE[self._family]
         # Same-tier square is the only safe fallback: dropping to another tier would
         # change the price band without saying so.
         return table.get((resolution, aspect_ratio)) or table.get((resolution, "1:1"), "2048x2048")
@@ -153,10 +154,7 @@ class SeedreamAdapter(ModelAdapter):
         # Defensive only: every published table covers all eight ratios, so this cannot
         # fire today. It stays so that adding a tier with partial rows degrades to a
         # reported correction rather than to silently unreported geometry.
-        if (
-            resolution not in _PASSTHROUGH_TIERS.get(family, frozenset())
-            and (resolution, req.aspect_ratio) not in _TIER_TABLE[family]
-        ):
+        if (resolution, req.aspect_ratio) not in _TIER_TABLE[family]:
             corrected["aspect_ratio"] = "1:1"
         return corrected
 
