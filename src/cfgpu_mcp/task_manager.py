@@ -68,15 +68,22 @@ ClientResolver = Callable[["ModelAdapter"], CFGPUClient]
 _ASPECT_RATIO_KEY = "_requested_aspect_ratio"
 
 # Reserved stored-payload keys holding the caller's own echo fields — the ``request_id``
-# correlation handle and the ``caption`` artifact label (see tool_registry.stamp_echo).
-# Stashed here — alongside _ASPECT_RATIO_KEY — so task_status/task_wait can recover and
-# echo them from the DB row without a schema/column change. This is what makes the
-# caption survive the async hop with no state on the caller's side: the label is supplied
-# on generate but the artifact only exists at task_wait. Like the aspect-ratio echo they
-# are internal-only: create() POSTs the clean build_payload() output and only augments
-# the stored copy, and public_payload() strips them, so they never reach the upstream API.
+# correlation handle plus the ``caption`` artifact description and the ``label`` artifact
+# name (see tool_registry.stamp_echo). Stashed here — alongside _ASPECT_RATIO_KEY — so
+# task_status/task_wait can recover and echo them from the DB row without a schema/column
+# change. This is what makes them survive the async hop with no state on the caller's
+# side: both are supplied on generate but the artifact only exists at task_wait. Like the
+# aspect-ratio echo they are internal-only: create() POSTs the clean build_payload()
+# output and only augments the stored copy, and public_payload() strips them, so they
+# never reach the upstream API.
 _REQUEST_ID_KEY = "_request_id"
 _CAPTION_KEY = "_caption"
+_LABEL_KEY = "_label"
+
+# The echo keys as one tuple, because ``public_payload`` has to strip every one of them
+# and that list is the thing that grows: adding a fourth echo field and forgetting the
+# strip would leak an internal key into the payload every caller sees, silently.
+_ECHO_PAYLOAD_KEYS = (_REQUEST_ID_KEY, _CAPTION_KEY, _LABEL_KEY)
 
 # The upstream's own ETA for this submission, captured from the POST response by
 # adapter.extract_eta(). Stashed like the keys above so the force-async return path
@@ -91,9 +98,9 @@ _ETA_KEY = "_eta"
 def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
     """Return a copy of ``payload`` augmented with the reserved internal keys.
 
-    Adds the caller's ``request_id`` / ``caption`` (when supplied) so task_status/
-    task_wait can echo them, and — for async tasks (``aspect_ratio=True``) — the
-    requested aspect_ratio echo that poll() falls back to. Returns ``payload``
+    Adds the caller's ``request_id`` / ``caption`` / ``label`` (when supplied) so
+    task_status/task_wait can echo them, and — for async tasks (``aspect_ratio=True``) —
+    the requested aspect_ratio echo that poll() falls back to. Returns ``payload``
     unchanged when nothing needs stashing.
     """
     extra: dict[str, Any] = {}
@@ -105,6 +112,9 @@ def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
     caption = getattr(req, "caption", None)
     if caption:
         extra[_CAPTION_KEY] = caption
+    label = getattr(req, "label", None)
+    if label:
+        extra[_LABEL_KEY] = label
     return {**payload, **extra} if extra else payload
 
 # Internal (already normalized via _STATUS_MAP) terminal statuses. Raw API
@@ -235,12 +245,13 @@ class Task:
         ``payload`` is exactly what ``build_payload`` produced and POSTed to the
         model's specific CFGPU endpoint — i.e. the real per-model API request, not
         the unified tool schema. The reserved internal keys (``_requested_aspect_ratio``
-        for async re-polling, ``_request_id`` / ``_caption`` for the caller's echo
-        fields) are never part of the real request, so they are stripped here.
+        for async re-polling, ``_request_id`` / ``_caption`` / ``_label`` for the
+        caller's echo fields) are never part of the real request, so they are stripped
+        here.
         """
         return {
             k: v for k, v in self.payload.items()
-            if k not in (_ASPECT_RATIO_KEY, _REQUEST_ID_KEY, _CAPTION_KEY)
+            if k not in (_ASPECT_RATIO_KEY, *_ECHO_PAYLOAD_KEYS)
         }
 
 

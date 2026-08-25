@@ -295,44 +295,86 @@ def image_refs_field(image_slot: str) -> Any:
     )
 
 
-# ── Caption (artifact label) ────────────────────────────────────────────────
+# ── Caption / label (artifact description and name) ─────────────────────────
 #
-# Like ``request_id``, ``caption`` is a caller-supplied handle this server stores and
-# echoes but never interprets — it is not part of any upstream request. It exists for
-# hosts that keep their own asset ledger (DeerFlow/cf-dream registers every generated
-# artifact as a *material* the user later refers to by a short id): without a label
-# supplied at call time, the ledger entry is nameless and the host has to spend a second
-# tool round trip naming it after the fact. Riding the generate call closes that gap, and
-# riding the stored payload means the async ``generate → task_wait`` hop carries it for
-# free — the host needs no state of its own to survive the two-phase case.
+# Like ``request_id``, ``caption`` and ``label`` are caller-supplied handles this server
+# stores and echoes but never interprets — neither is part of any upstream request. They
+# exist for hosts that keep their own asset ledger (DeerFlow/cf-dream registers every
+# generated artifact as a *material* the user later refers to by a short id): without
+# them the ledger entry is nameless and the host has to spend a second tool round trip
+# naming it after the fact. Riding the generate call closes that gap, and riding the
+# stored payload means the async ``generate → task_wait`` hop carries them for free — the
+# host needs no state of its own to survive the two-phase case.
 #
-# Over-long captions are truncated, never rejected: a caption has no effect on the
-# generated media, so failing the call — and costing the caller a whole turn — over the
-# length of a cosmetic label would be a bad trade.
+# **They are two fields because they answer to two different readers.** ``caption``
+# describes the artifact *to a model* — it lands in a ledger the agent re-reads every
+# turn to work out which material is which, so it wants to disambiguate ("角色阿雅 第一版,
+# 侧脸"). ``label`` names the artifact *to a person* — the host shows it as the file name
+# in the user's asset panel, so it wants to be short, stable, and free of anything a
+# filesystem would reject. One field cannot be both: a caption long enough to
+# disambiguate makes a terrible file name, and a file name short enough to display
+# disambiguates nothing. They are also owned differently downstream — a host may let its
+# agent rewrite the caption at will while the label stays the artifact's birth name — so
+# merging them would mean an unrelated model call could rename a user's file.
+#
+# Over-long values are truncated, never rejected: neither has any effect on the generated
+# media, so failing the call — and costing the caller a whole turn — over the length of a
+# cosmetic string would be a bad trade.
 
 CAPTION_MAX_CHARS = 200
+
+# Shorter than a caption on purpose: this is a file name. Past ~100 characters it is
+# unusable in any panel or filesystem the host might put it in, and the caller keeps the
+# long-form description in ``caption`` anyway. Truncation here is plain — the host owns
+# whatever sanitizing (illegal characters, extension preservation) its own storage needs,
+# because only it knows those rules.
+LABEL_MAX_CHARS = 100
 
 
 def _truncate_caption(v: str | None) -> str | None:
     return v[:CAPTION_MAX_CHARS] if v else v
 
 
+def _truncate_label(v: str | None) -> str | None:
+    return v[:LABEL_MAX_CHARS] if v else v
+
+
 CaptionStr = Annotated[Optional[str], AfterValidator(_truncate_caption)]
+LabelStr = Annotated[Optional[str], AfterValidator(_truncate_label)]
 
 
 def caption_field() -> Any:
-    """Declare the artifact-label slot (kept in one place so the three copies can't drift)."""
+    """Declare the artifact-description slot (kept in one place so the three copies can't drift)."""
     return Field(
         default=None,
-        description="Optional short human-readable label for the artifact this call "
+        description="Optional short human-readable description of the artifact this call "
         "produces, e.g. '角色阿雅 第一版' or 'cover image v1'. Echoed back verbatim "
         "alongside the result — including on the eventual artifact returned by a later "
         "task_status/task_wait call — so a caller that keeps its own asset ledger can "
-        "file this artifact under a name a human recognises, without a second call to "
-        "name it afterwards. It is a label, not a second prompt: name the subject and "
-        "the version, and do not restate the generation prompt. Never sent to the model "
+        "file this artifact under a description that tells it apart from its siblings, "
+        "without a second call to name it afterwards. It is a label, not a second prompt: "
+        "name the subject and the version, and do not restate the generation prompt. "
+        "Distinct from `label`: this one may be longer and exists to disambiguate; "
+        "`label` is the short display/file name. Never sent to the model "
         f"API and has no effect on the generated media. Truncated at {CAPTION_MAX_CHARS} "
         "characters; omitted from the response when not supplied.",
+    )
+
+
+def label_field() -> Any:
+    """Declare the artifact-name slot (kept in one place so the three copies can't drift)."""
+    return Field(
+        default=None,
+        description="Optional short display name for the artifact this call produces — "
+        "the name a person sees, e.g. '阿雅侧脸.png' or 'cover_v1.png'. Supply one "
+        "whenever you keep your own asset ledger: hosts use it as the artifact's file "
+        "name, and without it the artifact shows up under an opaque generated key. "
+        "Echoed back verbatim alongside the result, including on the eventual artifact "
+        "returned by a later task_status/task_wait call. Keep it short and name-like — a "
+        "few words, no sentence, no prompt text; put the longer disambiguating "
+        "description in `caption` instead. Never sent to the model API and has no effect "
+        f"on the generated media. Truncated at {LABEL_MAX_CHARS} characters; omitted from "
+        "the response when not supplied.",
     )
 
 
@@ -480,6 +522,7 @@ class GenerateImageInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
     @model_validator(mode="after")
@@ -614,6 +657,7 @@ class GenerateVideoInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
 
@@ -683,6 +727,7 @@ class GenerateAudioInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
 
@@ -935,28 +980,35 @@ def lean_result(result: dict[str, Any], payload: dict[str, Any]) -> dict[str, An
 
 # ── Caller-supplied echo fields (service-layer data contract) ───────────────
 
-def stamp_echo(result: Any, *, request_id: str | None = None, caption: str | None = None) -> Any:
+def stamp_echo(
+    result: Any,
+    *,
+    request_id: str | None = None,
+    caption: str | None = None,
+    label: str | None = None,
+) -> Any:
     """Echo the caller's own handles onto a result dict (in place), if set.
 
-    Both fields are supplied on a ``generate_*`` call, stored, and handed back
-    untouched; neither is part of any upstream request:
+    All three fields are supplied on a ``generate_*`` call, stored, and handed back
+    untouched; none is part of any upstream request:
 
     - ``request_id`` is a correlation handle. It lets the caller join a result back to
       the originating request across the async ``generate → task_wait/task_status`` hop
       (where the tool_call ids differ) and for synchronous models that have no
       ``task_id``.
-    - ``caption`` is a human-readable label for the artifact, for callers that keep
-      their own asset ledger and would otherwise have to name the entry in a second
-      call.
+    - ``caption`` describes the artifact for callers that keep their own asset ledger and
+      would otherwise have to name the entry in a second call.
+    - ``label`` names it — the short display/file name the same ledger shows to a person.
 
     Stamped by the **service layer** — not the MCP wrapper — so all three call modes
     (MCP, agent dispatcher, CLI) echo them. Omitted when falsy so callers that supply
-    neither see unchanged result shapes; ``setdefault`` never clobbers a value already
+    none see unchanged result shapes; ``setdefault`` never clobbers a value already
     present. Non-dict results (e.g. a ``CallToolResult``) pass through untouched.
 
-    The two diverge on **failures**: ``CFGPUError`` carries ``request_id`` (joining a
-    failure back to its request is exactly what a correlation handle is for) but not
-    ``caption`` — a failed call produced no artifact, so there is nothing to label.
+    They diverge on **failures**: ``CFGPUError`` carries ``request_id`` (joining a
+    failure back to its request is exactly what a correlation handle is for) but neither
+    ``caption`` nor ``label`` — a failed call produced no artifact, so there is nothing
+    to describe or name.
     """
     if not isinstance(result, dict):
         return result
@@ -964,6 +1016,8 @@ def stamp_echo(result: Any, *, request_id: str | None = None, caption: str | Non
         result.setdefault("request_id", request_id)
     if caption:
         result.setdefault("caption", caption)
+    if label:
+        result.setdefault("label", label)
     return result
 
 

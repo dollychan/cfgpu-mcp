@@ -49,6 +49,7 @@ async def generate_video(
     model_specific: dict | None = None,
     request_id: str | None = None,
     caption: str | None = None,
+    label: str | None = None,
     validate_only: bool = False,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import client_for, get_task_repository, get_registry
@@ -76,6 +77,7 @@ async def generate_video(
         model_specific=model_specific,
         request_id=request_id,
         caption=caption,
+        label=label,
         validate_only=validate_only,
     )
 
@@ -119,6 +121,7 @@ async def generate_video(
             _handle(task, forced=adapter.force_async and wait),
             request_id=request_id,
             caption=caption,
+            label=label,
         )
 
     try:
@@ -129,11 +132,11 @@ async def generate_video(
         raise
 
     if task.result is None:
-        return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption)
+        return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption, label=label)
 
     result = task.result
     # The real per-model API request is always surfaced, regardless of return_metadata.
     payload = task.public_payload()
     if not return_metadata:
-        return stamp_echo(lean_result(result, payload), request_id=request_id, caption=caption)
-    return stamp_echo({**result, "payload": payload}, request_id=request_id, caption=caption)
+        return stamp_echo(lean_result(result, payload), request_id=request_id, caption=caption, label=label)
+    return stamp_echo({**result, "payload": payload}, request_id=request_id, caption=caption, label=label)

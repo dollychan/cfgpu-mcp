@@ -19,6 +19,7 @@ from cfgpu_mcp.service import video as video_service
 from cfgpu_mcp.tool_registry import NormalizedResult
 
 CAPTION = "角色阿雅 第一版"
+LABEL = "阿雅侧脸.png"
 
 
 async def _repo() -> tuple[object, aiosqlite.Connection]:
@@ -133,6 +134,77 @@ async def test_mcp_wrapper_forwards_caption_to_the_service():
     ) as svc:
         await mcp.call_tool("generate_image", {"prompt": "x", "caption": CAPTION})
     assert svc.await_args.kwargs["caption"] == CAPTION
+
+
+@pytest.mark.asyncio
+async def test_sync_generate_echoes_label_with_the_artifact():
+    repo, db = await _repo()
+    client = MagicMock()
+    client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    a, b, c, d = _patched(_sync_adapter(), repo, client)
+    with a, b, c, d:
+        result = await image_service.generate_image(prompt="x", caption=CAPTION, label=LABEL)
+    assert result["caption"] == CAPTION
+    assert result["label"] == LABEL
+    assert "_label" not in result["payload"]  # the name is not part of the API request
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_sync_generate_echoes_label_without_metadata():
+    """return_metadata=False builds a different result dict — it must stamp too."""
+    repo, db = await _repo()
+    client = MagicMock()
+    client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    a, b, c, d = _patched(_sync_adapter(), repo, client)
+    with a, b, c, d:
+        result = await image_service.generate_image(
+            prompt="x", label=LABEL, return_metadata=False
+        )
+    assert set(result) == {"urls", "expires_at", "payload", "label"}
+    assert result["label"] == LABEL
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_no_wait_envelope_echoes_label():
+    """wait=False returns before any artifact exists; the name rides along so the caller
+    can file the pending task under what it will see at task_wait."""
+    repo, db = await _repo()
+    client = MagicMock()
+    client.post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    a, b, c, d = _patched(_async_adapter(), repo, client)
+    with a, b, c, d:
+        result = await video_service.generate_video(prompt="x", wait=False, label=LABEL)
+    assert result["task_id"] == "cfgpu-task-1"
+    assert result["label"] == LABEL
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_mcp_wrapper_forwards_label_to_the_service():
+    """The FastMCP wrappers re-declare every param by hand, so the schema-consistency
+    test proves the param exists while this proves the wrapper actually passes it on."""
+    from cfgpu_mcp.server import mcp
+
+    with patch(
+        "cfgpu_mcp.service.image.generate_image",
+        AsyncMock(return_value={"urls": ["https://cdn/img.jpg"], "label": LABEL}),
+    ) as svc:
+        await mcp.call_tool("generate_image", {"prompt": "x", "label": LABEL})
+    assert svc.await_args.kwargs["label"] == LABEL
+
+
+@pytest.mark.asyncio
+async def test_omitting_label_leaves_the_result_shape_unchanged():
+    repo, db = await _repo()
+    client = MagicMock()
+    client.post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    a, b, c, d = _patched(_sync_adapter(), repo, client)
+    with a, b, c, d:
+        result = await image_service.generate_image(prompt="x", caption=CAPTION)
+    assert "label" not in result
+    await db.close()
 
 
 @pytest.mark.asyncio

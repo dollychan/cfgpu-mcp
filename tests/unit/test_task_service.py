@@ -162,12 +162,13 @@ async def test_get_status_result_includes_real_api_payload():
 
 # ── request_id correlation echo ────────────────────────────────────────────────
 
-from cfgpu_mcp.task_manager import _CAPTION_KEY, _REQUEST_ID_KEY
+from cfgpu_mcp.task_manager import _CAPTION_KEY, _LABEL_KEY, _REQUEST_ID_KEY
 
 
 async def _db_with_task(status: str, adapter_id: str, *, result=None, error=None,
                         request_id: str | None = None,
-                        caption: str | None = None) -> aiosqlite.Connection:
+                        caption: str | None = None,
+                        label: str | None = None) -> aiosqlite.Connection:
     db = await aiosqlite.connect(":memory:")
     db.row_factory = aiosqlite.Row
     await db.execute(_CREATE_TABLE)
@@ -177,6 +178,8 @@ async def _db_with_task(status: str, adapter_id: str, *, result=None, error=None
         payload[_REQUEST_ID_KEY] = request_id
     if caption:
         payload[_CAPTION_KEY] = caption
+    if label:
+        payload[_LABEL_KEY] = label
     await db_ops.insert_task(db, "task-1", adapter_id, "pending", payload)
     if status != "pending":
         await db_ops.update_task(db, "task-1", status, result=result, error=error)
@@ -268,6 +271,75 @@ async def test_get_status_echoes_caption_on_pending_envelope():
     with p_db, p_client, p_reg:
         result = await task_service.get_status("task-1")
     assert result["caption"] == "开场镜头 v2"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_echoes_label_on_success():
+    """The name supplied on generate_* arrives with the artifact one tool call later —
+    without it a host's asset panel shows the artifact under an opaque generated key."""
+    db = await _db_with_task(
+        "succeeded", "wan-2-0", result={"urls": ["https://cdn/v.mp4"]}, label="开场镜头.mp4"
+    )
+    client = MagicMock()
+    client.get = AsyncMock()
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=True))
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+    assert result["label"] == "开场镜头.mp4"
+    assert _LABEL_KEY not in result["payload"]
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_echoes_label_on_pending_envelope():
+    db = await _db_with_task("pending", "wan-2-0", label="开场镜头.mp4")
+    client = MagicMock()
+    client.get = AsyncMock(return_value={"id": "task-1", "status": "running"})
+    adapter = _adapter(is_async=True)
+    adapter.extract_status.return_value = "running"
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+    assert result["label"] == "开场镜头.mp4"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_wait_echoes_both_caption_and_label():
+    """task_wait is the other half of the async hop and must echo the same pair."""
+    db = await _db_with_task(
+        "succeeded", "wan-2-0", result={"urls": ["https://cdn/v.mp4"]},
+        caption="开场镜头 v2", label="开场镜头.mp4",
+    )
+    client = MagicMock()
+    client.get = AsyncMock()
+    adapter = _adapter(is_async=True)
+    adapter.estimate_poll_timeout.return_value = 5  # a MagicMock cannot be min()'d
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.wait_for_task("task-1")
+    assert result["caption"] == "开场镜头 v2"
+    assert result["label"] == "开场镜头.mp4"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_failed_task_carries_no_label_either():
+    """Same asymmetry as the caption: a failed call produced no artifact to name."""
+    from cfgpu_mcp.errors import CFGPUError
+    db = await _db_with_task(
+        "failed", "wan-2-0", error="content blocked", request_id="r-7", label="开场镜头.mp4"
+    )
+    client = MagicMock()
+    client.get = AsyncMock()
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=True))
+    with p_db, p_client, p_reg:
+        with pytest.raises(CFGPUError) as exc_info:
+            await task_service.get_status("task-1")
+    err = exc_info.value.to_tool_result_dict()
+    assert err["request_id"] == "r-7"
+    assert "label" not in err
     await db.close()
 
 
