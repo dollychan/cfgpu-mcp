@@ -662,6 +662,14 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > （GPT Image 2）只有 1K/2K/4K 三档，传 `3K` 会被上游拒绝；它的 `aspect_ratio` 也没有 `21:9`。
 > 分辨率直接影响计价（`cf-image-2` 三档分别为 0.105 / 0.16 / 0.21 元每张），需要哪档就显式传哪档。
 
+> **Seedream 系列是例外：档位在本地校验，且始终以精确像素上行。** 各家族支持的档位不同
+> （`doubao-seedream-5-0-pro`：1K/1.5K/2K；`5-0-lite` 与 `4.5`：2K/3K/4K；`4.0`：1K/2K/3K/4K），
+> 超出的档位由 `supports()` 直接拒绝而不是静默降档——`validate_only` 会在 `corrected_args`
+> 里给出最接近的可用档位，`model="auto"` 则会绕开不支持该档的模型。adapter 把
+> （`resolution`, `aspect_ratio`）查成一个精确的 `宽x高` 送上游，因此 `aspect_ratio` 在
+> 每一档都真实生效。注意 Pro 的 1.5K：官方称它与 1K 同价且效果更好，但那个等价只在上行
+> **档位名**时成立；发像素后可能按上一档计费。要保 1K 价就传 `1K`。
+
 ### 视觉理解（图像理解 / 图像推理 / 视频理解）
 
 ```bash

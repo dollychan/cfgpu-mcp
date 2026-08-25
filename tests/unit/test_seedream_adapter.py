@@ -162,11 +162,13 @@ def test_pro_n_greater_than_one_raises():
         adapter.build_payload(req)
 
 
-def test_pro_1k_resolution_passes_through():
+def test_pro_1k_maps_to_pixels():
+    """Every Pro tier emits pixels, 1K included — the tier name is never sent, so the
+    caller's aspect_ratio is honoured at every tier rather than left to the prompt."""
     adapter = _make_pro_adapter()
     req = GenerateImageInput(prompt="x", resolution="1K", aspect_ratio="16:9")
     payload = adapter.build_payload(req)
-    assert payload["size"] == "1K"
+    assert payload["size"] == "1424x800"
 
 
 def test_pro_2k_3x2_maps_to_correct_size():
@@ -261,13 +263,24 @@ def test_3k_and_4k_carry_every_published_ratio(resolution, aspect_ratio, expecte
     assert _make_adapter().build_payload(req)["size"] == expected
 
 
-def test_pro_1_5k_passes_the_tier_through():
-    """1.5K is billed at the 1K rate, which can only hold if the tier *name* is what
-    billing reads — its pixel count sits well inside the upper band. Emitting exact
-    pixels here would double the price of the call to buy an exact aspect ratio the
-    model is expected to infer from the prompt anyway."""
+def test_pro_1_5k_maps_to_pixels():
+    """1.5K has its own published pixel table on Pro and is sent as pixels like the
+    other two tiers."""
     req = GenerateImageInput(prompt="x", resolution="1.5K", aspect_ratio="16:9")
-    assert _make_pro_adapter().build_payload(req)["size"] == "1.5K"
+    assert _make_pro_adapter().build_payload(req)["size"] == "2048x1152"
+
+
+@pytest.mark.parametrize("tier", ["1K", "1.5K", "2K"])
+@pytest.mark.parametrize("ratio", ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"])
+def test_pro_every_tier_and_ratio_is_pixels_inside_the_documented_range(tier, ratio):
+    """Pro's constraint is a total-pixel range, [921600, 4624220], plus a ratio range of
+    [1/16, 16]. A table entry outside it is an opaque upstream 400 that no local check
+    would catch, so pin the whole grid rather than a sample of it."""
+    req = GenerateImageInput(prompt="x", resolution=tier, aspect_ratio=ratio)
+    size = _make_pro_adapter().build_payload(req)["size"]
+    w, h = (int(v) for v in size.split("x"))
+    assert 921600 <= w * h <= 4624220, size
+    assert 1 / 16 <= w / h <= 16, size
 
 
 def test_4_0_supports_1k():
