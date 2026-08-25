@@ -225,6 +225,42 @@ async def test_validate_only_returns_the_payload_the_real_call_would_send():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("svc", "kwargs", "watermark_path"),
+    [
+        (
+            image_service.generate_image,
+            {"prompt": "猫", "model": "doubao-seedream-5-0-lite"},
+            ("watermark",),
+        ),
+        (
+            video_service.generate_video,
+            {"prompt": "海浪", "model": "doubao-seedance-2-0", "duration_seconds": 5},
+            ("watermark",),
+        ),
+        (
+            video_service.generate_video,
+            {"prompt": "海浪", "model": "wan2.7-t2v", "duration_seconds": 5},
+            ("parameters", "watermark"),
+        ),
+    ],
+)
+async def test_agent_omitted_watermark_reaches_supported_upstream_as_false(
+    svc, kwargs, watermark_path
+):
+    """Mode B passes raw tool args to the service, so its Python default is the
+    load-bearing fallback when the agent omits watermark."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await svc(**kwargs, validate_only=True)
+
+    value = result["payload"]
+    for key in watermark_path:
+        value = value[key]
+    assert value is False
+
+
+@pytest.mark.asyncio
 async def test_validate_only_echoes_request_id_but_not_caption():
     """Same asymmetry CFGPUError already encodes: a preflight produced no artifact,
     so there is nothing for the label to name — but the correlation handle still joins

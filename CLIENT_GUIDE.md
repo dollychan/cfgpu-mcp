@@ -305,7 +305,7 @@ async def main():
         aspect_ratio="16:9",
         resolution="720p",
         with_audio=True,
-        watermark=False,        # None=模型默认；gpt-image-2 / nano-banana 不支持(忽略)
+        watermark=False,        # 默认 false；不支持水印字段的模型会忽略
         wait=False,             # 立即返回 task_id
     )
     print(task["task_id"])      # 'task-abc123'
@@ -611,8 +611,9 @@ cfgpu generate image "..." --no-watermark      # gpt-image-2 / nano-banana 不�
 cfgpu generate video "..." --model-specific '{"tools": [{"type": "web_search"}]}'
 ```
 
-> `watermark` 现已提升为通用参数（`--watermark/--no-watermark`，service 层 `watermark=True/False`）。
-> 不传时（`None`）沿用各模型自身的默认值（多数为开启，Seedream 4.5 为关闭）。
+> `watermark` 是通用参数（`--watermark/--no-watermark`，service 层 `watermark=True/False`），
+> 默认为 `false`。对支持的模型，未显式传入时仍会将 `false` 写入上游 payload；
+> GPT Image / Nano Banana、Grok、Kling 和 MiniMax H3 等没有 watermark 请求字段的模型会忽略它。
 
 ### 生成音频（语音合成 / text-to-speech）
 

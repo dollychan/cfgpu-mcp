@@ -456,10 +456,11 @@ class GenerateImageInput(BaseModel):
             )
         return v
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
-    watermark: Optional[bool] = Field(
-        default=None,
-        description="Add an 'AI generated' watermark. None keeps each model's own default. "
-        "Not supported by gpt-image-2 / nano-banana models (ignored there).",
+    watermark: bool = Field(
+        default=False,
+        description="Add an 'AI generated' watermark. Defaults to false and is sent "
+        "explicitly by models whose upstream API supports it. Not supported by "
+        "gpt-image-2 / nano-banana models (ignored there).",
     )
     wait: bool = Field(default=True, description="Wait for task completion before returning")
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
@@ -585,9 +586,10 @@ class GenerateVideoInput(BaseModel):
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
-    watermark: Optional[bool] = Field(
-        default=None,
-        description="Add a watermark. None keeps each model's own default. Supported by all video models.",
+    watermark: bool = Field(
+        default=False,
+        description="Add a watermark. Defaults to false and is sent explicitly by models "
+        "whose upstream API supports it; models with no watermark request field ignore it.",
     )
     prompt_extend: bool = Field(
         default=True,

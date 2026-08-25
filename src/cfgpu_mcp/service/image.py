@@ -16,7 +16,7 @@ async def generate_image(
     image_refs: list[str] | None = None,
     n: int = 1,
     quality_tier: str = "balanced",
-    watermark: bool | None = None,
+    watermark: bool = False,
     wait: bool = True,
     timeout: int | None = None,
     return_metadata: bool = True,

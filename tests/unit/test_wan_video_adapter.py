@@ -83,6 +83,14 @@ def test_payload_nested_envelope():
     }
 
 
+def test_default_watermark_is_only_in_parameters_envelope():
+    payload = _make_adapter().build_payload(
+        GenerateVideoInput(prompt="x", first_frame="https://example.com/f.jpg")
+    )
+    assert payload["parameters"]["watermark"] is False
+    assert "watermark" not in payload
+
+
 def test_i2v_parameters_omit_ratio_but_map_prompt_extend_and_watermark():
     adapter = _make_adapter()
     req = GenerateVideoInput(

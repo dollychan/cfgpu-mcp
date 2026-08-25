@@ -41,7 +41,7 @@ async def generate_video(
     resolution: str = "720p",
     with_audio: bool = True,
     quality_tier: str = "balanced",
-    watermark: bool | None = None,
+    watermark: bool = False,
     prompt_extend: bool = True,
     wait: bool = True,
     timeout: int | None = None,

@@ -253,6 +253,7 @@ class SeedreamAdapter(ModelAdapter):
             "prompt": prompt,
             "size": self._resolve_size(req.resolution, req.aspect_ratio),
             "response_format": "url",
+            "watermark": req.watermark,
         }
         if req.reference_images:
             # Single ref → string; multiple → array
@@ -270,8 +271,6 @@ class SeedreamAdapter(ModelAdapter):
             # upstream default, and Pro rejects the key even when set to `disabled`.
             payload["sequential_image_generation"] = "auto"
             payload["sequential_image_generation_options"] = {"max_images": req.n}
-        if req.watermark is not None:
-            payload["watermark"] = req.watermark
         if req.model_specific:
             payload.update(req.model_specific)
         return payload

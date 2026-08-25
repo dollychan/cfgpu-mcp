@@ -88,7 +88,7 @@ class WanVideoAdapter(ModelAdapter):
         parameters: dict = {
             "resolution": req.resolution.upper(),   # 720p → 720P
             "prompt_extend": req.prompt_extend,
-            "watermark": req.watermark if req.watermark is not None else False,
+            "watermark": req.watermark,
             "duration": self.resolve_duration_seconds(req),
         }
         if self._uses_ratio():

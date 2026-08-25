@@ -87,6 +87,18 @@ def test_model_specific_merged():
     assert payload["watermark"] is False
 
 
+def test_watermark_defaults_false_at_payload_top_level():
+    payload = _make_adapter().build_payload(GenerateVideoInput(prompt="x"))
+    assert payload["watermark"] is False
+
+
+def test_explicit_true_watermark_is_preserved():
+    payload = _make_adapter().build_payload(
+        GenerateVideoInput(prompt="x", watermark=True)
+    )
+    assert payload["watermark"] is True
+
+
 # ── extract_task_id ──────────────────────────────────────────────────────────
 
 def test_extract_task_id_from_output():

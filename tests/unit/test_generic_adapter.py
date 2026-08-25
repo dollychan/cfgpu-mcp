@@ -52,6 +52,13 @@ def test_default_value_used_when_field_missing():
     assert payload["watermark"] == "false"
 
 
+def test_explicit_boolean_uses_json_spelling():
+    payload = _make_adapter().build_payload(
+        GenerateImageInput(prompt="a dog", watermark=True)
+    )
+    assert payload["watermark"] == "true"
+
+
 def test_actual_value_overrides_default():
     adapter = _make_adapter(extra={
         "payload_mapping": {"flag": "{enabled|default:no}"}

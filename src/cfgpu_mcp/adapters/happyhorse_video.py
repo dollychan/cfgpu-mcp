@@ -57,11 +57,10 @@ class HappyHorseVideoAdapter(ModelAdapter):
         payload: dict = {
             "model": self.cfgpu_model_id,
             "input": inp,
+            "watermark": req.watermark,
         }
         if parameters:
             payload["parameters"] = parameters
-        if req.watermark is not None:
-            payload["watermark"] = req.watermark
         if req.model_specific:
             payload.update(req.model_specific)
         return payload
