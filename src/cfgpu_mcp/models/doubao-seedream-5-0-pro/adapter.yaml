@@ -6,7 +6,7 @@ display_name: "Doubao Seedream 5.0 Pro"
 cfgpu_model_id: doubao-seedream-5-0-pro
 model_name: doubao-seedream-5-0-pro
 
-# Pro drops 组图 (multi_image_group) and 联网搜索 (web_search); single image only.
+# Pro drops 组图 (multi_image_group) and 联网搜索 (web_search); n is ignored.
 # It is so far the only image model that can edit a *named region*: the coordinates ride
 # inside the prompt as <bbox> tags, so neither the endpoint nor the response changes.
 capabilities:

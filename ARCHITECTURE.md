@@ -513,7 +513,7 @@ src/cfgpu_mcp/
 │   ├── registry.py             YAML 加载、extends 合并、Python 类解析
 │   ├── generic.py              YAML DSL 驱动的通用 adapter
 │   ├── seedance_video.py       Seedance 系列 Python Adapter（WAN 2.0 / WAN 2.0 Fast / Seedance 2.0 / 2.0 Fast / 1.5 Pro 共用）
-│   ├── seedream.py             Seedream 系列 Python Adapter（同步模型；5.0 lite / 5.0 Pro / 4.5 / 4.0 共用。Pro 为单图模型，n>1 报错；所有档位均映射为精确像素，不上行档位名）
+│   ├── seedream.py             Seedream 系列 Python Adapter（同步模型；5.0 lite / 5.0 Pro / 4.5 / 4.0 共用。Pro 为单图模型并静默忽略 n>1；所有档位均映射为精确像素，不上行档位名）
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
 │   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds/sound + image_list/video_list）
@@ -789,7 +789,7 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
 - `with_audio`：视频音频开关，`SeedanceVideoAdapter` 映射为 `generate_audio`。
 - `watermark`：水印开关，类型为 `bool`，**默认 `false`**。Agent / MCP / service 三层的默认值保持一致；即使 caller 未传值，支持水印字段的 adapter 也会显式写入上游 payload。不同 API 形状分开处理：`seedream`、`seedance_video` 和 `happyhorse` 使用顶层 `payload["watermark"]`，WAN 2.6/2.7 使用 `payload["parameters"]["watermark"]`。它们都在 `model_specific` 合并之前写入，因此显式的模型私有值仍可覆盖。上游没有该请求字段的 adapter（GPT Image / Nano Banana、Grok、Kling、MiniMax H3 等）继续忽略它，避免传入未知字段。
-- `n`：图片组图数量（1-15），默认 1。仅 `SeedreamAdapter` 支持 `n>1`——会自动写入 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`async_image`（gpt-image-2 / nano-banana）的 `supports()` 对 `n>1` 直接拒绝。
+- `n`：图片组图数量（1-15），默认 1。只有声明 `multi_image_group` 能力的 Seedream 模型会把 `n>1` 写成 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；不支持该能力的图像模型（包括 Seedream 5.0 Pro、gpt-image-2、nano-banana）静默忽略 `n`，继续发送其他参数并生成单张图片。
 - `resolution`（视频）：开放 `1080p`，WAN 2.0 / Doubao Seedance 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**分辨率是逐模型的取值集合**：能查到官方取值范围的模型在 `adapter.yaml` 用 `resolutions: [...]` 声明（Seedance 2.5 / 2.0 fast / 2.0 mini 均为 `[480p, 720p]`，Seedance 2.0 为 `[480p, 720p, 1080p]`），由 `ModelAdapter.supports()` 统一校验；未声明（`None`）= 不做本地限制，即该字段引入前的行为。否则上游会回 `the parameter resolution specified in the request is not valid for model X in i2v`。**另一例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
 - `quality_tier`：**双重身份**——既是 `model="auto"` 的路由打分输入（`router.py`），也被部分 adapter 映射进 payload，**选定模型后仍然生效**：`KlingVideoAdapter` → `mode`（`best` → `pro`，其余 `std`），`GptImage2Adapter` → `quality`（`fast`/`balanced`/`best` → `low`/`medium`/`high`）。三档与这些 API 自身的档位一一对应，故复用该参数而不新增一个近义的 `quality` 工具参数。其余 adapter 不读取它，选定模型后即为纯路由偏好。两处映射都写在 `payload.update(req.model_specific)` **之前**，故 `model_specific` 仍可覆盖。
 - `resolution`（图片）：**必须在 `build_payload` 里显式下发**——图片 API 按分辨率档位分段计价（GPT Image 2：1K/2K/4K 三档），adapter 漏读该字段不会报错，只会让每次调用都静默落到模型自身的默认档，且账单与预期不符。`SeedreamAdapter` 映射为像素 `size`，`NanoBananaAdapter` 映射为 `image_size`，`GptImage2Adapter` 原样下发 `resolution`（三档都是字面量 `1K` / `2K` / `4K`，空串会被上游判参数错误——早期版本把 `1K` 翻成 `""`，上游回的正是 `resolution 参数必须为 '1K'、'2K' 或 '4K'`）。注意 `ModelAdapter.supports()` 里的 `resolutions` 声明式校验**只对视频生效**（`isinstance(req, GenerateVideoInput)` 分支内），图片侧不做本地取值拦截：统一 Schema 比单个模型宽（`3K` 之于 GPT Image 2、`21:9` 之于 GPT Image 2 / nano-banana），这些值原样上行、**由上游拒绝**。

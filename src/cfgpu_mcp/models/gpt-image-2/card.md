@@ -41,7 +41,7 @@
 | `resolution` | `resolution` | `1K` / `2K` / `4K` 原样下发——API 三档都是字面量，空串会被判参数错误（`resolution 参数必须为 '1K'、'2K' 或 '4K'`）；`3K` 无对应档位，原样下发由上游拒绝 |
 | `aspect_ratio` | `aspect_ratio` | 原样下发。统一 Schema 多出的 `21:9` 不在本模型取值集内，不做本地拦截，由上游拒绝 |
 | `quality_tier` | `quality` | `fast` → `low`、`balanced` → `medium`、`best` → `high`。**本模型的 `quality_tier` 不只是路由偏好，选定模型后仍然生效**（同可灵的 `quality_tier` → `mode`）；`model_specific={"quality": ...}` 最后合并，可覆盖该映射 |
-| `watermark` / `n>1` | — | 不支持：`watermark` 忽略，`n>1` 由 `supports()` 本地拒绝 |
+| `watermark` / `n>1` | — | 不支持：两者均静默忽略，其余参数照常发送；`n>1` 仍只生成单张图片 |
 
 ## 使用示例
 

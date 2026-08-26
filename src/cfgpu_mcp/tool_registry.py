@@ -484,9 +484,9 @@ class GenerateImageInput(BaseModel):
         "outcome, not a failure, and no setting forces an exact number. Do not promise the "
         "user a specific count before the result comes back. Only models with the "
         "`multi_image_group` capability accept n>1 (the doubao-seedream-* line except "
-        "5-0-pro, which is single-image); others reject it rather than quietly generating "
-        "one. On group models the input reference images plus the generated images must "
-        "total at most 15.",
+        "5-0-pro, which is single-image); models without that capability silently ignore "
+        "n and generate one image. On group models the input reference images plus the "
+        "generated images must total at most 15.",
     )
 
     @field_validator("n")

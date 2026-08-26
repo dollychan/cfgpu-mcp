@@ -503,9 +503,8 @@ def test_regions_and_group_images_are_mutually_exclusive():
     picture being edited.
 
     Unreachable through any shipped model — the only region editor is Pro, and Pro has
-    no 组图 at all, so its n>1 refusal fires first. Exercised here on a hypothetical
-    group-capable region model so that combination cannot start passing silently the day
-    one exists.
+    no 组图 capability, so it ignores n. Exercised here on a hypothetical group-capable
+    region model so that combination cannot start passing silently the day one exists.
     """
     adapter = _lite()
     adapter.capabilities = adapter.capabilities | {"region_edit"}

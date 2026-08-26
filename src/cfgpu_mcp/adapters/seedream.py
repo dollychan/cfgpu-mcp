@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 from cfgpu_mcp.adapters.base import (
     ModelAdapter,
     _default_expires_at,
-    models_with_capability,
     register_python_adapter,
 )
 from cfgpu_mcp.adapters.regions import render_prompt
@@ -188,17 +187,6 @@ class SeedreamAdapter(ModelAdapter):
             return False, f"{self.adapter_id} accepts at most {max_refs} reference_images"
 
         does_groups = _GROUP_CAPABILITY in self.capabilities
-        if req.n > 1 and not does_groups:
-            alternatives = models_with_capability(_GROUP_CAPABILITY)
-            tail = (
-                f"改用支持组图的模型：{' / '.join(alternatives)}，或 model='auto'。"
-                if alternatives
-                else "当前没有支持组图的模型可用。"
-            )
-            return False, (
-                f"{self.model_name} 只生成单张图片，不支持 n>1（组图 / "
-                f"sequential_image_generation）。{tail}"
-            )
         if does_groups and reference_count + req.n > _GROUP_TOTAL_CAP:
             return False, (
                 f"{self.adapter_id} requires reference_images count + n <= "
@@ -208,7 +196,7 @@ class SeedreamAdapter(ModelAdapter):
         # independent images, while a region names a place on the one image being
         # edited. Only Pro takes regions and Pro has no 组图, so this is unreachable
         # today — it exists so a future group-capable region model cannot pass silently.
-        if req.regions and req.n > 1:
+        if does_groups and req.regions and req.n > 1:
             return False, (
                 f"{self.adapter_id}: regions (区域编辑) cannot be combined with n>1 "
                 f"(组图) — a group is several independent images, a region marks one "
@@ -218,15 +206,6 @@ class SeedreamAdapter(ModelAdapter):
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)
-
-        # supports() is the gate; this is the direct-call backstop. Keyed on the declared
-        # capability rather than on "is this Pro" so a future single-image variant cannot
-        # slip through and have 组图 switched on for it.
-        if req.n and req.n > 1 and _GROUP_CAPABILITY not in self.capabilities:
-            raise ValueError(
-                f"{self.model_name} generates a single image and does not support n>1 "
-                f"(组图 / sequential_image_generation)."
-            )
 
         # supports() is the gate, but build_payload is also reachable directly (tests,
         # and any future caller). A region that reached a model without the capability
@@ -262,7 +241,7 @@ class SeedreamAdapter(ModelAdapter):
                 if len(req.reference_images) == 1
                 else req.reference_images
             )
-        if req.n and req.n > 1:
+        if req.n and req.n > 1 and _GROUP_CAPABILITY in self.capabilities:
             # 组图. Note "auto" does not mean "give me exactly n": the model decides both
             # *whether* to return a group and how many images it contains, and max_images
             # only caps it — so n is a ceiling, and fewer is a normal outcome, not a
