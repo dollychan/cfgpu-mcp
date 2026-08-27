@@ -114,10 +114,11 @@ def media_field(
 # ── Regions (user-drawn annotations on an input image) ──────────────────────
 #
 # A region carries "here, on that image" from a human's canvas into a model request.
-# Two very different upstream dialects consume it — Seedream embeds `<bbox>` tags in
-# the prompt text, Qwen's vision models do the same for reading — so the unified schema
-# deliberately matches neither: it is **normalised [0, 1] floats**, and each adapter
-# converts once, at its own exit.
+# Three very different upstream dialects consume it — Seedream embeds `<bbox>` tags in
+# the prompt text, Qwen's vision models do the same for reading, and 万相 2.7 图像 takes
+# absolute pixels in its own `bbox_list` field — so the unified schema deliberately
+# matches none of them: it is **normalised [0, 1] floats**, and each adapter converts
+# once, at its own exit.
 #
 # Why normalised rather than pixels:
 #
@@ -134,7 +135,9 @@ def media_field(
 # every caller through that grid would tax every *other* dialect with Seedream's
 # quantisation (a ±4px systematic error on a 4000px image, incurred purely to suit a
 # model that may not even be the one selected), and it forces a "grid index → pixel"
-# inclusive-last-cell rule into the shared layer. ``[0,1] → [0,w]`` needs no such rule.
+# inclusive-last-cell rule into the shared layer. ``[0,1] → [0,w]`` needs no such rule —
+# and 万相 2.7's pixel-native `bbox_list` is that same conversion at the image's own
+# scale, which a grid-native schema would have had to un-quantise on the way out.
 #
 # **The model never writes these numbers.** They come from the user's canvas, through
 # the host's own annotation registry, and reach the payload without any LLM
@@ -172,9 +175,12 @@ class RegionSpec(BaseModel):
     image_size: Optional[list[int]] = Field(
         default=None,
         description="`[width, height]` in pixels of the **original** image this region "
-        "was drawn on (not the size of the canvas it was displayed at). Optional: "
-        "needed only by dialects that want absolute pixels, and repairable server-side "
-        "because the normalised coordinates stay correct even when it is wrong.",
+        "was drawn on (not the size of the canvas it was displayed at). Pass it whenever "
+        "you have it: models whose region field takes absolute pixels (e.g. "
+        "`wan2.7-image`) **require** it and reject the call without it, since a size can "
+        "never be guessed — a wrong one silently edits a different rectangle. Models "
+        "that carry coordinates in the prompt do not need it, so omitting it narrows "
+        "which model can serve the request rather than failing outright.",
     )
     label: Optional[str] = Field(
         default=None,
@@ -461,11 +467,12 @@ class GenerateImageInput(BaseModel):
         "models carrying the `region_edit` capability — check with list_models / "
         "get_model_card; passing regions to a model without it is a hard error, never a "
         "silent whole-image edit. Write every region you pass here into `prompt` as a "
-        "`[[label]]` placeholder, in the clause it belongs to — that is where its "
-        "coordinates are substituted in. Naming a mark in prose instead ('erase what is "
-        "in 标记3') hands the model a label it cannot resolve: the name reaches it as "
-        "literal text it may paint into the picture, while the coordinates land in a "
-        "trailing suffix with no clause to anchor them. Substitution covers exactly the "
+        "`[[label]]` placeholder, in the clause it belongs to — that is where the region "
+        "is rendered into the sentence (as coordinates, or as a phrase like '图2中框选的"
+        "区域' on models with a structured region field). Naming a mark in prose instead "
+        "('erase what is in 标记3') hands the model a label it cannot resolve: the name "
+        "reaches it as literal text it may paint into the picture, while the region "
+        "itself arrives with no clause to anchor it. Substitution covers exactly the "
         "marks passed here, so `[[...]]` is a rendering site and not a way to mention: an "
         "area you are NOT editing takes no placeholder — and usually no mention at all, "
         "since a region edit already changes only what is marked and listing the "

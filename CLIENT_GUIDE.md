@@ -508,8 +508,18 @@ cfgpu generate image "same style portrait" \
   --reference-images https://example.com/ref1.jpg \
   --reference-images https://example.com/ref2.jpg
 
-# 组图（一次生成多张关联图片，仅 doubao-seedream-* 支持，1-15 张）
+# 组图（一次生成多张关联图片，1-15 张；doubao-seedream-* 与 wan2.7-image 支持）
 cfgpu generate image "四格漫画分镜" --model doubao-seedream-5-0-lite -n 4
+
+# 万相 2.7 图像（同步）— 文生图 / 多图编辑 / 图像集，1K/2K 两档
+cfgpu generate image "一间有着精致窗户的花店，漂亮的木质门，摆放着花朵" \
+  --model wan2.7-image --aspect-ratio 16:9 --resolution 2K
+
+# 万相 2.7 多图编辑：图片在参数里的顺序就是 prompt 里的「图1」「图2」
+cfgpu generate image "把图2的涂鸦喷到图1的车上" \
+  --model wan2.7-image \
+  --reference-images https://example.com/car.webp \
+  --reference-images https://example.com/paint.webp
 
 # 输出完整 JSON（含元数据）
 cfgpu generate image "..." --metadata --json
@@ -641,10 +651,14 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
 
-> `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。仅 `doubao-seedream-*`
-> 支持 `n>1`（自动设置 `sequential_image_generation=auto` + `max_images=n`），**例外：
+> `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。支持 `n>1` 的是带
+> `multi_image_group` 能力的模型：`doubao-seedream-*`（自动设置
+> `sequential_image_generation=auto` + `max_images=n`）与 `wan2.7-image`（自动设置
+> `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。**例外：
 > `doubao-seedream-5-0-pro` 为单图模型，不支持组图，`n>1` 会报错**；`gpt-image-2`、
-> `nano-banana-*` 传 `n>1` 也会被拒绝。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
+> `nano-banana-*` 传 `n>1` 也会被拒绝。
+> 两家的 `n` 都是**上限而不是张数**：出几张由模型决定，少于 `n` 是正常结果，结果回来之前
+> 不要向用户承诺具体张数。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
 > HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，
 > 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
 > `duration_seconds` 的 schema 范围是 4–30，但 30 秒**只有 `doubao-seedance-2-5` 支持**；WAN 2.0 /
@@ -663,13 +677,23 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > （GPT Image 2）只有 1K/2K/4K 三档，传 `3K` 会被上游拒绝；它的 `aspect_ratio` 也没有 `21:9`。
 > 分辨率直接影响计价（`cf-image-2` 三档分别为 0.105 / 0.16 / 0.21 元每张），需要哪档就显式传哪档。
 
-> **Seedream 系列是例外：档位在本地校验，且始终以精确像素上行。** 各家族支持的档位不同
+> **Seedream 系列与 `wan2.7-image` 是例外：档位在本地校验，且始终以精确像素上行。** 各家族支持的档位不同
 > （`doubao-seedream-5-0-pro`：1K/1.5K/2K；`5-0-lite` 与 `4.5`：2K/3K/4K；`4.0`：1K/2K/3K/4K），
 > 超出的档位由 `supports()` 直接拒绝而不是静默降档——`validate_only` 会在 `corrected_args`
 > 里给出最接近的可用档位，`model="auto"` 则会绕开不支持该档的模型。adapter 把
 > （`resolution`, `aspect_ratio`）查成一个精确的 `宽x高` 送上游，因此 `aspect_ratio` 在
 > 每一档都真实生效。注意 Pro 的 1.5K：官方称它与 1K 同价且效果更好，但那个等价只在上行
 > **档位名**时成立；发像素后可能按上一档计费。要保 1K 价就传 `1K`。
+
+> `wan2.7-image` 走同一条路，只是像素表是**算出来的**而不是抄来的：官方只公布了每档的总像素
+> 预算（1K = 1024x1024，2K = 2048x2048）和全场景区间 [768x768, 2048x2048]，adapter 取满足预算
+> 的最大整数倍，宽高比因此是精确值。它只有 1K / 2K 两档（4K 只有 pro 版的文生图有），其余档位
+> 由 `supports()` 拒绝、`validate_only` 在 `corrected_args` 里给出最接近的可用档。
+> 注意分隔符是 `宽*高` 而不是 Seedream 的 `宽x高`。另有一个后果值得知道：上行档位名时，上游会把
+> 输出**按最后一张输入图片的宽高比**缩放，而发像素则由 `aspect_ratio`（默认 `1:1`）说了算——
+> 编辑一张 16:9 的图也会得到 1:1。想把画幅交还给模型，用
+> `model_specific={"parameters": {"size": "2K"}}` 覆盖回档位名（该模型的 `model_specific`
+> 对 `parameters` 做深合并，不会把整个对象替换掉）。
 
 ### 视觉理解（图像理解 / 图像推理 / 视频理解）
 

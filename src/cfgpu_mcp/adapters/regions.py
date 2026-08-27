@@ -17,10 +17,14 @@ image (see `_render_region`). Regions that no placeholder mentions are appended 
 structured suffix: never dropped, because a dropped region produces a plausible, billed,
 wrong picture.
 
-A structured dialect (one with its own ``bbox_list`` field) would reuse the placeholder
-resolution here with coordinate substitution replaced by neutral wording, so the
-sentence keeps a referent while the numbers travel separately. No such model is
-registered yet, so that branch is not written.
+万相 2.7 图像 (``wan2.7-image``) is the third consumer and the structured one: it has its
+own ``bbox_list`` parameter taking **absolute pixels of the original image**, so its
+numbers never enter the prompt. It reuses everything here that is not the coordinate
+substitution itself — the placeholder grammar, the fail-closed ambiguity rules, the
+per-image ordinals — with ``structured=True`` swapping the substituted text for neutral
+wording ("图2中框选的区域"), so the sentence keeps a referent while the numbers travel in
+their own field. `to_pixels` is the one conversion; `to_grid` is now that same function
+over a 1000x1000 image, which is what the grid always was.
 """
 
 from __future__ import annotations
@@ -50,24 +54,34 @@ _CAP_EDIT = "region_edit"
 _CAP_UNDERSTAND = "region_understand"
 
 
-def to_grid(box: list[float]) -> tuple[int, int, int, int]:
-    """Normalised ``[0,1]`` box → the ``[0, GRID-1]`` integer cell indices both dialects use.
+def to_pixels(box: list[float], image_size: "list[int] | tuple[int, int]") -> tuple[int, int, int, int]:
+    """Normalised ``[0,1]`` box → integer coordinates on a ``[width, height]`` raster.
 
-    The two edges round differently on purpose. ``GRID - 1`` is the *index of the last
-    cell*, not the coordinate of the image's right edge, so the right/bottom edge must
-    name the last cell the box actually covers — hence ``ceil(v*GRID) - 1``. Rounding
-    both edges the same way would make the full-image box ``[0,0,1,1]`` come out one
-    cell short of the full grid, and that off-by-one would then drift a little further
-    with every edit round-trip. With this rule ``[0,0,1,1]`` maps to
-    ``[0, 0, 999, 999]``, matching what the model documentation says the bottom-right
+    The two edges round differently on purpose. The far edge names the *index of the
+    last cell the box covers*, not the coordinate of the image's right edge — hence
+    ``ceil(v*w) - 1``. Rounding both edges the same way would make the full-image box
+    ``[0,0,1,1]`` come out one cell short, and that off-by-one would then drift a little
+    further with every edit round-trip. With this rule ``[0,0,1,1]`` maps to
+    ``[0, 0, w-1, h-1]``, matching what the model documentation says the bottom-right
     corner is.
+
+    One function serves both dialects because they differ only in the raster: the
+    ``[0, 999]`` grid *is* this conversion over a 1000x1000 image, and 万相 2.7's
+    ``bbox_list`` is it over the image's real pixel dimensions. Two implementations of a
+    rule this easy to get subtly wrong would be fixed one at a time.
     """
+    width, height = image_size
     x1, y1, x2, y2 = box
-    gx1 = min(max(math.floor(x1 * GRID), 0), GRID - 1)
-    gy1 = min(max(math.floor(y1 * GRID), 0), GRID - 1)
-    gx2 = min(max(math.ceil(x2 * GRID) - 1, gx1), GRID - 1)
-    gy2 = min(max(math.ceil(y2 * GRID) - 1, gy1), GRID - 1)
-    return gx1, gy1, gx2, gy2
+    px1 = min(max(math.floor(x1 * width), 0), width - 1)
+    py1 = min(max(math.floor(y1 * height), 0), height - 1)
+    px2 = min(max(math.ceil(x2 * width) - 1, px1), width - 1)
+    py2 = min(max(math.ceil(y2 * height) - 1, py1), height - 1)
+    return px1, py1, px2, py2
+
+
+def to_grid(box: list[float]) -> tuple[int, int, int, int]:
+    """Normalised ``[0,1]`` box → the ``[0, GRID-1]`` cell indices the prompt dialects use."""
+    return to_pixels(box, (GRID, GRID))
 
 
 def format_bbox(box: list[float]) -> str:
@@ -122,6 +136,61 @@ def _render_region(region: "RegionSpec", *, include_names: bool, fallback_ordina
     return "".join(parts)
 
 
+def _render_region_structured(region: "RegionSpec", *, fallback_ordinal: int, only: bool) -> str:
+    """One region as a *referent* rather than as coordinates.
+
+    For a model with its own ``bbox_list`` field the numbers must not be in the prompt at
+    all — the model would then be reading the same box twice, once in a raster it was not
+    given (normalised? grid? pixels of which image?) and once in the field that actually
+    means something. What the sentence still needs is a phrase in the clause the caller
+    marked, so the instruction has something to attach to: upstream's own examples read
+    "place the alarm clock from image 1 in the selected area of image 2".
+
+    ``only`` collapses "第1个区域" to plain "区域" when the image carries a single box,
+    which is the common case; a numbered reference to a set of one invites the model to
+    go looking for the others.
+
+    Names and notes are withheld here for the same reason as in ``_render_region``: this
+    is a painting model, and a label in its prompt is text it may render into the picture.
+    """
+    where = _ordinal(region.image_index)
+    if only:
+        return f"{where}中框选的区域"
+    return f"{where}中框选的第{fallback_ordinal}个区域"
+
+
+def build_bbox_list(regions: list["RegionSpec"], n_images: int) -> list[list[list[int]]]:
+    """Regions → the per-image ``bbox_list`` 万相 2.7 takes, in absolute pixels.
+
+    The outer list is positionally aligned with the image slot and padded with ``[]`` for
+    every un-annotated image — that padding is exactly what ``RegionSpec``'s flat shape
+    exists to keep away from the caller, since a short list does not fail, it lands the
+    box on the wrong image.
+
+    Boxes keep the order they were passed in, so the *n*-th box on an image is the one the
+    prompt calls 第 n 个区域.
+
+    ``image_size`` is required here and never guessed: this is the one dialect that wants
+    absolute pixels, and a wrong size does not fail — it edits a plausible, billed
+    rectangle somewhere else on the picture. ``supports()`` rejects such a request long
+    before this, so reaching the raise means a direct caller bypassed that gate.
+    """
+    out: list[list[list[int]]] = [[] for _ in range(n_images)]
+    for region in regions:
+        if region.image_size is None:
+            raise ValueError(
+                f"region on image_index={region.image_index} has no image_size; "
+                f"bbox_list is in absolute pixels and a size is never inferred."
+            )
+        out[region.image_index].append(list(to_pixels(region.box, region.image_size)))
+    return out
+
+
+def regions_missing_size(regions: list["RegionSpec"]) -> list[int]:
+    """Image indices carrying a region with no ``image_size``, for ``supports()``."""
+    return sorted({r.image_index for r in regions if r.image_size is None})
+
+
 def _ambiguous(token: str, candidates: list[str], *, kind: str) -> CFGPUError:
     return CFGPUError(
         error_type="invalid_params",
@@ -142,6 +211,7 @@ def render_prompt(
     image_refs: list[str] | None,
     *,
     include_names: bool,
+    structured: bool = False,
 ) -> str:
     """Substitute ``[[...]]`` placeholders and append whatever regions went unmentioned.
 
@@ -158,6 +228,14 @@ def render_prompt(
     worst failure mode available. An unmatched placeholder, by contrast, is left alone
     and its region falls through to the suffix: the caller may simply not be using
     placeholders, and being wrong about that costs precision, not correctness.
+
+    ``structured=True`` is for a model with its own ``bbox_list`` field. Placeholders
+    resolve to neutral wording instead of coordinates, and there is **no trailing
+    suffix**: the suffix exists in the prose dialects because the prompt is the only
+    channel a box has, whereas here every region reaches the model in its own field
+    whether or not a placeholder named it. Appending a bare mention with no instruction
+    attached would not be a safety net — "图1中框选的第2个区域。" alone on a line reads as
+    one more thing to go and edit.
     """
     regions = list(regions or [])
     refs = list(image_refs or [])
@@ -182,6 +260,17 @@ def render_prompt(
 
     used: set[int] = set()
 
+    def render_one(i: int) -> str:
+        if structured:
+            return _render_region_structured(
+                regions[i],
+                fallback_ordinal=ordinals[i],
+                only=per_image_ordinal[regions[i].image_index] == 1,
+            )
+        return _render_region(
+            regions[i], include_names=include_names, fallback_ordinal=ordinals[i]
+        )
+
     def substitute(match: re.Match[str]) -> str:
         token = match.group(1).strip()
         if "#" in token:
@@ -193,9 +282,7 @@ def render_prompt(
             if len(hits) != 1:
                 return match.group(0)
             used.add(hits[0])
-            return _render_region(
-                regions[hits[0]], include_names=include_names, fallback_ordinal=ordinals[hits[0]]
-            )
+            return render_one(hits[0])
 
         hits = by_label.get(token, [])
         is_ref = token in ref_index
@@ -211,25 +298,20 @@ def render_prompt(
             )
         if len(hits) == 1:
             used.add(hits[0])
-            return _render_region(
-                regions[hits[0]], include_names=include_names, fallback_ordinal=ordinals[hits[0]]
-            )
+            return render_one(hits[0])
         if is_ref:
             return _ordinal(ref_index[token])
         return match.group(0)
 
     rendered = _PLACEHOLDER.sub(substitute, prompt)
 
-    leftovers = [i for i in range(len(regions)) if i not in used]
+    leftovers = [] if structured else [i for i in range(len(regions)) if i not in used]
     if leftovers:
         heading = "标注区域" if include_names else "参考区域"
         # No ordinal is prepended here: _render_region already carries it, and the two
         # paths must render a box identically — a suffix box and an inline box differ
         # only in where the caller put it, never in what it says.
-        items = [
-            _render_region(regions[i], include_names=include_names, fallback_ordinal=ordinals[i])
-            for i in leftovers
-        ]
+        items = [render_one(i) for i in leftovers]
         rendered = f"{rendered}\n\n{heading}：" + "；".join(items) + "。"
     return rendered
 

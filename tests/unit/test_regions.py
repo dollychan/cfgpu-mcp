@@ -22,7 +22,7 @@ import pytest
 from pydantic import ValidationError
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
-from cfgpu_mcp.adapters.regions import GRID, format_bbox, render_prompt, to_grid
+from cfgpu_mcp.adapters.regions import GRID, format_bbox, render_prompt, to_grid, to_pixels
 from cfgpu_mcp.adapters.seedream import SeedreamAdapter
 from cfgpu_mcp.adapters.vision_chat import QwenVisionAdapter
 from cfgpu_mcp.errors import CFGPUError
@@ -83,6 +83,23 @@ def test_a_sliver_still_has_a_non_inverted_box():
     """A box thinner than one cell must not come out with x2 < x1."""
     x1, y1, x2, y2 = to_grid([0.5001, 0.5001, 0.5002, 0.5002])
     assert x1 <= x2 and y1 <= y2
+
+
+def test_the_grid_is_just_the_pixel_conversion_over_a_1000x1000_image():
+    """One conversion serves both rasters, so the inclusive-last-cell rule has one home.
+
+    万相 2.7 wants absolute pixels of the real image; the prompt dialects want cells of a
+    1000-wide grid. Two implementations of a rule this easy to get subtly wrong would be
+    fixed one at a time.
+    """
+    box = [0.1, 0.2, 0.35, 0.9]
+    assert to_grid(box) == to_pixels(box, (GRID, GRID))
+
+
+def test_pixels_land_on_the_last_covered_pixel_of_the_real_image():
+    # 1696x960, the size in the model's own interactive-editing example.
+    assert to_pixels([0.0, 0.0, 1.0, 1.0], [1696, 960]) == (0, 0, 1695, 959)
+    assert to_pixels([0.5, 0.5, 1.0, 1.0], [1696, 960]) == (848, 480, 1695, 959)
 
 
 def test_bbox_is_the_documented_spelling():

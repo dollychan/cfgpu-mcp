@@ -1,0 +1,25 @@
+adapter_id: wan-2-7-image
+display_name: "万相 2.7 (图像生成与编辑)"
+cfgpu_model_id: wan2.7-image
+model_name: wan2.7-image
+
+task_type: image
+endpoint: /images/generations
+is_async: false
+poll_endpoint: ~
+
+capabilities:
+  - text_to_image
+  - image_to_image
+  - multi_image_fusion
+  - multi_image_group
+  - region_edit
+
+# 单张图最多 2 个 bbox（官方限制）。声明在这里而不是写进 schema：区域上限是逐模型的事实，
+# 写进 per-tool 的 schema 会把一个模型的上限当成全局上限，去拒绝在别的模型上完全合法的调用。
+max_regions_per_image: 2
+
+# 0.2 元 / 张，与 doubao-seedream-4-0 同档。
+cost_tier: 2
+# 同步返回，但 thinking_mode 默认开启会拉长文生图耗时，比 Seedream 慢一档。
+speed_tier: 2
