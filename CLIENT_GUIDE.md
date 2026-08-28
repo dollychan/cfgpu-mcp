@@ -825,7 +825,7 @@ done
 
 > **建议每次都传 `label`**：不传时宿主只能拿不透明的生成 key 显示产物。但它在 schema 里是**可选**的，且刻意不改成必填——本服务器有多个消费方，新增必填参数对每一个都是破坏性变更，而漏传一次的代价是一整轮失败的调用，为一个装饰性字符串不划算。"要不要强制"是宿主自己的提示词该管的事。
 
-> **`validate_only`（预检，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受 `validate_only: bool = false`。置 `true` 时走**完全相同**的解析链路——Pydantic 校验 → 路由（`model="auto"` 在此解析成具体模型）→ `supports()` 逐参数校验 → 构建真实上游 payload——然后**在发出 POST 之前返回**。不创建任务、不生成、不计费、不写任务表。
+> **`validate_only`（预检，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` / `understand_vision` 接受 `validate_only: bool = false`。置 `true` 时走**完全相同**的解析链路——Pydantic 校验 → 路由（`model="auto"` 在此解析成具体模型）→ `supports()` 逐参数校验 → 构建真实上游 payload——然后**在发出 POST 之前返回**。不创建任务、不生成、不计费、不写任务表。
 >
 > 返回：`{"validated": true, "model_used": "<具体模型>", "task_type", "is_async", "cost_tier", "speed_tier", "corrected_args": {...}, "payload": {<真实上游请求>}}`（Mode A 下 `payload` 随既有拆分进 `structuredContent`，不进模型上下文；`corrected_args` 留在 `content`，它是要照做的指令）。
 >
@@ -838,6 +838,8 @@ done
 > 代价要知道：钉死 `model` 换掉了 `auto` 的 failover——预检与提交之间该模型若不可用，原本会自动路由到下一个候选，现在直接硬失败。这是有意的取舍：审批只有在它指名了真正会跑的东西时才有意义，而这种失败是显式且可重试的。
 >
 > 三条要点：①**失败与真实调用完全一致**——内部抛的是同一个 `CFGPUError`，`error_type` / `card_hint` / 各模型专有的错误回译都相同，所以预检通过即意味着参数被接受。**但异常不越过工具边界**：与本服务器所有工具一样，`tool_error_dict` 把它转成一个*正常返回*的错误字典，调用方拿到的是 `{"error": true, "error_type": ..., "message": ..., "retryable": false, "model_id": ...}` 而**不是**协议级异常，返回里也**不会有 `validated` 键**。判"预检没过"要看 `error is true`，别只看 `validated is false`——只认后者会把每一次被拒的调用当成通过放行；②它校验的是**请求合法**，不保证**生成成功**（远端 5xx、限流、内容审核仍可能发生），预检不是产物预览；③回显 `request_id` 但不回显 `caption` / `label`——与错误路径同理，预检没有产物可标注、可命名。`understand_vision` 恒同步、便宜、可重跑，且未知模型会回退 auto，故不设此参数。
+>
+> **`understand_vision` 上的它答的是另一个问题**（2026-08-28 加）：视觉理解是同步、便宜、可重跑的，前面没有审批卡片，所以本来不在预检清单里。但**宿主的预检是按 pattern 匹配的、不是按工具挑的**——只要这个工具进了那份清单，`validate_only` 就会作为一个普通入参发过来。而**未声明的入参不会被拒，会被静默丢掉**（FastMCP 的入参模型是普通 pydantic 模型，`extra="ignore"`；`model_dump_one_level` 只遍历已声明字段），于是那次"空跑"是一次真实的、计费的视觉理解调用，答案被丢弃后再跑一次。**从响应上看不出来**：被忽略的预检和成功的预检长得一模一样。所以判据不是"这个工具需不需要预检"，而是"它honor不honor这个开关"——后者从外面看得见，前者看不见。
 >
 > ⚠️ 与环境变量 `CFGPU_DRY_RUN` 无关且语义相反：后者是"打印请求日志但**照常发送**"的调试开关。
 

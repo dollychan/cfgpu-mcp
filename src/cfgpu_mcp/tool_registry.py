@@ -411,7 +411,7 @@ def label_field() -> Any:
 # answerable only by reading which spelling was used.
 
 def validate_only_field() -> Any:
-    """Declare the preflight switch (kept in one place so the three copies can't drift)."""
+    """Declare the preflight switch (kept in one place so the four copies can't drift)."""
     return Field(
         default=False,
         description="Preflight only: resolve the model, validate every parameter against "
@@ -817,6 +817,7 @@ class UnderstandVisionInput(BaseModel):
         description="Model-specific parameters passed directly to the chat/completions API "
         "(e.g. {'top_p': 0.8}). Merged last, so it overrides typed fields.",
     )
+    validate_only: bool = validate_only_field()
 
     @model_validator(mode="after")
     def _validate_regions_against_images(self) -> "UnderstandVisionInput":

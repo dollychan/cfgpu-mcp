@@ -23,6 +23,7 @@ from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
+from cfgpu_mcp.service import vision as vision_service
 from cfgpu_mcp.router import ModelRouter
 from cfgpu_mcp.task_manager import validate_request
 from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
@@ -73,6 +74,18 @@ _CASES = [
         "audio",
         audio_service.generate_audio,
         {"text": "你好", "model": "MiniMax/speech-2.8-hd"},
+    ),
+    # understand_vision joins the same contract (2026-08-28). It is the one tool here
+    # with no approval card in front of it, and it was left out for that reason — but
+    # "no card" was never the whole job: a host that preflights *anything* sends the
+    # flag as an ordinary argument, and an undeclared one is silently dropped rather
+    # than refused (FastMCP's arg model is pydantic `extra="ignore"`). So the tool that
+    # did not carry the flag was not the tool nobody preflighted; it was the tool whose
+    # preflight quietly became a second billed call.
+    (
+        "understand",
+        vision_service.understand_vision,
+        {"prompt": "描述这张图", "model": "qwen-3-6-plus", "images": ["m_c079468f"]},
     ),
 ]
 
@@ -806,3 +819,71 @@ async def test_default_is_off_and_still_posts():
         await image_service.generate_image(prompt="猫", model="doubao-seedream-5-0-lite")
 
     client.post.assert_awaited_once()
+
+
+# ── understand_vision: the tool whose ignored preflight was a real call ──────
+#
+# The three generate_* tools carry the flag to get a concrete model onto an approval
+# card. This one carries it for a different reason, and the reason is the failure mode:
+# an *undeclared* argument is not refused, it is dropped — so before this field existed,
+# a host preflighting `understand_vision` did not get "unsupported", it got a normal,
+# billed answer that it then threw away and asked for again. The declaration is what
+# turns that silence into either a real preflight or a loud error.
+
+@pytest.mark.asyncio
+async def test_understand_vision_advertises_validate_only():
+    """The regression anchor, asserted on the *advertised* schema rather than the
+    Pydantic model: what a host can send is the MCP inputSchema, and the whole bug lives
+    in the gap between "the server ignores this key" and "the server rejects this key".
+    """
+    from cfgpu_mcp.server import mcp
+
+    tool = next(t for t in mcp._tool_manager.list_tools() if t.name == "understand_vision")
+    assert "validate_only" in tool.parameters["properties"]
+    assert tool.parameters["properties"]["validate_only"].get("default") is False
+
+
+@pytest.mark.asyncio
+async def test_vision_validate_only_reports_the_routed_model_and_the_real_payload():
+    """`auto` resolves, and the media handles reach the payload untouched.
+
+    Same opaque-handle contract the generate_* slots have: the caller's `images` values
+    are material ids the host resolves to URLs only on the billed call, so the preflight
+    must neither parse nor probe them. Asserting on the built payload (not just
+    `validated`) is what shows they survived `build_payload` instead of being dropped.
+    """
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await vision_service.understand_vision(
+            prompt="描述这张图",
+            model="auto",
+            images=["m_c079468f"],
+            validate_only=True,
+        )
+
+    assert result["validated"] is True
+    assert result["task_type"] == "understand"
+    assert result["is_async"] is False
+    assert result["model_used"] == "qwen3.6-plus"
+    assert result["corrected_args"] == {"model": "qwen3.6-plus"}
+    assert "m_c079468f" in json.dumps(result["payload"], ensure_ascii=False)
+
+
+@pytest.mark.asyncio
+async def test_vision_validate_only_rejects_what_the_billed_path_rejects():
+    """Equivalence: a request the real call refuses must be refused here identically.
+
+    `understand_vision` accepts an unknown model by falling back to auto-selection
+    (router), so the honest way to fail it is a structural rule — a region pointing at
+    an image index that does not exist. Both paths run the same validators, so a
+    preflight that passed this would be worse than no preflight at all.
+    """
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c, pytest.raises(ValidationError):
+        await vision_service.understand_vision(
+            prompt="[[标记1]] 是什么？",
+            model="qwen-3-6-plus",
+            images=["m_c079468f"],
+            regions=[{"image_index": 3, "box": [0.1, 0.1, 0.2, 0.2], "label": "标记1"}],
+            validate_only=True,
+        )
