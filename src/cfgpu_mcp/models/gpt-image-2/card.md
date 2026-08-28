@@ -1,11 +1,10 @@
-# GPT Image 2
+# CF Image 2
 
 ## 基本信息
 
 | 属性 | 值 |
 |------|-----|
-| 任务类型 | image |
-| CFGPU 模型 ID | `gpt-image-2` |
+| 任务类型 | image | 
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -26,8 +25,7 @@
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `prompt` | string | 必填 | 图片描述 |
-| `model` | string | - | 使用 `gpt-image-2` |
+| `prompt` | string | 必填 | 图片描述 | 
 | `aspect_ratio` | string | `1:1` | 1:1、3:2、2:3、4:3、3:4、16:9、9:16 |
 | `resolution` | string | `1K` | 分辨率档位：`1K` / `2K` / `4K`，其他取值（含空串）上游报参数错误 |
 | `quality` | string | `medium` | 生成质量：`low` / `medium` / `high` |
@@ -48,16 +46,14 @@
 **文生图**
 ```json
 {
-  "prompt": "一只可爱的猫咪，写实风格",
-  "model": "gpt-image-2"
+  "prompt": "一只可爱的猫咪，写实风格"
 }
 ```
 
 **图生图**
 ```json
 {
-  "prompt": "将图片风格改为水彩画",
-  "model": "gpt-image-2",
+  "prompt": "将图片风格改为水彩画", 
   "reference_images": ["https://example.com/input.jpg"]
 }
 ```
@@ -83,7 +79,7 @@
   "message":"success",
   "data":{
     "task_id":"xxx",
-    "task_type":"gpt_image_generation",
+    "task_type":"cf_image_generation",
     "status":"completed",
     "result":{
       "images":["https://..."]
