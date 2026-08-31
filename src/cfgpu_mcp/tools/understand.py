@@ -23,6 +23,7 @@ def register(mcp: FastMCP) -> None:
         temperature: Optional[float] = None,
         return_metadata: bool = True,
         model_specific: Optional[dict] = None,
+        validate_only: bool = False,
     ) -> dict:
         """Understand and reason over images and video using CFGPU vision-language models."""
         try:
@@ -38,6 +39,7 @@ def register(mcp: FastMCP) -> None:
                 temperature=temperature,
                 return_metadata=return_metadata,
                 model_specific=model_specific,
+                validate_only=validate_only,
             )
         except Exception as e:
             return tool_error_dict(e)

@@ -114,10 +114,11 @@ def media_field(
 # ── Regions (user-drawn annotations on an input image) ──────────────────────
 #
 # A region carries "here, on that image" from a human's canvas into a model request.
-# Two very different upstream dialects consume it — Seedream embeds `<bbox>` tags in
-# the prompt text, Qwen's vision models do the same for reading — so the unified schema
-# deliberately matches neither: it is **normalised [0, 1] floats**, and each adapter
-# converts once, at its own exit.
+# Three very different upstream dialects consume it — Seedream embeds `<bbox>` tags in
+# the prompt text, Qwen's vision models do the same for reading, and 万相 2.7 图像 takes
+# absolute pixels in its own `bbox_list` field — so the unified schema deliberately
+# matches none of them: it is **normalised [0, 1] floats**, and each adapter converts
+# once, at its own exit.
 #
 # Why normalised rather than pixels:
 #
@@ -134,7 +135,9 @@ def media_field(
 # every caller through that grid would tax every *other* dialect with Seedream's
 # quantisation (a ±4px systematic error on a 4000px image, incurred purely to suit a
 # model that may not even be the one selected), and it forces a "grid index → pixel"
-# inclusive-last-cell rule into the shared layer. ``[0,1] → [0,w]`` needs no such rule.
+# inclusive-last-cell rule into the shared layer. ``[0,1] → [0,w]`` needs no such rule —
+# and 万相 2.7's pixel-native `bbox_list` is that same conversion at the image's own
+# scale, which a grid-native schema would have had to un-quantise on the way out.
 #
 # **The model never writes these numbers.** They come from the user's canvas, through
 # the host's own annotation registry, and reach the payload without any LLM
@@ -172,9 +175,12 @@ class RegionSpec(BaseModel):
     image_size: Optional[list[int]] = Field(
         default=None,
         description="`[width, height]` in pixels of the **original** image this region "
-        "was drawn on (not the size of the canvas it was displayed at). Optional: "
-        "needed only by dialects that want absolute pixels, and repairable server-side "
-        "because the normalised coordinates stay correct even when it is wrong.",
+        "was drawn on (not the size of the canvas it was displayed at). Pass it whenever "
+        "you have it: models whose region field takes absolute pixels (e.g. "
+        "`wan2.7-image`) **require** it and reject the call without it, since a size can "
+        "never be guessed — a wrong one silently edits a different rectangle. Models "
+        "that carry coordinates in the prompt do not need it, so omitting it narrows "
+        "which model can serve the request rather than failing outright.",
     )
     label: Optional[str] = Field(
         default=None,
@@ -295,44 +301,86 @@ def image_refs_field(image_slot: str) -> Any:
     )
 
 
-# ── Caption (artifact label) ────────────────────────────────────────────────
+# ── Caption / label (artifact description and name) ─────────────────────────
 #
-# Like ``request_id``, ``caption`` is a caller-supplied handle this server stores and
-# echoes but never interprets — it is not part of any upstream request. It exists for
-# hosts that keep their own asset ledger (DeerFlow/cf-dream registers every generated
-# artifact as a *material* the user later refers to by a short id): without a label
-# supplied at call time, the ledger entry is nameless and the host has to spend a second
-# tool round trip naming it after the fact. Riding the generate call closes that gap, and
-# riding the stored payload means the async ``generate → task_wait`` hop carries it for
-# free — the host needs no state of its own to survive the two-phase case.
+# Like ``request_id``, ``caption`` and ``label`` are caller-supplied handles this server
+# stores and echoes but never interprets — neither is part of any upstream request. They
+# exist for hosts that keep their own asset ledger (DeerFlow/cf-dream registers every
+# generated artifact as a *material* the user later refers to by a short id): without
+# them the ledger entry is nameless and the host has to spend a second tool round trip
+# naming it after the fact. Riding the generate call closes that gap, and riding the
+# stored payload means the async ``generate → task_wait`` hop carries them for free — the
+# host needs no state of its own to survive the two-phase case.
 #
-# Over-long captions are truncated, never rejected: a caption has no effect on the
-# generated media, so failing the call — and costing the caller a whole turn — over the
-# length of a cosmetic label would be a bad trade.
+# **They are two fields because they answer to two different readers.** ``caption``
+# describes the artifact *to a model* — it lands in a ledger the agent re-reads every
+# turn to work out which material is which, so it wants to disambiguate ("角色阿雅 第一版,
+# 侧脸"). ``label`` names the artifact *to a person* — the host shows it as the file name
+# in the user's asset panel, so it wants to be short, stable, and free of anything a
+# filesystem would reject. One field cannot be both: a caption long enough to
+# disambiguate makes a terrible file name, and a file name short enough to display
+# disambiguates nothing. They are also owned differently downstream — a host may let its
+# agent rewrite the caption at will while the label stays the artifact's birth name — so
+# merging them would mean an unrelated model call could rename a user's file.
+#
+# Over-long values are truncated, never rejected: neither has any effect on the generated
+# media, so failing the call — and costing the caller a whole turn — over the length of a
+# cosmetic string would be a bad trade.
 
 CAPTION_MAX_CHARS = 200
+
+# Shorter than a caption on purpose: this is a file name. Past ~100 characters it is
+# unusable in any panel or filesystem the host might put it in, and the caller keeps the
+# long-form description in ``caption`` anyway. Truncation here is plain — the host owns
+# whatever sanitizing (illegal characters, extension preservation) its own storage needs,
+# because only it knows those rules.
+LABEL_MAX_CHARS = 100
 
 
 def _truncate_caption(v: str | None) -> str | None:
     return v[:CAPTION_MAX_CHARS] if v else v
 
 
+def _truncate_label(v: str | None) -> str | None:
+    return v[:LABEL_MAX_CHARS] if v else v
+
+
 CaptionStr = Annotated[Optional[str], AfterValidator(_truncate_caption)]
+LabelStr = Annotated[Optional[str], AfterValidator(_truncate_label)]
 
 
 def caption_field() -> Any:
-    """Declare the artifact-label slot (kept in one place so the three copies can't drift)."""
+    """Declare the artifact-description slot (kept in one place so the three copies can't drift)."""
     return Field(
         default=None,
-        description="Optional short human-readable label for the artifact this call "
+        description="Optional short human-readable description of the artifact this call "
         "produces, e.g. '角色阿雅 第一版' or 'cover image v1'. Echoed back verbatim "
         "alongside the result — including on the eventual artifact returned by a later "
         "task_status/task_wait call — so a caller that keeps its own asset ledger can "
-        "file this artifact under a name a human recognises, without a second call to "
-        "name it afterwards. It is a label, not a second prompt: name the subject and "
-        "the version, and do not restate the generation prompt. Never sent to the model "
+        "file this artifact under a description that tells it apart from its siblings, "
+        "without a second call to name it afterwards. It is a label, not a second prompt: "
+        "name the subject and the version, and do not restate the generation prompt. "
+        "Distinct from `label`: this one may be longer and exists to disambiguate; "
+        "`label` is the short display/file name. Never sent to the model "
         f"API and has no effect on the generated media. Truncated at {CAPTION_MAX_CHARS} "
         "characters; omitted from the response when not supplied.",
+    )
+
+
+def label_field() -> Any:
+    """Declare the artifact-name slot (kept in one place so the three copies can't drift)."""
+    return Field(
+        default=None,
+        description="Optional short display name for the artifact this call produces — "
+        "the name a person sees, e.g. '阿雅侧脸.png' or 'cover_v1.png'. Supply one "
+        "whenever you keep your own asset ledger: hosts use it as the artifact's file "
+        "name, and without it the artifact shows up under an opaque generated key. "
+        "Echoed back verbatim alongside the result, including on the eventual artifact "
+        "returned by a later task_status/task_wait call. Keep it short and name-like — a "
+        "few words, no sentence, no prompt text; put the longer disambiguating "
+        "description in `caption` instead. Never sent to the model API and has no effect "
+        f"on the generated media. Truncated at {LABEL_MAX_CHARS} characters; omitted from "
+        "the response when not supplied.",
     )
 
 
@@ -363,7 +411,7 @@ def caption_field() -> Any:
 # answerable only by reading which spelling was used.
 
 def validate_only_field() -> Any:
-    """Declare the preflight switch (kept in one place so the three copies can't drift)."""
+    """Declare the preflight switch (kept in one place so the four copies can't drift)."""
     return Field(
         default=False,
         description="Preflight only: resolve the model, validate every parameter against "
@@ -419,11 +467,12 @@ class GenerateImageInput(BaseModel):
         "models carrying the `region_edit` capability — check with list_models / "
         "get_model_card; passing regions to a model without it is a hard error, never a "
         "silent whole-image edit. Write every region you pass here into `prompt` as a "
-        "`[[label]]` placeholder, in the clause it belongs to — that is where its "
-        "coordinates are substituted in. Naming a mark in prose instead ('erase what is "
-        "in 标记3') hands the model a label it cannot resolve: the name reaches it as "
-        "literal text it may paint into the picture, while the coordinates land in a "
-        "trailing suffix with no clause to anchor them. Substitution covers exactly the "
+        "`[[label]]` placeholder, in the clause it belongs to — that is where the region "
+        "is rendered into the sentence (as coordinates, or as a phrase like '图2中框选的"
+        "区域' on models with a structured region field). Naming a mark in prose instead "
+        "('erase what is in 标记3') hands the model a label it cannot resolve: the name "
+        "reaches it as literal text it may paint into the picture, while the region "
+        "itself arrives with no clause to anchor it. Substitution covers exactly the "
         "marks passed here, so `[[...]]` is a rendering site and not a way to mention: an "
         "area you are NOT editing takes no placeholder — and usually no mention at all, "
         "since a region edit already changes only what is marked and listing the "
@@ -442,9 +491,9 @@ class GenerateImageInput(BaseModel):
         "outcome, not a failure, and no setting forces an exact number. Do not promise the "
         "user a specific count before the result comes back. Only models with the "
         "`multi_image_group` capability accept n>1 (the doubao-seedream-* line except "
-        "5-0-pro, which is single-image); others reject it rather than quietly generating "
-        "one. On group models the input reference images plus the generated images must "
-        "total at most 15.",
+        "5-0-pro, which is single-image); models without that capability silently ignore "
+        "n and generate one image. On group models the input reference images plus the "
+        "generated images must total at most 15.",
     )
 
     @field_validator("n")
@@ -456,10 +505,11 @@ class GenerateImageInput(BaseModel):
             )
         return v
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
-    watermark: Optional[bool] = Field(
-        default=None,
-        description="Add an 'AI generated' watermark. None keeps each model's own default. "
-        "Not supported by gpt-image-2 / nano-banana models (ignored there).",
+    watermark: bool = Field(
+        default=False,
+        description="Add an 'AI generated' watermark. Defaults to false and is sent "
+        "explicitly by models whose upstream API supports it. Not supported by "
+        "gpt-image-2 / nano-banana models (ignored there).",
     )
     wait: bool = Field(default=True, description="Wait for task completion before returning")
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
@@ -479,6 +529,7 @@ class GenerateImageInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
     @model_validator(mode="after")
@@ -585,9 +636,10 @@ class GenerateVideoInput(BaseModel):
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
-    watermark: Optional[bool] = Field(
-        default=None,
-        description="Add a watermark. None keeps each model's own default. Supported by all video models.",
+    watermark: bool = Field(
+        default=False,
+        description="Add a watermark. Defaults to false and is sent explicitly by models "
+        "whose upstream API supports it; models with no watermark request field ignore it.",
     )
     prompt_extend: bool = Field(
         default=True,
@@ -612,6 +664,7 @@ class GenerateVideoInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
 
@@ -681,6 +734,7 @@ class GenerateAudioInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
 
@@ -763,6 +817,7 @@ class UnderstandVisionInput(BaseModel):
         description="Model-specific parameters passed directly to the chat/completions API "
         "(e.g. {'top_p': 0.8}). Merged last, so it overrides typed fields.",
     )
+    validate_only: bool = validate_only_field()
 
     @model_validator(mode="after")
     def _validate_regions_against_images(self) -> "UnderstandVisionInput":
@@ -933,28 +988,35 @@ def lean_result(result: dict[str, Any], payload: dict[str, Any]) -> dict[str, An
 
 # ── Caller-supplied echo fields (service-layer data contract) ───────────────
 
-def stamp_echo(result: Any, *, request_id: str | None = None, caption: str | None = None) -> Any:
+def stamp_echo(
+    result: Any,
+    *,
+    request_id: str | None = None,
+    caption: str | None = None,
+    label: str | None = None,
+) -> Any:
     """Echo the caller's own handles onto a result dict (in place), if set.
 
-    Both fields are supplied on a ``generate_*`` call, stored, and handed back
-    untouched; neither is part of any upstream request:
+    All three fields are supplied on a ``generate_*`` call, stored, and handed back
+    untouched; none is part of any upstream request:
 
     - ``request_id`` is a correlation handle. It lets the caller join a result back to
       the originating request across the async ``generate → task_wait/task_status`` hop
       (where the tool_call ids differ) and for synchronous models that have no
       ``task_id``.
-    - ``caption`` is a human-readable label for the artifact, for callers that keep
-      their own asset ledger and would otherwise have to name the entry in a second
-      call.
+    - ``caption`` describes the artifact for callers that keep their own asset ledger and
+      would otherwise have to name the entry in a second call.
+    - ``label`` names it — the short display/file name the same ledger shows to a person.
 
     Stamped by the **service layer** — not the MCP wrapper — so all three call modes
     (MCP, agent dispatcher, CLI) echo them. Omitted when falsy so callers that supply
-    neither see unchanged result shapes; ``setdefault`` never clobbers a value already
+    none see unchanged result shapes; ``setdefault`` never clobbers a value already
     present. Non-dict results (e.g. a ``CallToolResult``) pass through untouched.
 
-    The two diverge on **failures**: ``CFGPUError`` carries ``request_id`` (joining a
-    failure back to its request is exactly what a correlation handle is for) but not
-    ``caption`` — a failed call produced no artifact, so there is nothing to label.
+    They diverge on **failures**: ``CFGPUError`` carries ``request_id`` (joining a
+    failure back to its request is exactly what a correlation handle is for) but neither
+    ``caption`` nor ``label`` — a failed call produced no artifact, so there is nothing
+    to describe or name.
     """
     if not isinstance(result, dict):
         return result
@@ -962,6 +1024,8 @@ def stamp_echo(result: Any, *, request_id: str | None = None, caption: str | Non
         result.setdefault("request_id", request_id)
     if caption:
         result.setdefault("caption", caption)
+    if label:
+        result.setdefault("label", label)
     return result
 
 

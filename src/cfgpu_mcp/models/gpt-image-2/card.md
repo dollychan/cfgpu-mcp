@@ -1,11 +1,10 @@
-# GPT Image 2
+# CF Image 2
 
 ## 基本信息
 
 | 属性 | 值 |
 |------|-----|
-| 任务类型 | image |
-| CFGPU 模型 ID | `gpt-image-2` |
+| 任务类型 | image | 
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -26,8 +25,7 @@
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `prompt` | string | 必填 | 图片描述 |
-| `model` | string | - | 使用 `gpt-image-2` |
+| `prompt` | string | 必填 | 图片描述 | 
 | `aspect_ratio` | string | `1:1` | 1:1、3:2、2:3、4:3、3:4、16:9、9:16 |
 | `resolution` | string | `1K` | 分辨率档位：`1K` / `2K` / `4K`，其他取值（含空串）上游报参数错误 |
 | `quality` | string | `medium` | 生成质量：`low` / `medium` / `high` |
@@ -41,23 +39,21 @@
 | `resolution` | `resolution` | `1K` / `2K` / `4K` 原样下发——API 三档都是字面量，空串会被判参数错误（`resolution 参数必须为 '1K'、'2K' 或 '4K'`）；`3K` 无对应档位，原样下发由上游拒绝 |
 | `aspect_ratio` | `aspect_ratio` | 原样下发。统一 Schema 多出的 `21:9` 不在本模型取值集内，不做本地拦截，由上游拒绝 |
 | `quality_tier` | `quality` | `fast` → `low`、`balanced` → `medium`、`best` → `high`。**本模型的 `quality_tier` 不只是路由偏好，选定模型后仍然生效**（同可灵的 `quality_tier` → `mode`）；`model_specific={"quality": ...}` 最后合并，可覆盖该映射 |
-| `watermark` / `n>1` | — | 不支持：`watermark` 忽略，`n>1` 由 `supports()` 本地拒绝 |
+| `watermark` / `n>1` | — | 不支持：两者均静默忽略，其余参数照常发送；`n>1` 仍只生成单张图片 |
 
 ## 使用示例
 
 **文生图**
 ```json
 {
-  "prompt": "一只可爱的猫咪，写实风格",
-  "model": "gpt-image-2"
+  "prompt": "一只可爱的猫咪，写实风格"
 }
 ```
 
 **图生图**
 ```json
 {
-  "prompt": "将图片风格改为水彩画",
-  "model": "gpt-image-2",
+  "prompt": "将图片风格改为水彩画", 
   "reference_images": ["https://example.com/input.jpg"]
 }
 ```
@@ -83,7 +79,7 @@
   "message":"success",
   "data":{
     "task_id":"xxx",
-    "task_type":"gpt_image_generation",
+    "task_type":"cf_image_generation",
     "status":"completed",
     "result":{
       "images":["https://..."]

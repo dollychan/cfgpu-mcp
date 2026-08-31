@@ -258,6 +258,12 @@ ModelAdapter (ABC, adapters/base.py)
     │
     ├── SeedreamAdapter           手写 Python，处理 resolution×ratio → size 映射
     │
+    ├── WanImageAdapter           手写 Python，万相 2.7 图像（同步，DashScope 风格 input/parameters）
+    │       ├── content 数组：1 个 text + 0-9 个 image，图片顺序即 prompt 里的「图N」序号
+    │       ├── size 是算出来的精确像素对（分隔符 `*`）：每档总像素预算内的最大整数倍，宽高比精确
+    │       ├── 组图走 enable_sequential + n（两个键永远一起发；只发前者上游默认 n=12）
+    │       └── 唯一的结构化区域方言：regions → parameters.bbox_list（原图绝对像素，逐图对齐补 []）
+    │
     ├── HappyHorseVideoAdapter    手写 Python，DashScope 风格嵌套 payload
     │       └── input.media 数组 + parameters 对象；大写状态码归一化
     │
@@ -485,6 +491,8 @@ MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在�
 
 **`caption`（产物标签回显）**：与 `request_id` 同机制的第二个回显字段（同一个 `stamp_echo()`、同一套 `_stash_internal()` / `public_payload()` 保留键，键名 `_caption`），但用途不同——它是给**产物**起的一句人类可读短标签，服务端只存不解释。存在的理由是自建素材台账的客户端（DeerFlow / cf-dream 把每个生成产物登记为可用短 id 引用的 material）：标签若不能在发起时携带，台账条目就是无名的，只能事后再花一次工具调用补名字；而把它存进任务记录，正是**两段式**（`wait=False` → `task_wait`，产物晚一次 tool_call 才存在）无需客户端自持 `task_id → 标签` 映射的原因。两处刻意的取舍：①超长**截断不报错**（`CAPTION_MAX_CHARS=200`，`CaptionStr` 的 `AfterValidator`）——标签不影响出图，为它失败一整次调用不划算；②**失败路径不回显**——`CFGPUError` 带 `request_id` 不带 `caption`，调用失败即无产物可标注（由 `test_failed_task_carries_request_id_but_not_caption` 钉住）。三个 generate 工具的字段声明共用 `caption_field()`，避免三份副本漂移。
 
+**`label`（产物名字回显）**：第三个回显字段，机制与 `caption` 逐字节相同（同一个 `stamp_echo()`、保留键 `_label`、共用的 `label_field()`），区别只在它是给**人**看的展示名 / 文件名。**为什么不与 caption 合并成一个字段**：两者服务的读者不同——caption 落在 agent 每轮重读的台账里，职责是让模型分辨哪条素材是哪条，因而要能消歧；label 落在用户的素材面板里当文件名，因而要短、要稳、不含文件系统拒收的字符。长到能消歧的描述做文件名很糟，短到能显示的文件名消不了歧。更硬的一条是**归属不同**：宿主通常允许 agent 随时改写 caption，而 label 是素材的出生名——合并即意味着一次无关的模型调用能改掉用户面板里的文件名。两处取舍：①`LABEL_MAX_CHARS=100`，比 caption 短是故意的（这是文件名），且只做**纯截断**——非法字符替换、后缀保留这类清洗留给宿主，只有它知道自己的存储规则；②**两个字段互不兜底**，只传一个绝不派生另一个，回落策略（label → caption → object_key 基名）属于宿主。`public_payload()` 现在剥的是 `_ECHO_PAYLOAD_KEYS` 这一个元组而非手写清单——会增长的正是这份清单，漏一个就是内部键静默泄进所有调用方看到的 payload。
+
 **`inline_media`（无 URL 的内联产物）**：部分模型不给下载链接，直接把媒体内容返回 —— 目前只有 MiniMax 语音（十六进制字符串在 `output.data.audio`，`MiniMaxSpeechAdapter` 解码后转 base64 存进 `NormalizedResult.inline_media`，每项 `{data, mime_type, filename}`）。对这类模型 **`inline_media` 就是产物本身**，因此凡是判断"有没有产物"的地方都必须是 `urls` **或** `inline_media`：`annotate_artifact()`（打 `artifact` 标记）、`TaskManager.create()` / `poll()` 的"成功但无产物 → 失败"守卫、`_present()`（`task_status` / `task_wait` 的成功分支）、`tool_registry.lean_result()`（`return_metadata=False` 的精简输出，三个 generate service 共用同一个 helper，避免各写一份而漂移）。同步 guard 只适用于 `image` / `video` / `audio`，文本型 `understand` 明确豁免。MiniMax 还会检查 HTTP 200 内的 `output.base_resp.status_code`，例如 `2054 / voice id not exist` 会直接返回 `invalid_params`，而不是落成空成功结果。`return_metadata` 屏蔽的是**元数据**（`task_id` / `model_used` / `aspect_ratio` / `seed` / `usage`），从不屏蔽产物 —— 少了这条，MiniMax 的精简结果就是一个 `urls: []` 的空壳。同步模型也会经由 `generate_audio(wait=False)` → `task_status` 走到 `_present()`，故那一处同样必须认 `inline_media`。MCP 工具层则把它划入 `structured_keys`（`generate_audio` 与 `tools/tasks.py` 的两个工具都是），base64 数据只进 `structuredContent`，绝不进模型上下文。测试见 `tests/unit/test_inline_media_result.py`。
 
 `tool_registry.annotate_artifact(result)` 是单一实现：当 `result` 含非空 `urls` 或非空 `inline_media`（顶层；并保留对嵌套 `result.urls` 的兼容判断作兜底）时打标记；无产物的结果（`wait=False` 的 pending、轮询中的 running、error dict）原样返回。`tools/generate.py`、`tools/tasks.py` 在各工具 `return` 处包一层调用。该标记只在 MCP 工具层加，service / dispatcher / CLI 的原始返回不受影响。
@@ -511,7 +519,7 @@ src/cfgpu_mcp/
 │   ├── registry.py             YAML 加载、extends 合并、Python 类解析
 │   ├── generic.py              YAML DSL 驱动的通用 adapter
 │   ├── seedance_video.py       Seedance 系列 Python Adapter（WAN 2.0 / WAN 2.0 Fast / Seedance 2.0 / 2.0 Fast / 1.5 Pro 共用）
-│   ├── seedream.py             Seedream 系列 Python Adapter（同步模型；5.0 lite / 5.0 Pro / 4.5 / 4.0 共用。Pro 为单图模型，n>1 报错；所有档位均映射为精确像素，不上行档位名）
+│   ├── seedream.py             Seedream 系列 Python Adapter（同步模型；5.0 lite / 5.0 Pro / 4.5 / 4.0 共用。Pro 为单图模型并静默忽略 n>1；所有档位均映射为精确像素，不上行档位名）
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
 │   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds/sound + image_list/video_list）
@@ -570,6 +578,9 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── kling-v3-omni/
 │   │   ├── adapter.yaml        可灵 V3 全能版，extends: kling-video-o1, card_base: ~
+│   │   └── card.md
+│   ├── wan-2-7-image/
+│   │   ├── adapter.yaml        万相 2.7 图像，WanImageAdapter（同步图像；region_edit 走 bbox_list）
 │   │   └── card.md
 │   ├── wan-2-7-i2v/
 │   │   ├── adapter.yaml        万相 2.7 图生视频，独立 WanVideoAdapter（仅 image_to_video）
@@ -786,15 +797,15 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 跨多数模型、用户高频调整的开关应做成**通用参数**（typed field），而不是埋在 free-form 的 `model_specific` 里。已有两个范例：
 
 - `with_audio`：视频音频开关，`SeedanceVideoAdapter` 映射为 `generate_audio`。
-- `watermark`：水印开关。类型为 `Optional[bool]`，**默认 `None` 表示不写入 payload、沿用各模型 API 自身默认**（避免覆盖 Seedream 4.5 的 `false` 等差异化默认）。支持的 adapter（`seedance_video`、`seedream`、`happyhorse`）在 `payload.update(req.model_specific)` **之前**写入 `payload["watermark"]`，因此 `model_specific` 仍可覆盖它；不支持的 adapter（`async_image` 下的 gpt-image-2 / nano-banana）不读取该字段，传入即被忽略。
-- `n`：图片组图数量（1-15），默认 1。仅 `SeedreamAdapter` 支持 `n>1`——会自动写入 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`async_image`（gpt-image-2 / nano-banana）的 `supports()` 对 `n>1` 直接拒绝。
+- `watermark`：水印开关，类型为 `bool`，**默认 `false`**。Agent / MCP / service 三层的默认值保持一致；即使 caller 未传值，支持水印字段的 adapter 也会显式写入上游 payload。不同 API 形状分开处理：`seedream`、`seedance_video` 和 `happyhorse` 使用顶层 `payload["watermark"]`，WAN 2.6/2.7 使用 `payload["parameters"]["watermark"]`。它们都在 `model_specific` 合并之前写入，因此显式的模型私有值仍可覆盖。上游没有该请求字段的 adapter（GPT Image / Nano Banana、Grok、Kling、MiniMax H3 等）继续忽略它，避免传入未知字段。
+- `n`：图片组图数量（1-15），默认 1。声明了 `multi_image_group` 能力的模型才认 `n>1`，且各家 API 的写法不同：Seedream 系写成 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`wan2.7-image` 写成 `parameters.enable_sequential=true` + `parameters.n`（上限 12，超出由 `supports()` 在发请求前拒绝），**两个键永远一起下发**——只发 `enable_sequential` 时上游的 `n` 默认值是 12，那是 12 张的账单。不支持该能力的图像模型（包括 Seedream 5.0 Pro、gpt-image-2、nano-banana）静默忽略 `n`，继续发送其他参数并生成单张图片。两家的 `n` 都是上限而非张数。
 - `resolution`（视频）：开放 `1080p`，WAN 2.0 / Doubao Seedance 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**分辨率是逐模型的取值集合**：能查到官方取值范围的模型在 `adapter.yaml` 用 `resolutions: [...]` 声明（Seedance 2.5 / 2.0 fast / 2.0 mini 均为 `[480p, 720p]`，Seedance 2.0 为 `[480p, 720p, 1080p]`），由 `ModelAdapter.supports()` 统一校验；未声明（`None`）= 不做本地限制，即该字段引入前的行为。否则上游会回 `the parameter resolution specified in the request is not valid for model X in i2v`。**另一例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
-- `quality_tier`：**双重身份**——既是 `model="auto"` 的路由打分输入（`router.py`），也被部分 adapter 映射进 payload，**选定模型后仍然生效**：`KlingVideoAdapter` → `mode`（`best` → `pro`，其余 `std`），`GptImage2Adapter` → `quality`（`fast`/`balanced`/`best` → `low`/`medium`/`high`）。三档与这些 API 自身的档位一一对应，故复用该参数而不新增一个近义的 `quality` 工具参数。其余 adapter 不读取它，选定模型后即为纯路由偏好。两处映射都写在 `payload.update(req.model_specific)` **之前**，故 `model_specific` 仍可覆盖。
-- `resolution`（图片）：**必须在 `build_payload` 里显式下发**——图片 API 按分辨率档位分段计价（GPT Image 2：1K/2K/4K 三档），adapter 漏读该字段不会报错，只会让每次调用都静默落到模型自身的默认档，且账单与预期不符。`SeedreamAdapter` 映射为像素 `size`，`NanoBananaAdapter` 映射为 `image_size`，`GptImage2Adapter` 原样下发 `resolution`（三档都是字面量 `1K` / `2K` / `4K`，空串会被上游判参数错误——早期版本把 `1K` 翻成 `""`，上游回的正是 `resolution 参数必须为 '1K'、'2K' 或 '4K'`）。注意 `ModelAdapter.supports()` 里的 `resolutions` 声明式校验**只对视频生效**（`isinstance(req, GenerateVideoInput)` 分支内），图片侧不做本地取值拦截：统一 Schema 比单个模型宽（`3K` 之于 GPT Image 2、`21:9` 之于 GPT Image 2 / nano-banana），这些值原样上行、**由上游拒绝**。
+- `quality_tier`：**双重身份**——既是 `model="auto"` 的路由打分输入（`router.py`），也被部分 adapter 映射进 payload，**选定模型后仍然生效**：`KlingVideoAdapter` → `mode`（`best` → `pro`，其余 `std`），`GptImage2Adapter` → `quality`（`fast`/`balanced`/`best` → `low`/`medium`/`high`），`WanImageAdapter` → `parameters.thinking_mode`（`fast` → `false`，其余 `true`；且只在纯文生图场景下发，那是上游唯一承认它生效的场景）。三档与这些 API 自身的档位一一对应，故复用该参数而不新增一个近义的 `quality` 工具参数。其余 adapter 不读取它，选定模型后即为纯路由偏好。两处映射都写在 `payload.update(req.model_specific)` **之前**，故 `model_specific` 仍可覆盖。
+- `resolution`（图片）：**必须在 `build_payload` 里显式下发**——图片 API 按分辨率档位分段计价（GPT Image 2：1K/2K/4K 三档），adapter 漏读该字段不会报错，只会让每次调用都静默落到模型自身的默认档，且账单与预期不符。`SeedreamAdapter` 映射为像素 `size`，`WanImageAdapter` 同样映射为像素 `size`（分隔符是 `*`，且档位表是按每档总像素预算算出来的，不是抄来的），`NanoBananaAdapter` 映射为 `image_size`，`GptImage2Adapter` 原样下发 `resolution`（三档都是字面量 `1K` / `2K` / `4K`，空串会被上游判参数错误——早期版本把 `1K` 翻成 `""`，上游回的正是 `resolution 参数必须为 '1K'、'2K' 或 '4K'`）。注意 `ModelAdapter.supports()` 里的 `resolutions` 声明式校验**只对视频生效**（`isinstance(req, GenerateVideoInput)` 分支内），图片侧默认不做本地取值拦截（`SeedreamAdapter` 与 `WanImageAdapter` 在各自的 `supports()` 里自行拦截，见下）：统一 Schema 比单个模型宽（`3K` 之于 GPT Image 2、`21:9` 之于 GPT Image 2 / nano-banana），这些值原样上行、**由上游拒绝**。
 - `duration_seconds`（视频）：允许 `-1`（智能时长，`SeedanceVideoAdapter` 直接透传）。Pydantic 校验器只卡**全机队最宽**的范围 4–30（来自 `doubao-seedance-2-5`，单段 30 秒直出）；**每个模型真实的上限写在各自 `adapter.yaml` 的 `max_duration_seconds`**（缺省 15 = 2.5 之前的全局上限，故其余模型行为不变；`doubao-seedance-1-5-pro` 为 12），由 `ModelAdapter.supports()` 统一拒绝。这样超限在本地报错而不是被上游 POST 拒绝，且 `model="auto"` 能绕开时长不够的模型。`happyhorse` 另外拒绝 `-1`。
 - **能力校验（视频）**：CFGPU 上游 API 会**按 `content` 数组形态在服务端推导 `task_type`**（如带 `reference_video` → `r2v`），客户端从不传 `task_type`。`SeedanceVideoAdapter.supports()` 据此把场景映射成能力名（首帧+尾帧→`first_last_frame`、仅首帧→`image_to_video`、reference_images/videos/audios→`multi_modal_reference`、纯文本→`text_to_video`），若该能力不在模型 `capabilities` 内则本地直接拒绝（如 `doubao-seedance-1-5-pro` 无 `multi_modal_reference`，传 `reference_videos` 会得到清晰报错，而非上游 `the specified task_type r2v does not support model ...`）。这也让 `model="auto"` 路由跳过不支持该场景的模型。
 
-> 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark`、`n` 作为通用参数列在支持模型的顶层 args（`n` 仅列在 seedream 系；gpt/nano 均不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`response_format` 等）。新增/调整参数时同步该文件。
+> 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark`、`n` 作为通用参数列在支持模型的顶层 args（`n` 只列在带 `multi_image_group` 能力的模型上——seedream 系与 `wan2.7-image`，且上限逐模型不同：seedream 15、`wan2.7-image` 12；gpt/nano 均不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`response_format` 等；`wan2.7-image` 的私有字段挂在嵌套的 `parameters` 下，故写成 `parameters.seed` 这样的点号键）。新增模型或调整参数时同步该文件——每条 args 的取值都应能用对应 adapter 的 `supports()` 复核。
 
 ---
 

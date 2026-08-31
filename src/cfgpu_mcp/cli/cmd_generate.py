@@ -54,8 +54,8 @@ def generate() -> None:
 @click.option("--quality-tier", "-q",
               type=click.Choice(["fast", "balanced", "best"]),
               default="balanced", show_default=True)
-@click.option("--watermark/--no-watermark", default=None,
-              help="Add/remove watermark (default: model's own default)")
+@click.option("--watermark/--no-watermark", default=False,
+              help="Add/remove watermark (default: no watermark)")
 @click.option("--prompt-extend/--no-prompt-extend", default=True,
               help="Enable/disable WAN 2.6/2.7 LLM prompt expansion")
 @click.option("--no-wait", is_flag=True,
@@ -130,8 +130,8 @@ def image_cmd(
 @click.option("--quality-tier", "-q",
               type=click.Choice(["fast", "balanced", "best"]),
               default="balanced", show_default=True)
-@click.option("--watermark/--no-watermark", default=None,
-              help="Add/remove watermark (default: model's own default)")
+@click.option("--watermark/--no-watermark", default=False,
+              help="Add/remove watermark (default: no watermark)")
 @click.option("--no-wait", is_flag=True,
               help="Return task_id immediately without waiting for completion")
 @click.option("--timeout", type=int, default=None,

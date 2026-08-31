@@ -18,10 +18,11 @@ async def understand_vision(
     temperature: float | None = None,
     return_metadata: bool = True,
     model_specific: dict | None = None,
+    validate_only: bool = False,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import client_for, get_task_repository, get_registry
     from cfgpu_mcp.router import ModelRouter
-    from cfgpu_mcp.task_manager import TaskManager
+    from cfgpu_mcp.task_manager import TaskManager, validate_request
 
     req = UnderstandVisionInput(
         prompt=prompt,
@@ -35,11 +36,37 @@ async def understand_vision(
         temperature=temperature,
         return_metadata=return_metadata,
         model_specific=model_specific,
+        validate_only=validate_only,
     )
 
     registry = get_registry()
     router = ModelRouter(registry)
-    adapter = router.resolve(req)
+    adapter = router.resolve(req, for_validation=validate_only)
+
+    if validate_only:
+        # Same branch, same position as the three generate_* services: before the
+        # repository is acquired, so a request that is never submitted leaves no task
+        # row, and errors are stamped exactly as on the billed path.
+        #
+        # **This tool carries the flag for a different reason than they do.** There is
+        # no approval card in front of a vision call — it is synchronous and cheap. What
+        # it lacked was a *preflight lane at all*: a host that runs one (DeerFlow's
+        # `PreflightMiddleware`) sends `validate_only=True` as an ordinary tool argument,
+        # and an undeclared argument is not an error — FastMCP's arg model inherits
+        # pydantic's `extra="ignore"` and its `model_dump_one_level` walks declared
+        # fields only, so the flag was dropped in silence and the "dry run" was a real,
+        # billed vision call whose result was thrown away. A host cannot detect that from
+        # the outside: the response of an ignored preflight is a perfectly normal answer.
+        # Declaring the field is what makes the silence impossible.
+        try:
+            preflight = validate_request(adapter, req)
+        except CFGPUError as e:
+            e.model_id = adapter.model_name
+            raise
+        # No `stamp_echo`: understand_vision carries none of the three echo handles
+        # (request_id / caption / label) — it is single-call and returns text, not an
+        # artifact to correlate, describe or name.
+        return preflight
 
     repo = await get_task_repository()
     tm = TaskManager(client_for, repo)

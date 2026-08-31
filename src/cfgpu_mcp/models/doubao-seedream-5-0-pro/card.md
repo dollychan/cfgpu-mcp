@@ -304,7 +304,7 @@ Pro 是生图模型，prompt 里出现「标记1」这几个字有被**画进结
 | aspect_ratio | size | 与 resolution 一起查表，组合进 size 的像素值；三档均生效 |
 | resolution | size | 1K / 1.5K / 2K 全部映射成精确像素（方式 1），档位名不上行 |
 | reference_images | image | URL 数组；单张为 string，多张为 array（2–10） |
-| n | — | Pro 仅支持 n=1；n>1 会报错拒绝（不支持组图） |
+| n | — | Pro 不支持组图；n>1 会被静默忽略，其余参数照常发送并生成单张图片 |
 | regions | prompt 内嵌 `<bbox>` | 归一 `[0,1]` → `[0,999]` 格索引，见「区域编辑」 |
 | image_refs | — | 只用于解析 prompt 里的 `[[句柄]]`，不上行 |
 | watermark | watermark | 直接映射 |

@@ -1,11 +1,10 @@
-# Nano Banana 2
+# CF Banana 2
 
 ## 基本信息
 
 | 属性 | 值 |
 |------|-----|
-| 任务类型 | image |
-| CFGPU 模型 ID | `nano2` |
+| 任务类型 | image | 
 | 成本档位 | 4/5 |
 | 速度档位 | 3/5 |
 
@@ -26,8 +25,7 @@
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `prompt` | string | 必填 | 图片描述 |
-| `model` | string | - | 使用 `nano-banana-2` |
+| `prompt` | string | 必填 | 图片描述 | 
 | `resolution` | string | `2K` | 图片分辨率：1K（默认）、2K、4K（映射为 image_size） |
 | `aspect_ratio` | string | `1:1` | 1:1、3:4、4:3、9:16、16:9、21:9 |
 | `reference_images` | list[url] | 可选 | 参考图 URL 数组 |
@@ -38,8 +36,7 @@
 **文生图**
 ```json
 {
-  "prompt": "一只可爱的猫咪，写实风格",
-  "model": "nano-banana-2"
+  "prompt": "一只可爱的猫咪，写实风格"
 }
 ```
 

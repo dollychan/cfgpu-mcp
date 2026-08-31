@@ -84,6 +84,18 @@ def test_model_specific_merged():
     assert payload["output_format"] == "png"
 
 
+def test_watermark_defaults_false_at_payload_top_level():
+    payload = _make_adapter().build_payload(GenerateImageInput(prompt="x"))
+    assert payload["watermark"] is False
+
+
+def test_explicit_true_watermark_is_preserved():
+    payload = _make_adapter().build_payload(
+        GenerateImageInput(prompt="x", watermark=True)
+    )
+    assert payload["watermark"] is True
+
+
 def test_cfgpu_model_id_only_in_model_field():
     adapter = _make_adapter()
     req = GenerateImageInput(prompt="x")
@@ -155,11 +167,15 @@ def test_2k_21x9_maps_to_correct_size():
 
 # --- doubao-seedream-5-0-pro (single-image, 1K/2K) ---
 
-def test_pro_n_greater_than_one_raises():
+def test_pro_n_greater_than_one_is_ignored():
     adapter = _make_pro_adapter()
     req = GenerateImageInput(prompt="x", n=4)
-    with pytest.raises(ValueError, match="does not support n>1"):
-        adapter.build_payload(req)
+    ok, reason = adapter.supports(req)
+    assert ok
+    assert reason == ""
+    payload = adapter.build_payload(req)
+    assert "sequential_image_generation" not in payload
+    assert "sequential_image_generation_options" not in payload
 
 
 def test_pro_1k_maps_to_pixels():
@@ -332,21 +348,22 @@ def test_group_generation_is_gated_on_the_capability_not_on_the_model_id():
 
     Pro happens to be the only family member without 组图 today, so an ``adapter_id ==
     pro`` test passes right now — and would keep passing while silently switching 组图 on
-    for the next single-image variant, generating and billing images nobody asked for.
+    for the next single-image variant. Variants without the capability must ignore n.
     """
     adapter = _make_adapter()
     adapter.capabilities = adapter.capabilities - {"multi_image_group"}
     ok, reason = adapter.supports(GenerateImageInput(prompt="x", n=4))
-    assert not ok
-    assert "组图" in reason
-    with pytest.raises(ValueError, match="does not support n>1"):
-        adapter.build_payload(GenerateImageInput(prompt="x", n=4))
+    assert ok
+    assert reason == ""
+    payload = adapter.build_payload(GenerateImageInput(prompt="x", n=4))
+    assert "sequential_image_generation" not in payload
+    assert "sequential_image_generation_options" not in payload
 
 
-def test_the_group_refusal_names_models_that_can():
+def test_single_image_seedream_ignores_n():
     ok, reason = _make_pro_adapter().supports(GenerateImageInput(prompt="x", n=4))
-    assert not ok
-    assert "doubao-seedream-5-0-lite" in reason
+    assert ok
+    assert reason == ""
 
 
 @pytest.mark.parametrize(
