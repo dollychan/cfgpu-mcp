@@ -66,10 +66,17 @@ class HappyHorseVideoAdapter(ModelAdapter):
         return payload
 
     def extract_task_id(self, resp: dict) -> str | None:
-        return self._output(resp).get("taskId")
+        # The two endpoints disagree on casing: create (POST /video/generations)
+        # answers snake_case {"output": {"task_status", "task_id"}, "request_id"},
+        # poll (GET /video/tasks/{id}) answers camelCase {"output": {"taskId",
+        # "taskStatus", "videoUrl"}, "requestId"}. Reading one casing only means
+        # the create response yields no task id and the task can never be polled.
+        output = self._output(resp)
+        return output.get("taskId") or output.get("task_id")
 
     def extract_status(self, resp: dict) -> str:
-        status = self._output(resp).get("taskStatus", "running").lower()
+        output = self._output(resp)
+        status = (output.get("taskStatus") or output.get("task_status") or "running").lower()
         # "canceled" and "unknown" aren't in task_manager's STATUS_MAP; collapse to failed
         if status in ("canceled", "unknown"):
             return "failed"
@@ -82,7 +89,7 @@ class HappyHorseVideoAdapter(ModelAdapter):
         return NormalizedResult(
             urls=[video_url] if video_url else [],
             expires_at=_default_expires_at(),
-            task_id=output.get("taskId"),
+            task_id=output.get("taskId") or output.get("task_id"),
             model_used=resp.get("model"),
             seed=output.get("seed"),
             usage=resp.get("usage"),

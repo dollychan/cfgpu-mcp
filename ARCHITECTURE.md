@@ -265,7 +265,9 @@ ModelAdapter (ABC, adapters/base.py)
     │       └── 唯一的结构化区域方言：regions → parameters.bbox_list（原图绝对像素，逐图对齐补 []）
     │
     ├── HappyHorseVideoAdapter    手写 Python，DashScope 风格嵌套 payload
-    │       └── input.media 数组 + parameters 对象；大写状态码归一化
+    │       ├── input.media 数组 + parameters 对象；大写状态码归一化
+    │       └── 两个端点键名大小写不一致：创建响应 snake_case（output.task_id / task_status），
+    │           轮询响应 camelCase（output.taskId / taskStatus / videoUrl）——两种都读
     │
     ├── WanVideoAdapter           手写 Python，万相 2.6/2.7 视频家族（基类=wan2.7-i2v）
     │       ├── 请求用 HappyHorse 风格 input/parameters（轮询用 Seedance 标准响应 content.videoUrl）；input 由 _build_input 钩子构建
@@ -415,6 +417,8 @@ while not done:
 ```
 
 每个模型的轮询参数在 `adapter.yaml` 的 `poll_config` 中配置，`SeedanceVideoAdapter` 还根据请求参数（时长、是否有参考媒体）动态延长 `estimate_poll_timeout()`。
+
+**失败原因的提取（`_extract_error_message`）**：上游对「原因写在哪」毫无共识，故按形状逐个试探 —— 万相视频是顶层 `error`（成功时为 `null`，失败时是 dict 或字符串），Submodel 嵌在 `task.error`，gpt-image-2 / Nano Banana 在 `data.error_msg`（如 Azure 安全系统拒绝），DashScope 形状的视频 API（HappyHorse、万相 2.6/2.7）则用 `output.code` + `output.message`（成功时两者为 `null`），两段都在时拼成 `code: message` —— code（如 `InvalidParameter.DataInspection`，即内容审核拒绝）常常是唯一说清「为什么」的一半，message 反而笼统。**顶层的 `message` 一律不读**：图片 API 即使任务失败也把它设成 `"success"`（那说的是「这次查询成功」），读了只会把失败报告成成功；`output.message` 是另一回事，它描述的是任务本身。全都取不到才回落到 `Task failed (upstream reported no error detail)` —— 这条兜底文案出现，意味着上游真的什么都没说，不是解析漏了。
 
 **轮询失败 ≠ 任务失败。** 一次 poll 打不通，只说明这条 socket 有问题；任务在上游照跑不误。所以 `wait()` 会**吸收可重试的**轮询错误（`CFGPUError.retryable`），真正的边界是**轮询超时**（`estimate_poll_timeout()`），不是第一次网络抖动：
 

@@ -774,6 +774,43 @@ def test_extract_error_nested_fail_reason():
     assert _extract_error_message(resp) == "nsfw detected"
 
 
+def test_extract_error_dashscope_output_code_and_message():
+    # HappyHorse / 万相 video: the task record is nested under output, and the
+    # reason rides output.code + output.message (both null on success).
+    resp = {
+        "requestId": "r1",
+        "model": "happyhorse-1.0-t2v",
+        "output": {
+            "taskId": "t1",
+            "taskStatus": "FAILED",
+            "code": "InvalidParameter.DataInspection",
+            "message": "Input data may contain inappropriate content.",
+        },
+    }
+    assert _extract_error_message(resp) == (
+        "InvalidParameter.DataInspection: Input data may contain inappropriate content."
+    )
+
+
+def test_extract_error_dashscope_output_code_only():
+    resp = {"output": {"taskStatus": "FAILED", "code": "InternalError", "message": None}}
+    assert _extract_error_message(resp) == "InternalError"
+
+
+def test_extract_error_dashscope_output_null_on_success_shape():
+    # Success poll carries code/message as null — must yield no reason.
+    resp = {
+        "output": {
+            "taskId": "t1",
+            "taskStatus": "SUCCEEDED",
+            "videoUrl": "https://cdn.example.com/v.mp4",
+            "message": None,
+            "code": None,
+        }
+    }
+    assert _extract_error_message(resp) is None
+
+
 @pytest.mark.asyncio
 async def test_poll_wan_null_error_failure_converges():
     """Regression: a WAN-style failed poll with error: null used to crash
