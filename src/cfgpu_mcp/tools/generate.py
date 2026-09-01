@@ -8,7 +8,7 @@ from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
-from cfgpu_mcp.tool_registry import annotate_artifact, split_structured
+from cfgpu_mcp.tool_registry import RegionSpec, annotate_artifact, split_structured
 
 
 def register(mcp: FastMCP) -> None:
@@ -19,15 +19,18 @@ def register(mcp: FastMCP) -> None:
         aspect_ratio: str = "1:1",
         resolution: str = "2K",
         reference_images: Optional[list[str]] = None,
+        regions: Optional[list[RegionSpec]] = None,
+        image_refs: Optional[list[str]] = None,
         n: int = 1,
         quality_tier: str = "balanced",
-        watermark: Optional[bool] = None,
+        watermark: bool = False,
         wait: bool = True,
         timeout: Optional[int] = None,
         return_metadata: bool = True,
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
         caption: Optional[str] = None,
+        label: Optional[str] = None,
         validate_only: bool = False,
     ) -> dict:
         """Generate image from text prompt using CFGPU models."""
@@ -38,6 +41,8 @@ def register(mcp: FastMCP) -> None:
                 aspect_ratio=aspect_ratio,
                 resolution=resolution,
                 reference_images=reference_images,
+                regions=regions,
+                image_refs=image_refs,
                 n=n,
                 quality_tier=quality_tier,
                 watermark=watermark,
@@ -47,6 +52,7 @@ def register(mcp: FastMCP) -> None:
                 model_specific=model_specific,
                 request_id=request_id,
                 caption=caption,
+                label=label,
                 validate_only=validate_only,
             )), structured_keys=("usage", "payload"))
         except Exception as e:
@@ -66,7 +72,7 @@ def register(mcp: FastMCP) -> None:
         resolution: str = "720p",
         with_audio: bool = True,
         quality_tier: str = "balanced",
-        watermark: Optional[bool] = None,
+        watermark: bool = False,
         prompt_extend: bool = True,
         wait: bool = True,
         timeout: Optional[int] = None,
@@ -74,6 +80,7 @@ def register(mcp: FastMCP) -> None:
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
         caption: Optional[str] = None,
+        label: Optional[str] = None,
         validate_only: bool = False,
     ) -> dict:
         """Generate video from text prompt, image, or multimodal references using CFGPU models.
@@ -107,6 +114,7 @@ def register(mcp: FastMCP) -> None:
                 model_specific=model_specific,
                 request_id=request_id,
                 caption=caption,
+                label=label,
                 validate_only=validate_only,
             )), structured_keys=("usage", "payload"))
         except Exception as e:
@@ -131,6 +139,7 @@ def register(mcp: FastMCP) -> None:
         model_specific: Optional[dict] = None,
         request_id: Optional[str] = None,
         caption: Optional[str] = None,
+        label: Optional[str] = None,
         validate_only: bool = False,
     ) -> dict:
         """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
@@ -153,6 +162,7 @@ def register(mcp: FastMCP) -> None:
                 model_specific=model_specific,
                 request_id=request_id,
                 caption=caption,
+                label=label,
                 validate_only=validate_only,
             )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:

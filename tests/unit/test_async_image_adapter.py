@@ -34,11 +34,15 @@ def _nano() -> NanoBananaAdapter:
 
 
 @pytest.mark.parametrize("adapter", [_gpt(), _nano()])
-def test_rejects_group_generation(adapter):
+def test_ignores_group_generation_parameter(adapter):
     req = GenerateImageInput(prompt="x", n=3)
     ok, reason = adapter.supports(req)
-    assert ok is False
-    assert "doubao-seedream" in reason
+    assert ok is True
+    assert reason == ""
+    payload = adapter.build_payload(req)
+    assert payload["prompt"] == "x"
+    assert "n" not in payload
+    assert "sequential_image_generation" not in payload
 
 
 @pytest.mark.parametrize("adapter", [_gpt(), _nano()])

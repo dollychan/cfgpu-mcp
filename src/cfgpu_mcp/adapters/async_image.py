@@ -54,11 +54,6 @@ class _AsyncImageBase(ModelAdapter):
         assert isinstance(req, GenerateImageInput)
         if not req.prompt.strip():
             return False, f"{self.adapter_id} requires a non-empty prompt"
-        if req.n and req.n > 1:
-            return False, (
-                f"{self.adapter_id} generates a single image; n>1 (组图 / group image "
-                f"generation) is only supported by doubao-seedream-* models"
-            )
         return True, ""
 
     def validation_corrections(

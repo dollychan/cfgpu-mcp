@@ -21,6 +21,11 @@ def _render(template: Any, ctx: dict) -> Any:
             val = ctx.get(key)
             if val is None:
                 return "" if default is None else default
+            if isinstance(val, bool):
+                # Placeholder values are strings, but payload templates use JSON
+                # spelling for boolean defaults. Keep an actual typed default aligned
+                # with the same wire representation (``false``, not Python's ``False``).
+                return "true" if val else "false"
             return str(val)
         return _PLACEHOLDER_RE.sub(_replace, template)
     if isinstance(template, list):

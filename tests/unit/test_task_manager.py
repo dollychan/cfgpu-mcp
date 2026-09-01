@@ -674,6 +674,60 @@ async def test_caption_does_not_reach_the_posted_body():
 
 
 @pytest.mark.asyncio
+async def test_async_create_stashes_label():
+    """Same reason as the caption stash: the name is supplied on generate but the
+    artifact it names only appears at task_wait, one tool call later."""
+    from cfgpu_mcp.task_manager import _LABEL_KEY
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    req = GenerateVideoInput(prompt="x", label="开场镜头.mp4")
+    task = await tm.create(adapter, req)
+    assert task.payload[_LABEL_KEY] == "开场镜头.mp4"
+    assert _LABEL_KEY not in task.public_payload()
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_label_does_not_reach_the_posted_body():
+    from cfgpu_mcp.task_manager import _LABEL_KEY
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"id": "cfgpu-task-1"})
+    await tm.create(adapter, GenerateVideoInput(prompt="x", label="开场镜头.mp4"))
+    posted_body = tm._client_for(None).post.await_args.args[1]
+    assert _LABEL_KEY not in posted_body
+    assert "label" not in posted_body
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_create_without_label_leaves_payload_clean():
+    from cfgpu_mcp.task_manager import _LABEL_KEY
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    task = await tm.create(adapter, GenerateImageInput(prompt="x"))
+    assert _LABEL_KEY not in task.payload
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_public_payload_strips_every_echo_key():
+    """The strip list is hand-maintained; a fourth echo field added without updating it
+    would leak an internal key into the payload every caller sees, silently."""
+    from cfgpu_mcp.task_manager import _ECHO_PAYLOAD_KEYS
+    tm, db = await _make_tm()
+    adapter = _sync_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"data": [{"url": "https://cdn/img.jpg"}]})
+    req = GenerateImageInput(prompt="x", request_id="r-1", caption="描述", label="名字.png")
+    task = await tm.create(adapter, req)
+    assert all(k in task.payload for k in _ECHO_PAYLOAD_KEYS)
+    assert not any(k in task.public_payload() for k in _ECHO_PAYLOAD_KEYS)
+    await db.close()
+
+
+@pytest.mark.asyncio
 async def test_create_without_caption_leaves_payload_clean():
     tm, db = await _make_tm()
     adapter = _sync_adapter()
@@ -718,6 +772,43 @@ def test_extract_error_string():
 def test_extract_error_nested_fail_reason():
     resp = {"data": {"status": "failed", "fail_reason": "nsfw detected"}}
     assert _extract_error_message(resp) == "nsfw detected"
+
+
+def test_extract_error_dashscope_output_code_and_message():
+    # HappyHorse / 万相 video: the task record is nested under output, and the
+    # reason rides output.code + output.message (both null on success).
+    resp = {
+        "requestId": "r1",
+        "model": "happyhorse-1.0-t2v",
+        "output": {
+            "taskId": "t1",
+            "taskStatus": "FAILED",
+            "code": "InvalidParameter.DataInspection",
+            "message": "Input data may contain inappropriate content.",
+        },
+    }
+    assert _extract_error_message(resp) == (
+        "InvalidParameter.DataInspection: Input data may contain inappropriate content."
+    )
+
+
+def test_extract_error_dashscope_output_code_only():
+    resp = {"output": {"taskStatus": "FAILED", "code": "InternalError", "message": None}}
+    assert _extract_error_message(resp) == "InternalError"
+
+
+def test_extract_error_dashscope_output_null_on_success_shape():
+    # Success poll carries code/message as null — must yield no reason.
+    resp = {
+        "output": {
+            "taskId": "t1",
+            "taskStatus": "SUCCEEDED",
+            "videoUrl": "https://cdn.example.com/v.mp4",
+            "message": None,
+            "code": None,
+        }
+    }
+    assert _extract_error_message(resp) is None
 
 
 @pytest.mark.asyncio

@@ -1,11 +1,10 @@
-# Nano Banana Pro绘画模型-official
+# CF Banana Pro绘画模型-official
 
 ## 基本信息
 
 | 属性 | 值 |
 |------|-----|
-| 任务类型 | image |
-| CFGPU 模型 ID | `nano-pro-official` |
+| 任务类型 | image | 
 | 能力标签 | text_to_image, image_to_image |
 | 成本档位 | 4/5 |
 | 速度档位 | 3/5 |
@@ -26,8 +25,7 @@
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `prompt` | string | 必填 | 图片描述 |
-| `model` | string | - | 使用 `nano-pro-official` |
+| `prompt` | string | 必填 | 图片描述 | 
 | `resolution` | string | `2K` | 图片分辨率：1K、2K、4K |
 | `aspect_ratio` | string | `1:1` | 1:1、3:4、4:3、9:16、16:9、21:9 |
 | `reference_images` | list[url] | 可选 | 参考图 URL 数组 |

@@ -305,7 +305,7 @@ async def main():
         aspect_ratio="16:9",
         resolution="720p",
         with_audio=True,
-        watermark=False,        # None=模型默认；gpt-image-2 / nano-banana 不支持(忽略)
+        watermark=False,        # 默认 false；不支持水印字段的模型会忽略
         wait=False,             # 立即返回 task_id
     )
     print(task["task_id"])      # 'task-abc123'
@@ -508,8 +508,18 @@ cfgpu generate image "same style portrait" \
   --reference-images https://example.com/ref1.jpg \
   --reference-images https://example.com/ref2.jpg
 
-# 组图（一次生成多张关联图片，仅 doubao-seedream-* 支持，1-15 张）
+# 组图（一次生成多张关联图片，1-15 张；doubao-seedream-* 与 wan2.7-image 支持）
 cfgpu generate image "四格漫画分镜" --model doubao-seedream-5-0-lite -n 4
+
+# 万相 2.7 图像（同步）— 文生图 / 多图编辑 / 图像集，1K/2K 两档
+cfgpu generate image "一间有着精致窗户的花店，漂亮的木质门，摆放着花朵" \
+  --model wan2.7-image --aspect-ratio 16:9 --resolution 2K
+
+# 万相 2.7 多图编辑：图片在参数里的顺序就是 prompt 里的「图1」「图2」
+cfgpu generate image "把图2的涂鸦喷到图1的车上" \
+  --model wan2.7-image \
+  --reference-images https://example.com/car.webp \
+  --reference-images https://example.com/paint.webp
 
 # 输出完整 JSON（含元数据）
 cfgpu generate image "..." --metadata --json
@@ -611,8 +621,9 @@ cfgpu generate image "..." --no-watermark      # gpt-image-2 / nano-banana 不�
 cfgpu generate video "..." --model-specific '{"tools": [{"type": "web_search"}]}'
 ```
 
-> `watermark` 现已提升为通用参数（`--watermark/--no-watermark`，service 层 `watermark=True/False`）。
-> 不传时（`None`）沿用各模型自身的默认值（多数为开启，Seedream 4.5 为关闭）。
+> `watermark` 是通用参数（`--watermark/--no-watermark`，service 层 `watermark=True/False`），
+> 默认为 `false`。对支持的模型，未显式传入时仍会将 `false` 写入上游 payload；
+> GPT Image / Nano Banana、Grok、Kling 和 MiniMax H3 等没有 watermark 请求字段的模型会忽略它。
 
 ### 生成音频（语音合成 / text-to-speech）
 
@@ -640,10 +651,14 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
 
-> `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。仅 `doubao-seedream-*`
-> 支持 `n>1`（自动设置 `sequential_image_generation=auto` + `max_images=n`），**例外：
+> `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。支持 `n>1` 的是带
+> `multi_image_group` 能力的模型：`doubao-seedream-*`（自动设置
+> `sequential_image_generation=auto` + `max_images=n`）与 `wan2.7-image`（自动设置
+> `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。**例外：
 > `doubao-seedream-5-0-pro` 为单图模型，不支持组图，`n>1` 会报错**；`gpt-image-2`、
-> `nano-banana-*` 传 `n>1` 也会被拒绝。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
+> `nano-banana-*` 传 `n>1` 也会被拒绝。
+> 两家的 `n` 都是**上限而不是张数**：出几张由模型决定，少于 `n` 是正常结果，结果回来之前
+> 不要向用户承诺具体张数。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
 > HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，
 > 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
 > `duration_seconds` 的 schema 范围是 4–30，但 30 秒**只有 `doubao-seedance-2-5` 支持**；WAN 2.0 /
@@ -661,6 +676,24 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 单个模型宽，超出的值会原样上行、由上游 API 拒绝并回传原始报错。已知差异：`cf-image-2`
 > （GPT Image 2）只有 1K/2K/4K 三档，传 `3K` 会被上游拒绝；它的 `aspect_ratio` 也没有 `21:9`。
 > 分辨率直接影响计价（`cf-image-2` 三档分别为 0.105 / 0.16 / 0.21 元每张），需要哪档就显式传哪档。
+
+> **Seedream 系列与 `wan2.7-image` 是例外：档位在本地校验，且始终以精确像素上行。** 各家族支持的档位不同
+> （`doubao-seedream-5-0-pro`：1K/1.5K/2K；`5-0-lite` 与 `4.5`：2K/3K/4K；`4.0`：1K/2K/3K/4K），
+> 超出的档位由 `supports()` 直接拒绝而不是静默降档——`validate_only` 会在 `corrected_args`
+> 里给出最接近的可用档位，`model="auto"` 则会绕开不支持该档的模型。adapter 把
+> （`resolution`, `aspect_ratio`）查成一个精确的 `宽x高` 送上游，因此 `aspect_ratio` 在
+> 每一档都真实生效。注意 Pro 的 1.5K：官方称它与 1K 同价且效果更好，但那个等价只在上行
+> **档位名**时成立；发像素后可能按上一档计费。要保 1K 价就传 `1K`。
+
+> `wan2.7-image` 走同一条路，只是像素表是**算出来的**而不是抄来的：官方只公布了每档的总像素
+> 预算（1K = 1024x1024，2K = 2048x2048）和全场景区间 [768x768, 2048x2048]，adapter 取满足预算
+> 的最大整数倍，宽高比因此是精确值。它只有 1K / 2K 两档（4K 只有 pro 版的文生图有），其余档位
+> 由 `supports()` 拒绝、`validate_only` 在 `corrected_args` 里给出最接近的可用档。
+> 注意分隔符是 `宽*高` 而不是 Seedream 的 `宽x高`。另有一个后果值得知道：上行档位名时，上游会把
+> 输出**按最后一张输入图片的宽高比**缩放，而发像素则由 `aspect_ratio`（默认 `1:1`）说了算——
+> 编辑一张 16:9 的图也会得到 1:1。想把画幅交还给模型，用
+> `model_specific={"parameters": {"size": "2K"}}` 覆盖回档位名（该模型的 `model_specific`
+> 对 `parameters` 做深合并，不会把整个对象替换掉）。
 
 ### 视觉理解（图像理解 / 图像推理 / 视频理解）
 
@@ -784,7 +817,15 @@ done
 >
 > 三条约束：①它是**标签不是第二个 prompt**——写清主体与版本即可，不要复述生成 prompt；②超过 200 字符会被**截断而非报错**（标签不影响出图，为它失败一整次调用不划算）；③绝不进入上游 API 请求体（`payload` 中不出现），对生成结果零影响。与 `request_id` 的唯一差异在**失败路径**：错误结果带 `request_id`（关联标识正是用来把失败 join 回原请求的），但不带 `caption`——调用失败即没有产物可标注。
 
-> **`validate_only`（预检，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受 `validate_only: bool = false`。置 `true` 时走**完全相同**的解析链路——Pydantic 校验 → 路由（`model="auto"` 在此解析成具体模型）→ `supports()` 逐参数校验 → 构建真实上游 payload——然后**在发出 POST 之前返回**。不创建任务、不生成、不计费、不写任务表。
+> **`label`（产物名字，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 还接受一个可选的 `label`——产物的**展示名 / 文件名**（如 `"阿雅侧脸.png"` / `"cover_v1.png"`），回显机制与 `caption` 完全相同（即时响应 + 之后的 `task_status` / `task_wait`，存进任务记录故两段式也带得回来）。
+
+> **为什么是两个字段而不是一个**：它们答的是两个读者。`caption` 是写给**模型**看的描述——它落在 agent 每轮重读的素材台账里，用来分辨哪条素材是哪条，所以需要能消歧（"角色阿雅 第一版, 侧脸"）；`label` 是写给**人**看的名字——宿主把它当作用户素材面板里的文件名，所以要短、要稳、不能含文件系统拒收的字符。一个字段兼不了两职：长到能消歧的描述做文件名很糟，短到能显示的文件名消不了歧。两者的**归属**也不同——宿主可以让 agent 随时改写 caption，而 label 是素材的出生名，合并就意味着一次无关的模型调用能改掉用户的文件名。
+
+> 三条要点：①**保持名字的形状**——几个词，不要句子、不要 prompt 原文，长描述放 `caption`；②超过 100 字符**截断而非报错**（比 caption 的 200 短是故意的：这是文件名），服务端只做纯截断，**非法字符 / 后缀保留这类清洗归宿主**——只有它知道自己的存储规则；③两个字段**互不兜底**：只传一个绝不会替你编出另一个，回落策略归宿主（它才知道自己的台账要基名还是要描述）。失败路径与 `caption` 同理：错误结果两者都不带——调用失败即没有产物可命名。
+
+> **建议每次都传 `label`**：不传时宿主只能拿不透明的生成 key 显示产物。但它在 schema 里是**可选**的，且刻意不改成必填——本服务器有多个消费方，新增必填参数对每一个都是破坏性变更，而漏传一次的代价是一整轮失败的调用，为一个装饰性字符串不划算。"要不要强制"是宿主自己的提示词该管的事。
+
+> **`validate_only`（预检，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` / `understand_vision` 接受 `validate_only: bool = false`。置 `true` 时走**完全相同**的解析链路——Pydantic 校验 → 路由（`model="auto"` 在此解析成具体模型）→ `supports()` 逐参数校验 → 构建真实上游 payload——然后**在发出 POST 之前返回**。不创建任务、不生成、不计费、不写任务表。
 >
 > 返回：`{"validated": true, "model_used": "<具体模型>", "task_type", "is_async", "cost_tier", "speed_tier", "corrected_args": {...}, "payload": {<真实上游请求>}}`（Mode A 下 `payload` 随既有拆分进 `structuredContent`，不进模型上下文；`corrected_args` 留在 `content`，它是要照做的指令）。
 >
@@ -796,7 +837,9 @@ done
 >
 > 代价要知道：钉死 `model` 换掉了 `auto` 的 failover——预检与提交之间该模型若不可用，原本会自动路由到下一个候选，现在直接硬失败。这是有意的取舍：审批只有在它指名了真正会跑的东西时才有意义，而这种失败是显式且可重试的。
 >
-> 三条要点：①**失败与真实调用完全一致**——内部抛的是同一个 `CFGPUError`，`error_type` / `card_hint` / 各模型专有的错误回译都相同，所以预检通过即意味着参数被接受。**但异常不越过工具边界**：与本服务器所有工具一样，`tool_error_dict` 把它转成一个*正常返回*的错误字典，调用方拿到的是 `{"error": true, "error_type": ..., "message": ..., "retryable": false, "model_id": ...}` 而**不是**协议级异常，返回里也**不会有 `validated` 键**。判"预检没过"要看 `error is true`，别只看 `validated is false`——只认后者会把每一次被拒的调用当成通过放行；②它校验的是**请求合法**，不保证**生成成功**（远端 5xx、限流、内容审核仍可能发生），预检不是产物预览；③回显 `request_id` 但不回显 `caption`——与错误路径同理，预检没有产物可标注。`understand_vision` 恒同步、便宜、可重跑，且未知模型会回退 auto，故不设此参数。
+> 三条要点：①**失败与真实调用完全一致**——内部抛的是同一个 `CFGPUError`，`error_type` / `card_hint` / 各模型专有的错误回译都相同，所以预检通过即意味着参数被接受。**但异常不越过工具边界**：与本服务器所有工具一样，`tool_error_dict` 把它转成一个*正常返回*的错误字典，调用方拿到的是 `{"error": true, "error_type": ..., "message": ..., "retryable": false, "model_id": ...}` 而**不是**协议级异常，返回里也**不会有 `validated` 键**。判"预检没过"要看 `error is true`，别只看 `validated is false`——只认后者会把每一次被拒的调用当成通过放行；②它校验的是**请求合法**，不保证**生成成功**（远端 5xx、限流、内容审核仍可能发生），预检不是产物预览；③回显 `request_id` 但不回显 `caption` / `label`——与错误路径同理，预检没有产物可标注、可命名。`understand_vision` 恒同步、便宜、可重跑，且未知模型会回退 auto，故不设此参数。
+>
+> **`understand_vision` 上的它答的是另一个问题**（2026-08-28 加）：视觉理解是同步、便宜、可重跑的，前面没有审批卡片，所以本来不在预检清单里。但**宿主的预检是按 pattern 匹配的、不是按工具挑的**——只要这个工具进了那份清单，`validate_only` 就会作为一个普通入参发过来。而**未声明的入参不会被拒，会被静默丢掉**（FastMCP 的入参模型是普通 pydantic 模型，`extra="ignore"`；`model_dump_one_level` 只遍历已声明字段），于是那次"空跑"是一次真实的、计费的视觉理解调用，答案被丢弃后再跑一次。**从响应上看不出来**：被忽略的预检和成功的预检长得一模一样。所以判据不是"这个工具需不需要预检"，而是"它honor不honor这个开关"——后者从外面看得见，前者看不见。
 >
 > ⚠️ 与环境变量 `CFGPU_DRY_RUN` 无关且语义相反：后者是"打印请求日志但**照常发送**"的调试开关。
 

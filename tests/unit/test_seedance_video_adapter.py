@@ -98,11 +98,11 @@ def test_model_specific_merged():
     assert payload["watermark"] is False
 
 
-def test_watermark_omitted_when_none():
+def test_watermark_defaults_false_at_payload_top_level():
     adapter = _make_adapter()
     req = GenerateVideoInput(prompt="x")
     payload = adapter.build_payload(req)
-    assert "watermark" not in payload
+    assert payload["watermark"] is False
 
 
 def test_watermark_typed_field_emitted():

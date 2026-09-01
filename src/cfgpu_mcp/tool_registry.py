@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal, Optional
 
 from mcp.types import CallToolResult, TextContent
-from pydantic import AfterValidator, BaseModel, Field, field_validator
+from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
 
 
 # ── Media (material) slot annotations ───────────────────────────────────────
@@ -46,6 +46,17 @@ MEDIA_ANNOTATION_KEY = "x-cfgpu-media"
 _WIRE_FORMS: dict[str, str] = {
     "https_url": "a publicly reachable https:// URL",
     "asset_url": "an `asset://<ASSET_ID>` handle (Seedance / WAN video models only)",
+    # A region is not a file — but it *is* a reference into one, and it is subject to
+    # exactly the two problems the annotation exists to solve: a host with its own
+    # annotation layer must know which parameter to re-describe (it hands the model a
+    # mark token, not a coordinate) and which values to resolve on the way out. So it
+    # is declared as a slot with its own role and its own wire form rather than left
+    # as an ordinary field that hosts have to recognise by name.
+    "region_spec": (
+        "a region object `{image_index, box: [x1, y1, x2, y2], label?, note?, "
+        "image_size?}` where the box is normalised to [0, 1] of the image's width and "
+        "height, x first, origin top-left"
+    ),
 }
 
 
@@ -64,7 +75,7 @@ def _compose_media_description(slot: str, accepts: list[str], arity: str) -> str
 def media_field(
     *,
     slot: str,
-    role: Literal["image", "video", "audio"],
+    role: Literal["image", "video", "audio", "region"],
     arity: Literal["one", "many"],
     accepts: list[str],
 ) -> Any:
@@ -100,44 +111,276 @@ def media_field(
     )
 
 
-# ── Caption (artifact label) ────────────────────────────────────────────────
+# ── Regions (user-drawn annotations on an input image) ──────────────────────
 #
-# Like ``request_id``, ``caption`` is a caller-supplied handle this server stores and
-# echoes but never interprets — it is not part of any upstream request. It exists for
-# hosts that keep their own asset ledger (DeerFlow/cf-dream registers every generated
-# artifact as a *material* the user later refers to by a short id): without a label
-# supplied at call time, the ledger entry is nameless and the host has to spend a second
-# tool round trip naming it after the fact. Riding the generate call closes that gap, and
-# riding the stored payload means the async ``generate → task_wait`` hop carries it for
-# free — the host needs no state of its own to survive the two-phase case.
+# A region carries "here, on that image" from a human's canvas into a model request.
+# Three very different upstream dialects consume it — Seedream embeds `<bbox>` tags in
+# the prompt text, Qwen's vision models do the same for reading, and 万相 2.7 图像 takes
+# absolute pixels in its own `bbox_list` field — so the unified schema deliberately
+# matches none of them: it is **normalised [0, 1] floats**, and each adapter converts
+# once, at its own exit.
 #
-# Over-long captions are truncated, never rejected: a caption has no effect on the
-# generated media, so failing the call — and costing the caller a whole turn — over the
-# length of a cosmetic label would be a bad trade.
+# Why normalised rather than pixels:
+#
+#   * A normalised box is the same number at every rendering scale, so a client that
+#     drew it on a 900px-wide canvas of a 4000px image needs no multiplication — and
+#     therefore cannot get that multiplication wrong. A wrong pixel box does not fail,
+#     it silently edits the wrong part of the picture.
+#   * If ``image_size`` is misreported, the coordinates are still right: probing the
+#     real size repairs the request exactly. Under a pixel scheme the authoritative
+#     data is itself wrong and nothing can recover it.
+#   * Thumbnailing, transcoding, and client-side pre-compression leave it valid.
+#
+# Why floats rather than the [0, 999] integer grid one of the dialects speaks: routing
+# every caller through that grid would tax every *other* dialect with Seedream's
+# quantisation (a ±4px systematic error on a 4000px image, incurred purely to suit a
+# model that may not even be the one selected), and it forces a "grid index → pixel"
+# inclusive-last-cell rule into the shared layer. ``[0,1] → [0,w]`` needs no such rule —
+# and 万相 2.7's pixel-native `bbox_list` is that same conversion at the image's own
+# scale, which a grid-native schema would have had to un-quantise on the way out.
+#
+# **The model never writes these numbers.** They come from the user's canvas, through
+# the host's own annotation registry, and reach the payload without any LLM
+# transcription step. That is the whole point: an LLM copying coordinates is reliably
+# wrong, and being wrong here costs a billed generation.
+
+#: Stored/serialised precision for a normalised coordinate. Six decimals is finer than
+#: one pixel on a 100,000px image, i.e. permanently below the resolution of any real
+#: input, while keeping the value short enough to read in a payload dump.
+COORD_DECIMALS = 6
+
+
+class RegionSpec(BaseModel):
+    """One region a user marked on one input image.
+
+    Flat, with an explicit ``image_index``, rather than a per-image nested list. The
+    nested shape (outer list positionally aligned with the image slot, empty ``[]``
+    padding for un-annotated images) is a textbook LLM trap: given three images with a
+    box on only the first, a model reliably emits a one-element list — and the
+    consequence is not an error but *the box landing on the wrong image*. Padding is
+    the adapter's job, not the caller's.
+    """
+
+    image_index: int = Field(
+        description="0-based index into this call's image slot (`reference_images` for "
+        "generate_image, `images` for understand_vision) identifying which image this "
+        "region was drawn on.",
+    )
+    box: list[float] = Field(
+        description="The region as `[x1, y1, x2, y2]`, **normalised to [0, 1]** of the "
+        "image's own width and height — x first, origin top-left, x1<x2 and y1<y2. "
+        "`[0, 0, 1, 1]` is the whole image. Never in pixels, and never a number you "
+        "worked out yourself: a box must come from a region the user actually marked.",
+    )
+    image_size: Optional[list[int]] = Field(
+        default=None,
+        description="`[width, height]` in pixels of the **original** image this region "
+        "was drawn on (not the size of the canvas it was displayed at). Pass it whenever "
+        "you have it: models whose region field takes absolute pixels (e.g. "
+        "`wan2.7-image`) **require** it and reject the call without it, since a size can "
+        "never be guessed — a wrong one silently edits a different rectangle. Models "
+        "that carry coordinates in the prompt do not need it, so omitting it narrows "
+        "which model can serve the request rather than failing outright.",
+    )
+    label: Optional[str] = Field(
+        default=None,
+        description="The region's visible name, exactly as the user sees it (e.g. "
+        "'标记1'). Use it in `prompt` as a `[[标记1]]` placeholder to say *where in the "
+        "sentence* this region belongs; the adapter substitutes the coordinates in "
+        "place. Names are unique per image but may repeat across images — write "
+        "`[[<image_ref>#标记1]]` when more than one image is in play.",
+    )
+    note: Optional[str] = Field(
+        default=None,
+        description="What the user said about this region. Passed to models that read "
+        "regions rather than paint them; generation models never receive it, so it "
+        "cannot leak into the picture.",
+    )
+
+    @field_validator("image_index")
+    @classmethod
+    def _validate_image_index(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError(f"image_index={v} must be >= 0 (0-based index into the image slot)")
+        return v
+
+    @field_validator("box")
+    @classmethod
+    def _validate_box(cls, v: list[float]) -> list[float]:
+        if len(v) != 4:
+            raise ValueError(
+                f"box must have exactly 4 values [x1, y1, x2, y2], got {len(v)}: {v}"
+            )
+        if any(not (0.0 <= c <= 1.0) for c in v):
+            raise ValueError(
+                f"box {v} is out of range: coordinates are normalised to [0, 1] of the "
+                f"image's width/height, not pixels. Divide by the image's width (x) and "
+                f"height (y)."
+            )
+        x1, y1, x2, y2 = v
+        if x1 >= x2 or y1 >= y2:
+            raise ValueError(
+                f"box {v} is empty or inverted: it must satisfy x1<x2 and y1<y2 "
+                f"(x first, origin top-left)."
+            )
+        return [round(c, COORD_DECIMALS) for c in v]
+
+    @field_validator("image_size")
+    @classmethod
+    def _validate_image_size(cls, v: Optional[list[int]]) -> Optional[list[int]]:
+        if v is None:
+            return v
+        if len(v) != 2 or any(c <= 0 for c in v):
+            raise ValueError(f"image_size must be [width, height] with both > 0, got {v}")
+        return v
+
+
+def _validate_regions(
+    regions: Optional[list[RegionSpec]],
+    images: Optional[list[str]],
+    image_refs: Optional[list[str]],
+    *,
+    image_slot: str,
+) -> None:
+    """Check a request's regions against the image slot they point into.
+
+    Everything here is structural and model-independent, so it belongs at the schema
+    layer: no model can route around it and no adapter can repair it. Per-model limits
+    (whether the model reads regions at all, how many boxes it takes per image) are the
+    opposite shape and live in ``ModelAdapter.supports()``.
+    """
+    n_images = len(images or [])
+    if regions:
+        if n_images == 0:
+            raise ValueError(
+                f"regions were supplied but {image_slot} is empty — a region marks a "
+                f"place *on an image*, so the annotated image must be passed in "
+                f"{image_slot} as well."
+            )
+        for r in regions:
+            if r.image_index >= n_images:
+                raise ValueError(
+                    f"region image_index={r.image_index} is out of range: "
+                    f"{image_slot} has {n_images} image(s), so valid indices are "
+                    f"0..{n_images - 1}."
+                )
+        # One image has one size. Two different sizes reported for the same index means
+        # the caller crossed two images' metadata — which also means at least one set of
+        # coordinates is attached to the wrong picture, so fail rather than pick one.
+        sizes: dict[int, list[int]] = {}
+        for r in regions:
+            if r.image_size is None:
+                continue
+            seen = sizes.setdefault(r.image_index, r.image_size)
+            if seen != r.image_size:
+                raise ValueError(
+                    f"regions on image_index={r.image_index} report different "
+                    f"image_size values ({seen} vs {r.image_size}); one image has one "
+                    f"size, so this means two images' metadata got crossed."
+                )
+    if image_refs is not None and len(image_refs) != n_images:
+        raise ValueError(
+            f"image_refs has {len(image_refs)} entry/entries but {image_slot} has "
+            f"{n_images} — image_refs is one handle per image, in the same order, so "
+            f"the two must be the same length (or omit image_refs entirely)."
+        )
+
+
+def image_refs_field(image_slot: str) -> Any:
+    """Declare the per-image caller-handle list (kept in one place for both tools)."""
+    return Field(
+        default=None,
+        description=f"Optional: your own handle for each image in `{image_slot}`, in the "
+        f"same order and the same length. Its only job is to let `prompt` refer to a "
+        f"whole image by name — write `[[<handle>]]` and the adapter renders it as that "
+        f"model's own image ordinal. Use it instead of writing '图1' / 'the second "
+        f"image' yourself: ordinals shift whenever the image list is rebuilt, and a "
+        f"sentence that hard-codes one then points at the wrong picture without any "
+        f"error. Handles are also the qualified half of a `[[<handle>#<label>]]` region "
+        f"placeholder. Passed through untouched — never fetched, never sent upstream.",
+    )
+
+
+# ── Caption / label (artifact description and name) ─────────────────────────
+#
+# Like ``request_id``, ``caption`` and ``label`` are caller-supplied handles this server
+# stores and echoes but never interprets — neither is part of any upstream request. They
+# exist for hosts that keep their own asset ledger (DeerFlow/cf-dream registers every
+# generated artifact as a *material* the user later refers to by a short id): without
+# them the ledger entry is nameless and the host has to spend a second tool round trip
+# naming it after the fact. Riding the generate call closes that gap, and riding the
+# stored payload means the async ``generate → task_wait`` hop carries them for free — the
+# host needs no state of its own to survive the two-phase case.
+#
+# **They are two fields because they answer to two different readers.** ``caption``
+# describes the artifact *to a model* — it lands in a ledger the agent re-reads every
+# turn to work out which material is which, so it wants to disambiguate ("角色阿雅 第一版,
+# 侧脸"). ``label`` names the artifact *to a person* — the host shows it as the file name
+# in the user's asset panel, so it wants to be short, stable, and free of anything a
+# filesystem would reject. One field cannot be both: a caption long enough to
+# disambiguate makes a terrible file name, and a file name short enough to display
+# disambiguates nothing. They are also owned differently downstream — a host may let its
+# agent rewrite the caption at will while the label stays the artifact's birth name — so
+# merging them would mean an unrelated model call could rename a user's file.
+#
+# Over-long values are truncated, never rejected: neither has any effect on the generated
+# media, so failing the call — and costing the caller a whole turn — over the length of a
+# cosmetic string would be a bad trade.
 
 CAPTION_MAX_CHARS = 200
+
+# Shorter than a caption on purpose: this is a file name. Past ~100 characters it is
+# unusable in any panel or filesystem the host might put it in, and the caller keeps the
+# long-form description in ``caption`` anyway. Truncation here is plain — the host owns
+# whatever sanitizing (illegal characters, extension preservation) its own storage needs,
+# because only it knows those rules.
+LABEL_MAX_CHARS = 100
 
 
 def _truncate_caption(v: str | None) -> str | None:
     return v[:CAPTION_MAX_CHARS] if v else v
 
 
+def _truncate_label(v: str | None) -> str | None:
+    return v[:LABEL_MAX_CHARS] if v else v
+
+
 CaptionStr = Annotated[Optional[str], AfterValidator(_truncate_caption)]
+LabelStr = Annotated[Optional[str], AfterValidator(_truncate_label)]
 
 
 def caption_field() -> Any:
-    """Declare the artifact-label slot (kept in one place so the three copies can't drift)."""
+    """Declare the artifact-description slot (kept in one place so the three copies can't drift)."""
     return Field(
         default=None,
-        description="Optional short human-readable label for the artifact this call "
+        description="Optional short human-readable description of the artifact this call "
         "produces, e.g. '角色阿雅 第一版' or 'cover image v1'. Echoed back verbatim "
         "alongside the result — including on the eventual artifact returned by a later "
         "task_status/task_wait call — so a caller that keeps its own asset ledger can "
-        "file this artifact under a name a human recognises, without a second call to "
-        "name it afterwards. It is a label, not a second prompt: name the subject and "
-        "the version, and do not restate the generation prompt. Never sent to the model "
+        "file this artifact under a description that tells it apart from its siblings, "
+        "without a second call to name it afterwards. It is a label, not a second prompt: "
+        "name the subject and the version, and do not restate the generation prompt. "
+        "Distinct from `label`: this one may be longer and exists to disambiguate; "
+        "`label` is the short display/file name. Never sent to the model "
         f"API and has no effect on the generated media. Truncated at {CAPTION_MAX_CHARS} "
         "characters; omitted from the response when not supplied.",
+    )
+
+
+def label_field() -> Any:
+    """Declare the artifact-name slot (kept in one place so the three copies can't drift)."""
+    return Field(
+        default=None,
+        description="Optional short display name for the artifact this call produces — "
+        "the name a person sees, e.g. '阿雅侧脸.png' or 'cover_v1.png'. Supply one "
+        "whenever you keep your own asset ledger: hosts use it as the artifact's file "
+        "name, and without it the artifact shows up under an opaque generated key. "
+        "Echoed back verbatim alongside the result, including on the eventual artifact "
+        "returned by a later task_status/task_wait call. Keep it short and name-like — a "
+        "few words, no sentence, no prompt text; put the longer disambiguating "
+        "description in `caption` instead. Never sent to the model API and has no effect "
+        f"on the generated media. Truncated at {LABEL_MAX_CHARS} characters; omitted from "
+        "the response when not supplied.",
     )
 
 
@@ -168,7 +411,7 @@ def caption_field() -> Any:
 # answerable only by reading which spelling was used.
 
 def validate_only_field() -> Any:
-    """Declare the preflight switch (kept in one place so the three copies can't drift)."""
+    """Declare the preflight switch (kept in one place so the four copies can't drift)."""
     return Field(
         default=False,
         description="Preflight only: resolve the model, validate every parameter against "
@@ -198,19 +441,59 @@ class GenerateImageInput(BaseModel):
         "(e.g. ['doubao-seedream-5-0-lite', 'cf-pro']), or 'auto' to choose from all models",
     )
     aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
-    resolution: Literal["1K", "2K", "3K", "4K"] = Field(default="2K")
+    resolution: Literal["1K", "1.5K", "2K", "3K", "4K"] = Field(
+        default="2K",
+        description="Output resolution tier. The tiers a model actually offers differ "
+        "per family and asking for one outside it is rejected rather than quietly "
+        "downgraded (doubao-seedream-5-0-pro: 1K/1.5K/2K; 5-0-lite and 4.5: 2K/3K/4K; "
+        "4.0: 1K/2K/3K/4K). 1.5K exists only on doubao-seedream-5-0-pro, where it looks "
+        "better than 1K at a documented-equal price — but cfgpu sends exact pixels, "
+        "not the tier name, so 1.5K may bill at the higher band; use 1K if the rate "
+        "matters more than the exact aspect ratio. With model='auto' the tier "
+        "steers which model is picked; with an explicit model, validate_only reports "
+        "the nearest supported tier in corrected_args.",
+    )
     reference_images: Optional[list[str]] = media_field(
-        slot="Reference images that guide the generation.",
+        slot="Reference images that guide the generation. Also the images that `regions` "
+        "marks up, when the edit is positional.",
         role="image",
         arity="many",
         accepts=["https_url"],
     )
+    regions: Optional[list[RegionSpec]] = media_field(
+        slot="Regions of `reference_images` to edit, as boxes the user marked. Supply "
+        "this only for a positional edit ('replace what is inside this box'); a "
+        "whole-image edit ('make it watercolour') needs no regions. Accepted only by "
+        "models carrying the `region_edit` capability — check with list_models / "
+        "get_model_card; passing regions to a model without it is a hard error, never a "
+        "silent whole-image edit. Write every region you pass here into `prompt` as a "
+        "`[[label]]` placeholder, in the clause it belongs to — that is where the region "
+        "is rendered into the sentence (as coordinates, or as a phrase like '图2中框选的"
+        "区域' on models with a structured region field). Naming a mark in prose instead "
+        "('erase what is in 标记3') hands the model a label it cannot resolve: the name "
+        "reaches it as literal text it may paint into the picture, while the region "
+        "itself arrives with no clause to anchor it. Substitution covers exactly the "
+        "marks passed here, so `[[...]]` is a rendering site and not a way to mention: an "
+        "area you are NOT editing takes no placeholder — and usually no mention at all, "
+        "since a region edit already changes only what is marked and listing the "
+        "untouched marks invites edits to them.",
+        role="region",
+        arity="many",
+        accepts=["region_spec"],
+    )
+    image_refs: Optional[list[str]] = image_refs_field("reference_images")
     n: int = Field(
         default=1,
-        description="Number of images to generate as a related group (组图 / sequential image "
-        "generation). 1–15. Only doubao-seedream-* models support n>1; other image models "
-        "generate a single image and reject n>1. Exception: doubao-seedream-5-0-pro is a "
-        "single-image model (no 组图 support) and rejects n>1.",
+        description="Upper bound on how many images to generate as one related group "
+        "(组图 / sequential image generation). 1–15. **This is a ceiling, not a count**: "
+        "the model decides for itself whether to return a group at all and how many "
+        "images it contains, so asking for 4 may return 1, 2, 3, or 4 — fewer is a normal "
+        "outcome, not a failure, and no setting forces an exact number. Do not promise the "
+        "user a specific count before the result comes back. Only models with the "
+        "`multi_image_group` capability accept n>1 (the doubao-seedream-* line except "
+        "5-0-pro, which is single-image); models without that capability silently ignore "
+        "n and generate one image. On group models the input reference images plus the "
+        "generated images must total at most 15.",
     )
 
     @field_validator("n")
@@ -222,10 +505,11 @@ class GenerateImageInput(BaseModel):
             )
         return v
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
-    watermark: Optional[bool] = Field(
-        default=None,
-        description="Add an 'AI generated' watermark. None keeps each model's own default. "
-        "Not supported by gpt-image-2 / nano-banana models (ignored there).",
+    watermark: bool = Field(
+        default=False,
+        description="Add an 'AI generated' watermark. Defaults to false and is sent "
+        "explicitly by models whose upstream API supports it. Not supported by "
+        "gpt-image-2 / nano-banana models (ignored there).",
     )
     wait: bool = Field(default=True, description="Wait for task completion before returning")
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
@@ -245,7 +529,16 @@ class GenerateImageInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
+
+    @model_validator(mode="after")
+    def _validate_regions_against_images(self) -> "GenerateImageInput":
+        _validate_regions(
+            self.regions, self.reference_images, self.image_refs,
+            image_slot="reference_images",
+        )
+        return self
 
 
 class GenerateVideoInput(BaseModel):
@@ -343,9 +636,10 @@ class GenerateVideoInput(BaseModel):
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
-    watermark: Optional[bool] = Field(
-        default=None,
-        description="Add a watermark. None keeps each model's own default. Supported by all video models.",
+    watermark: bool = Field(
+        default=False,
+        description="Add a watermark. Defaults to false and is sent explicitly by models "
+        "whose upstream API supports it; models with no watermark request field ignore it.",
     )
     prompt_extend: bool = Field(
         default=True,
@@ -370,6 +664,7 @@ class GenerateVideoInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
 
@@ -439,6 +734,7 @@ class GenerateAudioInput(BaseModel):
         "Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
+    label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
 
@@ -480,6 +776,23 @@ class UnderstandVisionInput(BaseModel):
         arity="one",
         accepts=["https_url"],
     )
+    regions: Optional[list[RegionSpec]] = media_field(
+        slot="Regions of `images` the user marked, so you can ask about a specific place "
+        "rather than the whole picture ('what material is [[标记3]]?'). Accepted only by "
+        "models carrying the `region_understand` capability — passing regions to a model "
+        "without it is a hard error, never a silently whole-image answer. Reading a "
+        "region and then describing it in words is also how you edit with a model that "
+        "cannot take regions itself. Write every region you pass here into `prompt` as a "
+        "`[[label]]` placeholder, in the clause that asks about it — that is where its "
+        "coordinates are substituted in; a region no placeholder names is appended at the "
+        "end instead, leaving the model to pair it with your sentences itself. "
+        "Substitution covers exactly the marks passed here, so `[[...]]` is a rendering "
+        "site and not a way to mention: to ask about a region, pass it.",
+        role="region",
+        arity="many",
+        accepts=["region_spec"],
+    )
+    image_refs: Optional[list[str]] = image_refs_field("images")
     system_prompt: Optional[str] = Field(
         default=None,
         description="System message steering the model's behaviour. "
@@ -504,6 +817,12 @@ class UnderstandVisionInput(BaseModel):
         description="Model-specific parameters passed directly to the chat/completions API "
         "(e.g. {'top_p': 0.8}). Merged last, so it overrides typed fields.",
     )
+    validate_only: bool = validate_only_field()
+
+    @model_validator(mode="after")
+    def _validate_regions_against_images(self) -> "UnderstandVisionInput":
+        _validate_regions(self.regions, self.images, self.image_refs, image_slot="images")
+        return self
 
 
 class TaskStatusInput(BaseModel):
@@ -559,6 +878,14 @@ class NormalizedResult:
     # so the raw blob never enters the model context; the consumer materialises it
     # into its own OSS object_key.
     inline_media: list[dict[str, Any]] | None = None
+    # ── Per-item failures inside a partially successful response ──
+    # A 组图 (group image) request returns one slot per image, and a slot may carry an
+    # error instead of a url while the request as a whole returns HTTP 200. Without this
+    # the caller gets a short url list and no reason — four asked for, two returned,
+    # silence. It rides `content` rather than structuredContent because the remedy
+    # belongs to the model: a moderation rejection means rewrite the prompt, an upstream
+    # 500 means generation stopped there and a retry is worth making.
+    partial_errors: list[dict[str, Any]] | None = None
 
     def to_dict(self, return_metadata: bool = False) -> dict[str, Any]:
         # Vision-understanding results carry a chat message rather than media urls —
@@ -579,6 +906,8 @@ class NormalizedResult:
         }
         if self.inline_media:  # actual artifact payload — always surfaced, like urls
             base["inline_media"] = self.inline_media
+        if self.partial_errors:  # why the artifact list is shorter than requested
+            base["partial_errors"] = self.partial_errors
         if return_metadata:
             base.update({
                 "task_id": self.task_id,
@@ -593,6 +922,11 @@ class NormalizedResult:
 # ── Artifact flagging ────────────────────────────────────────────────────────
 
 _ARTIFACT_DONE_STATUS = "Success. URLs already generated; no further task_status/task_wait polling needed."
+_ARTIFACT_PARTIAL_STATUS = (
+    "Partial success. The URLs listed are already generated (no further "
+    "task_status/task_wait polling needed), but some requested images failed — see "
+    "partial_errors for which and why. Re-running is the only way to obtain them."
+)
 
 
 def annotate_artifact(result: Any) -> Any:
@@ -613,7 +947,11 @@ def annotate_artifact(result: Any) -> Any:
         return result
     if result.get("urls") or result.get("inline_media"):
         result["artifact"] = True
-        result["status"] = _ARTIFACT_DONE_STATUS
+        # A bare "Success." over a group where half the images were blocked reads as the
+        # summary and would be believed; the model needs the qualifier next to the count.
+        result["status"] = (
+            _ARTIFACT_PARTIAL_STATUS if result.get("partial_errors") else _ARTIFACT_DONE_STATUS
+        )
     else:
         nested = result.get("result")
         if isinstance(nested, dict) and nested.get("urls"):
@@ -641,33 +979,44 @@ def lean_result(result: dict[str, Any], payload: dict[str, Any]) -> dict[str, An
     }
     if result.get("inline_media"):  # absent for URL-returning models — shape unchanged
         lean["inline_media"] = result["inline_media"]
+    if result.get("partial_errors"):
+        # Not metadata: it is the reason the artifact list is shorter than asked for, so
+        # suppressing it here would make the lean shape the one that lies.
+        lean["partial_errors"] = result["partial_errors"]
     return lean
 
 
 # ── Caller-supplied echo fields (service-layer data contract) ───────────────
 
-def stamp_echo(result: Any, *, request_id: str | None = None, caption: str | None = None) -> Any:
+def stamp_echo(
+    result: Any,
+    *,
+    request_id: str | None = None,
+    caption: str | None = None,
+    label: str | None = None,
+) -> Any:
     """Echo the caller's own handles onto a result dict (in place), if set.
 
-    Both fields are supplied on a ``generate_*`` call, stored, and handed back
-    untouched; neither is part of any upstream request:
+    All three fields are supplied on a ``generate_*`` call, stored, and handed back
+    untouched; none is part of any upstream request:
 
     - ``request_id`` is a correlation handle. It lets the caller join a result back to
       the originating request across the async ``generate → task_wait/task_status`` hop
       (where the tool_call ids differ) and for synchronous models that have no
       ``task_id``.
-    - ``caption`` is a human-readable label for the artifact, for callers that keep
-      their own asset ledger and would otherwise have to name the entry in a second
-      call.
+    - ``caption`` describes the artifact for callers that keep their own asset ledger and
+      would otherwise have to name the entry in a second call.
+    - ``label`` names it — the short display/file name the same ledger shows to a person.
 
     Stamped by the **service layer** — not the MCP wrapper — so all three call modes
     (MCP, agent dispatcher, CLI) echo them. Omitted when falsy so callers that supply
-    neither see unchanged result shapes; ``setdefault`` never clobbers a value already
+    none see unchanged result shapes; ``setdefault`` never clobbers a value already
     present. Non-dict results (e.g. a ``CallToolResult``) pass through untouched.
 
-    The two diverge on **failures**: ``CFGPUError`` carries ``request_id`` (joining a
-    failure back to its request is exactly what a correlation handle is for) but not
-    ``caption`` — a failed call produced no artifact, so there is nothing to label.
+    They diverge on **failures**: ``CFGPUError`` carries ``request_id`` (joining a
+    failure back to its request is exactly what a correlation handle is for) but neither
+    ``caption`` nor ``label`` — a failed call produced no artifact, so there is nothing
+    to describe or name.
     """
     if not isinstance(result, dict):
         return result
@@ -675,6 +1024,8 @@ def stamp_echo(result: Any, *, request_id: str | None = None, caption: str | Non
         result.setdefault("request_id", request_id)
     if caption:
         result.setdefault("caption", caption)
+    if label:
+        result.setdefault("label", label)
     return result
 
 

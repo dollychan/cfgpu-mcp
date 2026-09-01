@@ -68,15 +68,22 @@ ClientResolver = Callable[["ModelAdapter"], CFGPUClient]
 _ASPECT_RATIO_KEY = "_requested_aspect_ratio"
 
 # Reserved stored-payload keys holding the caller's own echo fields — the ``request_id``
-# correlation handle and the ``caption`` artifact label (see tool_registry.stamp_echo).
-# Stashed here — alongside _ASPECT_RATIO_KEY — so task_status/task_wait can recover and
-# echo them from the DB row without a schema/column change. This is what makes the
-# caption survive the async hop with no state on the caller's side: the label is supplied
-# on generate but the artifact only exists at task_wait. Like the aspect-ratio echo they
-# are internal-only: create() POSTs the clean build_payload() output and only augments
-# the stored copy, and public_payload() strips them, so they never reach the upstream API.
+# correlation handle plus the ``caption`` artifact description and the ``label`` artifact
+# name (see tool_registry.stamp_echo). Stashed here — alongside _ASPECT_RATIO_KEY — so
+# task_status/task_wait can recover and echo them from the DB row without a schema/column
+# change. This is what makes them survive the async hop with no state on the caller's
+# side: both are supplied on generate but the artifact only exists at task_wait. Like the
+# aspect-ratio echo they are internal-only: create() POSTs the clean build_payload()
+# output and only augments the stored copy, and public_payload() strips them, so they
+# never reach the upstream API.
 _REQUEST_ID_KEY = "_request_id"
 _CAPTION_KEY = "_caption"
+_LABEL_KEY = "_label"
+
+# The echo keys as one tuple, because ``public_payload`` has to strip every one of them
+# and that list is the thing that grows: adding a fourth echo field and forgetting the
+# strip would leak an internal key into the payload every caller sees, silently.
+_ECHO_PAYLOAD_KEYS = (_REQUEST_ID_KEY, _CAPTION_KEY, _LABEL_KEY)
 
 # The upstream's own ETA for this submission, captured from the POST response by
 # adapter.extract_eta(). Stashed like the keys above so the force-async return path
@@ -91,9 +98,9 @@ _ETA_KEY = "_eta"
 def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
     """Return a copy of ``payload`` augmented with the reserved internal keys.
 
-    Adds the caller's ``request_id`` / ``caption`` (when supplied) so task_status/
-    task_wait can echo them, and — for async tasks (``aspect_ratio=True``) — the
-    requested aspect_ratio echo that poll() falls back to. Returns ``payload``
+    Adds the caller's ``request_id`` / ``caption`` / ``label`` (when supplied) so
+    task_status/task_wait can echo them, and — for async tasks (``aspect_ratio=True``) —
+    the requested aspect_ratio echo that poll() falls back to. Returns ``payload``
     unchanged when nothing needs stashing.
     """
     extra: dict[str, Any] = {}
@@ -105,6 +112,9 @@ def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
     caption = getattr(req, "caption", None)
     if caption:
         extra[_CAPTION_KEY] = caption
+    label = getattr(req, "label", None)
+    if label:
+        extra[_LABEL_KEY] = label
     return {**payload, **extra} if extra else payload
 
 # Internal (already normalized via _STATUS_MAP) terminal statuses. Raw API
@@ -153,13 +163,39 @@ def _truncate_json(resp: dict) -> str:
     return text
 
 
+def _dashscope_output_reason(resp: dict) -> str | None:
+    """Failure reason from a DashScope-shaped ``output`` envelope.
+
+    HappyHorse and the 万相 video family nest the *task record* under ``output``
+    and carry the reason on ``output.code`` / ``output.message`` (both ``null``
+    on success). Read here rather than through the generic walk below because
+    the key is ``message``: at the top level that word is unusable (the image
+    API sets it to "success" even for a failed task), but inside ``output`` it
+    describes the task itself, not the query.
+
+    Both halves are kept when both are present — the code (e.g.
+    ``InvalidParameter.DataInspection``, a content-moderation rejection) is
+    often the only part that says *why*, while the message can be generic.
+    """
+    output = resp.get("output")
+    if not isinstance(output, dict):
+        return None
+    parts = [
+        val.strip()
+        for val in (output.get("code"), output.get("message"))
+        if isinstance(val, str) and val.strip()
+    ]
+    return ": ".join(parts) or None
+
+
 def _extract_error_message(resp: dict) -> str | None:
     """Best-effort failure reason from a poll response, tolerant of shape.
 
     Upstreams disagree on where the reason lives: WAN video carries a top-level
     ``error`` that is ``null`` on success and a dict on failure; Submodel nests
     it under ``task.error``; gpt-image-2 / nano image tasks nest the reason under
-    ``data.error_msg`` (e.g. an Azure OpenAI safety-system rejection). Returns
+    ``data.error_msg`` (e.g. an Azure OpenAI safety-system rejection); the
+    DashScope-shaped video APIs use ``output.code`` / ``output.message``. Returns
     None when the upstream genuinely gives nothing — callers supply a fallback.
     Deliberately ignores the top-level ``message`` field because the image API
     sets it to "success" (the query succeeded) even for failed tasks.
@@ -184,7 +220,7 @@ def _extract_error_message(resp: dict) -> str | None:
             val = container.get(key)
             if isinstance(val, str) and val.strip():
                 return val.strip()
-    return None
+    return _dashscope_output_reason(resp)
 
 
 def _now_row(
@@ -235,12 +271,13 @@ class Task:
         ``payload`` is exactly what ``build_payload`` produced and POSTed to the
         model's specific CFGPU endpoint — i.e. the real per-model API request, not
         the unified tool schema. The reserved internal keys (``_requested_aspect_ratio``
-        for async re-polling, ``_request_id`` / ``_caption`` for the caller's echo
-        fields) are never part of the real request, so they are stripped here.
+        for async re-polling, ``_request_id`` / ``_caption`` / ``_label`` for the
+        caller's echo fields) are never part of the real request, so they are stripped
+        here.
         """
         return {
             k: v for k, v in self.payload.items()
-            if k not in (_ASPECT_RATIO_KEY, _REQUEST_ID_KEY, _CAPTION_KEY)
+            if k not in (_ASPECT_RATIO_KEY, *_ECHO_PAYLOAD_KEYS)
         }
 
 

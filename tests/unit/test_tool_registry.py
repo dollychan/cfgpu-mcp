@@ -240,6 +240,29 @@ def test_stamp_echo_caption_omitted_when_none():
     assert "caption" not in stamp_echo({"urls": ["x"]}, caption=None)
 
 
+def test_stamp_echo_adds_label_when_set():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert stamp_echo({"urls": ["x"]}, label="阿雅.png") == {"urls": ["x"], "label": "阿雅.png"}
+
+
+def test_stamp_echo_label_omitted_when_none():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert "label" not in stamp_echo({"urls": ["x"]}, label=None)
+
+
+def test_stamp_echo_label_does_not_clobber_existing():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert stamp_echo({"label": "kept"}, label="other")["label"] == "kept"
+
+
+def test_stamp_echo_carries_all_three_independently():
+    from cfgpu_mcp.tool_registry import stamp_echo
+    assert stamp_echo({}, request_id="r-1", caption="cover v1", label="cover.png") == {
+        "request_id": "r-1", "caption": "cover v1", "label": "cover.png",
+    }
+    assert "label" not in stamp_echo({}, caption="cover v1")
+
+
 def test_stamp_echo_caption_does_not_clobber_existing():
     from cfgpu_mcp.tool_registry import stamp_echo
     assert stamp_echo({"caption": "kept"}, caption="other")["caption"] == "kept"
@@ -293,6 +316,69 @@ def test_caption_is_truncated_not_rejected():
 def test_caption_under_the_cap_is_untouched():
     from cfgpu_mcp.tool_registry import GenerateImageInput
     assert GenerateImageInput(prompt="x", caption="cover image v1").caption == "cover image v1"
+
+
+def test_image_and_video_watermark_default_to_false():
+    from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+
+    assert GenerateImageInput(prompt="x").watermark is False
+    assert GenerateVideoInput(prompt="x").watermark is False
+    assert GenerateImageInput.model_json_schema()["properties"]["watermark"]["default"] is False
+    assert GenerateVideoInput.model_json_schema()["properties"]["watermark"]["default"] is False
+
+
+# ── label field ──────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("model, required", [
+    ("GenerateImageInput", {"prompt": "x"}),
+    ("GenerateVideoInput", {"prompt": "x"}),
+    ("GenerateAudioInput", {"text": "x"}),
+])
+def test_generate_schemas_expose_optional_label(model, required):
+    """All three generate tools carry the name slot; none requires it.
+
+    Deliberately optional rather than required: this server has several consumers, so a
+    newly required parameter is a breaking change for every one of them, and a caller
+    that misses it pays a whole failed round trip for a cosmetic string.
+    """
+    import cfgpu_mcp.tool_registry as tr
+    cls = getattr(tr, model)
+    assert "label" in cls.model_json_schema()["properties"]
+    assert "label" not in cls.model_json_schema().get("required", [])
+    assert cls(**required).label is None
+
+
+def test_understand_vision_has_no_label():
+    """understand_vision returns text, not an artifact — there is nothing to name."""
+    from cfgpu_mcp.tool_registry import UnderstandVisionInput
+    assert "label" not in UnderstandVisionInput.model_fields
+
+
+def test_label_is_truncated_not_rejected():
+    from cfgpu_mcp.tool_registry import GenerateImageInput, LABEL_MAX_CHARS
+    req = GenerateImageInput(prompt="x", label="阿" * (LABEL_MAX_CHARS + 50))
+    assert req.label == "阿" * LABEL_MAX_CHARS
+
+
+def test_label_is_capped_shorter_than_caption():
+    """A label is a file name and a caption is a description; one cap cannot serve both."""
+    from cfgpu_mcp.tool_registry import CAPTION_MAX_CHARS, LABEL_MAX_CHARS
+    assert LABEL_MAX_CHARS < CAPTION_MAX_CHARS
+
+
+def test_label_and_caption_are_independent():
+    """No cross-fallback here: supplying one must never invent the other. The host owns
+    that policy (it knows whether its ledger wants a basename or a description)."""
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+    assert GenerateImageInput(prompt="x", caption="角色阿雅 第一版").label is None
+    assert GenerateImageInput(prompt="x", label="阿雅.png").caption is None
+
+
+def test_label_is_never_part_of_the_upstream_payload():
+    """It is a caller-side handle; a model API has no field for it."""
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+    req = GenerateImageInput(prompt="x", label="阿雅.png")
+    assert "label" not in req.model_dump(exclude_none=True, exclude={"label"})
 
 
 # ── split_structured / reshape_vision_result ─────────────────────────────────
@@ -441,3 +527,40 @@ def test_understand_vision_end_to_end_split():
     # reasoning_content, usage, payload are client-only
     assert set(out.structuredContent) == {"reasoning_content", "usage", "payload"}
     assert out.structuredContent["reasoning_content"] == "thinking trace"
+
+
+# ── partial group failures reach the caller ─────────────────────────────────
+
+
+def test_partial_errors_ride_the_llm_facing_content():
+    """`partial_errors` explains why the artifact list is shorter than requested, so it
+    belongs next to `urls` rather than in the client-only side channel — the model is the
+    one that has to decide whether to rewrite the prompt or retry."""
+    from cfgpu_mcp.tool_registry import NormalizedResult
+
+    result = NormalizedResult(
+        urls=["https://cdn/a.jpg"], expires_at=None, task_id=None, model_used="m",
+        seed=None, usage=None,
+        partial_errors=[{"index": 1, "code": "content_blocked", "message": "审核不通过"}],
+    )
+    assert result.to_dict()["partial_errors"][0]["code"] == "content_blocked"
+    # and it survives return_metadata=False, which drops metadata but not the reason
+    from cfgpu_mcp.tool_registry import lean_result
+
+    assert "partial_errors" in lean_result(result.to_dict(), payload={})
+
+
+def test_a_partial_result_is_not_announced_as_plain_success():
+    """A bare 'Success.' reads as the summary and would be believed. The qualifier has to
+    sit next to the shortened url list, not only in a separate field."""
+    from cfgpu_mcp.tool_registry import annotate_artifact
+
+    full = annotate_artifact({"urls": ["https://cdn/a.jpg"]})
+    partial = annotate_artifact({
+        "urls": ["https://cdn/a.jpg"],
+        "partial_errors": [{"index": 1, "code": "content_blocked", "message": "x"}],
+    })
+    assert full["artifact"] is True and partial["artifact"] is True
+    assert full["status"].startswith("Success.")
+    assert partial["status"].startswith("Partial success.")
+    assert "partial_errors" in partial["status"]

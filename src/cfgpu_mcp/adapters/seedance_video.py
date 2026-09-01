@@ -104,9 +104,8 @@ class SeedanceVideoAdapter(ModelAdapter):
             "duration": self.resolve_duration_seconds(req),
             "resolution": req.resolution,
             "generate_audio": req.with_audio,
+            "watermark": req.watermark,
         }
-        if req.watermark is not None:
-            payload["watermark"] = req.watermark
         if req.model_specific:
             payload.update(req.model_specific)
         return payload
