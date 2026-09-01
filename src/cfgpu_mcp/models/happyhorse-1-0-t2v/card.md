@@ -124,20 +124,21 @@
 
 ### 创建任务 POST `/video/generations`（异步）
 
+> **注意：创建响应是 snake_case**（`request_id` / `task_id` / `task_status`），且**不回显 `model`**；只有查询响应是 camelCase。两个端点写法不一致，adapter 两种都读。
+
 ```json
 {
-  "requestId": "...",
-  "model": "happyhorse-1.0-t2v",
+  "request_id": "b0850872-0dd2-9301-9f19-1691a1970db4",
   "output": {
-    "taskId": "task-abc123",
-    "taskStatus": "PENDING"
+    "task_id": "b7bc7a97-7f49-4e66-b2cc-5505d7c53c2d",
+    "task_status": "PENDING"
   }
 }
 ```
 
 ### 查询任务 GET `/video/tasks/{task_id}`
 
-> **注意：响应体字段为 camelCase**（`taskId` / `taskStatus` / `videoUrl` / `origPrompt`），与万相 / Seedance 一致。adapter 据此提取链接。
+> **注意：查询响应体字段为 camelCase**（`taskId` / `taskStatus` / `videoUrl` / `origPrompt`），与万相 / Seedance 一致 —— 与上面创建响应的 snake_case 不同。失败原因在 `output.message` / `output.code`（成功时两者为 `null`）。
 
 ```json
 {

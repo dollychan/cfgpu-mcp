@@ -163,13 +163,39 @@ def _truncate_json(resp: dict) -> str:
     return text
 
 
+def _dashscope_output_reason(resp: dict) -> str | None:
+    """Failure reason from a DashScope-shaped ``output`` envelope.
+
+    HappyHorse and the 万相 video family nest the *task record* under ``output``
+    and carry the reason on ``output.code`` / ``output.message`` (both ``null``
+    on success). Read here rather than through the generic walk below because
+    the key is ``message``: at the top level that word is unusable (the image
+    API sets it to "success" even for a failed task), but inside ``output`` it
+    describes the task itself, not the query.
+
+    Both halves are kept when both are present — the code (e.g.
+    ``InvalidParameter.DataInspection``, a content-moderation rejection) is
+    often the only part that says *why*, while the message can be generic.
+    """
+    output = resp.get("output")
+    if not isinstance(output, dict):
+        return None
+    parts = [
+        val.strip()
+        for val in (output.get("code"), output.get("message"))
+        if isinstance(val, str) and val.strip()
+    ]
+    return ": ".join(parts) or None
+
+
 def _extract_error_message(resp: dict) -> str | None:
     """Best-effort failure reason from a poll response, tolerant of shape.
 
     Upstreams disagree on where the reason lives: WAN video carries a top-level
     ``error`` that is ``null`` on success and a dict on failure; Submodel nests
     it under ``task.error``; gpt-image-2 / nano image tasks nest the reason under
-    ``data.error_msg`` (e.g. an Azure OpenAI safety-system rejection). Returns
+    ``data.error_msg`` (e.g. an Azure OpenAI safety-system rejection); the
+    DashScope-shaped video APIs use ``output.code`` / ``output.message``. Returns
     None when the upstream genuinely gives nothing — callers supply a fallback.
     Deliberately ignores the top-level ``message`` field because the image API
     sets it to "success" (the query succeeded) even for failed tasks.
@@ -194,7 +220,7 @@ def _extract_error_message(resp: dict) -> str | None:
             val = container.get(key)
             if isinstance(val, str) and val.strip():
                 return val.strip()
-    return None
+    return _dashscope_output_reason(resp)
 
 
 def _now_row(

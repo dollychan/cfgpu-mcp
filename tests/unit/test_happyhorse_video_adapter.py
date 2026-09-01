@@ -112,6 +112,21 @@ def test_extract_task_id_missing_returns_none():
     assert adapter.extract_task_id({}) is None
 
 
+def test_extract_task_id_from_snake_case_create_response():
+    """The create endpoint answers snake_case; only the poll endpoint is camelCase.
+
+    Reading ``taskId`` alone leaves the submitted task without an id, so it can
+    never be polled — the generation runs and is billed, unreachable.
+    """
+    adapter = _make_adapter()
+    create = {
+        "output": {"task_status": "PENDING", "task_id": "b7bc7a97-7f49-4e66-b2cc-5505d7c53c2d"},
+        "request_id": "fb8d4d3c-7057-9c27-b881-6b6ef043e5bd",
+    }
+    assert adapter.extract_task_id(create) == "b7bc7a97-7f49-4e66-b2cc-5505d7c53c2d"
+    assert adapter.extract_status(create) == "pending"
+
+
 # ── extract_status ───────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("api_status,expected", [
@@ -164,6 +179,40 @@ def test_parse_response_missing_url_returns_empty():
     resp = {"output": {"taskId": "t1", "taskStatus": "SUCCEEDED"}}
     result = adapter.parse_response(resp)
     assert result.urls == []
+
+
+def test_parse_real_t2v_response():
+    """Regression: exact poll payload returned by the live happyhorse-1.0-t2v API."""
+    adapter = _make_adapter()
+    resp = {
+        "requestId": "988b25d0-561e-96f7-9e5f-c7e2984c3140",
+        "model": "happyhorse-1.0-t2v",
+        "output": {
+            "taskId": "b7bc7a97-7f49-4e66-b2cc-5505d7c53c2d",
+            "taskStatus": "SUCCEEDED",
+            "submitTime": "2026-09-01 11:30:27.023",
+            "scheduledTime": "2026-09-01 11:30:27.069",
+            "endTime": "2026-09-01 11:31:43.557",
+            "origPrompt": "一座由硬纸板和瓶盖搭建的微型城市，在夜晚焕发出生机。",
+            "videoUrl": "https://dashscope-a717.oss-accelerate.aliyuncs.com/1d/28/x_watermark.mp4?Expires=1",
+            "message": None,
+            "code": None,
+        },
+        "usage": {
+            "duration": 5,
+            "inputVideoDuration": 0,
+            "outputVideoDuration": 5,
+            "videoCount": 1,
+            "sr": 720,
+            "ratio": "16:9",
+        },
+    }
+    assert adapter.extract_status(resp) == "succeeded"
+    assert adapter.extract_task_id(resp) == "b7bc7a97-7f49-4e66-b2cc-5505d7c53c2d"
+    result = adapter.parse_response(resp)
+    assert result.urls == [resp["output"]["videoUrl"]]
+    assert result.task_id == "b7bc7a97-7f49-4e66-b2cc-5505d7c53c2d"
+    assert result.aspect_ratio == "16:9"
 
 
 def test_parse_real_video_edit_response():
