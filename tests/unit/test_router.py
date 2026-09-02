@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from cfgpu_mcp.adapters.registry import AdapterRegistry
-from cfgpu_mcp.router import ModelRouter
+from cfgpu_mcp.router import ModelRouter, selection_key
 from cfgpu_mcp.tool_registry import (
     GenerateImageInput,
     GenerateVideoInput,
@@ -22,8 +22,9 @@ def test_auto_fast_tier_selects_high_speed_adapter():
     router = _router()
     req = GenerateVideoInput(prompt="test", quality_tier="fast")
     adapter = router.select_model(req)
-    # wan-2-0-fast and doubao-seedance-2-0-fast both score 6 (speed_tier=4,
-    # cost_tier=2); the deterministic adapter_id tie-break picks the latter.
+    # wan-2-0-fast, grok-imagine-video and doubao-seedance-2-0-fast all score 6
+    # (speed_tier=4, cost_tier=2); doubao-seedance-2-0-fast's auto_priority breaks
+    # the tie, where it used to be decided by alphabetical adapter_id.
     assert adapter.adapter_id == "doubao-seedance-2-0-fast"
 
 
@@ -78,7 +79,7 @@ def test_best_tier_runner_up_is_banana_pro():
         a for a in router._registry.list_all(task_type="image")
         if a.adapter_id != "gpt-image-2" and a.supports(req)[0]
     ]
-    ranked = sorted(candidates, key=lambda a: (-router._score(a, req), a.adapter_id))
+    ranked = sorted(candidates, key=lambda a: selection_key(router._score(a, req), a))
     assert ranked[0].adapter_id == "nano-banana-pro"
 
 
@@ -114,12 +115,37 @@ def test_group_request_avoids_the_model_that_ignores_n():
     assert "multi_image_group" in adapter.capabilities
 
 
-def test_video_best_tier_still_uses_the_cost_proxy():
-    # No video model declares a quality_rank, so that tier keeps its previous
-    # behaviour — the proxy is retained, not replaced.
+def test_auto_video_default_is_seedance_2_0_fast():
+    # balanced and fast both land on the declared default; without auto_priority
+    # the tie with 2.0 mini / grok / wan-2-0-fast fell to alphabetical adapter_id.
+    router = _router()
+    for tier in ("balanced", "fast"):
+        adapter = router.select_model(GenerateVideoInput(prompt="waves", quality_tier=tier))
+        assert adapter.adapter_id == "doubao-seedance-2-0-fast", tier
+
+
+def test_video_best_tier_prefers_declared_flagship_over_price():
+    # The cost_tier proxy ranked kling-v3-omni first on price alone (cost 5).
+    # Seedance 2.5 declares the rank and wins at cost 4.
     router = _router()
     adapter = router.select_model(GenerateVideoInput(prompt="waves", quality_tier="best"))
-    assert adapter.adapter_id == "kling-v3-omni"
+    assert adapter.adapter_id == "doubao-seedance-2-5"
+
+
+def test_cost_proxy_still_applies_where_no_rank_is_declared():
+    """The proxy is retained, not replaced: it orders every unranked model.
+
+    With the two ranked models removed, "best" must still fall to the priciest
+    remaining candidate rather than to whatever sorts first.
+    """
+    router = _router()
+    req = GenerateVideoInput(prompt="waves", quality_tier="best")
+    candidates = [
+        a for a in router._registry.list_all(task_type="video")
+        if a.quality_rank == 0 and a.supports(req)[0]
+    ]
+    ranked = sorted(candidates, key=lambda a: selection_key(router._score(a, req), a))
+    assert ranked[0].adapter_id == "kling-v3-omni"
 
 
 def test_declared_ranks_are_not_inherited_down_the_extends_chain():
@@ -136,10 +162,37 @@ def test_declared_ranks_are_not_inherited_down_the_extends_chain():
     assert get("nano-banana-pro").quality_rank == 2
     for adapter_id in ("nano-banana-2", "nano-banana-pro-official", "nano-banana-pro-premium"):
         assert get(adapter_id).quality_rank == 0, adapter_id
+    assert get("doubao-seedance-2-5").quality_rank == 3
+    assert get("doubao-seedance-2-0-fast").auto_priority == 2
+    # Both are leaves of the wan-2-0 chain, so nothing inherits from them; their
+    # siblings must stay undeclared.
+    for adapter_id in ("doubao-seedance-2-0", "doubao-seedance-2-0-mini", "wan-2-0-fast"):
+        assert get(adapter_id).quality_rank == 0, adapter_id
+        assert get(adapter_id).auto_priority == 0, adapter_id
     assert get("doubao-seedream-5-0-pro").auto_priority == 2
     assert get("doubao-seedream-5-0-lite").auto_priority == 1
     for adapter_id in ("doubao-seedream-4-0", "doubao-seedream-4-5"):
         assert get(adapter_id).auto_priority == 0, adapter_id
+
+
+def test_auto_priority_never_outweighs_a_scoring_difference():
+    """It is a tie-break, not a bonus.
+
+    doubao-seedance-2-0-fast carries auto_priority 2; in the "best" tier its proxy
+    score (cost 2 + speed 4 = 6) sits one below kling-v3-omni's (cost 5 + speed 2 =
+    7). Folded into the score it would win, handing a "best" request to the model
+    chosen for being fast. Checked with the flagship removed, since 2.5 outranks
+    both.
+    """
+    router = _router()
+    req = GenerateVideoInput(prompt="waves", quality_tier="best")
+    fast = router._registry.get("doubao-seedance-2-0-fast")
+    kling = router._registry.get("kling-v3-omni")
+    assert fast.auto_priority > kling.auto_priority
+    assert router._score(fast, req) < router._score(kling, req)
+    assert selection_key(router._score(kling, req), kling) < selection_key(
+        router._score(fast, req), fast
+    )
 
 
 def test_undeclared_model_scores_exactly_as_before():

@@ -26,6 +26,20 @@ logger = logging.getLogger(__name__)
 _QUALITY_RANK_STEP = 11
 
 
+def selection_key(score: int, adapter: "ModelAdapter") -> tuple[int, int, str]:
+    """Ordering for ``model="auto"``: score, then declared preference, then name.
+
+    ``auto_priority`` is a **tie-break, not a bonus** — it must separate models the
+    score left level without ever outweighing a real scoring difference. Folding it
+    into the score would do exactly that: the video default (priority 2) would
+    outrank the flagship proxy by a point in the "best" tier, handing a best request
+    to a model picked for being *fast*. As the second key it can only speak when the
+    first is silent. The trailing ``adapter_id`` keeps selection deterministic and
+    independent of registry/filesystem iteration order.
+    """
+    return (-score, -adapter.auto_priority, adapter.adapter_id)
+
+
 def _is_chinese(text: str) -> bool:
     return any(unicodedata.category(ch).startswith("Lo") for ch in text[:100])
 
@@ -159,9 +173,8 @@ class ModelRouter:
                 user_message="没有可用的模型支持当前请求，请检查参数或手动指定 model。",
                 original={},
             )
-        # Highest score wins; break ties deterministically by adapter_id so
-        # selection never depends on registry/filesystem iteration order.
-        scored.sort(key=lambda x: (-x[0], x[1].adapter_id))
+        # Highest score wins; see selection_key for how ties are broken.
+        scored.sort(key=lambda x: selection_key(x[0], x[1]))
         return scored[0][1]
 
     def _score(
@@ -186,10 +199,8 @@ class ModelRouter:
         else:  # balanced (and understand)
             score += adapter.speed_tier - adapter.cost_tier
 
-        # Applies to every tier: this is the "when nothing else separates them,
-        # prefer this one" knob, and the alternative it replaces (alphabetical
-        # adapter_id) is tier-independent too.
-        score += adapter.auto_priority
+        # NOTE: auto_priority is deliberately *not* added here — it is a tie-break
+        # applied after the score, see selection_key.
 
         # Reference media capability bonus
         if isinstance(req, GenerateImageInput):

@@ -16,6 +16,11 @@ model_name: doubao-seedance-2-5
 cost_tier: 4
 speed_tier: 2
 
+# quality_tier="best" flagship for video. The cost_tier proxy this replaces ranked
+# kling-v3-omni first on price alone (cost 5); 2.5 is the family flagship — 30s
+# single-shot, 50 reference materials, multilingual narration — at cost 4.
+quality_rank: 3
+
 max_duration_seconds: 30
 default_duration_seconds: -1
 

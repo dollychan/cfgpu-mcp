@@ -669,7 +669,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > **`model="auto"` 现在选谁（图片）**：`balanced` / `fast` 都是 `doubao-seedream-5-0-pro`；
 > Pro 被参数排除时（3K/4K、组图 `n>1`、联网搜索这三项它没有）退到 `doubao-seedream-5-0-lite`。
 > `best` 是 `cf-image-2`，被排除时退到 `cf-pro`。中文 prompt 仍会额外偏向 Seedream 家族。
-> 视频未改：`balanced`/`fast` 是 `doubao-seedance-2-0-fast`，`best` 是 `kling-v3-omni`。
+> **视频**：`balanced` / `fast` 是 `doubao-seedance-2-0-fast`，`best` 是 `doubao-seedance-2-5`
+> （30 秒单段直出、最多 50 个参考素材、多语种旁白；两者被参数排除时才轮到别的模型）。
 > 这些落点由 `adapter.yaml` 的 `auto_priority` / `quality_rank` 声明，不是硬编码的名单，
 > 也不再像从前那样由 `adapter_id` 的字母序决定（那会让 auto 恒选族里最老的模型）。
 > 真正跑了哪个，永远以返回的 `model_used` 为准。

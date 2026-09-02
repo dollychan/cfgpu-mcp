@@ -243,7 +243,7 @@ Its `size` table is **computed, not transcribed**: unlike Seedream this family p
 - `adapters/base.py` — `ModelAdapter` ABC + `@register_python_adapter` decorator
 - `adapters/registry.py` — YAML loading, `extends` merge, Python class resolution
 - `config.py` — Singleton registry/client/DB; `load_registry()` reads `disabled_models` from config.yaml
-- `router.py` — Scores adapters for `model="auto"` requests; Chinese prompts bias toward Seedream. Two declarative `adapter.yaml` fields keep the default pick out of the alphabetical `adapter_id` tie-break: `auto_priority` (all tiers) and `quality_rank` (`quality_tier="best"` only, replacing the `cost_tier` quality proxy for models that declare it). Both are inherited through `extends`, so a variant that must not inherit one zeroes it out explicitly
+- `router.py` — Scores adapters for `model="auto"` requests; Chinese prompts bias toward Seedream. Two declarative `adapter.yaml` fields keep the default pick out of the alphabetical `adapter_id` tie-break: `auto_priority` (the second sort key in `selection_key`, deliberately not a score bonus — folded into the score it would outweigh a real scoring difference) and `quality_rank` (`quality_tier="best"` only, replacing the `cost_tier` quality proxy for models that declare it). Both are inherited through `extends`, so a variant that must not inherit one zeroes it out explicitly
 - `task_manager.py` — Sync/async dispatch, exponential backoff polling, DB persistence
 - `agent/dispatcher.py` — `dispatch_tool(name, inputs)` entry point for Mode B (Anthropic SDK)
 - `agent/openai_tools.py` — `get_openai_tools()` + `openai_dispatch_tool()` for OpenAI SDK
