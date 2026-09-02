@@ -9,7 +9,7 @@
       "note": "Unified tool schema from GenerateVideoInput. Model not yet fixed; ranges are the union enum/limits of the unified schema, not a specific model. Once a model is chosen, switch to that model's entry for the real per-model ranges.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
-        "model": { "type": "enum", "options": ["auto", "wan-video", "wan-video-fast", "doubao-seedance-1-5-pro", "doubao-seedance-2-0", "doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini","doubao-seedance-2-5", "happyhorse-1.0-t2v", "happyhorse-1.0-i2v", "happyhorse-1.0-r2v", "happyhorse-1.0-video-edit", "kling-video-o1", "kling-v3-omni", "wan2.7-t2v", "wan2.7-i2v", "wan2.7-r2v", "wan2.7-videoedit", "wan2.6-t2v", "wan2.6-i2v", "wan2.6-r2v", "cf-imagine-video", "cf-imagine-video-1.5","cfdream/minimax-h3","cfdream/minimax-h3-r2v","submodel/minimax-h3"], "default": "auto", "writable": "true" },
+        "model": { "type": "enum", "options": ["auto", "wan-video", "wan-video-fast", "doubao-seedance-1-5-pro", "doubao-seedance-2-0", "doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini","doubao-seedance-2-5", "happyhorse-1.0-t2v", "happyhorse-1.0-i2v", "happyhorse-1.0-r2v", "happyhorse-1.0-video-edit", "kling-video-o1", "kling-v3-omni", "wan2.7-t2v", "wan2.7-i2v", "wan2.7-r2v", "wan2.7-videoedit", "wan2.6-t2v", "wan2.6-i2v", "wan2.6-r2v", "cf-imagine-video", "cf-imagine-video-1.5","cfdream/minimax-h3","cfdream/minimax-h3-r2v","MiniMax-H3"], "default": "auto", "writable": "true" },
         "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p", "4k"], "default": "720p", "writable": "true" },
         "duration_seconds": { "type": "integer", "min": 4, "max": 30, "default": null, "writable": "true", "note": "null uses the resolved model default; -1 = smart/auto duration (WAN 2.0 / Doubao Seedance); 30s is Doubao Seedance 2.5 only, WAN 2.0 / Seedance 2.0 cap at 15 and Seedance 1.5 Pro at 12; HappyHorse requires an explicit 4-15" },
@@ -642,26 +642,27 @@
       }
     },
     {
-      "adapterId": "submodel-minimax-h3",
+      "adapterId": "cfgpu-minimax-h3",
       "modelId": "MiniMax-H3",
-      "modelName": "submodel/minimax-h3",
-      "displayName": "MiniMax H3 (Submodel)",
-      "note": "MiniMax H3 through the Submodel API. Supports text-to-video, first/last-frame generation, or multimodal reference generation. first_frame / last_frame are mutually exclusive with all reference_* inputs; last_frame requires first_frame. Text-to-video requires an explicit non-adaptive aspect ratio, image-to-video infers geometry from the input image, and reference generation may use adaptive. with_audio and watermark are not sent to this API.",
+      "modelName": "MiniMax-H3",
+      "displayName": "MiniMax H3",
+      "note": "MiniMax H3 through the CFGPU video API (test-phase provider cfgpu-daily). Supports text-to-video, first/last-frame generation, or multimodal reference generation. first_frame / last_frame are mutually exclusive with all reference_* inputs; last_frame requires first_frame. Image-to-video infers geometry from the input image and sends no ratio at all; reference generation may use adaptive. This is the declared default landing spot for quality_tier=balanced, so an auto video call with no other arguments resolves here. with_audio is not sent to this API; watermark is, as aigc_watermark.",
       "args": {
-        "prompt": { "type": "text", "writable": "true", "note": "must contain non-whitespace text" },
-        "model": { "type": "string", "value": "submodel/minimax-h3", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], "default": "16:9", "writable": "true", "note": "text-to-video must use an explicit ratio other than adaptive; ignored for first/last-frame generation because geometry is inferred from the image; reference generation may use adaptive" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped to Submodel's native 768P and 2K tiers respectively; 480p is not supported" },
-        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) is not supported" },
+        "prompt": { "type": "text", "writable": "true", "note": "must contain non-whitespace text; max 7000 characters" },
+        "model": { "type": "string", "value": "MiniMax-H3", "writable": "false" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], "default": "adaptive", "writable": "true", "note": "upstream rejects adaptive for text-to-video, but the request is NOT refused: adaptive is the schema default meaning 'you pick', so it is substituted with 16:9 and the substitution is reported in validate_only's corrected_args. Ignored for first/last-frame generation because geometry is inferred from the image. Reference generation sends adaptive as-is (it is the upstream default there), so no substitution happens once any reference_* input is present" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped to MiniMax's native 768P and 2K tiers respectively. 480p is not supported — that is MiniMax-H3-Max, a different model id. Billing is per second and steps with this field: 0.4 CNY/s at 768P, 0.8 CNY/s at 2K" },
+        "duration_seconds": { "type": "integer", "min": 4, "max": 15, "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) is not supported. Billed per second, so this field is the direct cost multiplier" },
         "first_frame": { "type": "url", "writable": "true", "note": "optional; mutually exclusive with all reference_* inputs" },
         "last_frame": { "type": "url", "writable": "true", "note": "optional; requires first_frame and is mutually exclusive with all reference_* inputs" },
         "reference_images": { "type": "url_array", "maxItems": 9, "writable": "true", "note": "mutually exclusive with first_frame / last_frame" },
-        "reference_videos": { "type": "url_array", "maxItems": 3, "writable": "true", "note": "total reference-video duration must not exceed 15 seconds; mutually exclusive with first_frame / last_frame" },
-        "reference_audios": { "type": "url_array", "maxItems": 3, "writable": "true", "note": "total reference-audio duration must not exceed 15 seconds; mutually exclusive with first_frame / last_frame" },
+        "reference_videos": { "type": "url_array", "maxItems": 3, "writable": "true", "note": "each 2-15s and 15s total; the total cannot be checked locally from a URL, so an over-length set is rejected upstream. Mutually exclusive with first_frame / last_frame" },
+        "reference_audios": { "type": "url_array", "maxItems": 3, "writable": "true", "note": "each 2-15s and 15s total; the total cannot be checked locally from a URL, so an over-length set is rejected upstream. Mutually exclusive with first_frame / last_frame" },
+        "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "sent on every request as aigc_watermark (the AIGC identification watermark); false is the upstream default" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false", "note": "adapter default polling timeout is 900 seconds" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged into the Submodel request payload; no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged into the MiniMax request payload; no documented sub-fields beyond the typed args above (callback_url and the middle-frame image role are upstream features this layer does not expose)" }
       }
     }
   ],
