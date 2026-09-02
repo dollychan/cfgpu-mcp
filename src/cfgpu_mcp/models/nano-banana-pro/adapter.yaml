@@ -6,3 +6,6 @@ cfgpu_model_id: nano-pro
 model_name: cf-pro
 cost_tier: 3
 speed_tier: 3
+
+# quality_tier="best" runner-up: taken when CF Image 2 is filtered out by supports().
+quality_rank: 2

@@ -52,16 +52,102 @@ def test_reference_videos_score_multi_modal_capable_adapter():
     assert "multi_modal_reference" in adapter.capabilities
 
 
-def test_best_tier_prefers_higher_cost_tier():
+def test_best_tier_prefers_declared_quality_rank_over_price():
+    """"best" follows quality_rank, not the cost_tier proxy it replaced.
+
+    nano-banana-2 / -pro-official / -pro-premium all carry cost_tier 4 and used to
+    win this tier on price alone; the flagship is gpt-image-2 at cost_tier 2.
+    """
     router = _router()
-    # "best" uses cost_tier as a quality proxy: among image models nano-banana-2
-    # has the highest cost_tier (4), so it should win — whereas "balanced"
-    # (speed - cost) would penalize it. Use an English prompt to avoid the
-    # Chinese→Seedream bias.
     best = router.select_model(GenerateImageInput(prompt="a cat", quality_tier="best"))
     balanced = router.select_model(GenerateImageInput(prompt="a cat", quality_tier="balanced"))
-    assert best.adapter_id == "nano-banana-2"
-    assert balanced.adapter_id != "nano-banana-2"
+    assert best.adapter_id == "gpt-image-2"
+    assert balanced.adapter_id != "gpt-image-2"
+
+
+def test_best_tier_runner_up_is_banana_pro():
+    """With the flagship filtered out by supports(), "best" falls to CF Banana Pro.
+
+    Pinned because the two pricier members of the same chain (official / premium)
+    would outscore it on the surviving cost_tier proxy if their inherited
+    quality_rank were not zeroed out.
+    """
+    router = _router()
+    req = GenerateImageInput(prompt="a cat", quality_tier="best")
+    candidates = [
+        a for a in router._registry.list_all(task_type="image")
+        if a.adapter_id != "gpt-image-2" and a.supports(req)[0]
+    ]
+    ranked = sorted(candidates, key=lambda a: (-router._score(a, req), a.adapter_id))
+    assert ranked[0].adapter_id == "nano-banana-pro"
+
+
+def test_auto_image_default_is_seedream_5_0_pro():
+    """The default pick is declared, not alphabetical.
+
+    Every Seedream shares speed_tier 3 / cost_tier 2, so before auto_priority the
+    family tied and the adapter_id tie-break handed every auto image request to the
+    oldest member (4.0).
+    """
+    router = _router()
+    for tier in ("balanced", "fast"):
+        for prompt in ("a red panda", "一只红熊猫"):
+            adapter = router.select_model(
+                GenerateImageInput(prompt=prompt, quality_tier=tier)
+            )
+            assert adapter.adapter_id == "doubao-seedream-5-0-pro", (tier, prompt)
+
+
+def test_auto_image_falls_back_to_5_0_lite_when_pro_unsupported():
+    # 4K exceeds Pro's pixel ceiling, so supports() drops it. The fallback must be
+    # the newest lite, not whichever name sorts first.
+    router = _router()
+    adapter = router.select_model(GenerateImageInput(prompt="a cat", resolution="4K"))
+    assert adapter.adapter_id == "doubao-seedream-5-0-lite"
+
+
+def test_group_request_avoids_the_model_that_ignores_n():
+    # 5.0 Pro is the default pick but has no multi_image_group; n>1 there silently
+    # returns a single image, so the group bonus must route around it.
+    router = _router()
+    adapter = router.select_model(GenerateImageInput(prompt="a cat", n=4))
+    assert "multi_image_group" in adapter.capabilities
+
+
+def test_video_best_tier_still_uses_the_cost_proxy():
+    # No video model declares a quality_rank, so that tier keeps its previous
+    # behaviour — the proxy is retained, not replaced.
+    router = _router()
+    adapter = router.select_model(GenerateVideoInput(prompt="waves", quality_tier="best"))
+    assert adapter.adapter_id == "kling-v3-omni"
+
+
+def test_declared_ranks_are_not_inherited_down_the_extends_chain():
+    """Both new fields ride ``extends`` like every other YAML field.
+
+    gpt-image-2 (rank 3) is the parent of the whole nano-banana chain and
+    doubao-seedream-5-0-lite (priority 1) the parent of 4.0 / 4.5, so every variant
+    that must not inherit has to zero the field out in its own YAML. Pinned because
+    a silent inheritance would promote a model nobody nominated.
+    """
+    router = _router()
+    get = router._registry.get
+    assert get("gpt-image-2").quality_rank == 3
+    assert get("nano-banana-pro").quality_rank == 2
+    for adapter_id in ("nano-banana-2", "nano-banana-pro-official", "nano-banana-pro-premium"):
+        assert get(adapter_id).quality_rank == 0, adapter_id
+    assert get("doubao-seedream-5-0-pro").auto_priority == 2
+    assert get("doubao-seedream-5-0-lite").auto_priority == 1
+    for adapter_id in ("doubao-seedream-4-0", "doubao-seedream-4-5"):
+        assert get(adapter_id).auto_priority == 0, adapter_id
+
+
+def test_undeclared_model_scores_exactly_as_before():
+    # Both fields default to 0, so a model that declares neither is unaffected.
+    router = _router()
+    adapter = router._registry.get("wan-2-7-image")
+    assert adapter.auto_priority == 0
+    assert adapter.quality_rank == 0
 
 
 def test_image_reference_bonus_uses_real_capability():

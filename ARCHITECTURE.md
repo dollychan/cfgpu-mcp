@@ -133,16 +133,30 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 ```
 基础分（quality_tier）:
   fast   → speed_tier × 2 - cost_tier
-  best   → cost_tier × 2 + speed_tier - cost_tier（以 cost_tier 作质量代理：越贵≈越优）
+  best   → quality_rank × 11 + cost_tier × 2 + speed_tier - cost_tier
   balanced → speed_tier - cost_tier
 
 加分项:
+  auto_priority（所有档位）
   图像请求有 reference_images 且模型支持 multi_image_fusion/multi_image_group → +3
+  图像请求 n > 1 且模型支持 multi_image_group → +3
+  图像请求有 regions 且模型支持 region_edit → +3
   视频请求有 reference_images/videos/audios 且模型支持 multi_modal_reference → +3
   中文 prompt 且模型是 doubao-seedream-* → +2
+
+同分时按 adapter_id 字母序（确定性兜底，不依赖文件系统遍历顺序）
 ```
 
-这意味着：默认 balanced 模式下，低成本高速模型优先；中文 prompt 会偏向 Seedream；有参考媒体时优先选择支持多模态参考的模型。
+**`auto_priority` / `quality_rank` —— 把「谁是默认」写出来，而不是让字母表决定。** 打分只看 `speed_tier` / `cost_tier` 两个 1-5 的粗档，而十个图像模型里八个都是 `speed=3, cost=2`，于是整族同分、真正的选择器变成了 `sorted(adapter_id)`：`doubao-seedream-4-0` < `4-5` < `5-0-lite` < `5-0-pro`，`model="auto"` 每一次都把请求交给**最老**的那个，而这件事在任何一份配置里都写不出来也读不出来。两个字段各修一半：
+
+- **`auto_priority`（缺省 0，所有档位生效）**：同分时的显式偏好。当前 `doubao-seedream-5-0-pro: 2`（图像默认落点）、`doubao-seedream-5-0-lite: 1`（Pro 被 `supports()` 排除时的兜底 —— 3K/4K、组图 `n>1`、联网搜索都是 Pro 没有的能力）。
+- **`quality_rank`（缺省 0，仅 best 档生效）**：显式的旗舰声明。此前 best 用 `cost_tier` 当质量代理（「越贵≈越优」），排的其实是**计费档**而非产出质量 —— 于是同一个模型的 premium 服务档（`cost_tier=4`）能压过真正的新旗舰。当前 `gpt-image-2: 3`（best 首选）、`nano-banana-pro: 2`（首选被 `supports()` 排除时接替）。**代理并未废除**，仍作用于未声明 rank 的模型（今天全部视频与音频模型），因此视频的 best 行为不变（仍是 `kling-v3-omni`）。一个 rank 步长记 11 分，高于 `cost_tier + speed_tier` 的理论最大值 10，故任何已声明的 rank 必定压过未声明者，rank 之间的次序也绝不会被价格差翻转。
+
+**两个字段都随 `extends` 继承**，和其它 YAML 字段一样 —— 而 `gpt-image-2` 正是整条 nano-banana 链的父节点、`doubao-seedream-5-0-lite` 是 4.0 / 4.5 的父节点，所以不该继承的变体必须在自己的 YAML 里显式清零（`nano-banana-2` / `-pro-official` / `-pro-premium` 的 `quality_rank: 0`，`doubao-seedream-4-0` / `4-5` 的 `auto_priority: 0`）。漏掉一处不会报错，只会让一个没人提名的模型悄悄升上首选。`test_declared_ranks_are_not_inherited_down_the_extends_chain` 钉住这组解析后的值。
+
+**`n > 1` 的加分是必需的，不是锦上添花。** 5.0 Pro 是图像默认落点，却是唯一没有 `multi_image_group` 的 Seedream，而 `n` 对没有该能力的模型是**静默忽略**的兼容提示（见 Seedream 组图一节）—— 请求四张、拿回一张、没有任何报错。所以这一条与参考图加分同权，把组图请求从默认落点上引开。一个已知的次序：`quality_tier="best"` 的 rank 权重高于它，best + `n>1` 仍会落到 `cf-image-2` 并只回一张图 —— best 是调用方显式点的名，rank 让路给一个静默降级更糟。
+
+这意味着：默认 balanced 模式下，低成本高速模型优先（同分则按 `auto_priority`）；中文 prompt 会偏向 Seedream；有参考媒体时优先选择支持多模态参考的模型。
 
 ### 3.4 Provider —— 模型可以不来自 CFGPU
 

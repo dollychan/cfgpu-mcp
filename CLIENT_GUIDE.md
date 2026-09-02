@@ -666,6 +666,14 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 分辨率同理是逐模型的：`doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` **只支持 480p/720p**，
 > 传 `1080p` 会在发请求前被拒绝（需要 1080p 用 `doubao-seedance-2-0` / `wan-2-0`）。
 
+> **`model="auto"` 现在选谁（图片）**：`balanced` / `fast` 都是 `doubao-seedream-5-0-pro`；
+> Pro 被参数排除时（3K/4K、组图 `n>1`、联网搜索这三项它没有）退到 `doubao-seedream-5-0-lite`。
+> `best` 是 `cf-image-2`，被排除时退到 `cf-pro`。中文 prompt 仍会额外偏向 Seedream 家族。
+> 视频未改：`balanced`/`fast` 是 `doubao-seedance-2-0-fast`，`best` 是 `kling-v3-omni`。
+> 这些落点由 `adapter.yaml` 的 `auto_priority` / `quality_rank` 声明，不是硬编码的名单，
+> 也不再像从前那样由 `adapter_id` 的字母序决定（那会让 auto 恒选族里最老的模型）。
+> 真正跑了哪个，永远以返回的 `model_used` 为准。
+
 > `quality_tier`（fast/balanced/best）**不只是 `model="auto"` 的路由偏好**：部分模型的 adapter
 > 会把它映射进真实请求，选定模型后依然生效——`cf-image-2` 映射为 API 的 `quality`
 > （`fast`→`low`、`balanced`→`medium`、`best`→`high`，默认 `balanced` 即 `medium`），

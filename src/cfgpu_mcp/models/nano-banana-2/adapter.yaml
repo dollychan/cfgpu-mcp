@@ -6,3 +6,6 @@ cfgpu_model_id: nano2
 model_name: cf2
 cost_tier: 4
 speed_tier: 3
+
+# Not a "best" pick; zeroed rather than inherited from gpt-image-2 (3).
+quality_rank: 0

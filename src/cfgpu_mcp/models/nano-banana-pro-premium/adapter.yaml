@@ -7,3 +7,7 @@ cfgpu_model_id: nano-pro-premium
 model_name: cf-pro-premium
 cost_tier: 4
 speed_tier: 3
+
+# Same model as CF Banana Pro at a pricier service tier, not a better one — zeroed
+# rather than inherited (2), which its higher cost_tier would otherwise outscore.
+quality_rank: 0

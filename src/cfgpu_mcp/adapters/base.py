@@ -84,6 +84,18 @@ class ModelAdapter(ABC):
     capabilities: set[str]
     cost_tier: int               # 1-5
     speed_tier: int              # 1-5
+    #: Tie-break for ``model="auto"`` (all quality tiers). Without it a tie falls
+    #: through to alphabetical ``adapter_id``, which encodes nothing about the
+    #: model: eight of the ten image models share speed_tier 3 / cost_tier 2, so
+    #: the whole family scored level and the alphabetically first — the *oldest* —
+    #: name won every request. Default 0 = "no opinion", the previous behaviour.
+    auto_priority: int
+    #: Flagship declaration, read only by ``quality_tier="best"``. cost_tier used
+    #: to stand in for this ("pricier tends to mean flagship"), which ranks the
+    #: *billing tier* rather than the output — a premium-priced service tier of an
+    #: older model outranked a newer flagship. The proxy remains for models that
+    #: declare no rank. Default 0 = undeclared.
+    quality_rank: int
     max_duration_seconds: int    # video only: longest explicit duration accepted
     default_duration_seconds: int
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
@@ -123,6 +135,12 @@ class ModelAdapter(ABC):
         instance.capabilities = set(config.get("capabilities", []))
         instance.cost_tier = config.get("cost_tier", 3)
         instance.speed_tier = config.get("speed_tier", 3)
+        # Both default to 0 = undeclared, so a model that says nothing routes
+        # exactly as it did before these existed. Note they are inherited through
+        # ``extends`` like every other field: a variant that must *not* inherit a
+        # parent's rank has to zero it out explicitly (see the nano-banana chain).
+        instance.auto_priority = config.get("auto_priority", 0)
+        instance.quality_rank = config.get("quality_rank", 0)
         # GenerateVideoInput's own validator allows the widest range any model in
         # the fleet accepts (4–30, for Doubao Seedance 2.5). Every narrower model
         # declares its real ceiling here so supports() can reject locally instead

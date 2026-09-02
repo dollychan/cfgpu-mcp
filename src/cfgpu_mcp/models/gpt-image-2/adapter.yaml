@@ -15,6 +15,11 @@ capabilities:
 cost_tier: 2
 speed_tier: 3
 
+# quality_tier="best" flagship. Ranked above CF Banana Pro (2); the rest of this
+# extends chain zeroes it out explicitly — inheritance would otherwise promote
+# every descendant to 3 and let a pricier service tier of an older model win.
+quality_rank: 3
+
 poll_config:
   base_interval: 3
   max_interval: 15

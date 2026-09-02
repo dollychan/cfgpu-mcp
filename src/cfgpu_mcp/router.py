@@ -19,6 +19,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+#: Weight of one ``quality_rank`` step in the "best" tier. cost_tier + speed_tier
+#: can reach 10 (both capped at 5), so a step of 11 guarantees that any declared
+#: rank outranks every undeclared model and that the rank order can never be
+#: overturned by a price difference between two ranked models.
+_QUALITY_RANK_STEP = 11
+
+
 def _is_chinese(text: str) -> bool:
     return any(unicodedata.category(ch).startswith("Lo") for ch in text[:100])
 
@@ -169,12 +176,20 @@ class ModelRouter:
         if quality_tier == "fast":
             score += adapter.speed_tier * 2 - adapter.cost_tier
         elif quality_tier == "best":
-            # No model declares an explicit quality flag, so use cost_tier as a
-            # proxy: pricier models tend to be the higher-quality flagships.
+            # quality_rank is the explicit flagship declaration. cost_tier stays as
+            # the proxy for models that declare none (every video and audio model
+            # today): pricier tends to mean flagship — but only tends to, which is
+            # why a declared rank always wins over it.
+            score += adapter.quality_rank * _QUALITY_RANK_STEP
             score += adapter.cost_tier * 2
             score += adapter.speed_tier - adapter.cost_tier
         else:  # balanced (and understand)
             score += adapter.speed_tier - adapter.cost_tier
+
+        # Applies to every tier: this is the "when nothing else separates them,
+        # prefer this one" knob, and the alternative it replaces (alphabetical
+        # adapter_id) is tier-independent too.
+        score += adapter.auto_priority
 
         # Reference media capability bonus
         if isinstance(req, GenerateImageInput):
@@ -182,6 +197,14 @@ class ModelRouter:
                 "multi_image_fusion" in adapter.capabilities
                 or "multi_image_group" in adapter.capabilities
             ):
+                score += 3
+            # n > 1 asks for a 组图. A model without the capability does not fail — n is
+            # a compatibility hint it silently ignores and it returns a single image —
+            # so nothing downstream can catch a mismatch here. That makes this a real
+            # preference rather than a tie-break, at the same magnitude as the fusion
+            # bonus. (It matters now that auto_priority pins 5.0 Pro, the one Seedream
+            # *without* the capability, as the default pick.)
+            if req.n > 1 and "multi_image_group" in adapter.capabilities:
                 score += 3
             # Region editing does not need to be *filtered* for here — supports() already
             # rejects every model without the capability, so a regions request cannot

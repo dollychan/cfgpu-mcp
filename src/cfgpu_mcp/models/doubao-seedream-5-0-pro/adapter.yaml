@@ -21,3 +21,8 @@ capabilities:
 max_regions_per_image: ~
 
 # cost_tier / speed_tier inherited from doubao-seedream-5-0-lite (2 / 3).
+
+# Default pick for model="auto" on images. Every Seedream shares speed 3 / cost 2,
+# so the family scored level and the alphabetical adapter_id tie-break handed every
+# auto request to the oldest member (4.0). This states the preference outright.
+auto_priority: 2
