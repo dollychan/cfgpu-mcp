@@ -244,3 +244,66 @@ async def test_timeout_reports_measured_elapsed_never_the_budget():
 
     assert exc.value.original["elapsed"] < 1.0
     assert "120" not in exc.value.user_message.split("connect_timeout")[0]
+
+
+class _BodyErrorResp(_FakeResp):
+    """HTTP 200 whose body carries an upstream error object.
+
+    Both the submit and the poll endpoints answer this way — the status line says the
+    call was served, the body says what happened to the work.
+    """
+
+    async def json(self, content_type=None):
+        return {
+            "id": "cgt-20260902165545-8768d",
+            "error": {
+                "message": (
+                    "The request failed because the output video may be related to "
+                    "copyright restrictions."
+                )
+            },
+        }
+
+
+@pytest.mark.asyncio
+async def test_post_still_raises_on_an_http_200_body_error():
+    """On a submit the body error *is* this call's failure — the job was refused."""
+    client = _client()
+    session = MagicMock()
+    session.request.side_effect = lambda method, url, **kw: _BodyErrorResp()
+
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        with pytest.raises(CFGPUError) as exc_info:
+            await client.post("/v1/video/generations", {"prompt": "x"})
+
+    assert "copyright" in exc_info.value.user_message
+
+
+@pytest.mark.asyncio
+async def test_get_hands_back_an_http_200_body_error_when_asked_to():
+    """The poll's opt-out: the body is the task record, so the caller judges it.
+
+    Raising here made a dead task look like an unreachable one — ``wait()`` absorbed
+    it as a transient poll failure and reported ``status: "running"`` on a task
+    nothing upstream would ever advance.
+    """
+    client = _client()
+    session = MagicMock()
+    session.request.side_effect = lambda method, url, **kw: _BodyErrorResp()
+
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        body = await client.get("/v1/video/tasks/t1", raise_on_body_error=False)
+
+    assert "copyright" in body["error"]["message"]
+
+
+@pytest.mark.asyncio
+async def test_get_raises_on_a_body_error_by_default():
+    """The opt-out is opt-in: only a caller that knows the body shape may take it."""
+    client = _client()
+    session = MagicMock()
+    session.request.side_effect = lambda method, url, **kw: _BodyErrorResp()
+
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        with pytest.raises(CFGPUError):
+            await client.get("/v1/video/tasks/t1")

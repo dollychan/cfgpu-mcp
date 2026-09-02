@@ -376,3 +376,116 @@ async def test_failed_task_carries_request_id_but_not_caption():
     assert err["request_id"] == "r-7"
     assert "caption" not in err
     await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_converges_when_the_repoll_body_carries_an_upstream_error():
+    """task_status must resolve the task, not report it running forever.
+
+    Its re-poll swallows transient poll errors on purpose (a stale running row is the
+    right answer when the network hiccuped). A copyright/moderation rejection arriving
+    as an HTTP-200 body error used to land in that same branch — classified `unknown`,
+    logged as transient — so every subsequent task_status returned the stale running
+    row and the task could never resolve through this tool at all.
+    """
+    from cfgpu_mcp.errors import CFGPUError
+
+    db = await _db_with_task("pending", "wan-2-0", request_id="r-7")
+    client = MagicMock()
+    client.get = AsyncMock(return_value={
+        "id": "task-1",
+        "error": {"message": "The request failed because the output video may be "
+                             "related to copyright restrictions."},
+    })
+    adapter = _adapter(is_async=True)
+    adapter.extract_status.side_effect = lambda r: r.get("status", "running")
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        with pytest.raises(CFGPUError) as exc:
+            await task_service.get_status("task-1")
+
+    err = exc.value
+    assert err.error_type == "task_failed"
+    assert err.retryable is False
+    assert "copyright restrictions" in err.user_message
+    assert err.request_id == "r-7"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_marks_a_non_retryable_repoll_failure_on_the_envelope():
+    """A re-poll error that will not heal must not present as a plain running task.
+
+    task_status swallows transient poll failures on purpose — the stale record is the
+    right answer when the network hiccuped. But a non-retryable one (a retired endpoint,
+    a token the upstream will keep rejecting) makes every future call fail the same way,
+    so a bare `status: "running"` sends the caller into a loop that cannot terminate.
+    The task really is still alive upstream, so this rides `last_error` rather than the
+    error channel — the same shape `task_wait` produces for the same error.
+    """
+    from cfgpu_mcp.errors import CFGPUError
+
+    db = await _db_with_task("pending", "wan-2-0", request_id="r-1")
+    client = MagicMock()
+    client.get = AsyncMock(side_effect=CFGPUError(
+        error_type="model_unavailable",
+        user_message="所选模型暂不可用，请尝试其他模型。",
+        original={},
+        retryable=False,
+    ))
+    adapter = _adapter(is_async=True)
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["status"] in ("pending", "running")
+    assert "error" not in result                      # the task is alive; not the error channel
+    assert result["last_error"]["error_type"] == "model_unavailable"
+    assert result["last_error"]["retryable"] is False
+    # elapsed / consecutive_failures are properties of a *wait*; one re-poll has neither.
+    assert "elapsed" not in result["last_error"]
+    assert result["request_id"] == "r-1"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_stays_silent_about_a_retryable_repoll_failure():
+    """The ordinary case is unchanged: a blip returns the stale record with no noise."""
+    from cfgpu_mcp.errors import CFGPUError
+
+    db = await _db_with_task("pending", "wan-2-0")
+    client = MagicMock()
+    client.get = AsyncMock(side_effect=CFGPUError(
+        error_type="timeout", user_message="请求超时", original={}, retryable=True,
+    ))
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=True))
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["status"] == "pending"
+    assert "last_error" not in result
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_flags_a_repoll_that_blew_up_outside_cfgpu_error():
+    """An adapter that crashes parsing a terminal body recurs on every call.
+
+    It carries no classification we can trust, so `retryable` stays True (never tell a
+    caller to stop polling a live task) — the *presence* of last_error is the news:
+    this "running" was never observed.
+    """
+    db = await _db_with_task("pending", "wan-2-0")
+    client = MagicMock()
+    client.get = AsyncMock(return_value={"id": "task-1", "status": "succeeded"})
+    adapter = _adapter(is_async=True)
+    adapter.extract_status.return_value = "succeeded"
+    adapter.parse_response.side_effect = KeyError("videoUrl")
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["status"] == "pending"
+    assert result["last_error"]["error_type"] == "unknown"
+    assert "videoUrl" in result["last_error"]["message"]
+    await db.close()

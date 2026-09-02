@@ -433,11 +433,15 @@ DB 的作用：`task status <task_id>` / `task wait <task_id>` 需要在进程�
 
 **多进程 / 多实例共享**：stdio 下每个 agent spawn 独立 server 进程，但共指同一 SQLite 文件（`~/.cfgpu/tasks.db`，WAL 支持并发读 + 单写）；需进程隔离则各设不同 `task_db.url`。streamable-http 多实例水平扩展时改用 Postgres，所有实例共指同一库——本地 SQLite 文件无法跨实例共享。
 
-**客户端驱动轮询**：`service/task.py` 的 `get_status()` 对**非终态的异步任务**（pending/running）或「已成功但 result 无 URL」的任务，做**一次**实时上游轮询并落库。这是 `wait=false` 客户端驱动模型的关键——每次 `task_status` 调用都带着调用方 token，服务端借它把异步任务往前推一步，无需为此挂住连接；客户端断开后凭 task_id 重连即可继续。仅对异步模型（`adapter.is_async`）执行——同步模型无 `poll_endpoint`，跳过；轮询失败以 `logger.debug()` 记录、返回 DB 中的 stale 值，不阻断。
+**客户端驱动轮询**：`service/task.py` 的 `get_status()` 对**非终态的异步任务**（pending/running）或「已成功但 result 无 URL」的任务，做**一次**实时上游轮询并落库。这是 `wait=false` 客户端驱动模型的关键——每次 `task_status` 调用都带着调用方 token，服务端借它把异步任务往前推一步，无需为此挂住连接；客户端断开后凭 task_id 重连即可继续。仅对异步模型（`adapter.is_async`）执行——同步模型无 `poll_endpoint`，跳过。这次重查失败时**不阻断**，返回 DB 里的 stale 值，但「失败了却什么都不说」分三档：`auth` / `invalid_params` 直接抛（调用方可修，装成「还在跑」等于把人晾在那）；**不可重试**的错误（下架的 endpoint、上游会一直拒的 token）挂上 `last_error` 再返回未终态信封 —— 再查一次也是白查，只给一个 `status: "running"` 等于把调用方推进一个不会终止的循环，而任务本身确实还在上游跑，所以走 `last_error` 而不是 error 通道，与 `wait()` 对同一个错误的形状一致；可重试的（网络抖动、超时）才是原来那条静默路径，记一条日志、返回 stale，调用方下一步本来就是再查一次。非 `CFGPUError` 的异常（adapter 解析终态响应时崩了、仓储抖了一下）没有可信的分类，`retryable` 保守地留 `true`（绝不叫调用方停止轮询一个活任务），真正的信息是 `last_error` **出现了**：这个 running 是推断的，不是观测到的。
 
 ### 指数退避轮询
 
-`_STATUS_MAP`（模块级常量）将 CFGPU API 返回的原始状态映射到内部状态（`succeeded` / `failed` / `running` / `pending`），避免每次 `poll()` 调用重建 dict。
+`_STATUS_MAP`（模块级常量）将上游返回的原始状态映射到内部状态（`succeeded` / `failed` / `running` / `pending`），经 `_normalize_status()` **大小写折叠 + trim** 后查表，避免每次 `poll()` 调用重建 dict。
+
+**这张表的重点是那些「终态但不开心」的取值**（`canceled` / `cancelled` / `expired` / `rejected` / `timeout` / `unknown`），不是装饰：查不到的状态回落成 `running`，而对一个**终态**取值来说，这个回落就是一次无限轮询 —— 任务已经结束、上游永远不会再变，调用方却被告知继续查。此前只有 grok / happyhorse / wan_video 三个 adapter 各自手写了一份塌缩逻辑，三份列表已经开始漂移（只有 grok 认识 `cancelled`）；**没写这份逻辑的 adapter —— 包括跑在 base 实现上的整个 Seedance 家族 —— 完全没有防护**。同理，base 的 `extract_status()` 原样返回 `resp["status"]`，只有那三个 adapter 自己做了 `.lower()`，于是一个喊大写的上游（`"SUCCEEDED"`）会被读成 running，一条已经生成好的视频被永远轮询下去。
+
+表里那些**在途同义词**（`queued` / `waiting` / `submitted` / `in_progress` / `not_start`）是为了相反的目的：它们让「这个状态**确实**没见过」变成一个有意义的判断 —— `_normalize_status()` 认不出时返回 `None`（不是 `running`），`poll()` 据此才敢把「未知状态 + body 里带失败原因」判成失败，而不必担心误杀一个只是把「排队中」拼成别的写法的活任务。认不出时还会打一条 `logger.warning` 点名该状态值：一个没人映射过的终态值，除此之外没有任何浮上来的机会。
 
 ```python
 interval = base_interval                        # 默认 5s
@@ -456,6 +460,19 @@ while not done:
 
 之所以要这样：共置的 comfy-gateway 在上传产物时会冻住自己的事件循环（comfy-gateway PLAN.md D12），落在那个窗口里的 poll 必然超时。此前的行为是**直接判整个调用失败**——一条已经生成完的视频就此丢掉，而 `wait=True` 的调用方压根没拿到过 task_id，连补查都做不到。
 
+**反过来也要成立：HTTP 200 + body 里的 error ≠ 轮询失败，那是任务的判决。** 传输层是成功的 —— 上游收到了这次 GET 并回了 200，body 就是**任务记录本身**，其中的 `error` 描述的是任务，不是这次调用。`CFGPUClient._request()` 过去对 200 body 里非空的顶层 `error` 一律抛错（对 POST 是对的：提交被拒，那确实是这次调用失败了），于是一条被上游判死的任务以 `CFGPUError` 的形态到达 `wait()`，正好落进上面那套「轮询失败要吸收」的逻辑里 —— 连吞 5 次后返回 `status: "running"` + `last_error`，而 `get_status()` 的单次重查更直接把它当 transient 记一条日志、返回 stale 的 running 行。结果是这条任务**在两个工具里都永远不会结束**：上游不会改主意，调用方被告知继续轮询。
+
+（真实案例，2026-09-02：Seedance i2v 提交后上游回 `{"error": {"message": "The request failed because the output video may be related to copyright restrictions."}}`，调用方拿到 `error_type: "unknown"` / `retryable: true` / `status: "running"`。）
+
+所以判定权交回给知道「任务记录长什么样」的那一层：`CFGPUClient.get(path, raise_on_body_error=False)` 是**只给轮询用的退出口**（默认仍然抛，POST 完全不变），`TaskManager.poll()` 拿到原始 body 后自己判。两个细节是有意的：
+
+- **判据是「body 里有没有 error 对象」（`_has_body_error`），不是「能不能解析出原因」。** 这两件事必须分开：`_extract_error_message` 产出的是**给人看的原因**，它取不到是正常的（error 对象里只有 code，或者字段形状还没人映射过）；把终态判定挂在「解析得出原因」上，等于让一个没见过的 error 形状**静默地**当作运行中任务 —— 正是这条路径要终结的那种故障。判据与 client 原本抛错的条件逐字对齐，因此凡是过去会浮上来的响应，现在都收敛成终态失败，没有一条被吞掉。原因解析不出时错误文案带上响应截断（`_truncate_json`），既给调用方线索，也给下一个要教会 parser 这个形状的人线索。
+- **不看 `status` 字段。** 这类 body 常常只有原因、根本没有 status，而回落成 `running` 会把它读成「运行中」—— 这就是 bug 本身。唯一的例外是 `succeeded`：已经交付了产物就不该被一个残留的 error 字段推翻，而「succeeded 但无产物」下面本来就有守卫接着。
+
+同一个故障还能从另一侧到达：**状态查不到，同时 body 里带着失败原因**（DashScope 的 `output.code`、异步图片家族的 `data.error_msg` —— 都不是 client 当年会抛的那个顶层 `error`）。这一条也判失败，但**只在状态认不出时**（`_normalize_status()` 返回 `None`）生效，而不是「只要解析出原因就判死」：上游明确说 running / pending 就信它 —— 为一个残留的原因字段杀掉一个正在计费的活任务，比多轮询一个死任务糟得多。
+
+测试：`test_poll_treats_an_http_200_body_error_as_terminal`、`test_poll_body_error_without_a_parseable_reason_still_fails_with_an_excerpt`、`test_wait_raises_task_failed_for_a_body_error_instead_of_reporting_running`、`test_get_status_converges_when_the_repoll_body_carries_an_upstream_error`，以及 client 侧的 `test_post_still_raises_on_an_http_200_body_error` / `test_get_raises_on_a_body_error_by_default`。
+
 **这条推论走到底，就是「活着的任务永远不走 error」——`wait()` 只为真正 `failed` 的任务抛错。** 它返回 `WaitOutcome(task, last_error)`，三条任务仍然活着的退出路径都返回而不抛：
 
 | 退出路径 | `last_error` | 含义 |
@@ -463,6 +480,8 @@ while not done:
 | 等待预算耗尽 | 无 | 轮询一路正常，任务就是还没做完 |
 | 连续 `MAX_CONSECUTIVE_POLL_FAILURES` 次失败放弃 | 有 | 上游够不着，任务状态未知 |
 | 遇到不可重试的轮询错误（token 失效等） | 有 | 同上，且不会自愈 |
+
+`task_status` 的单次重查按同一套判据分档（见上文「客户端驱动轮询」），所以「我有一段时间没看见这个任务了」在两个工具里是同一个形状 —— 调用方不必因为换了个工具就换一套读法。
 
 理由是「等待超时」是**等**的属性，不是**任务**的属性：任务已创建、正在跑，调用方的下一步（`task_status(task_id)`）与 `wait=False` 完全相同，因此返回同一个信封才是诚实的。此前把它报成 `error: true`，逼得每个调用方都要用 `error_type` × `task_id` 反推「这到底结束了没有」——而 `task_failed`（带 task_id、确实终态）和 `timeout`（带 task_id、还活着）在这张真值表里长得一模一样。
 

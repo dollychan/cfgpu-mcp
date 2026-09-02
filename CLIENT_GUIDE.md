@@ -955,7 +955,17 @@ done
 - **没有它** = 服务端一路正常观察到最后，任务确实在跑，只是还没做完。继续 `task_status` 即可。
 - **有它** = 服务端有一段时间没看见这个任务了，`status: "running"` 只代表**未观测到终态**。先看 `last_error.error_type`：`auth` 要先修凭据再轮询（不修的话继续轮也是白轮，`retryable` 会是 `false`）；`timeout` / `unknown` 直接再调 `task_status`。
 
+`task_status` 也会带 `last_error`（此前只有 `task_wait` 会）：它每次调用会做一次实时重查，那次重查如果撞上**不会自愈**的错误（模型下架、上游持续拒绝的凭据），就带着 `last_error` 返回未终态信封，而不是给你一个干净的 `status: "running"` —— 后者会把你推进一个不会终止的轮询循环。可重试的抖动仍然静默回落到上一次已知状态，形状不变。这种单次重查没有 `elapsed` / `consecutive_failures`（那是「等」的属性），所以那两个键不出现。
+
 这里的 `retryable` 只回答**「再调一次 `task_status` 有没有希望」**，与顶层 error dict 里那个「重发整个请求安不安全」是两回事。
+
+**反过来，上游明确判死的任务不会出现在 `last_error` 里。** 有一类失败是上游用 HTTP 200 回的 —— 状态行说「这次查询成功」，body 里的 `error` 说「任务完了」，例如：
+
+```
+The request failed because the output video may be related to copyright restrictions.
+```
+
+这种响应现在收敛成标准的终态错误（`error: true`、`error_type: "task_failed"`、`retryable: false`，带 `task_id` 和 `request_id`），`generate_*(wait=true)` / `task_status` / `task_wait` 三处一致。此前它被当成一次「轮询失败」，于是拿到的是 `status: "running"` + `last_error{error_type: "unknown", retryable: true}` —— 一条永远不会再变的任务，却被告知继续轮询。**所以：看到 `last_error` 就按上面那条走（再查一次 / 先修凭据），不必怀疑任务其实已经死了。**
 
 > 两个不在这套契约里的例外：`validate_only` 预检返回 `{validated, model_used, …}`，三个键一个都没有，判据是 `"validated" in result`；`understand_vision` 返回文本，没有 `artifact` / `task_id`，恒同步，终态判据只有「没有 `error`」。
 

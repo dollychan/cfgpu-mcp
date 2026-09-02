@@ -113,7 +113,8 @@ class WanVideoAdapter(ModelAdapter):
         # Poll response uses camelCase taskStatus with UPPERCASE values (SUCCEEDED).
         output = self._output(resp)
         status = (output.get("taskStatus") or output.get("task_status") or "running").lower()
-        # "canceled" and "unknown" aren't in task_manager's _STATUS_MAP; collapse to failed
+        # "canceled" / "unknown" are terminal here. _STATUS_MAP collapses them centrally
+        # as well; this line keeps the upstream's documented vocabulary next to the card.
         if status in ("canceled", "unknown"):
             return "failed"
         return status

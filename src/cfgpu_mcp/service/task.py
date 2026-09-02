@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.task_manager import _CAPTION_KEY, _LABEL_KEY, _REQUEST_ID_KEY
+from cfgpu_mcp.task_manager import _CAPTION_KEY, _LABEL_KEY, _REQUEST_ID_KEY, _last_error_dict
 from cfgpu_mcp.tool_registry import pending_result, stamp_echo
 
 logger = logging.getLogger(__name__)
@@ -30,9 +30,12 @@ def _present(task: Any, last_error: dict[str, Any] | None = None) -> dict[str, A
     remedy (error_type / retryable / card_hint), while *still running* is not a failure
     at all, so only the first belongs in the error channel.
 
-    ``last_error`` is passed only by ``wait_for_task``, and only when the wait stopped
-    early for a reason (see ``TaskManager.wait``). ``get_status`` never sets it: a single
-    re-poll that fails there already falls back to the stale record on purpose.
+    ``last_error`` says why this "running" was *inferred* rather than observed (see
+    ``TaskManager.wait``). ``wait_for_task`` passes it when the wait stopped early for a
+    reason; ``get_status`` passes it when its single re-poll failed in a way that will
+    not fix itself. A re-poll failure that *is* transient still falls back to the stale
+    record silently, on purpose — that is the ordinary case and the caller's next move
+    (poll again) is unchanged.
 
     "Has an artifact" is ``urls`` **or** ``inline_media``, matching
     ``annotate_artifact`` and ``TaskManager.poll``'s success guard: a synchronous model
@@ -131,6 +134,7 @@ async def get_status(task_id: str) -> dict[str, Any]:
     # terminal: a succeeded-without-urls row is malformed data that poll()
     # converges to "failed" at write time, not something to retry on every read.
     needs_repoll = task.status in ("pending", "running")
+    last_error: dict[str, Any] | None = None
     if needs_repoll:
         registry = get_registry()
         adapter = registry.get(task.adapter_id)  # missing adapter is a program error, not stale-tolerable
@@ -144,12 +148,34 @@ async def get_status(task_id: str) -> dict[str, Any]:
                 if e.error_type in ("auth", "invalid_params"):
                     e.request_id = task.payload.get(_REQUEST_ID_KEY)
                     raise
-                logger.warning("Re-poll transient failure for task %s (%s): %s", task_id, task.adapter_id, e)
+                # A *non-retryable* one is neither of those: polling again is worthless,
+                # so returning a bare `status: "running"` sends the caller into a loop
+                # that cannot terminate. It still isn't the task failing (the job runs
+                # on upstream regardless), so it rides last_error exactly as the same
+                # error does in `wait()` — one shape for "we lost sight of it, and it
+                # won't heal", whichever tool the caller happened to use.
+                if not e.retryable:
+                    last_error = _last_error_dict(e)
+                logger.warning(
+                    "Re-poll failure for task %s (%s), retryable=%s: %s",
+                    task_id, task.adapter_id, e.retryable, e,
+                )
             except Exception as e:
+                # Not a CFGPUError, so it carries no classification we can trust — a
+                # deterministic parse bug on a terminal body and a one-off repository
+                # hiccup arrive identically here. `retryable: True` is the safe half of
+                # that (never tell a caller to stop polling a live task); the *presence*
+                # of last_error is what carries the real news, that this "running" was
+                # never observed.
+                last_error = {
+                    "error_type": "unknown",
+                    "message": f"轮询响应处理失败：{e}",
+                    "retryable": True,
+                }
                 logger.warning("Re-poll failed for task %s (%s), using stale DB result: %s", task_id, task.adapter_id, e)
 
     _raise_if_failed(task)
-    return _present(task)
+    return _present(task, last_error)
 
 
 async def wait_for_task(

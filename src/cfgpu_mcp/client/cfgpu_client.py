@@ -203,10 +203,23 @@ class CFGPUClient:
     async def post(self, path: str, json: dict) -> dict:
         return await self._request("POST", path, json=json)
 
-    async def get(self, path: str) -> dict:
-        return await self._request("GET", path)
+    async def get(self, path: str, *, raise_on_body_error: bool = True) -> dict:
+        """GET, optionally letting an HTTP-200 body error through to the caller.
 
-    async def _request(self, method: str, path: str, **kwargs) -> dict:
+        ``raise_on_body_error=False`` is what ``TaskManager.poll`` passes. On a poll
+        the transport succeeded — HTTP 200, the upstream answered — and the body *is*
+        the task record, so its ``error`` field is the task's verdict, not this call's
+        failure. Raising it here made a dead task indistinguishable from an unreachable
+        one: ``wait()`` absorbed it as a transient poll failure and handed back
+        ``status: "running"``, and ``get_status``'s re-poll swallowed it as transient
+        and returned the stale running row — forever. Deciding that belongs to the layer
+        that knows what a task record looks like.
+        """
+        return await self._request("GET", path, raise_on_body_error=raise_on_body_error)
+
+    async def _request(
+        self, method: str, path: str, *, raise_on_body_error: bool = True, **kwargs
+    ) -> dict:
         url = f"{self._base_url}/{path.lstrip('/')}"
         if method == "POST" and os.getenv("CFGPU_DRY_RUN"):
             logger.info("DRY-RUN POST %s\n%s", url, _json.dumps(kwargs.get("json", {}), ensure_ascii=False, indent=2))
@@ -228,7 +241,8 @@ class CFGPUClient:
                 if not isinstance(body, dict):
                     body = {"_raw": body}
 
-                if not resp.ok or (isinstance(body.get("error"), dict) and body["error"]):
+                body_error = isinstance(body.get("error"), dict) and bool(body["error"])
+                if not resp.ok or (body_error and raise_on_body_error):
                     raise CFGPUError.from_http_response(resp.status, body)
                 # Full response logging — DEBUG by default; INFO (pretty-printed)
                 # when CFGPU_LOG_RESPONSES is set, to verify adapter / card.md.

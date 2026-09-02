@@ -853,3 +853,203 @@ async def test_poll_wan_null_error_failure_converges():
     assert task.status == "failed"
     assert task.error and "no error detail" in task.error
     await db.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_treats_an_http_200_body_error_as_terminal():
+    """A poll body carrying an upstream error is the task's verdict, not a poll failure.
+
+    The transport worked — HTTP 200, the upstream answered — so the ``error`` object in
+    the body describes the *task*. Real case (2026-09-02): a copyright rejection came
+    back this way, the client raised on it, ``wait()`` absorbed it as a transient poll
+    failure, and the caller was handed ``status: "running"`` plus a ``last_error``
+    telling it to keep polling a task nothing upstream would ever advance.
+
+    Note the body carries no ``status`` at all: relying on the status field would leave
+    this on ``_STATUS_MAP``'s "running" default, which is exactly the bug.
+    """
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
+    task = await tm.create(adapter, GenerateVideoInput(prompt="x"))
+
+    tm._client_for(None).get = AsyncMock(return_value={
+        "id": "task-abc",
+        "error": {
+            "message": (
+                "The request failed because the output video may be related to "
+                "copyright restrictions."
+            )
+        },
+    })
+    task = await tm.poll(task, adapter)
+
+    assert task.status == "failed"
+    assert "copyright restrictions" in task.error
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_body_error_without_a_parseable_reason_still_fails_with_an_excerpt():
+    """The verdict must not depend on this parser recognising the reason field.
+
+    An error object holding only a code would otherwise pass as a running task —
+    the silent version of the very failure this path exists to end. The excerpt is
+    what makes the unmapped shape diagnosable instead of a dead-end message.
+    """
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
+    task = await tm.create(adapter, GenerateVideoInput(prompt="x"))
+
+    tm._client_for(None).get = AsyncMock(
+        return_value={"id": "task-abc", "status": "running", "error": {"code": "ContentRisk"}}
+    )
+    task = await tm.poll(task, adapter)
+
+    assert task.status == "failed"
+    assert "ContentRisk" in task.error
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_wait_raises_task_failed_for_a_body_error_instead_of_reporting_running():
+    """The end-to-end shape the caller sees: a terminal error, not a live task.
+
+    Before this, five of these in a row exhausted MAX_CONSECUTIVE_POLL_FAILURES and
+    returned ``WaitOutcome(task, last_error)`` — an ``error_type: "unknown"``,
+    ``retryable: true`` diagnostic riding a ``status: "running"`` envelope, on a task
+    that was already dead.
+    """
+    tm, db, adapter, req, task = await _waiting_tm(
+        [{"id": "task-1", "error": {"message": "copyright restrictions"}}]
+    )
+
+    with pytest.raises(CFGPUError) as exc_info:
+        await tm.wait(task, adapter, req)
+
+    err = exc_info.value
+    assert err.error_type == "task_failed"
+    assert err.retryable is False
+    assert "copyright restrictions" in err.user_message
+    assert err.original["task_id"] == "task-1"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_ignores_a_stray_error_field_on_a_succeeded_task():
+    """A delivered artifact outranks an error field: the work is done and billed."""
+    from cfgpu_mcp.tool_registry import NormalizedResult
+
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/v.mp4"], expires_at=None, task_id="task-abc",
+        model_used="wan-video", seed=None, usage=None,
+    )
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
+    task = await tm.create(adapter, GenerateVideoInput(prompt="x"))
+
+    tm._client_for(None).get = AsyncMock(return_value={
+        "id": "task-abc", "status": "succeeded", "error": {"message": "partial warning"},
+        "content": {"videoUrl": "https://cdn/v.mp4"},
+    })
+    task = await tm.poll(task, adapter)
+
+    assert task.status == "succeeded"
+    assert task.result["urls"] == ["https://cdn/v.mp4"]
+    await db.close()
+
+
+@pytest.mark.parametrize("raw,expected", [
+    # Case: the base extract_status hands back whatever the upstream wrote, and only
+    # three adapters lower-cased it themselves. "SUCCEEDED" reading as "running" means
+    # polling a finished video forever.
+    ("SUCCEEDED", "succeeded"),
+    ("Failed", "failed"),
+    ("success", "succeeded"),
+    # Terminal-but-unhappy. Three adapters hand-rolled this collapse (in lists that had
+    # already drifted — only grok knew "cancelled"); everyone else, the whole Seedance
+    # family included, had nothing.
+    ("canceled", "failed"),
+    ("cancelled", "failed"),
+    ("expired", "failed"),
+    ("rejected", "failed"),
+    ("timeout", "failed"),
+    ("unknown", "failed"),
+    # In flight, spelled the ways upstreams actually spell it.
+    ("queued", "pending"),
+    ("waiting", "pending"),
+    ("in_progress", "running"),
+    (" Running ", "running"),
+])
+def test_status_vocabulary_covers_the_terminal_spellings(raw, expected):
+    from cfgpu_mcp.task_manager import _normalize_status
+    assert _normalize_status(raw) == expected
+
+
+def test_an_unrecognised_status_is_not_silently_running():
+    """None, not "running" — the distinction is what poll() acts on.
+
+    Collapsing the two is what made an unmapped *terminal* status indistinguishable
+    from a healthy in-flight one.
+    """
+    from cfgpu_mcp.task_manager import _normalize_status
+    assert _normalize_status("brand_new_state") is None
+    assert _normalize_status(None) is None
+
+
+@pytest.mark.asyncio
+async def test_poll_converges_on_a_terminal_status_the_map_did_not_use_to_know():
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
+    task = await tm.create(adapter, GenerateVideoInput(prompt="x"))
+
+    tm._client_for(None).get = AsyncMock(return_value={"id": "task-abc", "status": "CANCELED"})
+    task = await tm.poll(task, adapter)
+
+    assert task.status == "failed"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_fails_on_an_unknown_status_carrying_a_failure_reason():
+    """The DashScope shape reached from the other side: no status this table knows,
+    but ``output.code`` says the content was rejected. The reason is not the top-level
+    ``error`` the client used to raise on, so nothing else would have caught it."""
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    adapter.extract_status.side_effect = lambda r: (r.get("output") or {}).get("taskStatus", "")
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
+    task = await tm.create(adapter, GenerateVideoInput(prompt="x"))
+
+    tm._client_for(None).get = AsyncMock(return_value={
+        "output": {"code": "InvalidParameter.DataInspection", "message": "content rejected"},
+    })
+    task = await tm.poll(task, adapter)
+
+    assert task.status == "failed"
+    assert "InvalidParameter.DataInspection" in task.error
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_an_explicit_running_status_is_believed_even_beside_a_reason_field():
+    """The guard on the rule above: only an *unrecognised* status may be overridden.
+
+    Killing a live, billed job over a stale reason field is worse than polling a dead
+    one, so an upstream that says "running" is taken at its word.
+    """
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    tm._client_for(None).post = AsyncMock(return_value={"id": "task-abc"})
+    task = await tm.create(adapter, GenerateVideoInput(prompt="x"))
+
+    tm._client_for(None).get = AsyncMock(
+        return_value={"id": "task-abc", "status": "running", "reason": "queued behind 3 jobs"}
+    )
+    task = await tm.poll(task, adapter)
+
+    assert task.status == "running"
+    await db.close()

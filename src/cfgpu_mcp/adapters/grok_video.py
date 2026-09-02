@@ -95,7 +95,9 @@ class GrokVideoAdapter(ModelAdapter):
         # A create response carrying only the bare id (no status) is still pending;
         # "running" keeps the poll loop going, which is the same outcome.
         status = (self._data(resp).get("status") or "running").lower()
-        # Not in task_manager's _STATUS_MAP; collapse to failed so polling converges.
+        # _STATUS_MAP now collapses these centrally too; kept here because this
+        # upstream's own vocabulary is what the card documents, and the adapter is
+        # where a reader looks for it.
         if status in ("canceled", "cancelled", "unknown"):
             return "failed"
         return status

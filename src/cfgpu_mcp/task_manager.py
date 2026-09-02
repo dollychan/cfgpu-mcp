@@ -131,16 +131,64 @@ def _has_media_artifact(result: dict[str, Any]) -> bool:
     return bool(result.get("urls") or result.get("inline_media"))
 
 
+#: Upstream status vocabulary → the internal one. Keys are matched **case-folded**
+#: (see ``_normalize_status``), so an upstream shouting ``"SUCCEEDED"`` lands here too.
+#:
+#: The terminal-but-unhappy rows (canceled / expired / rejected / timeout / unknown)
+#: are the point of this table, not decoration. An unrecognised status falls back to
+#: "running", and for a *terminal* value that fallback is an infinite poll: the task is
+#: over, nothing upstream will ever change, and every caller is told to come back. Three
+#: adapters (grok / happyhorse / wan_video) had each hand-rolled their own collapse for
+#: exactly this, in three lists that had already drifted apart — the ones without such a
+#: list, including the whole Seedance family on the base implementation, had no cover at
+#: all.
+#:
+#: The in-flight synonyms (queued / waiting / submitted / in_progress / not_start) matter
+#: for the opposite reason: they make "this status is genuinely unrecognised" mean
+#: something, which is what lets ``poll()`` treat an unrecognised status carrying an
+#: error reason as a failure without risking a live task that merely spells "queued"
+#: a way this table had not seen.
 _STATUS_MAP = {
+    # terminal, happy
     "completed": "succeeded",
     "succeed": "succeeded",
     "succeeded": "succeeded",
+    "success": "succeeded",
+    # terminal, unhappy
     "failed": "failed",
+    "failure": "failed",
     "error": "failed",
+    "canceled": "failed",
+    "cancelled": "failed",
+    "expired": "failed",
+    "rejected": "failed",
+    "timeout": "failed",
+    "timed_out": "failed",
+    "unknown": "failed",
+    # in flight
     "running": "running",
-    "pending": "pending",
     "processing": "running",
+    "in_progress": "running",
+    "pending": "pending",
+    "queued": "pending",
+    "waiting": "pending",
+    "submitted": "pending",
+    "not_start": "pending",
 }
+
+
+def _normalize_status(raw: Any) -> str | None:
+    """Case-fold an upstream status onto the internal vocabulary; None if unrecognised.
+
+    None is a distinct answer from "running" on purpose. Collapsing the two is what
+    made an unmapped terminal status (``"CANCELED"``, ``"expired"``) indistinguishable
+    from a healthy in-flight one, and the caller is the one who pays for that: it polls
+    a finished task forever. Keeping them apart lets ``poll()`` say "running, but that
+    is a fallback, not an observation" — and log it.
+    """
+    if raw is None:
+        return None
+    return _STATUS_MAP.get(str(raw).strip().lower())
 
 
 _RESPONSE_EXCERPT_CHARS = 400
@@ -186,6 +234,25 @@ def _dashscope_output_reason(resp: dict) -> str | None:
         if isinstance(val, str) and val.strip()
     ]
     return ": ".join(parts) or None
+
+
+def _has_body_error(resp: dict) -> bool:
+    """Whether an HTTP-200 poll body carries an upstream error object at all.
+
+    Deliberately separate from ``_extract_error_message``: that one produces the
+    *reason* and may legitimately find none (the error object carries only a code, or
+    a field nobody has mapped yet), while this one decides whether the task is dead.
+    Tying the verdict to a parseable message would make an unrecognised error shape
+    silently pass as a running task — the failure mode this whole path exists to end.
+
+    The rule mirrors exactly what ``CFGPUClient._request`` raises on for a 200 body (a
+    non-empty top-level ``error``), so every response that used to surface as an error
+    still converges to a terminal failure rather than being swallowed.
+    """
+    err = resp.get("error")
+    if isinstance(err, dict):
+        return bool(err)
+    return isinstance(err, str) and bool(err.strip())
 
 
 def _extract_error_message(resp: dict) -> str | None:
@@ -305,7 +372,7 @@ class WaitOutcome(NamedTuple):
 
 
 def _last_error_dict(
-    e: CFGPUError, *, consecutive_failures: int, elapsed: int
+    e: CFGPUError, *, consecutive_failures: int = 0, elapsed: int | None = None
 ) -> dict[str, Any]:
     """Demote a poll error to a diagnostic that rides a non-terminal result.
 
@@ -325,8 +392,11 @@ def _last_error_dict(
         "error_type": e.error_type,
         "message": e.user_message,
         "retryable": e.retryable,
-        "elapsed": elapsed,
     }
+    # Both are properties of a *wait*: get_status re-polls exactly once, so neither
+    # "how long we watched" nor "how many in a row" means anything there.
+    if elapsed is not None:
+        out["elapsed"] = elapsed
     if consecutive_failures:
         out["consecutive_failures"] = consecutive_failures
     phase = e.original.get("phase")
@@ -525,10 +595,47 @@ class TaskManager:
     async def poll(self, task: Task, adapter: "ModelAdapter") -> Task:
         assert adapter.poll_endpoint, f"{adapter.adapter_id} has no poll_endpoint"
         path = adapter.poll_endpoint.replace("{task_id}", task.id)
-        resp = await self._client_for(adapter).get(path)
+        # The poll body is the *task record*, so its error field is the task's verdict,
+        # not this HTTP call's failure — see CFGPUClient.get(raise_on_body_error=...).
+        resp = await self._client_for(adapter).get(path, raise_on_body_error=False)
 
         cfgpu_status: str = adapter.extract_status(resp)
-        status = _STATUS_MAP.get(cfgpu_status, "running")
+        mapped = _normalize_status(cfgpu_status)
+        if mapped is None:
+            # Unrecognised: keep polling (a new in-flight synonym is the likelier
+            # cause), but say so — a terminal value nobody has mapped yet is otherwise
+            # a silent infinite loop, and this line is the only place it can surface.
+            logger.warning(
+                "任务 %s 的上游状态 %r 不在 _STATUS_MAP 中，暂按 running 处理；"
+                "若它其实是终态，请补进该表",
+                task.id, cfgpu_status,
+            )
+        status = mapped or "running"
+
+        # An HTTP-200 poll body carrying an upstream error object is terminal, whatever
+        # its status field says — the transport worked, so that object describes the
+        # task. This is the case the client used to raise on; it reached wait() as a
+        # poll failure and was absorbed as transient, so a definitively dead task came
+        # back as `status: "running"` with a `last_error` telling the caller to poll a
+        # task nothing upstream would ever advance ("The request failed because the
+        # output video may be related to copyright restrictions", 2026-09-02). The
+        # status field cannot be relied on here: several bodies of this shape carry the
+        # reason alone, and the "running" fallback then reads them as in flight.
+        #
+        # The second clause covers the same failure reached from the other side: a
+        # status this table does not know *plus* a populated failure reason (DashScope's
+        # output.code, the async-image family's data.error_msg — neither of which is the
+        # top-level `error` the client used to raise on). It is deliberately gated on
+        # `mapped is None` rather than applied whenever a reason parses out: an upstream
+        # that explicitly says running/pending is believed, because killing a live billed
+        # job over a stale reason field is far worse than polling a dead one.
+        #
+        # "succeeded" is left alone either way — a result with an artifact is not
+        # overridden by a stray error field, and the no-artifact case is caught below.
+        body_error = _has_body_error(resp)
+        upstream_error = _extract_error_message(resp)
+        if status != "succeeded" and (body_error or (mapped is None and upstream_error)):
+            status = "failed"
 
         result_dict: dict | None = None
         error_msg: str | None = None
@@ -550,8 +657,13 @@ class TaskManager:
                 result_dict = None
                 error_msg = "Task reported success but returned no artifact URLs or inline media"
         elif status == "failed":
-            error_msg = _extract_error_message(resp) or (
-                "Task failed (upstream reported no error detail)"
+            error_msg = upstream_error or (
+                # The body said "error" but no field this parser knows carried the
+                # reason. An excerpt beats "no error detail": that message is a dead end
+                # for the caller *and* for whoever has to teach the parser this shape.
+                f"Task failed. 上游响应（截断）：{_truncate_json(resp)}"
+                if body_error or mapped is None
+                else "Task failed (upstream reported no error detail)"
             )
 
         await self._repo.update_task(task.id, status, result=result_dict, error=error_msg)
