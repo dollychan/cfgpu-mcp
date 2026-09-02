@@ -1,6 +1,7 @@
 import asyncio
 import os
 
+import aiohttp
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -147,3 +148,57 @@ async def test_timeout_names_the_knob_that_governs_this_provider(provider, expec
     if provider != "cfgpu":
         assert "cfgpu_api.http_timeout" not in exc.value.user_message
 
+
+
+@pytest.mark.asyncio
+async def test_connect_phase_timeout_points_at_connect_timeout_not_http_timeout():
+    """A connect timeout is an ``asyncio.TimeoutError`` too — one handler, two causes.
+
+    aiohttp raises ConnectionTimeoutError for DNS / TCP / TLS, i.e. before the
+    upstream has seen anything. Reporting it as "增大 http_timeout" sends the
+    reader to a knob that cannot move it: raise 120 → 300, retry, fail in the
+    same ``connect_timeout`` seconds. Same failure as pointing a non-cfgpu
+    provider at cfgpu_api.http_timeout, one layer down.
+    """
+    client = CFGPUClient(
+        api_token="t", base_url="https://x.test", http_timeout=300, connect_timeout=10,
+        provider="cfgpu-daily", use_request_token=False,
+    )
+    session = MagicMock()
+    session.request.side_effect = aiohttp.ConnectionTimeoutError("Connection timeout to host")
+
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        with pytest.raises(CFGPUError) as exc:
+            await client.post("/v1/x", json={})
+
+    assert exc.value.error_type == "timeout"
+    assert exc.value.original["phase"] == "connect"
+    assert "providers.cfgpu-daily.connect_timeout" in exc.value.user_message
+    # The knob that cannot work must be named only to rule it out.
+    assert "增大 providers.cfgpu-daily.http_timeout 不会有任何作用" in exc.value.user_message
+    # And the base_url has to be in the text: "can this box reach that host" is
+    # the actual next step, and it needs the host to be checkable.
+    assert "https://x.test" in exc.value.user_message
+
+
+@pytest.mark.asyncio
+async def test_timeout_reports_measured_elapsed_never_the_budget():
+    """The elapsed seconds are measured, not read off the config.
+
+    Printing ``timeout.total`` claimed 120s had passed when the call had in fact
+    failed in 10 — the one number that would have identified the phase was the
+    one number being fabricated.
+    """
+    client = CFGPUClient(
+        api_token="t", base_url="https://x.test", http_timeout=120, connect_timeout=10,
+        provider="cfgpu-daily", use_request_token=False,
+    )
+    session = MagicMock()
+    session.request.side_effect = aiohttp.ConnectionTimeoutError("Connection timeout to host")
+
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        with pytest.raises(CFGPUError) as exc:
+            await client.post("/v1/x", json={})
+
+    assert exc.value.original["elapsed"] < 1.0
+    assert "120" not in exc.value.user_message.split("connect_timeout")[0]

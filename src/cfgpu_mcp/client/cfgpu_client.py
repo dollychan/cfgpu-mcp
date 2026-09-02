@@ -4,6 +4,8 @@ import asyncio
 import json as _json
 import logging
 import os
+import time
+
 import aiohttp
 
 from cfgpu_mcp.context import get_request_token
@@ -103,20 +105,67 @@ class CFGPUClient:
             raise CFGPUError(error_type="auth", user_message=msg, original={})
         return token
 
-    def _timeout_setting_path(self) -> str:
-        """The config.yaml key that actually governs *this* client's timeout.
+    def _timeout_setting_path(self, field: str = "http_timeout") -> str:
+        """The config.yaml key that actually governs *this* client's ``field``.
 
-        Only the built-in ``cfgpu`` provider reads ``cfgpu_api.http_timeout``.
-        Every other provider carries its own, and ``config.get_client`` prefers it
-        whenever it is set — so naming the top-level key in a non-cfgpu timeout
-        sends the reader to a knob that changes nothing for the model that just
-        failed. They raise it, retry, time out identically, and now distrust the
-        message. Same discipline as ``card_hint``: a remedy that cannot work is
-        worse than no remedy.
+        Only the built-in ``cfgpu`` provider reads ``cfgpu_api.*``. Every other
+        provider carries its own, and ``config.get_client`` prefers it whenever it
+        is set — so naming the top-level key in a non-cfgpu timeout sends the
+        reader to a knob that changes nothing for the model that just failed. They
+        raise it, retry, time out identically, and now distrust the message. Same
+        discipline as ``card_hint``: a remedy that cannot work is worse than no
+        remedy.
         """
         if self._provider == DEFAULT_PROVIDER:
-            return "cfgpu_api.http_timeout"
-        return f"providers.{self._provider}.http_timeout"
+            return f"cfgpu_api.{field}"
+        return f"providers.{self._provider}.{field}"
+
+    def _timeout_error(self, exc: BaseException, url: str, elapsed: float) -> CFGPUError:
+        """Turn an aiohttp timeout into an error that names the phase that failed.
+
+        ``aiohttp.ConnectionTimeoutError`` — DNS, TCP and TLS, i.e. everything
+        before a byte is sent — subclasses ``asyncio.TimeoutError`` just like the
+        total-budget timeout does, so one handler catches both. Reporting both
+        with ``timeout.total`` printed a number that had not elapsed and pointed
+        at ``http_timeout``, a knob that cannot move a connect failure: raised
+        120 → 300, retried, failed in the same 10 seconds, and the message was
+        now twice wrong. (2026-09-02, MiniMax-H3 on cfgpu-daily: the server could
+        not reach the daily host at all; the log gap was exactly
+        ``connect_timeout``.) Same discipline as ``_timeout_setting_path``.
+
+        ``elapsed`` is measured, not read off the config — it is the one number
+        that distinguishes the two cases without trusting this classification.
+        """
+        connect_phase = isinstance(exc, aiohttp.ConnectionTimeoutError)
+        budget = self._timeout.connect if connect_phase else self._timeout.total
+        field = "connect_timeout" if connect_phase else "http_timeout"
+        if connect_phase:
+            detail = (
+                f"{elapsed:.1f}s 内没能与 provider {self._provider!r} 建立连接"
+                f"（DNS / TCP / TLS 都在这一步，上游还没收到任何请求）。"
+                "这通常是这台机器到该上游的网络不通，而不是上游慢 —— "
+                f"增大 {self._timeout_setting_path()} 不会有任何作用。"
+                f"请先确认本机能否访问 {self._base_url}，再考虑在 config.yaml 增大 "
+                f"{self._timeout_setting_path(field)}。"
+            )
+        else:
+            detail = (
+                f"请求超时（已耗时 {elapsed:.1f}s，上限 {budget}s，"
+                f"provider {self._provider!r}），请稍后重试或在 config.yaml 增大 "
+                f"{self._timeout_setting_path(field)}。"
+            )
+        return CFGPUError(
+            error_type="timeout",
+            user_message=detail,
+            original={
+                "url": url,
+                "phase": "connect" if connect_phase else "request",
+                "elapsed": round(elapsed, 1),
+                "timeout": budget,
+                "provider": self._provider,
+            },
+            retryable=True,
+        )
 
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
@@ -139,6 +188,7 @@ class CFGPUClient:
             "Accept-Encoding": ACCEPT_ENCODING,
         }
         session = await self._get_session()
+        started = time.monotonic()
         try:
             async with session.request(method, url, headers=headers, **kwargs) as resp:
                 body: dict = {}
@@ -165,19 +215,7 @@ class CFGPUClient:
         except CFGPUError:
             raise
         except asyncio.TimeoutError as e:
-            raise CFGPUError(
-                error_type="timeout",
-                user_message=(
-                    f"请求超时（{self._timeout.total}s，provider {self._provider!r}），"
-                    f"请稍后重试或在 config.yaml 增大 {self._timeout_setting_path()}。"
-                ),
-                original={
-                    "url": url,
-                    "timeout": self._timeout.total,
-                    "provider": self._provider,
-                },
-                retryable=True,
-            ) from e
+            raise self._timeout_error(e, url, elapsed=time.monotonic() - started) from e
         except aiohttp.ClientError as e:
             raise CFGPUError(
                 error_type="unknown",
