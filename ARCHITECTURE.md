@@ -562,7 +562,7 @@ src/cfgpu_mcp/
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
 │   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）
 │   ├── cfdream_h3.py           MiniMax H3（provider: comfy，自建 comfy-gateway）：t2v/i2v/flf2v 与 r2v 两套权重各一个类，互斥的素材槽位在 supports() 里判，使 auto 能在两者间路由
-│   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu-daily，测试期）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立
+│   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu-daily，测试期）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立；id 键名同理三种拼法一起读（`task_id` / CFGPU 实际应答的 `taskId` / 信封内的 `id`，见 _TASK_ID_KEYS）
 │   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3、minimax_h3 触发注册
 │
 ├── models/

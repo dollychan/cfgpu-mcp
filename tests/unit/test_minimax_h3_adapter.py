@@ -126,6 +126,30 @@ def test_nested_create_response_yields_task_id_too(adapter):
     assert adapter.extract_task_id({"task": {"id": 424010985738629}}) == "424010985738629"
 
 
+def test_camel_case_create_response_yields_task_id(adapter):
+    """The shape CFGPU actually answers create with — verbatim from cfgpu-daily.
+
+    card.md documents MiniMax's own ``{"task_id": ...}``, but the request never
+    reaches MiniMax unproxied: CFGPU's shared task layer re-spells it as
+    ``taskId``. Reading only the documented form made every submission report
+    "未能解析出 task_id" *after* the job was accepted and billed upstream.
+    """
+    assert adapter.extract_task_id({"taskId": "2da001349565486282c188aeef2a9dc7"}) == (
+        "2da001349565486282c188aeef2a9dc7"
+    )
+
+
+def test_camel_case_poll_envelope_still_reads(adapter):
+    """The same layer's poll answer, verbatim: camelCase timestamps, ``id`` inside."""
+    resp = {"task": {
+        "createdAt": 1788324409, "updatedAt": 1788324409,
+        "model": "MiniMax-H3", "id": "2da001349565486282c188aeef2a9dc7",
+        "status": "pending",
+    }}
+    assert adapter.extract_task_id(resp) == "2da001349565486282c188aeef2a9dc7"
+    assert adapter.extract_status(resp) == "pending"
+
+
 def test_flat_poll_response_is_parsed(adapter):
     """Same tolerance on the way out: an unwrapped task still yields the URL."""
     result = adapter.parse_response(

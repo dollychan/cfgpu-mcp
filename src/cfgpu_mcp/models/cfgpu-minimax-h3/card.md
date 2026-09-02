@@ -108,13 +108,20 @@ HEIC/HEIF，单文件 ≤ 30 MB，边长 [256, 5760] px，宽高比 [0.4, 2.5]�
 
 ## 响应结构
 
-创建响应是**平铺**的，只有一个 `task_id`：
+创建响应是**平铺**的，只有一个 id 字段——但键名取决于谁在应答。MiniMax 自己的 API
+写作 `task_id`；经 CFGPU 转发后实际拿到的是 **`taskId`**（2026-09-02 在 cfgpu-daily
+上实测）：
 
 ```json
-{"task_id": "task_01K2..."}
+{"taskId": "2da001349565486282c188aeef2a9dc7"}
 ```
 
-查询响应把一切套在 `task` 下：
+`MinimaxH3Adapter._TASK_ID_KEYS` 三种拼法一起读（`task_id` / `taskId` / `id`），理由和
+下面 `_task()` 兼容两种信封相同：这层拼写归转发方所有、不由本模型决定，而读漏一次
+的代价是任务已提交并计费、却报「未能解析出 task_id」并从此无法轮询。
+
+查询响应把一切套在 `task` 下（同一层的时间戳也是 camelCase：`createdAt` /
+`updatedAt`，本适配器不读这两个字段）：
 
 ```json
 {"task":{"id":"424010985738629","task_type":"generation","status":"succeeded","model":"MiniMax-H3","created_at":1785125529,"updated_at":1785125946,"content":{"url":"https://your-cdn.example.com/h3-generated-2k-output.mp4"},"resolution":"2K","duration":5,"ratio":"16:9","modality":"video","usage":{"total_seconds":5,"input_seconds":0,"output_seconds":5,"input_image_count":0}}}

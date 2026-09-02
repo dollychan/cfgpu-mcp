@@ -138,10 +138,25 @@ class MinimaxH3Adapter(ModelAdapter):
         task = resp.get("task")
         return task if isinstance(task, dict) else resp
 
+    #: Every spelling of the id key seen on this route, most specific first.
+    #:
+    #: ``task_id`` is what MiniMax's own API returns and what card.md documents;
+    #: ``taskId`` is what CFGPU's task layer actually answers create with
+    #: (observed on cfgpu-daily 2026-09-02: ``{"taskId": "2da0013495..."}``);
+    #: ``id`` is what the same layer uses inside the poll envelope. They are read
+    #: together for the reason ``_task`` tolerates two envelopes: the proxy owns
+    #: this spelling, not the model, and missing it costs a task that submits,
+    #: bills, and can never be polled back — while the caller is told the
+    #: submission failed.
+    _TASK_ID_KEYS = ("task_id", "taskId", "id")
+
     def extract_task_id(self, resp: dict) -> str | None:
         task = self._task(resp)
-        value = task.get("task_id") or task.get("id")
-        return str(value) if value is not None else None
+        for key in self._TASK_ID_KEYS:
+            value = task.get(key)
+            if value is not None and str(value):
+                return str(value)
+        return None
 
     def extract_status(self, resp: dict) -> str:
         status = str(self._task(resp).get("status", "running")).lower()
