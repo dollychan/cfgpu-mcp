@@ -829,7 +829,7 @@ done
 
 > **`artifact` 标记（仅 Mode A / MCP 工具）**：`generate_image`、`generate_video`、`generate_audio`、`task_status`、`task_wait` 这五个 MCP 工具，当返回结果包含已生成的媒体（非空 `urls` **或** 非空 `inline_media`）时，会在结果顶层追加 `"artifact": true`，便于客户端快速识别"本次结果含可渲染产物"。这些工具成功时都返回同一套扁平结构，无产物的结果（如 `wait=False` 的 pending 响应、轮询中的 running 状态、错误 dict）不带此字段。两种产物形态同权：MiniMax 语音只有 `inline_media`、没有 URL，同样是一次成功的生成。
 >
-> **`inline_media` 走 structuredContent（仅 Mode A / MCP 工具）**：`generate_audio` / `task_status` / `task_wait` 的返回被拆成 LLM 可见的 `content` 与客户端可见的 `structuredContent`，`inline_media`（连同 `usage` / `payload`）只出现在后者 —— base64 音频数据对模型毫无用处，进上下文只会挤爆窗口。客户端从 `structuredContent.inline_media` 取数据落盘；模型那边靠 `content` 里的 `artifact: true` + `status` 就知道生成已完成。Mode B / B2 / B3 / CLI 直连 service 层，不做拆分，`inline_media` 就在结果顶层。
+> **`inline_media` 走 structuredContent（仅 Mode A / MCP 工具）**：`generate_audio` / `task_status` / `task_wait` 的返回被拆成 LLM 可见的 `content` 与客户端可见的 `structuredContent`，`inline_media`（连同 `usage` / `payload`）只出现在后者 —— base64 音频数据对模型毫无用处，进上下文只会挤爆窗口。客户端从 `structuredContent.inline_media` 取数据落盘；模型那边靠 `content` 里的 `artifact: true` + `status: "succeeded"` + `note` 就知道生成已完成。Mode B / B2 / B3 / CLI 直连 service 层，不做拆分，`inline_media` 就在结果顶层。
 
 > **`request_id`（调用方关联标识，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `request_id` 入参，服务端会将其**原样回显**在本次即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact / error 上（有值才出现，不传则响应结构完全不变）。用途——异步流程里 generate 与稍后返回 artifact 的 `task_status` / `task_wait` 分属**不同的 tool_call**，而 `task_id` 要等 POST 返回才有、同步模型更是没有 `task_id`；`request_id` 由调用方在**发起时**自选，从而在整条链路上提供一个稳定、可直接对应的关联键，用来把异步结果 / 失败 join 回原始请求。它只作关联用途，绝不进入上游 API 请求体（`payload` 中不出现）。此回显在 service 层完成，故 MCP、Agent dispatcher、CLI 三种模式一致生效。仅可能异步的 `generate_*` 支持；`understand_vision` 恒同步、单次返回，无关联缺口，故不设此参数。
 
@@ -870,7 +870,9 @@ done
   "urls": ["https://cdn.cfgpu.com/..."],
   "expires_at": "2026-05-13T10:00:00Z",
   "payload": {"model": "seedream-v3", "prompt": "...", "size": "2K", "..." : "..."},
-  "artifact": true
+  "artifact": true,
+  "status": "succeeded",
+  "note": "Success. URLs already generated; no further task_status/task_wait polling needed."
 }
 ```
 
@@ -920,6 +922,43 @@ done
 
 任务**失败**时，`task_status` 与 `task_wait` 都返回下方「错误」一节描述的标准 error dict（`error_type: "task_failed"`，并带 `model_id`），两者形状完全一致——不再有 `task_status` 独有的 `{status: "failed", error: "..."}` 信封。
 
+### 怎么判断「这个请求结束了没有」
+
+`generate_*` / `task_status` / `task_wait` 三类工具返回**同一套形状**。按这个顺序判，一次判完：
+
+```
+1. result["error"] is True        → 结束了（失败，或请求压根没成立）
+2. result["artifact"] is True     → 结束了（成功，urls / inline_media 就在结果里）
+3. 否则                            → 没结束，用 result["task_id"] 继续 task_status
+```
+
+**`status` 是机器枚举**，取值 `succeeded` / `running` / `pending`（`failed` 走 error 通道，等不到）。给人和模型读的那句话在 `note` 里，不要拿它做控制流。
+
+**`error: true` 一定意味着「这条线到此为止」**：任务还活着的情况绝不会走 error 通道。`generate_*(wait=true)` 等待超时、连续轮询失败放弃、轮询中撞上 token 失效——这三种任务都还在上游跑，返回的都是未终态信封而不是错误：
+
+```json
+{
+  "task_id": "task-abc123",
+  "status": "running",
+  "last_error": {
+    "error_type": "auth",
+    "message": "API Token 无效或已过期，请检查 CFGPU_API_TOKEN。",
+    "retryable": false,
+    "consecutive_failures": 5,
+    "elapsed": 187
+  }
+}
+```
+
+**`last_error` 回答的是「为什么这次没等到结果」，不是「任务怎么了」。** 它出现与否本身就是信号：
+
+- **没有它** = 服务端一路正常观察到最后，任务确实在跑，只是还没做完。继续 `task_status` 即可。
+- **有它** = 服务端有一段时间没看见这个任务了，`status: "running"` 只代表**未观测到终态**。先看 `last_error.error_type`：`auth` 要先修凭据再轮询（不修的话继续轮也是白轮，`retryable` 会是 `false`）；`timeout` / `unknown` 直接再调 `task_status`。
+
+这里的 `retryable` 只回答**「再调一次 `task_status` 有没有希望」**，与顶层 error dict 里那个「重发整个请求安不安全」是两回事。
+
+> 两个不在这套契约里的例外：`validate_only` 预检返回 `{validated, model_used, …}`，三个键一个都没有，判据是 `"validated" in result`；`understand_vision` 返回文本，没有 `artifact` / `task_id`，恒同步，终态判据只有「没有 `error`」。
+
 ### 错误
 
 **Mode A（MCP）和 Mode B（Agent SDK）**：工具层捕获所有错误，返回结构化 dict，确保 LLM 能读取错误原因：
@@ -938,11 +977,13 @@ done
 
 `error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
 
-> **异步任务失败时，先看有没有 `task_id`。** 有的话任务多半仍在上游跑，用 `task_status` / `task_wait` 拿同一个 id 再查一次即可，**不要重新提交**——那是再烧一次 GPU。`wait=true` 的调用在放弃等待时一定会带回 `task_id`（无论是轮询超时，还是连续多次查询失败后放弃），这是这类调用唯一的补救入口。
+> **任务还活着时不会走这个通道。** 等待超时、连续轮询失败放弃、轮询中 token 失效——这三种都返回上一节的未终态信封（带 `task_id`，可能带 `last_error`），不是错误。所以拿到 error dict 就可以认定这条线已经结束，不必再去反推。
 >
 > 单次轮询请求打不通不会立刻判失败：可重试的错误会被吸收，连续 5 次才放弃。真正的上限是该模型的轮询超时（`poll_config.default_timeout`，H3 是 1500s），与单次 HTTP 超时（`http_timeout`）是两回事。
 >
-> **`timeout` 分两种，`original.phase` 说明是哪一种，别改错配置项。** `phase: "request"` 是连上了但上游没在 `http_timeout` 内答完；`phase: "connect"` 是 DNS / TCP / TLS 没在 `connect_timeout` 内完成，**上游根本没收到请求** —— 这几乎总是部署机器到该上游的网络不通（内网环境、出口策略、DNS），把 `http_timeout` 调大不会有任何作用。两种都带 `original.elapsed`（实测耗时，不是配置值），拿它和两个配置值一比即可确认。
+> **`timeout` 分两种，顶层 `phase` 说明是哪一种，别改错配置项。** `phase: "request"` 是连上了但上游没在 `http_timeout` 内答完；`phase: "connect"` 是 DNS / TCP / TLS 没在 `connect_timeout` 内完成，**上游根本没收到请求** —— 这几乎总是部署机器到该上游的网络不通（内网环境、出口策略、DNS），把 `http_timeout` 调大不会有任何作用。两种都带 `original.elapsed`（实测耗时，不是配置值），拿它和两个配置值一比即可确认。
+>
+> **`outcome_unknown: true` 是唯一一种「不知道成没成」的结果，别盲目重发。** 只出现在**提交请求**（POST）的 `phase: "request"` 超时上：请求已经发出、回应没等到，上游可能已经受理并开始计费，而服务端既没拿到 `task_id` 也没落库，**无法从本服务确认**。这种情况 `retryable` 是 `false`——不是说重发一定失败，而是说重发有重复计费的风险，请先到上游侧确认。相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
 
 **Mode B service 层直接调用**：service 函数抛出 `CFGPUError`，需自行捕获：
 
@@ -954,7 +995,8 @@ try:
 except CFGPUError as e:
     print(e.error_type)    # "auth" | "invalid_params" | ...
     print(e.user_message)  # 人类可读的错误描述
-    print(e.retryable)     # True 表示可重试
+    print(e.retryable)     # True 表示重发这个请求是安全的
+    print(e.outcome_unknown)  # True 表示上游可能已受理并计费，无法确认，勿盲目重发
     print(e.original)      # 原始 HTTP 响应体
 ```
 

@@ -63,11 +63,23 @@ def test_original_preserved():
     assert err.original == body
 
 
-def test_timeout_factory():
-    err = CFGPUError.timeout("task-123", 300)
-    assert err.error_type == "timeout"
-    assert err.retryable is False
-    assert "task-123" in err.user_message
+def test_a_live_task_can_no_longer_be_expressed_as_an_error():
+    """★ The ``CFGPUError.timeout(task_id, elapsed)`` constructor is gone on purpose.
+
+    It existed for "the wait ran out but the task is alive", which is not a failure of
+    anything: the task was created, it is running, and the caller's next move is the
+    same ``task_status(task_id)`` it would make after ``wait=False``. Reporting it as
+    ``error: True`` is what forced every caller to reconstruct "is this over?" from
+    ``error_type`` x ``task_id`` — see ``TaskManager.wait`` / ``WaitOutcome``, which
+    returns the task instead. Pinned as an absence so nothing reaches for it again.
+    """
+    assert not hasattr(CFGPUError, "timeout")
+
+
+def test_outcome_unknown_is_absent_unless_explicitly_set():
+    """It is a claim about billing, so it must never appear by default."""
+    d = CFGPUError(error_type="task_failed", user_message="x").to_tool_result_dict()
+    assert "outcome_unknown" not in d
 
 
 # ── card.md hint in to_tool_result_dict ──────────────────────────────────────

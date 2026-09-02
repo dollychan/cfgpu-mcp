@@ -921,12 +921,49 @@ class NormalizedResult:
 
 # ── Artifact flagging ────────────────────────────────────────────────────────
 
-_ARTIFACT_DONE_STATUS = "Success. URLs already generated; no further task_status/task_wait polling needed."
-_ARTIFACT_PARTIAL_STATUS = (
+#: ``status`` is a machine enum and nothing else. Only three of these can appear in a
+#: tool result: a *failed* task leaves as an error dict (see ``_raise_if_failed``), so
+#: ``"failed"`` is a member callers must never wait for.
+TASK_STATUS_VALUES = ("succeeded", "running", "pending", "failed")
+
+#: The human-readable half, which used to occupy ``status`` itself. It has a real job —
+#: hosts that rewrite ``urls`` out of the LLM-facing content (DeerFlow's
+#: MaterialsMiddleware) leave the model with no in-content evidence that generation
+#: finished, and without this it keeps polling a task that is already done. But sharing
+#: a key with the enum made ``status`` answer to two types at once: ``status ==
+#: "succeeded"`` — the obvious test — was permanently false, while the only tests that
+#: worked parsed English prose for control flow. So the sentence moved to ``note`` and
+#: ``status`` got its key back.
+_ARTIFACT_DONE_NOTE = "Success. URLs already generated; no further task_status/task_wait polling needed."
+_ARTIFACT_PARTIAL_NOTE = (
     "Partial success. The URLs listed are already generated (no further "
     "task_status/task_wait polling needed), but some requested images failed — see "
     "partial_errors for which and why. Re-running is the only way to obtain them."
 )
+
+
+def pending_result(
+    task_id: str,
+    status: str,
+    last_error: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """The non-terminal envelope: a task exists, no artifact yet, no error.
+
+    The single shape for "not done" across ``generate_*(wait=False)``,
+    ``generate_*(wait=True)`` that ran out of budget, ``task_status`` and
+    ``task_wait`` — so a caller distinguishes states by two booleans and one enum
+    (``error`` -> ``artifact`` -> ``status``) rather than by which tool it called.
+
+    ``last_error`` is present only when we stopped watching for a reason (see
+    ``TaskManager.wait``); its absence means polling was healthy and the job is
+    simply not finished. It stays in ``content`` rather than ``structuredContent``
+    because it is something the model must act on — fix a credential, stop polling,
+    tell the user — not host-only bookkeeping like ``usage`` / ``payload``.
+    """
+    out: dict[str, Any] = {"task_id": task_id, "status": status}
+    if last_error:
+        out["last_error"] = last_error
+    return out
 
 
 def annotate_artifact(result: Any) -> Any:
@@ -947,16 +984,20 @@ def annotate_artifact(result: Any) -> Any:
         return result
     if result.get("urls") or result.get("inline_media"):
         result["artifact"] = True
+        result["status"] = "succeeded"
         # A bare "Success." over a group where half the images were blocked reads as the
         # summary and would be believed; the model needs the qualifier next to the count.
-        result["status"] = (
-            _ARTIFACT_PARTIAL_STATUS if result.get("partial_errors") else _ARTIFACT_DONE_STATUS
+        # Note this stays a *note*, not a status: a partial group is still terminal, and
+        # spelling it as a third status value invited exactly the re-poll it warns against.
+        result["note"] = (
+            _ARTIFACT_PARTIAL_NOTE if result.get("partial_errors") else _ARTIFACT_DONE_NOTE
         )
     else:
         nested = result.get("result")
-        if isinstance(nested, dict) and nested.get("urls"):
+        if isinstance(nested, dict) and (nested.get("urls") or nested.get("inline_media")):
             result["artifact"] = True
-            result["status"] = _ARTIFACT_DONE_STATUS
+            result["status"] = "succeeded"
+            result["note"] = _ARTIFACT_DONE_NOTE
     return result
 
 

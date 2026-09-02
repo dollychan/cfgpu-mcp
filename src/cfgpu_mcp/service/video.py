@@ -4,7 +4,7 @@ from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.task_manager import _ETA_KEY, Task
-from cfgpu_mcp.tool_registry import GenerateVideoInput, lean_result, stamp_echo
+from cfgpu_mcp.tool_registry import GenerateVideoInput, lean_result, pending_result, stamp_echo
 
 
 def _handle(task: "Task", *, forced: bool) -> dict[str, Any]:
@@ -125,14 +125,20 @@ async def generate_video(
         )
 
     try:
-        task = await tm.wait(task, adapter, req, timeout=timeout)
+        task, last_error = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
         e.model_id = adapter.model_name
         e.request_id = request_id
         raise
 
+    # Same envelope as the wait=False receipt: a wait that ran out of budget, or that
+    # lost sight of the task, is still just "not done yet". ``next_step`` is repeated
+    # here for the same reason it exists there — this is now the shape a timed-out
+    # wait returns, and a caller that walks away leaves a paid-for video uncollected.
     if task.result is None:
-        return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption, label=label)
+        pending = pending_result(task.id, task.status, last_error)
+        pending["next_step"] = f"用 task_status('{task.id}') 查询进度与结果"
+        return stamp_echo(pending, request_id=request_id, caption=caption, label=label)
 
     result = task.result
     # The real per-model API request is always surfaced, regardless of return_metadata.

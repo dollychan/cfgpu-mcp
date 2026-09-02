@@ -61,15 +61,21 @@ def _patch_config(db, client, adapter):
 
 @pytest.mark.asyncio
 async def test_get_status_sync_model_skips_repoll():
+    from cfgpu_mcp.errors import CFGPUError
+
     db = await _db_with_succeeded_task("doubao-seedream-5-0-lite")
     client = MagicMock()
     client.get = AsyncMock()  # poll would call this
     p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=False))
     with p_db, p_client, p_reg:
-        result = await task_service.get_status("task-1")
-    # Sync model: no poll attempted, stale result returned without raising
+        with pytest.raises(CFGPUError) as exc:
+            await task_service.get_status("task-1")
+    # The invariant under test: a sync model is never re-polled.
     client.get.assert_not_called()
-    assert result["status"] == "succeeded"
+    # And the row itself (succeeded, no artifact) converges to a terminal failure rather
+    # than being handed back as `status: "succeeded"` with nothing in it — that shape
+    # reads as "not done yet" under the result contract, i.e. poll a terminal row forever.
+    assert exc.value.error_type == "task_failed"
     await db.close()
 
 
@@ -97,16 +103,25 @@ async def test_get_status_failed_task_raises_standard_error():
 async def test_get_status_succeeded_async_task_is_terminal():
     """A task already persisted as 'succeeded' is terminal: get_status does NOT
     re-poll upstream (poll() converges a urls-less success to 'failed' at write
-    time, so a stale succeeded record is never re-fetched on every read)."""
+    time, so a stale succeeded record is never re-fetched on every read).
+
+    Being terminal, it must also *present* as terminal. A succeeded row with no
+    artifact used to fall through to the non-terminal envelope, which the result
+    contract reads as "poll again" — an instruction that can never be satisfied for a
+    row nothing will ever re-poll.
+    """
+    from cfgpu_mcp.errors import CFGPUError
+
     db = await _db_with_succeeded_task("wan-2-0")
     client = MagicMock()
     client.get = AsyncMock(return_value={"status": "succeeded", "output": {}})
     adapter = _adapter(is_async=True)
     p_db, p_client, p_reg = _patch_config(db, client, adapter)
     with p_db, p_client, p_reg:
-        result = await task_service.get_status("task-1")
+        with pytest.raises(CFGPUError) as exc:
+            await task_service.get_status("task-1")
     client.get.assert_not_called()           # terminal: no upstream poll
-    assert result["status"] == "succeeded"
+    assert exc.value.error_type == "task_failed"
     await db.close()
 
 

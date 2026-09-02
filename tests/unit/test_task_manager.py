@@ -372,15 +372,25 @@ async def test_wait_sync_model_returns_immediately():
         return await original_poll(t, a)
     tm.poll = patched_poll  # type: ignore
 
-    result = await tm.wait(task, adapter, req)
+    outcome = await tm.wait(task, adapter, req)
     assert not poll_called
-    assert result.status == "succeeded"
+    assert outcome.task.status == "succeeded"
+    assert outcome.last_error is None
     await db.close()
 
 
 @pytest.mark.asyncio
-async def test_wait_times_out_and_raises():
-    from cfgpu_mcp.errors import CFGPUError
+async def test_wait_that_runs_out_of_budget_is_not_an_error():
+    """★ Running out of patience is a fact about the wait, not about the task.
+
+    The task was created and is running; the caller's next move is the same
+    ``task_status(task_id)`` it would make after ``wait=False``, so the result is the
+    same non-terminal envelope. Reporting ``error: True`` over a healthy job is what
+    made "is this over?" un-answerable from any single field.
+
+    ``last_error`` is absent here specifically: polling never failed, so "running"
+    means we watched it run. Its absence is the difference from the give-up paths.
+    """
     tm, db = await _make_tm()
     adapter = _async_adapter()
     tm._client_for(None).post = AsyncMock(return_value={"id": "task-timeout"})
@@ -390,9 +400,11 @@ async def test_wait_times_out_and_raises():
     tm._client_for(None).get = AsyncMock(return_value={"id": "task-timeout", "status": "running"})
     adapter.parse_response.return_value = None
 
-    with pytest.raises(CFGPUError) as exc_info:
-        await tm.wait(task, adapter, req, timeout=0)
-    assert exc_info.value.error_type == "timeout"
+    outcome = await tm.wait(task, adapter, req, timeout=0)
+
+    assert outcome.task.id == "task-timeout"
+    assert outcome.task.status in ("pending", "running")
+    assert outcome.last_error is None
     await db.close()
 
 
@@ -418,11 +430,10 @@ async def test_wait_is_clamped_to_the_hard_ceiling():
     # clock (time.monotonic is the event loop's own, patching it globally breaks
     # asyncio). Unclamped, min() would keep 99999 and this would poll forever.
     with patch("cfgpu_mcp.task_manager.MAX_WAIT_SECONDS", 0):
-        with pytest.raises(CFGPUError) as exc:
-            await tm.wait(task, adapter, req, timeout=99999)
+        outcome = await tm.wait(task, adapter, req, timeout=99999)
 
-    assert exc.value.error_type == "timeout"
-    assert exc.value.original["task_id"] == "task-clamp"   # the handle always survives
+    assert outcome.task.id == "task-clamp"   # the handle always survives
+    assert outcome.task.status != "succeeded"
     await db.close()
 
 
@@ -440,10 +451,9 @@ async def test_adapter_default_timeout_is_clamped_too():
     tm._client_for(None).get = AsyncMock(return_value={"id": "task-clamp-2", "status": "running"})
 
     with patch("cfgpu_mcp.task_manager.MAX_WAIT_SECONDS", 0):
-        with pytest.raises(CFGPUError) as exc:
-            await tm.wait(task, adapter, req)
+        outcome = await tm.wait(task, adapter, req)
 
-    assert exc.value.error_type == "timeout"
+    assert outcome.task.id == "task-clamp-2"
     await db.close()
 
 
@@ -487,29 +497,40 @@ async def test_wait_survives_a_transient_poll_failure():
         model_used="wan-video", seed=None, usage=None,
     )
 
-    result = await tm.wait(task, adapter, req)
+    outcome = await tm.wait(task, adapter, req)
 
-    assert result.status == "succeeded"
-    assert result.result["urls"] == ["https://cdn/v.mp4"]
+    assert outcome.task.status == "succeeded"
+    assert outcome.task.result["urls"] == ["https://cdn/v.mp4"]
+    # Absorbed, not merely survived: a transient blip that the poll recovered from is
+    # not something the caller has to hear about on a successful result.
+    assert outcome.last_error is None
     await db.close()
 
 
 @pytest.mark.asyncio
 async def test_wait_gives_up_after_repeated_failures_but_hands_back_the_task_id():
-    """A dead upstream must not hold the caller for the full poll timeout —
-    but whatever we raise has to carry the task_id, or the artifact is unreachable."""
+    """A dead upstream must not hold the caller for the full poll timeout — and the
+    task_id has to survive, or the artifact it is still producing is unreachable.
+
+    Giving up on *watching* is not the task failing, so this returns rather than
+    raising. ``last_error`` is what distinguishes this "running" from an observed one:
+    it says we lost sight of the job, and why.
+    """
     from cfgpu_mcp.task_manager import MAX_CONSECUTIVE_POLL_FAILURES
 
     tm, db, adapter, req, task = await _waiting_tm(
         [_transient() for _ in range(MAX_CONSECUTIVE_POLL_FAILURES + 3)]
     )
 
-    with pytest.raises(CFGPUError) as exc:
-        await tm.wait(task, adapter, req)
+    outcome = await tm.wait(task, adapter, req)
 
     assert tm._client_for(None).get.await_count == MAX_CONSECUTIVE_POLL_FAILURES
-    assert exc.value.to_tool_result_dict()["task_id"] == "task-1"
-    assert "task_status" in exc.value.user_message
+    assert outcome.task.id == "task-1"
+    assert outcome.last_error["error_type"] == "timeout"
+    assert outcome.last_error["consecutive_failures"] == MAX_CONSECUTIVE_POLL_FAILURES
+    # Carries the type, not just prose: `auth` and `timeout` need opposite next moves,
+    # and deciding between them must not require parsing a sentence.
+    assert outcome.last_error["retryable"] is True
     await db.close()
 
 
@@ -533,26 +554,32 @@ async def test_a_run_of_failures_resets_once_a_poll_gets_through():
         model_used="wan-video", seed=None, usage=None,
     )
 
-    result = await tm.wait(task, adapter, req)
+    outcome = await tm.wait(task, adapter, req)
 
-    assert result.status == "succeeded"
+    assert outcome.task.status == "succeeded"
     await db.close()
 
 
 @pytest.mark.asyncio
-async def test_wait_still_aborts_at_once_on_a_non_retryable_poll_error():
-    """A bad token or an unknown task will not fix itself by asking again."""
+async def test_wait_stops_at_once_on_a_non_retryable_poll_error_but_keeps_the_task():
+    """A bad token will not fix itself by asking again — but it also did not stop the
+    job, which keeps running upstream on someone else's GPU.
+
+    So this stops watching without claiming the task failed. The credential problem
+    rides ``last_error`` with its ``error_type`` intact, because that is what tells the
+    caller to fix the token *before* polling rather than simply polling again.
+    """
     tm, db, adapter, req, task = await _waiting_tm(
         CFGPUError(error_type="auth", user_message="token 无效", retryable=False)
     )
 
-    with pytest.raises(CFGPUError) as exc:
-        await tm.wait(task, adapter, req)
+    outcome = await tm.wait(task, adapter, req)
 
-    assert exc.value.error_type == "auth"
     assert tm._client_for(None).get.await_count == 1
-    # Still resumable: the caller needs the id even on the paths that abort.
-    assert exc.value.to_tool_result_dict()["task_id"] == "task-1"
+    # Still resumable: the caller needs the id even on the paths that stop early.
+    assert outcome.task.id == "task-1"
+    assert outcome.last_error["error_type"] == "auth"
+    assert outcome.last_error["retryable"] is False
     await db.close()
 
 

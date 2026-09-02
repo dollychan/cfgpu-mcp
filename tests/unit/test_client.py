@@ -32,15 +32,57 @@ def test_timeout_overridable_via_constructor():
 
 
 @pytest.mark.asyncio
-async def test_request_timeout_maps_to_cfgpu_error():
+async def test_submit_timeout_is_not_retryable_and_says_the_outcome_is_unknown():
+    """★ A POST whose response never came back may already have been accepted and billed.
+
+    ``TaskManager.create`` POSTs *before* ``insert_task``, so there is no returned
+    task_id and no local row — the work, if it exists, is unreachable and unnameable.
+    ``retryable=True`` here told the agent that resending was safe; it is a coin flip on
+    a double charge. This is the one error in the system that can answer neither "it
+    took effect" nor "it did not", which is what ``outcome_unknown`` is for.
+    """
     client = _client()
     session = MagicMock()
     session.request.side_effect = asyncio.TimeoutError()
     with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
         with pytest.raises(CFGPUError) as exc_info:
             await client.post("/v1/images/generations", {"prompt": "x"})
-    assert exc_info.value.error_type == "timeout"
+    err = exc_info.value
+    assert err.error_type == "timeout"
+    assert err.retryable is False
+    assert err.outcome_unknown is True
+    assert err.to_tool_result_dict()["outcome_unknown"] is True
+    assert err.to_tool_result_dict()["phase"] == "request"
+
+
+@pytest.mark.asyncio
+async def test_poll_timeout_stays_retryable():
+    """A GET creates nothing, so asking again is free — the reason the same wall-clock
+    failure is safe on a poll and not on a submit is the verb, not the timeout."""
+    client = _client()
+    session = MagicMock()
+    session.request.side_effect = asyncio.TimeoutError()
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        with pytest.raises(CFGPUError) as exc_info:
+            await client.get("/v1/tasks/task-1")
     assert exc_info.value.retryable is True
+    assert exc_info.value.outcome_unknown is False
+
+
+@pytest.mark.asyncio
+async def test_connect_phase_timeout_is_retryable_even_on_a_submit():
+    """DNS/TCP/TLS never completed, so the upstream received nothing whatever the verb.
+    Provably nothing to double-charge — this one is safe to resend."""
+    client = _client()
+    session = MagicMock()
+    session.request.side_effect = aiohttp.ConnectionTimeoutError()
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        with pytest.raises(CFGPUError) as exc_info:
+            await client.post("/v1/images/generations", {"prompt": "x"})
+    err = exc_info.value
+    assert err.retryable is True
+    assert err.outcome_unknown is False
+    assert err.to_tool_result_dict()["phase"] == "connect"
 
 
 class _FakeResp:

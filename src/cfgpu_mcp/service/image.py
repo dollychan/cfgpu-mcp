@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.tool_registry import GenerateImageInput, RegionSpec, lean_result, stamp_echo
+from cfgpu_mcp.tool_registry import GenerateImageInput, RegionSpec, lean_result, pending_result, stamp_echo
 
 
 async def generate_image(
@@ -81,17 +81,22 @@ async def generate_image(
         raise
 
     if not wait:
-        return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption, label=label)
+        return stamp_echo(pending_result(task.id, task.status), request_id=request_id, caption=caption, label=label)
 
     try:
-        task = await tm.wait(task, adapter, req, timeout=timeout)
+        task, last_error = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
         e.model_id = adapter.model_name
         e.request_id = request_id
         raise
 
+    # Same envelope as wait=False: a wait that ran out of budget, or that lost sight
+    # of the task, is still just "not done yet" — the caller's next move is identical.
     if task.result is None:
-        return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption, label=label)
+        return stamp_echo(
+            pending_result(task.id, task.status, last_error),
+            request_id=request_id, caption=caption, label=label,
+        )
 
     result = task.result
     # The real per-model API request is always surfaced, regardless of return_metadata.

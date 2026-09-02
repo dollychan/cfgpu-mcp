@@ -54,7 +54,7 @@ def register(mcp: FastMCP) -> None:
                 caption=caption,
                 label=label,
                 validate_only=validate_only,
-            )), structured_keys=("usage", "payload"))
+            )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
             return tool_error_dict(e)
 
@@ -116,7 +116,7 @@ def register(mcp: FastMCP) -> None:
                 caption=caption,
                 label=label,
                 validate_only=validate_only,
-            )), structured_keys=("usage", "payload"))
+            )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
             return tool_error_dict(e)
 

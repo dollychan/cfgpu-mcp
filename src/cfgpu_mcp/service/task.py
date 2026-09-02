@@ -5,12 +5,12 @@ from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.task_manager import _CAPTION_KEY, _LABEL_KEY, _REQUEST_ID_KEY
-from cfgpu_mcp.tool_registry import stamp_echo
+from cfgpu_mcp.tool_registry import pending_result, stamp_echo
 
 logger = logging.getLogger(__name__)
 
 
-def _present(task: Any) -> dict[str, Any]:
+def _present(task: Any, last_error: dict[str, Any] | None = None) -> dict[str, Any]:
     """Shape a Task into a tool result consistent with ``generate_*``.
 
     On success the flat ``NormalizedResult`` dict (urls/expires_at/metadata at
@@ -25,7 +25,14 @@ def _present(task: Any) -> dict[str, Any]:
     stashing them: they are supplied on ``generate_*`` but the artifact only exists here,
     one tool call later.
     Failed tasks are surfaced by raising ``CFGPUError`` — see ``_raise_if_failed`` — so
-    the error shape matches ``task_wait`` and the ``generate_*`` tools exactly.
+    the error shape matches ``task_wait`` and the ``generate_*`` tools exactly. Note the
+    asymmetry is deliberate and only looks lopsided: *failed* is terminal and carries a
+    remedy (error_type / retryable / card_hint), while *still running* is not a failure
+    at all, so only the first belongs in the error channel.
+
+    ``last_error`` is passed only by ``wait_for_task``, and only when the wait stopped
+    early for a reason (see ``TaskManager.wait``). ``get_status`` never sets it: a single
+    re-poll that fails there already falls back to the stale record on purpose.
 
     "Has an artifact" is ``urls`` **or** ``inline_media``, matching
     ``annotate_artifact`` and ``TaskManager.poll``'s success guard: a synchronous model
@@ -40,17 +47,48 @@ def _present(task: Any) -> dict[str, Any]:
     result = task.result or {}
     if task.status == "succeeded" and (result.get("urls") or result.get("inline_media")):
         return stamp_echo({**task.result, "payload": task.public_payload()}, request_id=request_id, caption=caption, label=label)
-    return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption, label=label)
+    return stamp_echo(
+        pending_result(task.id, task.status, last_error),
+        request_id=request_id, caption=caption, label=label,
+    )
+
+
+class _AsFailed:
+    """A read-only view of a task, presented as failed. Nothing is written back — the
+    stored row is left exactly as upstream reported it, so the discrepancy stays
+    diagnosable instead of being papered over by the read path."""
+
+    def __init__(self, task: Any, error: str) -> None:
+        self._task = task
+        self.status = "failed"
+        self.error = error
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._task, name)
 
 
 def _raise_if_failed(task: Any) -> None:
-    """Raise a standard ``task_failed`` CFGPUError for a failed task.
+    """Raise a standard ``task_failed`` CFGPUError for a task that cannot deliver.
 
     Keeps the failure contract identical across ``task_status`` / ``task_wait`` /
     ``generate_*`` (all produce ``{error: True, error_type, message, retryable,
     model_id}`` via ``tool_error_dict``), instead of ``task_status`` alone
     emitting a divergent ``{status: "failed", error: "<string>"}`` envelope.
+
+    "Succeeded with no artifact" counts as failed here for the same reason it does in
+    ``TaskManager.poll``: it is terminal, and it produced nothing. Without this it fell
+    through to the non-terminal envelope carrying ``status: "succeeded"`` — a shape the
+    result contract reads as "not done yet, poll again", which for a terminal row means
+    polling forever. ``get_status`` deliberately does not re-poll a terminal row (the
+    row is malformed data, not work in flight), so the presentation layer is where this
+    has to converge. Unreachable for rows written by the current code — both
+    ``create()`` and ``poll()`` already convert it at write time — but a row predating
+    those guards is exactly the kind of thing that turns into an infinite poll loop.
     """
+    if task.status == "succeeded" and not (
+        (task.result or {}).get("urls") or (task.result or {}).get("inline_media")
+    ):
+        task = _AsFailed(task, "Task reported success but returned no artifact URLs or inline media")
     if task.status == "failed":
         from cfgpu_mcp.config import get_registry
         # Expose the agent-facing model_id (model_name), not the internal
@@ -157,9 +195,10 @@ async def wait_for_task(
         req = GenerateVideoInput(prompt="")
 
     try:
-        task = await tm.wait(task, adapter, req, timeout=timeout)
+        task, last_error = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
         e.model_id = adapter.model_name
         e.request_id = task.payload.get(_REQUEST_ID_KEY)
         raise
-    return _present(task)
+    _raise_if_failed(task)
+    return _present(task, last_error)

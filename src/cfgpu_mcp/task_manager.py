@@ -5,7 +5,7 @@ import json
 import logging
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, NamedTuple
 
 from cfgpu_mcp.client.cfgpu_client import CFGPUClient
 from cfgpu_mcp.client.repository import TaskRepository
@@ -38,7 +38,7 @@ MAX_CONSECUTIVE_POLL_FAILURES = 5
 #: ★ The bound that matters is not ours — it is the MCP client's own request timeout,
 #: which is typically 60s and never minutes. Blocking past it does not buy patience;
 #: it destroys the call: the client gives up, the session is torn down, and the
-#: ``CFGPUError.timeout`` we would have raised (task_id and all) is never delivered.
+#: non-terminal result we would have returned (task_id and all) is never delivered.
 #: The caller is then left waiting on a job it can no longer name, resume, or cancel.
 #: That is exactly what happened on 2026-08-14 — see the incident note in
 #: models/cfdream-minimax-h3/adapter.yaml.
@@ -281,6 +281,60 @@ class Task:
         }
 
 
+class WaitOutcome(NamedTuple):
+    """What ``wait()`` observed — the task, plus why it stopped watching (if it did).
+
+    ``wait()`` returns a pair rather than raising for a task that is still alive,
+    because a wait that ran out of budget is not a failure of anything: the task was
+    created, it is running, and the caller's next move (``task_status(task_id)``) is
+    identical to the one after ``wait=False``. Raising made it an ``error: True``
+    result about a healthy job, which forced every caller to reconstruct "is this
+    over?" from ``error_type`` x ``task_id``.
+
+    ``last_error`` answers a different question from the task's status: *why did we
+    stop watching*, not *what happened to the task*. It is absent on the ordinary
+    budget-exhausted path (polling worked fine, the job is simply not done) and
+    present only when we lost sight of the task. That presence is itself the signal:
+    without it, "running" means we watched it run; with it, "running" means only that
+    we never observed a terminal state — and the caller may need to fix something
+    (a dead token) before polling can succeed at all.
+    """
+
+    task: "Task"
+    last_error: dict[str, Any] | None = None
+
+
+def _last_error_dict(
+    e: CFGPUError, *, consecutive_failures: int, elapsed: int
+) -> dict[str, Any]:
+    """Demote a poll error to a diagnostic that rides a non-terminal result.
+
+    Deliberately not spelled ``error``: the top-level ``error`` key is the terminal
+    verdict, and a nested one invites both key-name probing and a plain misread.
+
+    ``error_type`` is kept rather than a bare message because it is what decides the
+    next move — ``auth`` means fix the credential before polling again, ``timeout`` /
+    ``unknown`` mean just poll again. Leaving only prose would put the caller back to
+    parsing sentences for control flow.
+
+    ``retryable`` here narrows to its one honest meaning: *is calling task_status
+    again worth anything?* It no longer doubles as "is resending the whole request
+    safe", because a live task never reaches the caller as an error at all now.
+    """
+    out: dict[str, Any] = {
+        "error_type": e.error_type,
+        "message": e.user_message,
+        "retryable": e.retryable,
+        "elapsed": elapsed,
+    }
+    if consecutive_failures:
+        out["consecutive_failures"] = consecutive_failures
+    phase = e.original.get("phase")
+    if phase:
+        out["phase"] = phase
+    return out
+
+
 def single_client(client: CFGPUClient) -> ClientResolver:
     """Adapt one client into a resolver, for single-upstream callers and tests."""
     return lambda _adapter: client
@@ -517,10 +571,20 @@ class TaskManager:
         req: "GenerateImageInput | GenerateVideoInput",
         timeout: int | None = None,
         progress_callback: ProgressCallback | None = None,
-    ) -> Task:
+    ) -> WaitOutcome:
+        """Poll until the task reaches a terminal state, the budget runs out, or we
+        lose sight of it.
+
+        Returns a ``WaitOutcome``; raises only for a task that genuinely **failed**.
+        Every path where the task is still alive — budget exhausted, upstream
+        unreachable, credential rejected mid-poll — returns the task as it stands
+        with ``last_error`` describing why we stopped, because none of those is a
+        failure of the task and all of them have the same remedy: come back with
+        ``task_status(task_id)``.
+        """
         # Synchronous model: already done
         if not adapter.is_async:
-            return task
+            return WaitOutcome(task)
 
         requested = timeout if timeout is not None else adapter.estimate_poll_timeout(req)
         # Clamped even when the caller named the number explicitly: a wait that
@@ -546,7 +610,14 @@ class TaskManager:
             elapsed = int(time.monotonic() - start)
 
             if elapsed >= effective_timeout:
-                raise CFGPUError.timeout(task.id, elapsed)
+                # Not an error: the task was created and is running, we simply
+                # stopped waiting. No last_error — polling never failed, so
+                # "running" here means we watched it run.
+                logger.info(
+                    "等待任务 %s 达到预算上限 %ds，交回调用方用 task_status 继续",
+                    task.id, effective_timeout,
+                )
+                return WaitOutcome(task)
 
             try:
                 task = await self.poll(task, adapter)
@@ -555,12 +626,22 @@ class TaskManager:
                 # upstream. Absorb the transient ones (see
                 # MAX_CONSECUTIVE_POLL_FAILURES) rather than destroying a job that
                 # is fine. Non-retryable ones (4xx: bad token, unknown task) will
-                # not fix themselves by asking again, so they still abort — but
-                # with the task_id attached, which is the caller's only way back
-                # to the artifact on a wait=True call.
+                # not fix themselves by asking again, so we stop watching — but the
+                # task keeps running either way, so we hand it back rather than
+                # reporting a failure that did not happen. The reason rides
+                # last_error, which is what tells the caller that this "running"
+                # was inferred, not observed, and may need a fix before polling
+                # can work at all.
                 e.original.setdefault("task_id", task.id)
                 if not e.retryable:
-                    raise
+                    logger.warning(
+                        "任务 %s 轮询遇到不可重试的错误，停止等待（任务仍在上游）：%s",
+                        task.id, e.user_message,
+                    )
+                    return WaitOutcome(
+                        task,
+                        _last_error_dict(e, consecutive_failures=0, elapsed=elapsed),
+                    )
                 consecutive_failures += 1
                 logger.warning(
                     "轮询任务 %s 失败（连续第 %d/%d 次，已等待 %ds）：%s",
@@ -568,16 +649,14 @@ class TaskManager:
                     elapsed, e.user_message,
                 )
                 if consecutive_failures >= MAX_CONSECUTIVE_POLL_FAILURES:
-                    raise CFGPUError(
-                        error_type=e.error_type,
-                        user_message=(
-                            f"连续 {consecutive_failures} 次查询任务状态都失败，放弃等待。"
-                            f"任务 {task.id} 很可能仍在上游运行，可用 task_status 查询。"
-                            f"最后一次的原因：{e.user_message}"
+                    return WaitOutcome(
+                        task,
+                        _last_error_dict(
+                            e,
+                            consecutive_failures=consecutive_failures,
+                            elapsed=elapsed,
                         ),
-                        original={"task_id": task.id, "elapsed": elapsed, "last_error": e.original},
-                        retryable=True,
-                    ) from e
+                    )
                 interval = min(interval * backoff, max_interval)
                 continue
             consecutive_failures = 0
@@ -598,7 +677,7 @@ class TaskManager:
                 user_message=task.error or "Task failed without error message",
                 original={"task_id": task.id},
             )
-        return task
+        return WaitOutcome(task)
 
     # ── Query ────────────────────────────────────────────────────────────────
 

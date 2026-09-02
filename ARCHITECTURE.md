@@ -450,21 +450,30 @@ while not done:
 
 **失败原因的提取（`_extract_error_message`）**：上游对「原因写在哪」毫无共识，故按形状逐个试探 —— 万相视频是顶层 `error`（成功时为 `null`，失败时是 dict 或字符串），MiniMax H3 嵌在 `task.error`，gpt-image-2 / Nano Banana 在 `data.error_msg`（如 Azure 安全系统拒绝），DashScope 形状的视频 API（HappyHorse、万相 2.6/2.7）则用 `output.code` + `output.message`（成功时两者为 `null`），两段都在时拼成 `code: message` —— code（如 `InvalidParameter.DataInspection`，即内容审核拒绝）常常是唯一说清「为什么」的一半，message 反而笼统。**顶层的 `message` 一律不读**：图片 API 即使任务失败也把它设成 `"success"`（那说的是「这次查询成功」），读了只会把失败报告成成功；`output.message` 是另一回事，它描述的是任务本身。全都取不到才回落到 `Task failed (upstream reported no error detail)` —— 这条兜底文案出现，意味着上游真的什么都没说，不是解析漏了。
 
-**轮询失败 ≠ 任务失败。** 一次 poll 打不通，只说明这条 socket 有问题；任务在上游照跑不误。所以 `wait()` 会**吸收可重试的**轮询错误（`CFGPUError.retryable`），真正的边界是**轮询超时**（`estimate_poll_timeout()`），不是第一次网络抖动：
-
-```python
-try:
-    task = await self.poll(task, adapter)
-except CFGPUError as e:
-    e.original.setdefault("task_id", task.id)    # 任何放弃路径都必须带回 task_id
-    if not e.retryable:
-        raise                                     # 4xx：token 错、任务不存在 —— 再问也不会变
-    consecutive_failures += 1                     # 连续 MAX_CONSECUTIVE_POLL_FAILURES(5) 次才放弃
-```
+**轮询失败 ≠ 任务失败。** 一次 poll 打不通，只说明这条 socket 有问题；任务在上游照跑不误。所以 `wait()` 会**吸收可重试的**轮询错误（`CFGPUError.retryable`），真正的边界是**轮询超时**（`estimate_poll_timeout()`），不是第一次网络抖动。
 
 计数是**连续**的，一次 poll 成功即清零 —— 「每隔一轮抖一下」是上游慢，不是上游没了，不该累积成放弃。
 
-之所以要这样：共置的 comfy-gateway 在上传产物时会冻住自己的事件循环（comfy-gateway PLAN.md D12），落在那个窗口里的 poll 必然超时。此前的行为是**直接判整个调用失败**——一条已经生成完的视频就此丢掉，而 `wait=True` 的调用方压根没拿到过 task_id，连补查都做不到。因此凡是放弃的路径（含非可重试的直接 `raise`），抛出的错误都被补上 `task_id`，`to_tool_result_dict()` 会把它透到结果顶层。
+之所以要这样：共置的 comfy-gateway 在上传产物时会冻住自己的事件循环（comfy-gateway PLAN.md D12），落在那个窗口里的 poll 必然超时。此前的行为是**直接判整个调用失败**——一条已经生成完的视频就此丢掉，而 `wait=True` 的调用方压根没拿到过 task_id，连补查都做不到。
+
+**这条推论走到底，就是「活着的任务永远不走 error」——`wait()` 只为真正 `failed` 的任务抛错。** 它返回 `WaitOutcome(task, last_error)`，三条任务仍然活着的退出路径都返回而不抛：
+
+| 退出路径 | `last_error` | 含义 |
+|---|---|---|
+| 等待预算耗尽 | 无 | 轮询一路正常，任务就是还没做完 |
+| 连续 `MAX_CONSECUTIVE_POLL_FAILURES` 次失败放弃 | 有 | 上游够不着，任务状态未知 |
+| 遇到不可重试的轮询错误（token 失效等） | 有 | 同上，且不会自愈 |
+
+理由是「等待超时」是**等**的属性，不是**任务**的属性：任务已创建、正在跑，调用方的下一步（`task_status(task_id)`）与 `wait=False` 完全相同，因此返回同一个信封才是诚实的。此前把它报成 `error: true`，逼得每个调用方都要用 `error_type` × `task_id` 反推「这到底结束了没有」——而 `task_failed`（带 task_id、确实终态）和 `timeout`（带 task_id、还活着）在这张真值表里长得一模一样。
+
+`last_error` 回答的是**「为什么这次没等到结果」**，不是「任务怎么了」，故：
+
+- **键名不叫 `error`**，也不带 `error: true` —— 顶层 `error` 是终态判据，嵌套一个同名键会招来按键名探测的误判。
+- **保留 `error_type` 而非只给一句 message** —— 它决定下一步动作：`auth` 要先修凭据再轮询，`timeout` / `unknown` 直接再轮询。只给字符串等于逼调用方解析文本做控制流。
+- **字段的有无本身就是信号**：没有它 = 我一直在正常观察，任务确实在跑；有它 = 我有一段时间没看见了，`status: "running"` 只代表**未观测到终态**。少了这个区分，一个坏 token 会让调用方拿着它无限轮询下去。
+- 其中的 `retryable` 收窄回唯一正确的含义：**再调一次 `task_status` 有没有希望**。它不再兼职「重发整个请求安全吗」——活任务已经不会以 error 形态出现了。
+
+凡是放弃的路径仍然必须带回 `task_id`（`e.original.setdefault("task_id", task.id)` 保留），它是 `wait=True` 调用方唯一的补救入口。测试：`tests/unit/test_result_contract.py`。
 
 ---
 
@@ -483,7 +492,21 @@ CFGPUError.from_http_response(status, body)
     status = 429 → error_type = "rate_limit"
 ```
 
-`retryable` 字段由 `_RETRYABLE` 集合决定（`rate_limit`、`model_unavailable`、`unknown`），调用方可据此决定是否重试。目前系统内部没有自动重试，该字段供外部调用方使用。
+`retryable` 字段默认由 `_RETRYABLE` 集合决定（`rate_limit`、`model_unavailable`、`unknown`），调用方可据此决定是否重试。目前系统内部没有自动重试，该字段供外部调用方使用。它在调用方那一侧只有一个含义：**重发这个请求安全吗**。
+
+### HTTP 超时：三种处境，三种答案
+
+`_request()` 同时服务提交（POST）和轮询（GET），所以 `CFGPUClient._timeout_error()` 一个抛出点覆盖了三种语义完全不同的处境，`retryable` 必须按 **method × phase** 分流，而不是一律 `True`：
+
+| 处境 | 上游收到了吗 | `retryable` | `outcome_unknown` |
+|---|---|---|---|
+| connect 阶段（DNS / TCP / TLS 未完成） | 明确没有 | `True` | — |
+| request 阶段 + GET（轮询） | 无关，轮询幂等 | `True` | — |
+| request 阶段 + POST（提交） | **不知道** | `False` | `True` |
+
+第三种是全系统唯一一个「既不能说成功、也不能说没发生」的错误：`TaskManager.create()` 的 POST（同步 / 异步两条路）都在 `insert_task` **之前**，所以请求阶段超时意味着**没有 task_id、没有落库**，而上游可能已经受理并计费——同步模型（Seedream / 万相 2.7 图像）整个生成都在这个 POST 里，`http_timeout: 120` 是能被一次 4K 出图逼近的。此前这里写死 `retryable=True`，等于向 agent 断言「重发是安全的」，照做就是双份计费。
+
+因此新增 `CFGPUError.outcome_unknown`，`to_tool_result_dict()` 只在为真时输出；`phase`（`connect` / `request`）也从 `original` 抬进了结果顶层——判断要不要重发的依据不该靠读散文。测试：`test_submit_timeout_is_not_retryable_and_says_the_outcome_is_unknown` / `test_poll_timeout_stays_retryable` / `test_connect_phase_timeout_is_retryable_even_on_a_submit`。
 
 ### 失效 / 无权限端点：快速失败（非重试）
 
@@ -517,7 +540,7 @@ FastMCP 捕获异常后设置 `isError: true`，但 MCP 客户端是否将其内
 
 MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在结果顶层追加 `"artifact": True`，与 error dict 的 `"error": True` 顶层布尔标记对称，供 MCP 客户端快速判断"本次结果含可渲染产物"。
 
-`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且**有产物**（非空 `urls` 或非空 `inline_media`，与 `annotate_artifact()` / `TaskManager.poll()` 的成功判据一致）时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成时返回 `{task_id, status}` 信封（对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。**失败任务**由 `_raise_if_failed(task)` 抛出标准 `CFGPUError(task_failed)`（带 `model_id`——由 `registry.get(task.adapter_id).model_name` 映射得到，不暴露内部 `adapter_id`），经工具层 `tool_error_dict` 转成与 `task_wait` / `generate_*` 完全一致的 error dict——`task_status` 不再有独有的 `{status: "failed", error: "<string>"}` 信封。`wait_for_task()` 重建用于超时估算的最小 `req` 时也按 `adapter.task_type` 完整映射到对应 Input 类型（image/video/audio/understand），避免把错误的 Input 喂给 per-type 的 `estimate_poll_timeout()` 覆盖。
+`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且**有产物**（非空 `urls` 或非空 `inline_media`，与 `annotate_artifact()` / `TaskManager.poll()` 的成功判据一致）时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成时返回 `{task_id, status}` 信封（`tool_registry.pending_result()`，对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。**失败任务**由 `_raise_if_failed(task)` 抛出标准 `CFGPUError(task_failed)`（带 `model_id`——由 `registry.get(task.adapter_id).model_name` 映射得到，不暴露内部 `adapter_id`），经工具层 `tool_error_dict` 转成与 `task_wait` / `generate_*` 完全一致的 error dict——`task_status` 不再有独有的 `{status: "failed", error: "<string>"}` 信封。`wait_for_task()` 重建用于超时估算的最小 `req` 时也按 `adapter.task_type` 完整映射到对应 Input 类型（image/video/audio/understand），避免把错误的 Input 喂给 per-type 的 `estimate_poll_timeout()` 覆盖。
 
 **`payload` 字段（真实 API 请求体回传）**：所有成功结果（`generate_*` 以及 `_present` 的成功分支）在 `NormalizedResult` 元数据之外追加 `payload` 字段，内容是 `Task.public_payload()` —— 即真正 POST 给该模型专属 API 的请求体（`adapter.build_payload(req)` 的产物，含 `cfgpu_model_id` 与各模型私有字段），而非通用工具入参。`public_payload()` 会剥除内部回显用的保留键 `_requested_aspect_ratio`（见 §异步 aspect_ratio 兜底），保证只暴露真实发往上游的字段。**该字段始终返回，不受 `return_metadata` 影响**：`return_metadata=False` 的精简输出（`urls` / `expires_at`）同样带上 `payload`。
 
@@ -529,7 +552,29 @@ MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在�
 
 **`inline_media`（无 URL 的内联产物）**：部分模型不给下载链接，直接把媒体内容返回 —— 目前只有 MiniMax 语音（十六进制字符串在 `output.data.audio`，`MiniMaxSpeechAdapter` 解码后转 base64 存进 `NormalizedResult.inline_media`，每项 `{data, mime_type, filename}`）。对这类模型 **`inline_media` 就是产物本身**，因此凡是判断"有没有产物"的地方都必须是 `urls` **或** `inline_media`：`annotate_artifact()`（打 `artifact` 标记）、`TaskManager.create()` / `poll()` 的"成功但无产物 → 失败"守卫、`_present()`（`task_status` / `task_wait` 的成功分支）、`tool_registry.lean_result()`（`return_metadata=False` 的精简输出，三个 generate service 共用同一个 helper，避免各写一份而漂移）。同步 guard 只适用于 `image` / `video` / `audio`，文本型 `understand` 明确豁免。MiniMax 还会检查 HTTP 200 内的 `output.base_resp.status_code`，例如 `2054 / voice id not exist` 会直接返回 `invalid_params`，而不是落成空成功结果。`return_metadata` 屏蔽的是**元数据**（`task_id` / `model_used` / `aspect_ratio` / `seed` / `usage`），从不屏蔽产物 —— 少了这条，MiniMax 的精简结果就是一个 `urls: []` 的空壳。同步模型也会经由 `generate_audio(wait=False)` → `task_status` 走到 `_present()`，故那一处同样必须认 `inline_media`。MCP 工具层则把它划入 `structured_keys`（`generate_audio` 与 `tools/tasks.py` 的两个工具都是），base64 数据只进 `structuredContent`，绝不进模型上下文。测试见 `tests/unit/test_inline_media_result.py`。
 
-`tool_registry.annotate_artifact(result)` 是单一实现：当 `result` 含非空 `urls` 或非空 `inline_media`（顶层；并保留对嵌套 `result.urls` 的兼容判断作兜底）时打标记；无产物的结果（`wait=False` 的 pending、轮询中的 running、error dict）原样返回。`tools/generate.py`、`tools/tasks.py` 在各工具 `return` 处包一层调用。该标记只在 MCP 工具层加，service / dispatcher / CLI 的原始返回不受影响。
+`tool_registry.annotate_artifact(result)` 是单一实现：当 `result` 含非空 `urls` 或非空 `inline_media`（顶层；并保留对嵌套结果的兼容判断作兜底，两个分支的判据一致，都认 `urls` 或 `inline_media`）时打标记；无产物的结果（`wait=False` 的 pending、轮询中的 running、error dict）原样返回。`tools/generate.py`、`tools/tasks.py` 在各工具 `return` 处包一层调用。该标记只在 MCP 工具层加，service / dispatcher / CLI 的原始返回不受影响。
+
+### 统一的结果契约：`error` / `artifact` / `status`
+
+`generate_*`、`task_status`、`task_wait` 三类工具返回**同一套形状**，调用方按固定顺序判断 `error` → `artifact` → `status` 即可回答「这个请求结束了没有」：
+
+| 形状 | 判据 | 含义 |
+|---|---|---|
+| 终态·成功 | `artifact: true` | `urls` / `inline_media` + 元数据 + `payload` |
+| 未终态 | 无 `error`、无 `artifact` | `{task_id, status}`（+ 可选 `last_error`） |
+| 终态·失败 | `error: true` | `error_type` / `message` / `retryable`（+ `model_id` / `task_id` / `phase` / `outcome_unknown`） |
+
+**失败仍然走 error 而不是 `status: "failed"`**，是刻意的：`_raise_if_failed` 存在的理由就是让三类工具的失败形状一致，而 `error_type` / `retryable` / `card_hint` 才是携带补救措施的地方——换成一个枚举值等于把一整套可执行的诊断降级成一个词。于是 `status` 的取值实际只用到 `succeeded` / `running` / `pending`，`failed` 是个空成员，调用方不必等它。
+
+**`status` 是机器枚举，不再兼放散文。** `annotate_artifact()` 此前把 `"Success. URLs already generated; …"` 直接写进 `status`，于是同一个键上同时住着 `"running"` 和一句英文——最自然的写法 `status == "succeeded"` 永远为假，而唯一能用的写法是解析散文做控制流；更糟的是调用方必须**先知道自己拿到的是哪种形状**，才能正确读那个本该用来判断形状的键。现在 `status` 只放枚举（`TASK_STATUS_VALUES`），散文挪到 `note`。
+
+那句散文有真实职责，不能删：宿主若把 `urls` 从 LLM 可见的 content 里改写掉（DeerFlow 的 MaterialsMiddleware），模型就失去了「生成已完成」的**内容内**证据，会对一个已经出图的任务继续轮询。它顺带修掉一个隐患——`"Partial success."` 过去是 `status` 的**取值**，很容易被读成第三种状态而继续轮询，而它其实是终态（那句话自己写着「重跑是拿到它们的唯一办法」）；现在拆成 `status: "succeeded"` + 非空 `partial_errors`，状态与瑕疵各归各位。
+
+**「成功但无产物」在展示层也收敛成失败。** `_raise_if_failed` 除了 `status == "failed"`，还把「`succeeded` 且既无 `urls` 也无 `inline_media`」当作失败呈现（只读视图，不回写数据库，讨论留痕）。理由是 `get_status` 刻意**不**重查终态行（那是脏数据，不是在途工作），于是这种行过去会落进未终态信封并带着 `status: "succeeded"` —— 按上表的判据读就是「还没完，继续轮询」，而它永远不会变。当前代码写不出这种行（`create()` 与 `poll()` 在写入时就已转成 `failed`），但早于那两道守卫的历史行正是会变成死循环的那一种。
+
+**唯一的例外是 `validate_only` 预检**：它返回 `{validated, model_used, …}`，三个键一个都没有（`annotate_artifact` 也刻意不给它盖章），入口判据是 `validated in result`。`understand_vision` 也不在这套契约里——产物是文本，无 `artifact` 标记、无 `task_id`、恒同步，终态判据只有「没有 `error`」。
+
+测试：`tests/unit/test_result_contract.py`。
 
 ---
 

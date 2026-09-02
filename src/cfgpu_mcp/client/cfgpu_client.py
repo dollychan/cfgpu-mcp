@@ -120,7 +120,9 @@ class CFGPUClient:
             return f"cfgpu_api.{field}"
         return f"providers.{self._provider}.{field}"
 
-    def _timeout_error(self, exc: BaseException, url: str, elapsed: float) -> CFGPUError:
+    def _timeout_error(
+        self, exc: BaseException, url: str, elapsed: float, method: str = "GET"
+    ) -> CFGPUError:
         """Turn an aiohttp timeout into an error that names the phase that failed.
 
         ``aiohttp.ConnectionTimeoutError`` — DNS, TCP and TLS, i.e. everything
@@ -135,6 +137,21 @@ class CFGPUClient:
 
         ``elapsed`` is measured, not read off the config — it is the one number
         that distinguishes the two cases without trusting this classification.
+
+        ``method`` and the phase together decide ``retryable``, which at the agent
+        boundary means one specific thing: *is resending this request safe?*
+
+        - **connect phase** — DNS/TCP/TLS never completed, so the upstream received
+          nothing whatever the verb was. Safe to resend.
+        - **request phase on a GET** — polling is idempotent; asking again costs
+          nothing and creates nothing.
+        - **request phase on a POST** — the bytes went out and the answer did not
+          come back. Upstream may have accepted the job and started billing, and
+          because ``TaskManager.create`` POSTs *before* ``insert_task``, there is
+          neither a returned task_id nor a local row to reconcile against. Resending
+          is a coin flip on a double charge, so this is the one timeout that is not
+          retryable — and the one that sets ``outcome_unknown``, because "did this
+          take effect?" genuinely has no answer here.
         """
         connect_phase = isinstance(exc, aiohttp.ConnectionTimeoutError)
         budget = self._timeout.connect if connect_phase else self._timeout.total
@@ -154,17 +171,28 @@ class CFGPUClient:
                 f"provider {self._provider!r}），请稍后重试或在 config.yaml 增大 "
                 f"{self._timeout_setting_path(field)}。"
             )
+        # A submit whose response was lost is the only case that can have left
+        # billed work behind under a task_id nobody will ever see.
+        indeterminate = not connect_phase and method.upper() == "POST"
+        if indeterminate:
+            detail += (
+                "（请求已经发出但没等到回应，上游可能已经受理并开始计费；"
+                "本服务没有拿到 task_id，也没有落库，无法确认。"
+                "重发有重复计费的风险，请先到上游侧确认。）"
+            )
         return CFGPUError(
             error_type="timeout",
             user_message=detail,
             original={
                 "url": url,
                 "phase": "connect" if connect_phase else "request",
+                "method": method.upper(),
                 "elapsed": round(elapsed, 1),
                 "timeout": budget,
                 "provider": self._provider,
             },
-            retryable=True,
+            retryable=not indeterminate,
+            outcome_unknown=indeterminate,
         )
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -215,7 +243,9 @@ class CFGPUClient:
         except CFGPUError:
             raise
         except asyncio.TimeoutError as e:
-            raise self._timeout_error(e, url, elapsed=time.monotonic() - started) from e
+            raise self._timeout_error(
+                e, url, elapsed=time.monotonic() - started, method=method
+            ) from e
         except aiohttp.ClientError as e:
             raise CFGPUError(
                 error_type="unknown",
