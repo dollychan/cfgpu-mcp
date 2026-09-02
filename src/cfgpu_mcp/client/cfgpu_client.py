@@ -6,10 +6,11 @@ import logging
 import os
 import aiohttp
 
-logger = logging.getLogger(__name__)
-
 from cfgpu_mcp.context import get_request_token
 from cfgpu_mcp.errors import CFGPUError
+from cfgpu_mcp.settings import DEFAULT_PROVIDER
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://www.cfgpu.com/userapi/v1"
 
@@ -102,6 +103,21 @@ class CFGPUClient:
             raise CFGPUError(error_type="auth", user_message=msg, original={})
         return token
 
+    def _timeout_setting_path(self) -> str:
+        """The config.yaml key that actually governs *this* client's timeout.
+
+        Only the built-in ``cfgpu`` provider reads ``cfgpu_api.http_timeout``.
+        Every other provider carries its own, and ``config.get_client`` prefers it
+        whenever it is set — so naming the top-level key in a non-cfgpu timeout
+        sends the reader to a knob that changes nothing for the model that just
+        failed. They raise it, retry, time out identically, and now distrust the
+        message. Same discipline as ``card_hint``: a remedy that cannot work is
+        worse than no remedy.
+        """
+        if self._provider == DEFAULT_PROVIDER:
+            return "cfgpu_api.http_timeout"
+        return f"providers.{self._provider}.http_timeout"
+
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(timeout=self._timeout)
@@ -151,8 +167,15 @@ class CFGPUClient:
         except asyncio.TimeoutError as e:
             raise CFGPUError(
                 error_type="timeout",
-                user_message=f"请求超时（{self._timeout.total}s），请稍后重试或在 config.yaml 增大 cfgpu_api.http_timeout。",
-                original={"url": url, "timeout": self._timeout.total},
+                user_message=(
+                    f"请求超时（{self._timeout.total}s，provider {self._provider!r}），"
+                    f"请稍后重试或在 config.yaml 增大 {self._timeout_setting_path()}。"
+                ),
+                original={
+                    "url": url,
+                    "timeout": self._timeout.total,
+                    "provider": self._provider,
+                },
                 retryable=True,
             ) from e
         except aiohttp.ClientError as e:

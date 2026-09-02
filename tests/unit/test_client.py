@@ -111,3 +111,39 @@ async def test_request_raises_auth_when_no_token_anywhere():
         with pytest.raises(CFGPUError) as exc_info:
             await client.post("/v1/x", {"a": 1})
     assert exc_info.value.error_type == "auth"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider,expected", [
+    ("cfgpu", "cfgpu_api.http_timeout"),
+    ("cfgpu-daily", "providers.cfgpu-daily.http_timeout"),
+    ("comfy", "providers.comfy.http_timeout"),
+])
+async def test_timeout_names_the_knob_that_governs_this_provider(provider, expected):
+    """Only the built-in cfgpu provider reads cfgpu_api.http_timeout.
+
+    config.get_client prefers a provider's own http_timeout whenever it is set, so
+    pointing a non-cfgpu timeout at the top-level key sends the reader to a knob
+    that changes nothing for the model that just failed: they raise it, retry, time
+    out identically, and stop trusting the message.
+    """
+    client = CFGPUClient(
+        api_token="t", base_url="https://x.test", http_timeout=120,
+        provider=provider, use_request_token=(provider == "cfgpu"),
+    )
+    session = MagicMock()
+    session.request.side_effect = asyncio.TimeoutError()
+
+    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=session):
+        with pytest.raises(CFGPUError) as exc:
+            await client.post("/v1/x", json={})
+
+    assert exc.value.error_type == "timeout"
+    assert expected in exc.value.user_message
+    assert f"provider {provider!r}" in exc.value.user_message
+    # The provider must also ride `original`: a timeout report that does not say
+    # which upstream stalled cannot be acted on from the log alone.
+    assert exc.value.original["provider"] == provider
+    if provider != "cfgpu":
+        assert "cfgpu_api.http_timeout" not in exc.value.user_message
+
