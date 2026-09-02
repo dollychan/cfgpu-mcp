@@ -192,7 +192,7 @@ def _extract_error_message(resp: dict) -> str | None:
     """Best-effort failure reason from a poll response, tolerant of shape.
 
     Upstreams disagree on where the reason lives: WAN video carries a top-level
-    ``error`` that is ``null`` on success and a dict on failure; Submodel nests
+    ``error`` that is ``null`` on success and a dict on failure; MiniMax H3 nests
     it under ``task.error``; gpt-image-2 / nano image tasks nest the reason under
     ``data.error_msg`` (e.g. an Azure OpenAI safety-system rejection); the
     DashScope-shaped video APIs use ``output.code`` / ``output.message``. Returns

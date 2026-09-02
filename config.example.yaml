@@ -39,11 +39,17 @@ providers:                     # extra upstreams beyond CFGPU itself; omit if yo
   #   auth_scheme: raw         # bare token, not `Bearer <t>` — matches that host's proxy
   #   token_env: COMFY_GATEWAY_TOKEN
   #   http_timeout: 60
-  submodel:                    # hosted MiniMax H3 video API
-    base_url: https://h3.submodel.ai
-    auth_scheme: bearer
-    token_env: SUBMODEL_API_TOKEN
-    http_timeout: 120
+  # cfgpu-daily:               # the CFGPU daily environment, as its own upstream
+  #   base_url: https://<daily-host>/userapi/v1
+  #   auth_scheme: bearer
+  #   token_env: CFGPU_DAILY_API_TOKEN
+  #   http_timeout: 120
+  #
+  # A staging deployment of CFGPU itself is still a *separate* provider, not the
+  # built-in `cfgpu` one: different host, different credential. That also means it
+  # does not get `cfgpu`'s per-request Authorization behaviour — every caller
+  # shares the one `token_env` credential until the model moves to `provider:
+  # cfgpu` (which is a one-line edit in the model's adapter.yaml).
   #
   # token_env is the ONLY source of a non-cfgpu provider's credential. Such a
   # provider never reads the per-request Authorization header (that token is the

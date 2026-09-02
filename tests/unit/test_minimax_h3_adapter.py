@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
-from cfgpu_mcp.adapters.submodel_h3 import SubmodelH3Adapter
+from cfgpu_mcp.adapters.minimax_h3 import MinimaxH3Adapter
 from cfgpu_mcp.task_manager import _extract_error_message
 from cfgpu_mcp.tool_registry import GenerateVideoInput
 
@@ -12,13 +12,13 @@ MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models
 
 
 @pytest.fixture(scope="module")
-def adapter() -> SubmodelH3Adapter:
+def adapter() -> MinimaxH3Adapter:
     import cfgpu_mcp.adapters  # noqa: F401
 
-    registry = AdapterRegistry(MODELS_DIR, available_providers={"cfgpu", "submodel"})
+    registry = AdapterRegistry(MODELS_DIR, available_providers={"cfgpu", "cfgpu-daily"})
     registry.load()
-    result = registry.get("submodel/minimax-h3")
-    assert isinstance(result, SubmodelH3Adapter)
+    result = registry.get("MiniMax-H3")
+    assert isinstance(result, MinimaxH3Adapter)
     return result
 
 
@@ -29,10 +29,17 @@ def _req(**kwargs) -> GenerateVideoInput:
 
 
 def test_model_and_endpoints_are_wired(adapter):
-    assert adapter.provider == "submodel"
+    """Pinned because both halves migrate independently.
+
+    The provider is the test-phase placement and becomes ``cfgpu`` on launch;
+    the endpoints are CFGPU's shared video routes and must NOT drift back to
+    MiniMax's native ``/v2/video_generation`` when that happens.
+    """
+    assert adapter.provider == "cfgpu-daily"
+    assert adapter.model_name == "MiniMax-H3"
     assert adapter.cfgpu_model_id == "MiniMax-H3"
-    assert adapter.endpoint == "/v2/video_generation"
-    assert adapter.poll_endpoint == "/v2/query/video_generation/{task_id}"
+    assert adapter.endpoint == "/video/generations"
+    assert adapter.poll_endpoint == "/video/tasks/{task_id}"
 
 
 @pytest.mark.parametrize("resolution,wire", [("720p", "768P"), ("1080p", "2K")])
@@ -43,6 +50,7 @@ def test_text_to_video_payload_maps_resolution(adapter, resolution, wire):
         "content": [{"type": "text", "text": "A train crossing a snowy valley"}],
         "resolution": wire,
         "duration": 5,
+        "aigc_watermark": False,
         "ratio": "16:9",
     }
 
@@ -53,7 +61,42 @@ def test_image_to_video_omits_ratio(adapter):
     assert payload["content"][1]["role"] == "first_frame"
 
 
-def test_reference_content_uses_submodel_roles(adapter):
+def test_bare_text_to_video_is_routable_and_gets_a_concrete_ratio(adapter):
+    """The plainest call — prompt only — must reach this model and send 16:9.
+
+    ``adaptive`` is the unified schema default ("you pick"), and upstream refuses
+    it for text-to-video. Treating that as a validation error made
+    ``generate_video(prompt=...)`` unroutable here, so ``model="auto"`` could
+    never pick this model for ordinary text-to-video however it scored.
+    """
+    req = GenerateVideoInput(prompt="waves on a beach")
+    assert req.aspect_ratio == "adaptive"          # pin the schema default
+    ok, reason = adapter.supports(req)
+    assert ok, reason
+    assert adapter.build_payload(req)["ratio"] == "16:9"
+    assert adapter.validation_corrections(req)["aspect_ratio"] == "16:9"
+
+
+def test_reference_to_video_keeps_adaptive(adapter):
+    """Only text-to-video is substituted: adaptive is legal (and the upstream
+    default) once any reference material is present, so a substitution there
+    would silently overrule the material's own geometry."""
+    req = _req(aspect_ratio="adaptive", reference_images=["https://x.test/i.png"])
+    assert adapter.build_payload(req)["ratio"] == "adaptive"
+    assert "aspect_ratio" not in adapter.validation_corrections(req)
+
+
+def test_explicit_ratio_is_never_substituted(adapter):
+    assert adapter.build_payload(_req(aspect_ratio="21:9"))["ratio"] == "21:9"
+
+
+def test_watermark_maps_to_aigc_watermark(adapter):
+    """The unified flag has a home on this API, unlike with_audio/prompt_extend."""
+    payload = adapter.build_payload(_req(watermark=True))
+    assert payload["aigc_watermark"] is True
+
+
+def test_reference_content_uses_minimax_roles(adapter):
     payload = adapter.build_payload(_req(
         aspect_ratio="adaptive",
         reference_images=["https://x.test/i.png"],
@@ -67,14 +110,29 @@ def test_reference_content_uses_submodel_roles(adapter):
 
 
 def test_flat_create_response_yields_task_id(adapter):
-    """Create and query disagree on shape, and only query is nested.
+    """Create and query disagree on shape: only the query nests under ``task``.
 
-    ``POST /v2/video_generation`` answers with a bare ``{"task_id": ...}`` while
-    the query wraps everything in ``task``. The base extract_task_id covers the
-    flat form, so the adapter deliberately does not override it — pinned here
-    because the nested query response makes the opposite look self-evident.
+    Create answers with a bare ``{"task_id": ...}``. Reading only the nested
+    form here is the failure the happyhorse snake_case fix was about — the task
+    submits and bills, and nothing can ever poll it back.
     """
     assert adapter.extract_task_id({"task_id": "task_01K2..."}) == "task_01K2..."
+
+
+def test_nested_create_response_yields_task_id_too(adapter):
+    """CFGPU's task layer is shared across upstreams, so the envelope may or may
+    not survive the proxy. Both forms read, because guessing wrong is unpollable.
+    """
+    assert adapter.extract_task_id({"task": {"id": 424010985738629}}) == "424010985738629"
+
+
+def test_flat_poll_response_is_parsed(adapter):
+    """Same tolerance on the way out: an unwrapped task still yields the URL."""
+    result = adapter.parse_response(
+        {"id": "77", "status": "succeeded", "content": {"url": "https://cdn.test/f.mp4"}}
+    )
+    assert result.urls == ["https://cdn.test/f.mp4"]
+    assert result.task_id == "77"
 
 
 def test_nested_poll_response_is_parsed(adapter):
@@ -118,7 +176,6 @@ def test_nested_task_error_message_is_preserved(adapter):
 
 
 @pytest.mark.parametrize("kwargs,needle", [
-    ({"aspect_ratio": "adaptive"}, "explicit aspect_ratio"),
     ({"duration_seconds": -1}, "explicit duration"),
     ({"resolution": "480p"}, "does not support resolution"),
     ({"last_frame": "https://x.test/last.png"}, "requires first_frame"),

@@ -64,6 +64,15 @@ class PollConfig:
         )
 
 
+#: The quality tiers ``default_for`` may name — the same three
+#: ``GenerateImageInput / GenerateVideoInput / GenerateAudioInput.quality_tier``
+#: admits. Duplicated rather than imported from tool_registry, which imports this
+#: module; ``test_quality_tier_vocabulary_matches_the_schema`` pins the two in
+#: step, since a tier added to the schema but not here would be rejected as a
+#: typo in every adapter.yaml that named it.
+_QUALITY_TIERS = frozenset({"fast", "balanced", "best"})
+
+
 class ModelAdapter(ABC):
     # Subclasses must declare these as class attributes
     adapter_id: str
@@ -96,6 +105,27 @@ class ModelAdapter(ABC):
     #: older model outranked a newer flagship. The proxy remains for models that
     #: declare no rank. Default 0 = undeclared.
     quality_rank: int
+    #: Quality tiers this model is the declared default landing spot for, e.g.
+    #: ``["balanced"]``. Empty = undeclared, which is what every model did before
+    #: this existed.
+    #:
+    #: **Distinct from ``auto_priority``, and deliberately stronger.**
+    #: ``auto_priority`` breaks ties *within* a score, so it can only ever pick
+    #: among models the heuristic already rates equally — it cannot express "we
+    #: have decided", only "when the heuristic is silent, prefer this one".
+    #: Encoding a decision by inflating ``speed_tier`` / ``cost_tier`` until the
+    #: heuristic agrees is the alternative, and it corrupts the inputs: those two
+    #: feed *every* tier's score, so a number bent to win one tier silently moves
+    #: the others, and the file then states a cost or a latency that is not true.
+    #: This field keeps the estimate and the decision in separate places.
+    #:
+    #: Scoped per quality tier because "which model is the default" genuinely has
+    #: different answers for different asks: the model we want for an ordinary
+    #: request need not be the one we want when the caller explicitly asks for
+    #: speed. It is applied only among candidates ``supports()`` already accepted,
+    #: so it is a preference and not a pin — a model that cannot serve the request
+    #: is gone before this is read, and the next-best candidate takes over.
+    default_for: frozenset[str]
     max_duration_seconds: int    # video only: longest explicit duration accepted
     default_duration_seconds: int
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
@@ -141,6 +171,21 @@ class ModelAdapter(ABC):
         # parent's rank has to zero it out explicitly (see the nano-banana chain).
         instance.auto_priority = config.get("auto_priority", 0)
         instance.quality_rank = config.get("quality_rank", 0)
+        # A bare string is tolerated for the same reason disabled_models tolerates
+        # one: forgetting YAML list syntax for a single entry is the common slip,
+        # and reading it as a one-item list is unambiguous. An unknown tier name is
+        # not tolerated — it would silently declare nothing, which looks exactly
+        # like the model simply losing on score.
+        default_for = config.get("default_for") or []
+        if isinstance(default_for, str):
+            default_for = [default_for]
+        unknown = set(default_for) - _QUALITY_TIERS
+        if unknown:
+            raise ValueError(
+                f"{instance.adapter_id}: default_for has unknown quality tiers "
+                f"{sorted(unknown)} (valid: {sorted(_QUALITY_TIERS)})"
+            )
+        instance.default_for = frozenset(default_for)
         # GenerateVideoInput's own validator allows the widest range any model in
         # the fleet accepts (4–30, for Doubao Seedance 2.5). Every narrower model
         # declares its real ceiling here so supports() can reject locally instead

@@ -1,0 +1,85 @@
+# MiniMax H3 through the CFGPU video API.
+#
+# Replaces the former `submodel-minimax-h3`, which reached the same MiniMax V2
+# API through a third-party host (h3.submodel.ai). The request/response contract
+# is MiniMax's own and did not change; what moved is the upstream that serves it.
+adapter_id: cfgpu-minimax-h3
+display_name: "MiniMax H3"
+cfgpu_model_id: MiniMax-H3
+model_name: MiniMax-H3
+
+# ★ Test-phase placement. `cfgpu-daily` is the CFGPU daily environment
+# (config.yaml → providers.cfgpu-daily). Once the model ships on production
+# CFGPU, this line becomes `provider: cfgpu` — that single edit is the whole
+# migration, because the endpoints below are already the unified CFGPU ones and
+# the built-in `cfgpu` provider is synthesized from the top-level cfgpu_api block.
+#
+# Note what `cfgpu-daily` does NOT inherit from `cfgpu`: only the built-in
+# `cfgpu` provider reads the caller's per-request Authorization header
+# (CFGPUClient.use_request_token). Every other provider — this one included —
+# authenticates from its own `token_env`, so during the test phase all callers
+# share one daily credential. That ends by itself on the switch to `cfgpu`.
+provider: cfgpu-daily
+
+task_type: video
+# The unified CFGPU video routes, same as every other cfgpu video model — not
+# MiniMax's native /v2/video_generation. CFGPU's task layer is shared across
+# upstreams; the per-model shape lives in the payload, not the path.
+endpoint: /video/generations
+is_async: true
+poll_endpoint: /video/tasks/{task_id}
+
+capabilities:
+  - text_to_video
+  - image_to_video
+  - first_last_frame
+  - multi_modal_reference
+
+# Unified 720p/1080p tiers map to MiniMax's 768P/2K wire values (see
+# MinimaxH3Adapter._RESOLUTION_MAP). 480p is MiniMax-H3-Max only — a different
+# model id — so it is genuinely unsupported here rather than merely unmapped.
+resolutions: [720p, 1080p]
+max_duration_seconds: 15
+
+# ── Routing: the declared balanced default for video ─────────────────────────
+#
+# cost_tier 2 (was 3, inherited from the submodel-hosted config) is a
+# *correction*, not a thumb on the scale. Against the by-the-second cohort at
+# 720p with no video input:
+#   cf-imagine-video 0.385 元/秒 (cost 2) · MiniMax-H3 0.4 · wan2.7-t2v 0.63
+#   (cost 3) · kling-video-o1 0.63 (cost 4) · happyhorse-1.0-t2v 0.945
+# 0.4 sits essentially on top of the one model already declared cost 2, so 3 was
+# simply wrong. (The Seedance family bills per token and cannot be lined up here
+# without a tokens-per-second figure — none of this claims H3 is cheaper than
+# doubao-seedance-2-0-fast.)
+#
+# speed_tier 3 is the neutral, unmeasured value. It briefly read 4, purely to
+# lift this model into the top of the balanced band; that is exactly the input
+# corruption `default_for` exists to avoid, and it was wrong on its own terms —
+# a model we do *not* want serving `quality_tier="fast"` is not a model whose
+# speed tops the field. Replace it when real latency numbers exist.
+cost_tier: 2
+speed_tier: 3
+
+# ★ The decision, kept out of the estimate above.
+#
+# `auto_priority` could not carry this: it is a tie-break, and at speed 3 /
+# cost 2 the balanced score is 1 against doubao-seedance-2-0-fast's 2 — a later
+# sort key never speaks across a real gap. The only tier pair that would have
+# topped `balanced` without also topping `fast` is speed 3 / cost 1, and cost 1
+# claims this model is in the cheapest band while cf-imagine-video is both
+# cheaper and declared cost 2. So the routing decision is written as a routing
+# decision (router.selection_key's first key) instead of as a false price.
+#
+# Scoped to `balanced` alone, deliberately: `fast` stays with
+# doubao-seedance-2-0-fast (score 6, genuinely the faster model) and `best` stays
+# with doubao-seedance-2-5 (quality_rank, 39 vs 6). Not a pin either — 480p or a
+# duration past 15s removes this model in supports(), and the runner-up
+# (doubao-seedance-2-0-fast, auto_priority 2) takes over.
+default_for: [balanced]
+
+poll_config:
+  base_interval: 5
+  max_interval: 20
+  backoff_factor: 1.3
+  default_timeout: 900

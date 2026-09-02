@@ -26,18 +26,46 @@ logger = logging.getLogger(__name__)
 _QUALITY_RANK_STEP = 11
 
 
-def selection_key(score: int, adapter: "ModelAdapter") -> tuple[int, int, str]:
-    """Ordering for ``model="auto"``: score, then declared preference, then name.
+def selection_key(
+    score: int, adapter: "ModelAdapter", quality_tier: str
+) -> tuple[int, int, int, str]:
+    """Ordering for ``model="auto"``: declared default, then score, preference, name.
 
-    ``auto_priority`` is a **tie-break, not a bonus** — it must separate models the
-    score left level without ever outweighing a real scoring difference. Folding it
-    into the score would do exactly that: the video default (priority 2) would
-    outrank the flagship proxy by a point in the "best" tier, handing a best request
-    to a model picked for being *fast*. As the second key it can only speak when the
-    first is silent. The trailing ``adapter_id`` keeps selection deterministic and
-    independent of registry/filesystem iteration order.
+    **``default_for`` outranks the score; ``auto_priority`` does not.** The two look
+    similar and are deliberately different strengths:
+
+    - ``auto_priority`` is a **tie-break, not a bonus**. It must separate models the
+      score left level without ever outweighing a real scoring difference. Folded
+      into the score it would do exactly that: a video default carrying priority 2
+      would outrank the flagship proxy by a point in the "best" tier, handing a best
+      request to a model picked for being *fast*. As a later key it can only speak
+      when the earlier ones are silent.
+    - ``default_for`` is an **operator decision for one named quality tier**, so it
+      is allowed to overrule the heuristic — that is the whole point of writing it
+      down. The alternative for expressing "this is our default" was bending
+      ``speed_tier`` / ``cost_tier`` until the score agreed, which corrupts the
+      inputs: both feed *every* tier's score, so a number bent to win one tier
+      silently moves the others, and the YAML ends up asserting a latency or a price
+      that is not true. Scoping it to a tier is what keeps it from leaking: a model
+      declared the balanced default says nothing about "fast" or "best".
+
+    It is not a pin. ``select_model`` has already dropped every candidate whose
+    ``supports()`` refused the request, so a declared default that cannot serve this
+    particular call is simply not here, and the next-best candidate wins normally.
+
+    The trailing ``adapter_id`` keeps selection deterministic and independent of
+    registry/filesystem iteration order.
+
+    ``quality_tier`` is required rather than defaulted: it now changes the *first*
+    key, and a caller that omitted it would get a silently wrong ordering that
+    still looks like a valid ranking.
     """
-    return (-score, -adapter.auto_priority, adapter.adapter_id)
+    return (
+        0 if quality_tier in adapter.default_for else 1,
+        -score,
+        -adapter.auto_priority,
+        adapter.adapter_id,
+    )
 
 
 def _is_chinese(text: str) -> bool:
@@ -173,8 +201,10 @@ class ModelRouter:
                 user_message="没有可用的模型支持当前请求，请检查参数或手动指定 model。",
                 original={},
             )
-        # Highest score wins; see selection_key for how ties are broken.
-        scored.sort(key=lambda x: selection_key(x[0], x[1]))
+        # A model declared the default for this quality tier wins outright; failing
+        # that, highest score. See selection_key for the full ordering.
+        quality_tier = getattr(req, "quality_tier", "balanced")
+        scored.sort(key=lambda x: selection_key(x[0], x[1], quality_tier))
         return scored[0][1]
 
     def _score(

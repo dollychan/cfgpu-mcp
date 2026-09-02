@@ -79,7 +79,9 @@ def test_best_tier_runner_up_is_banana_pro():
         a for a in router._registry.list_all(task_type="image")
         if a.adapter_id != "gpt-image-2" and a.supports(req)[0]
     ]
-    ranked = sorted(candidates, key=lambda a: selection_key(router._score(a, req), a))
+    ranked = sorted(
+        candidates, key=lambda a: selection_key(router._score(a, req), a, "best")
+    )
     assert ranked[0].adapter_id == "nano-banana-pro"
 
 
@@ -115,13 +117,52 @@ def test_group_request_avoids_the_model_that_ignores_n():
     assert "multi_image_group" in adapter.capabilities
 
 
-def test_auto_video_default_is_seedance_2_0_fast():
-    # balanced and fast both land on the declared default; without auto_priority
-    # the tie with 2.0 mini / grok / wan-2-0-fast fell to alphabetical adapter_id.
+def test_video_defaults_differ_per_quality_tier():
+    """Each tier has its own declared default, and they are not the same model.
+
+    This is the whole reason ``default_for`` is scoped per tier rather than being
+    one global flag: MiniMax H3 is what we want for an ordinary request, but a
+    caller who explicitly asked for speed should get the model that is actually
+    faster. H3 wins balanced *despite* scoring below the band (speed 3 - cost 2 =
+    1 against doubao-seedance-2-0-fast's 2) — that gap is exactly what
+    auto_priority could not have crossed.
+    """
     router = _router()
-    for tier in ("balanced", "fast"):
+    expected = {
+        "balanced": "cfgpu-minimax-h3",       # default_for
+        "fast": "doubao-seedance-2-0-fast",   # score 6, genuinely the faster model
+        "best": "doubao-seedance-2-5",        # quality_rank
+    }
+    for tier, adapter_id in expected.items():
         adapter = router.select_model(GenerateVideoInput(prompt="waves", quality_tier=tier))
-        assert adapter.adapter_id == "doubao-seedance-2-0-fast", tier
+        assert adapter.adapter_id == adapter_id, tier
+
+
+def test_default_for_does_not_leak_into_the_other_tiers():
+    """Scoping is the safety property: H3 declares only "balanced", so its low
+    score must still lose fast and best outright."""
+    router = _router()
+    h3 = router._registry.get("cfgpu-minimax-h3")
+    assert h3.default_for == frozenset({"balanced"})
+    for tier in ("fast", "best"):
+        req = GenerateVideoInput(prompt="waves", quality_tier=tier)
+        winner = router.select_model(req)
+        assert winner is not h3, tier
+        assert router._score(winner, req) > router._score(h3, req), tier
+
+
+def test_video_default_needs_no_arguments_beyond_a_prompt():
+    """The default landing spot has to accept the plainest possible call.
+
+    MiniMax H3 refuses `adaptive` on text-to-video upstream, and that used to be
+    a supports() rejection — which would silently drop the declared default out
+    of the candidate list for exactly the request shape it is the default *for*,
+    handing every bare call to the runner-up with nothing to show why.
+    """
+    router = _router()
+    adapter = router.select_model(GenerateVideoInput(prompt="waves"))
+    assert adapter.adapter_id == "cfgpu-minimax-h3"
+    assert adapter.build_payload(GenerateVideoInput(prompt="waves"))["ratio"] == "16:9"
 
 
 def test_video_best_tier_prefers_declared_flagship_over_price():
@@ -144,7 +185,9 @@ def test_cost_proxy_still_applies_where_no_rank_is_declared():
         a for a in router._registry.list_all(task_type="video")
         if a.quality_rank == 0 and a.supports(req)[0]
     ]
-    ranked = sorted(candidates, key=lambda a: selection_key(router._score(a, req), a))
+    ranked = sorted(
+        candidates, key=lambda a: selection_key(router._score(a, req), a, "best")
+    )
     assert ranked[0].adapter_id == "kling-v3-omni"
 
 
@@ -163,7 +206,12 @@ def test_declared_ranks_are_not_inherited_down_the_extends_chain():
     for adapter_id in ("nano-banana-2", "nano-banana-pro-official", "nano-banana-pro-premium"):
         assert get(adapter_id).quality_rank == 0, adapter_id
     assert get("doubao-seedance-2-5").quality_rank == 3
-    assert get("doubao-seedance-2-0-fast").auto_priority == 2
+    assert get("doubao-seedance-2-0-fast").auto_priority == 2   # fast-tier default
+    # The balanced default carries neither of the score-adjacent fields: its
+    # declaration lives in default_for, so nothing it says can move another tier.
+    assert get("cfgpu-minimax-h3").default_for == frozenset({"balanced"})
+    assert get("cfgpu-minimax-h3").auto_priority == 0
+    assert get("cfgpu-minimax-h3").quality_rank == 0
     # Both are leaves of the wan-2-0 chain, so nothing inherits from them; their
     # siblings must stay undeclared.
     for adapter_id in ("doubao-seedance-2-0", "doubao-seedance-2-0-mini", "wan-2-0-fast"):
@@ -190,9 +238,71 @@ def test_auto_priority_never_outweighs_a_scoring_difference():
     kling = router._registry.get("kling-v3-omni")
     assert fast.auto_priority > kling.auto_priority
     assert router._score(fast, req) < router._score(kling, req)
-    assert selection_key(router._score(kling, req), kling) < selection_key(
-        router._score(fast, req), fast
+    assert selection_key(router._score(kling, req), kling, "best") < selection_key(
+        router._score(fast, req), fast, "best"
     )
+
+
+def test_quality_tier_vocabulary_matches_the_schema():
+    """``_QUALITY_TIERS`` is a hand-copy of the schema's Literal, so pin the copy.
+
+    tool_registry imports adapters.base, so the constant cannot be imported back
+    the other way. A tier added to the schema but not here would be refused as a
+    typo by every adapter.yaml that tried to declare it.
+    """
+    import typing
+
+    from cfgpu_mcp.adapters.base import _QUALITY_TIERS
+
+    for model in (GenerateImageInput, GenerateVideoInput):
+        annotation = model.model_fields["quality_tier"].annotation
+        assert set(typing.get_args(annotation)) == _QUALITY_TIERS, model.__name__
+
+
+def test_default_for_is_undeclared_by_default():
+    """Absent = empty, so every model that says nothing routes exactly as before."""
+    router = _router()
+    declared = [a for a in router._registry.list_all() if a.default_for]
+    assert [a.adapter_id for a in declared] == ["cfgpu-minimax-h3"]
+
+
+def test_default_for_rejects_an_unknown_quality_tier():
+    """A typo must fail at load, not decline silently.
+
+    An unrecognised tier name would simply never match, which is indistinguishable
+    from the model losing on score — the failure this field exists to make visible.
+    """
+    from cfgpu_mcp.adapters.generic import GenericAdapter
+
+    with pytest.raises(ValueError, match="default_for has unknown quality tiers"):
+        GenericAdapter.from_config({
+            "adapter_id": "x", "model_name": "x", "cfgpu_model_id": "x",
+            "display_name": "x", "task_type": "video", "endpoint": "/v",
+            "default_for": ["balanced", "cheapest"],
+        })
+
+
+def test_default_for_accepts_a_bare_string():
+    """Forgetting YAML list syntax for one entry is the common slip."""
+    from cfgpu_mcp.adapters.generic import GenericAdapter
+
+    adapter = GenericAdapter.from_config({
+        "adapter_id": "x", "model_name": "x", "cfgpu_model_id": "x",
+        "display_name": "x", "task_type": "video", "endpoint": "/v",
+        "default_for": "fast",
+    })
+    assert adapter.default_for == frozenset({"fast"})
+
+
+def test_default_for_yields_to_supports_rather_than_pinning():
+    """A declared default that cannot serve the request is gone before it is read.
+
+    480p is outside MiniMax H3's resolution set, so the balanced pick falls to the
+    runner-up instead of the request failing on the default's own limitation.
+    """
+    router = _router()
+    adapter = router.select_model(GenerateVideoInput(prompt="waves", resolution="480p"))
+    assert adapter.adapter_id == "doubao-seedance-2-0-fast"
 
 
 def test_undeclared_model_scores_exactly_as_before():

@@ -32,7 +32,7 @@ disabled_tools: []            # 不注册的 MCP 工具；空 / 省略 = 全量�
 
 ### 可选：接入非 CFGPU 的上游（`providers:`）
 
-绝大多数模型由 CFGPU 平台提供，不需要这一段。个别模型跑在别的地方 —— 目前只有 `cfdream/minimax-h3*`（MiniMax H3 本地权重，由自建 comfy-gateway 提供）。
+绝大多数模型由 CFGPU 平台提供，不需要这一段。个别模型跑在别的地方 —— `cfdream/minimax-h3*`（MiniMax H3 本地权重，由自建 comfy-gateway 提供），以及测试期的 `MiniMax-H3`（挂在 CFGPU 的日常环境上）。
 
 ```yaml
 providers:
@@ -41,7 +41,14 @@ providers:
     auth_scheme: raw            # 裸 token，不是 `Bearer <t>`
     token_env: COMFY_GATEWAY_TOKEN
     http_timeout: 60
+  cfgpu-daily:                  # CFGPU 日常环境；MiniMax-H3 上线后此段可删
+    base_url: https://<daily-host>/userapi/v1
+    auth_scheme: bearer
+    token_env: CFGPU_DAILY_API_TOKEN
+    http_timeout: 120
 ```
+
+CFGPU 的日常环境也要写在这里：它是**另一台主机、另一份凭据**，不是内建的 `cfgpu` provider。因此它和 comfy 一样不读调用方逐请求带来的 `Authorization`，只认自己的 `token_env` —— 多租户部署下，测试期所有调用方共用这一份日常凭据。
 
 配套要在环境（或 `.env`）里放 `COMFY_GATEWAY_TOKEN=...`。
 
@@ -623,7 +630,8 @@ cfgpu generate video "..." --model-specific '{"tools": [{"type": "web_search"}]}
 
 > `watermark` 是通用参数（`--watermark/--no-watermark`，service 层 `watermark=True/False`），
 > 默认为 `false`。对支持的模型，未显式传入时仍会将 `false` 写入上游 payload；
-> GPT Image / Nano Banana、Grok、Kling 和 MiniMax H3 等没有 watermark 请求字段的模型会忽略它。
+> `MiniMax-H3` 上它写作 `aigc_watermark`（AIGC 标识水印），同样会显式写入。
+> GPT Image / Nano Banana、Grok、Kling 和 `cfdream/minimax-h3*` 等没有 watermark 请求字段的模型会忽略它。
 
 ### 生成音频（语音合成 / text-to-speech）
 
@@ -669,11 +677,14 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > **`model="auto"` 现在选谁（图片）**：`balanced` / `fast` 都是 `doubao-seedream-5-0-pro`；
 > Pro 被参数排除时（3K/4K、组图 `n>1`、联网搜索这三项它没有）退到 `doubao-seedream-5-0-lite`。
 > `best` 是 `cf-image-2`，被排除时退到 `cf-pro`。中文 prompt 仍会额外偏向 Seedream 家族。
-> **视频**：`balanced` / `fast` 是 `doubao-seedance-2-0-fast`，`best` 是 `doubao-seedance-2-5`
-> （30 秒单段直出、最多 50 个参考素材、多语种旁白；两者被参数排除时才轮到别的模型）。
-> 这些落点由 `adapter.yaml` 的 `auto_priority` / `quality_rank` 声明，不是硬编码的名单，
-> 也不再像从前那样由 `adapter_id` 的字母序决定（那会让 auto 恒选族里最老的模型）。
-> 真正跑了哪个，永远以返回的 `model_used` 为准。
+> **视频**：`balanced` 是 `MiniMax-H3`，`fast` 是 `doubao-seedance-2-0-fast`，
+> `best` 是 `doubao-seedance-2-5`（30 秒单段直出、最多 50 个参考素材、多语种旁白）。
+> 三档各有各的落点：日常请求想要的模型，未必是点名要快时想要的那个。被参数排除时
+> 才轮到别的模型 —— 例如 480p 或超过 15 秒都不在 `MiniMax-H3` 的能力内，`balanced`
+> 会自动退到 `doubao-seedance-2-0-fast`。
+> 这些落点由 `adapter.yaml` 的 `default_for` / `auto_priority` / `quality_rank` 声明，
+> 不是硬编码的名单，也不再像从前那样由 `adapter_id` 的字母序决定（那会让 auto 恒选
+> 族里最老的模型）。真正跑了哪个，永远以返回的 `model_used` 为准。
 
 > `quality_tier`（fast/balanced/best）**不只是 `model="auto"` 的路由偏好**：部分模型的 adapter
 > 会把它映射进真实请求，选定模型后依然生效——`cf-image-2` 映射为 API 的 `quality`

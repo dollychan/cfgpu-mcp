@@ -85,10 +85,12 @@ async def test_accept_encoding_excludes_brotli():
     """Every request pins gzip/deflate instead of letting aiohttp negotiate.
 
     aiohttp advertises `br` whenever the optional Brotli package happens to be
-    importable on the host, and Cloudflare (which fronts the submodel provider)
-    brotli-encodes JSON the moment it's offered — a failing decode there surfaced
-    as ClientPayloadError("400, message:\\n  Can not decode content-encoding: br")
-    on healthy polls. Nothing here is big enough for brotli to earn its keep.
+    importable on the host, and a Cloudflare-fronted upstream (the since-retired
+    `submodel` provider) brotli-encodes JSON the moment it's offered — a failing
+    decode there surfaced as ClientPayloadError("400, message:\\n  Can not decode
+    content-encoding: br") on healthy polls. That provider is gone; any upstream
+    behind a CDN can do the same, and nothing here is big enough for brotli to
+    earn its keep.
     """
     client = _client()
     captured: dict = {}

@@ -148,8 +148,18 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 **`auto_priority` / `quality_rank` —— 把「谁是默认」写出来，而不是让字母表决定。** 打分只看 `speed_tier` / `cost_tier` 两个 1-5 的粗档，而十个图像模型里八个都是 `speed=3, cost=2`，于是整族同分、真正的选择器变成了 `sorted(adapter_id)`：`doubao-seedream-4-0` < `4-5` < `5-0-lite` < `5-0-pro`，`model="auto"` 每一次都把请求交给**最老**的那个，而这件事在任何一份配置里都写不出来也读不出来。两个字段各修一半：
 
-- **`auto_priority`（缺省 0）**：同分时的显式偏好。当前 `doubao-seedream-5-0-pro: 2`（图像默认落点）、`doubao-seedream-5-0-lite: 1`（Pro 被 `supports()` 排除时的兜底 —— 3K/4K、组图 `n>1`、联网搜索都是 Pro 没有的能力）、`doubao-seedance-2-0-fast: 2`（视频默认落点）。**它是排序的第二关键字，不是加分项**（`router.selection_key`）：加进总分就会压过真实的分差 —— 视频默认落点的 priority 2 会在 best 档反超 `kling-v3-omni` 高一分的旗舰代理，把一次 best 请求交给一个因为「快」才被选中的模型。作为第二关键字，它只在第一关键字沉默时开口。
+- **`auto_priority`（缺省 0）**：同分时的显式偏好。当前 `doubao-seedream-5-0-pro: 2`（图像默认落点）、`doubao-seedream-5-0-lite: 1`（Pro 被 `supports()` 排除时的兜底 —— 3K/4K、组图 `n>1`、联网搜索都是 Pro 没有的能力）、`doubao-seedance-2-0-fast: 2`（视频 fast 档的默认落点）。**它是排序的第二关键字，不是加分项**（`router.selection_key`）：加进总分就会压过真实的分差 —— 视频默认落点的 priority 2 会在 best 档反超 `kling-v3-omni` 高一分的旗舰代理，把一次 best 请求交给一个因为「快」才被选中的模型。作为第二关键字，它只在第一关键字沉默时开口。
 - **`quality_rank`（缺省 0，仅 best 档生效）**：显式的旗舰声明。此前 best 用 `cost_tier` 当质量代理（「越贵≈越优」），排的其实是**计费档**而非产出质量 —— 于是同一个模型的 premium 服务档（`cost_tier=4`）能压过真正的新旗舰。当前 `gpt-image-2: 3`（图像 best 首选）、`nano-banana-pro: 2`（首选被 `supports()` 排除时接替）、`doubao-seedance-2-5: 3`（视频 best 首选 —— 30 秒单段直出、50 个参考素材、多语种旁白，`cost_tier` 却比 `kling-v3-omni` 低一档，代理排不出来）。**代理并未废除**，仍作用于未声明 rank 的模型，两个 rank 都被 `supports()` 排除时次序照旧（视频仍回到 `kling-v3-omni`）。一个 rank 步长记 11 分，高于 `cost_tier + speed_tier` 的理论最大值 10，故任何已声明的 rank 必定压过未声明者，rank 之间的次序也绝不会被价格差翻转。
+
+- **`default_for`（缺省空集，按 quality_tier 分档）**：**显式声明的默认落点**，是 `selection_key` 的**第一关键字**，压过分数。当前只有 `cfgpu-minimax-h3: [balanced]`。
+
+**它和 `auto_priority` 看着像，强度是故意不同的。** `auto_priority` 是同分内的 tie-break，只能在启发式**已经打成平手**的模型之间挑，表达不了「我们定了」，只能表达「启发式沉默时优先这个」。而把一个决定编码成默认落点，另一条路是**把 `speed_tier`/`cost_tier` 掰到启发式同意为止** —— 那会污染输入：这两个字段喂的是**每一档**的分数，为赢下一档而掰的数会悄悄挪动另外两档，且 YAML 从此写着一个不成立的价格或时延。`default_for` 把「估计」和「决定」分开放。
+
+`MiniMax-H3` 就是这么来的：它诚实的 speed 3 / cost 2 在 balanced 档记 1 分，比 `doubao-seedance-2-0-fast` 的 2 分低，**后置的关键字跨不过真实分差**；而唯一能「上 balanced 顶档又不上 fast 顶档」的组合是 speed 3 / cost 1（穷举 5x5 只此一解），可 cost 1 宣称它在最便宜档，而 0.385 元/秒的 `cf-imagine-video` 才记 cost 2、H3 在 2K 是 0.8 —— 那是假话。于是路由决定写成路由决定。
+
+**按档划分是它的安全属性，不是装饰。** 「谁是默认」对不同的问法本就有不同答案：日常请求想要的模型，未必是调用方点名要快时想要的那个。`MiniMax-H3` 只声明 `balanced`，所以 `fast` 仍归 `doubao-seedance-2-0-fast`（6 分，确实更快），`best` 仍归 `doubao-seedance-2-5`（`quality_rank`，39 比 6）。**也不是钉死**：它只在 `supports()` 已经放行的候选里生效，480p 或超过 15 秒会让 H3 在读到这个字段之前就出局，兜底自然接手。`selection_key` 的 `quality_tier` 参数**没有缺省值** —— 它现在决定第一关键字，漏传会得到一个看起来仍然合法、实际排错了的次序。
+
+**默认落点必须接得住最朴素的那次调用。** `generate_video(prompt=...)` 不带其它参数时 `aspect_ratio` 是 `adaptive`，而 MiniMax 的文生视频恰恰拒绝 `adaptive` —— 若把它当成 `supports()` 里的硬错误，这个模型就会在**它正要当默认的那种请求形状上**被悄悄剔出候选集，每次都落到亚军身上且毫无迹象。所以 `adaptive` 在 `build_payload` 里被替换成 `16:9`（`_T2V_DEFAULT_RATIO`，与 `WanVideoAdapter` 把不支持的比例映射到 16:9 是同一处理），`validation_corrections` 把这次替换报进 `corrected_args`。只有文生视频这么做：参考素材生视频里 `adaptive` 本就是上游默认值且合法，在那里替换等于越过素材自己的画幅。`test_video_default_needs_no_arguments_beyond_a_prompt` 钉住这条。
 
 **两个字段都随 `extends` 继承**，和其它 YAML 字段一样 —— 而 `gpt-image-2` 正是整条 nano-banana 链的父节点、`doubao-seedream-5-0-lite` 是 4.0 / 4.5 的父节点，所以不该继承的变体必须在自己的 YAML 里显式清零（`nano-banana-2` / `-pro-official` / `-pro-premium` 的 `quality_rank: 0`，`doubao-seedream-4-0` / `4-5` 的 `auto_priority: 0`）。两个 Seedance 声明都落在 `wan-2-0` 链的叶子上（`2-0-fast` / `2-5` 无子节点），故无需清零 —— 但若日后有模型 `extends` 它们，这一条同样适用。漏掉一处不会报错，只会让一个没人提名的模型悄悄升上首选。`test_declared_ranks_are_not_inherited_down_the_extends_chain` 钉住这组解析后的值。
 
@@ -170,9 +180,16 @@ providers:
     auth_scheme: raw              # 裸 token，不是 `Bearer <t>`
     token_env: COMFY_GATEWAY_TOKEN
     http_timeout: 60
+  cfgpu-daily:                    # CFGPU 日常环境（MiniMax-H3 的测试期落点）
+    base_url: https://<daily-host>/userapi/v1
+    auth_scheme: bearer
+    token_env: CFGPU_DAILY_API_TOKEN
+    http_timeout: 120
 ```
 
 `cfgpu` 这个 provider **不在这里声明**，它由顶层 `cfgpu_api:` 段合成 —— 否则 `base_url` 就有了两个可以互相打架的来源。
+
+**CFGPU 自己的日常环境仍然是「另一个 provider」，不是内建的那个。** 不同主机、不同凭据，于是下面第 2 条对它同样成立：`cfgpu-daily` 不读调用方逐请求带来的 Authorization，只认 `CFGPU_DAILY_API_TOKEN`，测试期所有调用方共用这一份凭据。模型上线到生产 CFGPU 时，把该模型 `adapter.yaml` 里的 `provider:` 改成 `cfgpu` 就是整个迁移 —— 前提是它的 `endpoint` / `poll_endpoint` 从一开始就写 CFGPU 的统一视频路由（`/video/generations`、`/video/tasks/{task_id}`），而不是上游原生的路径。
 
 三条不显然的约束：
 
@@ -244,7 +261,7 @@ service 返回 dict → 访问层格式化 → 用户
 - `get_client(provider="cfgpu")` **按 provider 各持一个实例**（各自一个连接池），见 §3.4。默认 provider 的 `CFGPUClient` **不持有 token**——共享连接池，token 逐请求从 ContextVar 解析；`base_url`/超时来自 settings。非默认 provider 的 client 反过来：只认自己 `token_env` 里的服务端凭据，不看 ContextVar。`client_for(adapter)` 是给 `TaskManager` 用的解析器。`close()` 关闭全部 provider 的 client。
 - `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。该单例的初始化是 `async` 且首调时有 `await`，因此用 `asyncio.Lock` + 双重检查保护：否则一批并发工具调用会各自看到 `_repo is None` 并同时建仓库 / 跑建表 DDL，撞上 Postgres `CREATE TABLE` 的目录竞争（`pg_type_typname_nsp_index` 唯一键冲突 → `duplicate key (tasks)`）。跨实例同时启动的竞争则由 `PostgresTaskRepository._init_schema` 的事务级 advisory lock（`pg_advisory_xact_lock`）串行化建表，输家随后跑 `CREATE ... IF NOT EXISTS` 成空操作。
 
-**请求头里的 `Accept-Encoding` 是写死的**（`cfgpu_client.ACCEPT_ENCODING = "gzip, deflate"`，逐请求随 `Authorization` 一起注入）。不写的话 aiohttp 会按**宿主机上恰好装了哪些可选编解码器**来生成这个头（`_gen_default_accept_encoding()`：`HAS_BROTLI` 为真就追加 `br`，`HAS_ZSTD` 为真就追加 `zstd`），于是线上的 wire 格式取决于部署环境的间接依赖。submodel provider（`h3.submodel.ai`）在 Cloudflare 后面，客户端一声明 `br` 它就 brotli 压缩 JSON 返回；解压一旦失败，`http_parser` 抛的 `ContentEncodingError` 会在 payload 层被包成 `ClientPayloadError`，落到 `_request()` 的 `except aiohttp.ClientError` 上，最终变成一条 `网络请求失败：400, message:\n  Can not decode content-encoding: br` —— 而任务在上游其实好好的。`wait()` 会把它当可重试错误吞掉（连续 N 次才放弃），但 `task_status` 只轮询一次，一次就直接报给调用方。这里的 body 全是几百字节的 JSON（task 信封、URL），gzip 足够且由标准库支撑，固定这个集合等于零成本地让 wire 格式在所有宿主机上一致。测试：`test_accept_encoding_excludes_brotli`。
+**请求头里的 `Accept-Encoding` 是写死的**（`cfgpu_client.ACCEPT_ENCODING = "gzip, deflate"`，逐请求随 `Authorization` 一起注入）。不写的话 aiohttp 会按**宿主机上恰好装了哪些可选编解码器**来生成这个头（`_gen_default_accept_encoding()`：`HAS_BROTLI` 为真就追加 `br`，`HAS_ZSTD` 为真就追加 `zstd`），于是线上的 wire 格式取决于部署环境的间接依赖。触发它的是一个挂在 Cloudflare 后面的上游（已下架的 `submodel` provider），客户端一声明 `br` 它就 brotli 压缩 JSON 返回；解压一旦失败，`http_parser` 抛的 `ContentEncodingError` 会在 payload 层被包成 `ClientPayloadError`，落到 `_request()` 的 `except aiohttp.ClientError` 上，最终变成一条 `网络请求失败：400, message:\n  Can not decode content-encoding: br` —— 而任务在上游其实好好的。`wait()` 会把它当可重试错误吞掉（连续 N 次才放弃），但 `task_status` 只轮询一次，一次就直接报给调用方。这里的 body 全是几百字节的 JSON（task 信封、URL），gzip 足够且由标准库支撑，固定这个集合等于零成本地让 wire 格式在所有宿主机上一致。测试：`test_accept_encoding_excludes_brotli`。
 
 程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 task 仓库（SQLite 连接 / Postgres 连接池）。各访问层各自负责调用：CLI 在 `_run()` 的 `finally` 中调用；stdio MCP server 通过 FastMCP 的 `lifespan` 上下文在关闭阶段调用。**不能用 `atexit` + `asyncio.run()`**——那会新建事件循环去关闭绑定在 server 原循环上的 `ClientSession`，触发 "Event loop is closed" 告警；lifespan 在 server 自身的事件循环内退出，确保 session 在它被创建的同一循环上关闭。
 
@@ -431,7 +448,7 @@ while not done:
 
 每个模型的轮询参数在 `adapter.yaml` 的 `poll_config` 中配置，`SeedanceVideoAdapter` 还根据请求参数（时长、是否有参考媒体）动态延长 `estimate_poll_timeout()`。
 
-**失败原因的提取（`_extract_error_message`）**：上游对「原因写在哪」毫无共识，故按形状逐个试探 —— 万相视频是顶层 `error`（成功时为 `null`，失败时是 dict 或字符串），Submodel 嵌在 `task.error`，gpt-image-2 / Nano Banana 在 `data.error_msg`（如 Azure 安全系统拒绝），DashScope 形状的视频 API（HappyHorse、万相 2.6/2.7）则用 `output.code` + `output.message`（成功时两者为 `null`），两段都在时拼成 `code: message` —— code（如 `InvalidParameter.DataInspection`，即内容审核拒绝）常常是唯一说清「为什么」的一半，message 反而笼统。**顶层的 `message` 一律不读**：图片 API 即使任务失败也把它设成 `"success"`（那说的是「这次查询成功」），读了只会把失败报告成成功；`output.message` 是另一回事，它描述的是任务本身。全都取不到才回落到 `Task failed (upstream reported no error detail)` —— 这条兜底文案出现，意味着上游真的什么都没说，不是解析漏了。
+**失败原因的提取（`_extract_error_message`）**：上游对「原因写在哪」毫无共识，故按形状逐个试探 —— 万相视频是顶层 `error`（成功时为 `null`，失败时是 dict 或字符串），MiniMax H3 嵌在 `task.error`，gpt-image-2 / Nano Banana 在 `data.error_msg`（如 Azure 安全系统拒绝），DashScope 形状的视频 API（HappyHorse、万相 2.6/2.7）则用 `output.code` + `output.message`（成功时两者为 `null`），两段都在时拼成 `code: message` —— code（如 `InvalidParameter.DataInspection`，即内容审核拒绝）常常是唯一说清「为什么」的一半，message 反而笼统。**顶层的 `message` 一律不读**：图片 API 即使任务失败也把它设成 `"success"`（那说的是「这次查询成功」），读了只会把失败报告成成功；`output.message` 是另一回事，它描述的是任务本身。全都取不到才回落到 `Task failed (upstream reported no error detail)` —— 这条兜底文案出现，意味着上游真的什么都没说，不是解析漏了。
 
 **轮询失败 ≠ 任务失败。** 一次 poll 打不通，只说明这条 socket 有问题；任务在上游照跑不误。所以 `wait()` 会**吸收可重试的**轮询错误（`CFGPUError.retryable`），真正的边界是**轮询超时**（`estimate_poll_timeout()`），不是第一次网络抖动：
 
@@ -545,7 +562,8 @@ src/cfgpu_mcp/
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
 │   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）
 │   ├── cfdream_h3.py           MiniMax H3（provider: comfy，自建 comfy-gateway）：t2v/i2v/flf2v 与 r2v 两套权重各一个类，互斥的素材槽位在 supports() 里判，使 auto 能在两者间路由
-│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3 触发注册
+│   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu-daily，测试期）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立
+│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3、minimax_h3 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -625,6 +643,9 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── cfdream-minimax-h3-r2v/
 │   │   ├── adapter.yaml        MiniMax H3 参考素材生视频，extends: cfdream-minimax-h3, card_base: ~（另一套权重，不与上者混用）
+│   │   └── card.md
+│   ├── cfgpu-minimax-h3/
+│   │   ├── adapter.yaml        MiniMax-H3（provider: cfgpu-daily，测试期；上线后改 cfgpu），720p/1080p → 768P/2K，4–15s
 │   │   └── card.md
 │   ├── grok-imagine-video-1-5/
 │   │   ├── adapter.yaml        Grok Imagine Video 1.5，GrokVideoAdapter（公开 id cf-imagine-video-1.5）
@@ -814,7 +835,7 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 跨多数模型、用户高频调整的开关应做成**通用参数**（typed field），而不是埋在 free-form 的 `model_specific` 里。已有两个范例：
 
 - `with_audio`：视频音频开关，`SeedanceVideoAdapter` 映射为 `generate_audio`。
-- `watermark`：水印开关，类型为 `bool`，**默认 `false`**。Agent / MCP / service 三层的默认值保持一致；即使 caller 未传值，支持水印字段的 adapter 也会显式写入上游 payload。不同 API 形状分开处理：`seedream`、`seedance_video` 和 `happyhorse` 使用顶层 `payload["watermark"]`，WAN 2.6/2.7 使用 `payload["parameters"]["watermark"]`。它们都在 `model_specific` 合并之前写入，因此显式的模型私有值仍可覆盖。上游没有该请求字段的 adapter（GPT Image / Nano Banana、Grok、Kling、MiniMax H3 等）继续忽略它，避免传入未知字段。
+- `watermark`：水印开关，类型为 `bool`，**默认 `false`**。Agent / MCP / service 三层的默认值保持一致；即使 caller 未传值，支持水印字段的 adapter 也会显式写入上游 payload。不同 API 形状分开处理：`seedream`、`seedance_video` 和 `happyhorse` 使用顶层 `payload["watermark"]`，WAN 2.6/2.7 使用 `payload["parameters"]["watermark"]`。它们都在 `model_specific` 合并之前写入，因此显式的模型私有值仍可覆盖。`MiniMax-H3` 的该字段叫 `aigc_watermark`（AIGC 标识水印），同样每次显式写入。上游没有该请求字段的 adapter（GPT Image / Nano Banana、Grok、Kling、以及走 comfy-gateway 的 `cfdream/minimax-h3*`）继续忽略它，避免传入未知字段。
 - `n`：图片组图数量（1-15），默认 1。声明了 `multi_image_group` 能力的模型才认 `n>1`，且各家 API 的写法不同：Seedream 系写成 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`wan2.7-image` 写成 `parameters.enable_sequential=true` + `parameters.n`（上限 12，超出由 `supports()` 在发请求前拒绝），**两个键永远一起下发**——只发 `enable_sequential` 时上游的 `n` 默认值是 12，那是 12 张的账单。不支持该能力的图像模型（包括 Seedream 5.0 Pro、gpt-image-2、nano-banana）静默忽略 `n`，继续发送其他参数并生成单张图片。两家的 `n` 都是上限而非张数。
 - `resolution`（视频）：开放 `1080p`，WAN 2.0 / Doubao Seedance 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**分辨率是逐模型的取值集合**：能查到官方取值范围的模型在 `adapter.yaml` 用 `resolutions: [...]` 声明（Seedance 2.5 / 2.0 fast / 2.0 mini 均为 `[480p, 720p]`，Seedance 2.0 为 `[480p, 720p, 1080p]`），由 `ModelAdapter.supports()` 统一校验；未声明（`None`）= 不做本地限制，即该字段引入前的行为。否则上游会回 `the parameter resolution specified in the request is not valid for model X in i2v`。**另一例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
 - `quality_tier`：**双重身份**——既是 `model="auto"` 的路由打分输入（`router.py`），也被部分 adapter 映射进 payload，**选定模型后仍然生效**：`KlingVideoAdapter` → `mode`（`best` → `pro`，其余 `std`），`GptImage2Adapter` → `quality`（`fast`/`balanced`/`best` → `low`/`medium`/`high`），`WanImageAdapter` → `parameters.thinking_mode`（`fast` → `false`，其余 `true`；且只在纯文生图场景下发，那是上游唯一承认它生效的场景）。三档与这些 API 自身的档位一一对应，故复用该参数而不新增一个近义的 `quality` 工具参数。其余 adapter 不读取它，选定模型后即为纯路由偏好。两处映射都写在 `payload.update(req.model_specific)` **之前**，故 `model_specific` 仍可覆盖。

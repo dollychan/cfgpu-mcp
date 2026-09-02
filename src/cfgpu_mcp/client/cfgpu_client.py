@@ -27,8 +27,9 @@ DEFAULT_CONNECT_TIMEOUT = 10.0
 # depends on the deployment's transitive dependencies — and if that decode then
 # fails, aiohttp raises ContentEncodingError("Can not decode content-encoding:
 # br"), which surfaces as a bogus "网络请求失败" on an otherwise healthy poll.
-# Submodel sits behind Cloudflare, which brotli-encodes JSON as soon as the
-# client offers `br`, so that path was live in production.
+# The case that surfaced it was a Cloudflare-fronted provider (the since-retired
+# `submodel` host), which brotli-encodes JSON as soon as the client offers `br`.
+# That provider is gone; the pin is not host-specific and stays.
 #
 # Every body here is small JSON (a task envelope, a URL); gzip already covers it
 # and is stdlib-backed, so pinning the set costs nothing and makes the wire
