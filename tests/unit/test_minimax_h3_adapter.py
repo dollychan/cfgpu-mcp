@@ -179,7 +179,28 @@ def test_nested_poll_response_is_parsed(adapter):
     assert result.urls == ["https://cdn.test/out.mp4"]
     assert result.task_id == "428863236170174"
     assert result.aspect_ratio == "16:9"
-    assert result.usage == {"total_seconds": 5, "output_seconds": 5}
+    assert result.usage == {"duration": 5, "sr": 768, "ratio": "16:9"}
+
+
+def test_completed_task_normalizes_artifact_metadata_into_usage(adapter):
+    """The CFGPU response exposes billing inputs beside, not inside, ``usage``."""
+    response = {
+        "task": {
+            "id": "285e0301e17f4b87a0cd50e83271a8be",
+            "model": "MiniMax-H3",
+            "status": "succeeded",
+            "duration": 5,
+            "resolution": "768P",
+            "ratio": "16:9",
+            "content": {"url": "https://cdn.test/out.mp4"},
+        }
+    }
+
+    assert adapter.parse_response(response).usage == {
+        "duration": 5,
+        "sr": 768,
+        "ratio": "16:9",
+    }
 
 
 def test_queued_status_is_read_from_nested_task(adapter):

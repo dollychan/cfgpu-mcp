@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
@@ -166,6 +166,40 @@ class MinimaxH3Adapter(ModelAdapter):
             "completed": "succeeded",
         }.get(status, status)
 
+    @staticmethod
+    def _parse_sr(resolution: Any) -> int | None:
+        """Return the numeric resolution tier (for example, ``"768P"`` → 768)."""
+        if isinstance(resolution, (int, float)):
+            return int(resolution)
+        if not isinstance(resolution, str):
+            return None
+        digits = resolution.strip().rstrip("pP")
+        try:
+            return int(digits)
+        except ValueError:
+            return None
+
+    def _build_usage(self, task: dict) -> dict | None:
+        """Normalize MiniMax H3's top-level billing attributes into ``usage``.
+
+        CFGPU returns ``duration``, ``resolution`` and ``ratio`` alongside the
+        completed artifact rather than in an upstream ``usage`` object. Keep the
+        per-second video billing contract uniform with Grok and Kling by exposing
+        those values as ``{duration, sr, ratio}`` in the tool result.
+        """
+        duration: Any = task.get("duration")
+        if isinstance(duration, str):
+            try:
+                duration = int(duration)
+            except ValueError:
+                pass
+        usage = {
+            "duration": duration,
+            "sr": self._parse_sr(task.get("resolution")),
+            "ratio": task.get("ratio"),
+        }
+        return None if all(value is None for value in usage.values()) else usage
+
     def parse_response(self, resp: dict) -> NormalizedResult:
         task = self._task(resp)
         content = task.get("content") or {}
@@ -176,7 +210,7 @@ class MinimaxH3Adapter(ModelAdapter):
             task_id=self.extract_task_id(resp),
             model_used=task.get("model"),
             seed=None,
-            usage=task.get("usage"),
+            usage=self._build_usage(task),
             aspect_ratio=task.get("ratio"),
         )
 
