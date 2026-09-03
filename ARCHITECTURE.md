@@ -180,7 +180,7 @@ providers:
     auth_scheme: raw              # 裸 token，不是 `Bearer <t>`
     token_env: COMFY_GATEWAY_TOKEN
     http_timeout: 60
-  cfgpu-daily:                    # CFGPU 日常环境（MiniMax-H3 的测试期落点）
+  cfgpu-daily:                    # CFGPU 日常环境（示例：CFGPU 的另一台主机）
     base_url: https://<daily-host>/userapi/v1
     auth_scheme: bearer
     token_env: CFGPU_DAILY_API_TOKEN
@@ -189,7 +189,7 @@ providers:
 
 `cfgpu` 这个 provider **不在这里声明**，它由顶层 `cfgpu_api:` 段合成 —— 否则 `base_url` 就有了两个可以互相打架的来源。
 
-**CFGPU 自己的日常环境仍然是「另一个 provider」，不是内建的那个。** 不同主机、不同凭据，于是下面第 2 条对它同样成立：`cfgpu-daily` 不读调用方逐请求带来的 Authorization，只认 `CFGPU_DAILY_API_TOKEN`，测试期所有调用方共用这一份凭据。模型上线到生产 CFGPU 时，把该模型 `adapter.yaml` 里的 `provider:` 改成 `cfgpu` 就是整个迁移 —— 前提是它的 `endpoint` / `poll_endpoint` 从一开始就写 CFGPU 的统一视频路由（`/video/generations`、`/video/tasks/{task_id}`），而不是上游原生的路径。
+**CFGPU 自己的日常环境仍然是「另一个 provider」，不是内建的那个。** 不同主机、不同凭据，于是下面第 2 条对它同样成立：`cfgpu-daily` 不读调用方逐请求带来的 Authorization，只认 `CFGPU_DAILY_API_TOKEN`，所有调用方共用这一份凭据。模型从日常环境搬到生产 CFGPU 时，把该模型 `adapter.yaml` 里的 `provider:` 改成 `cfgpu` 就是整个迁移 —— 前提是它的 `endpoint` / `poll_endpoint` 从一开始就写 CFGPU 的统一视频路由（`/video/generations`、`/video/tasks/{task_id}`），而不是上游原生的路径。MiniMax-H3 已经走完这一步（2026-09-03），现在挂在内建的 `cfgpu` 上，逐请求令牌因此对它生效；目前没有模型再用 `cfgpu-daily`。
 
 三条不显然的约束：
 
@@ -626,7 +626,7 @@ src/cfgpu_mcp/
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
 │   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）
 │   ├── cfdream_h3.py           MiniMax H3（provider: comfy，自建 comfy-gateway）：t2v/i2v/flf2v 与 r2v 两套权重各一个类，互斥的素材槽位在 supports() 里判，使 auto 能在两者间路由
-│   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu-daily，测试期）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立；id 键名同理三种拼法一起读（`task_id` / CFGPU 实际应答的 `taskId` / 信封内的 `id`，见 _TASK_ID_KEYS）
+│   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立；id 键名同理三种拼法一起读（`task_id` / CFGPU 实际应答的 `taskId` / 信封内的 `id`，见 _TASK_ID_KEYS）
 │   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3、minimax_h3 触发注册
 │
 ├── models/
@@ -709,7 +709,7 @@ src/cfgpu_mcp/
 │   │   ├── adapter.yaml        MiniMax H3 参考素材生视频，extends: cfdream-minimax-h3, card_base: ~（另一套权重，不与上者混用）
 │   │   └── card.md
 │   ├── cfgpu-minimax-h3/
-│   │   ├── adapter.yaml        MiniMax-H3（provider: cfgpu-daily，测试期；上线后改 cfgpu），720p/1080p → 768P/2K，4–15s
+│   │   ├── adapter.yaml        MiniMax-H3（provider: cfgpu，内建；逐请求令牌对它生效），720p/1080p → 768P/2K，4–15s
 │   │   └── card.md
 │   ├── grok-imagine-video-1-5/
 │   │   ├── adapter.yaml        Grok Imagine Video 1.5，GrokVideoAdapter（公开 id cf-imagine-video-1.5）

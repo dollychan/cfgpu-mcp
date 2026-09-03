@@ -15,7 +15,7 @@ MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models
 def adapter() -> MinimaxH3Adapter:
     import cfgpu_mcp.adapters  # noqa: F401
 
-    registry = AdapterRegistry(MODELS_DIR, available_providers={"cfgpu", "cfgpu-daily"})
+    registry = AdapterRegistry(MODELS_DIR, available_providers={"cfgpu"})
     registry.load()
     result = registry.get("MiniMax-H3")
     assert isinstance(result, MinimaxH3Adapter)
@@ -29,13 +29,15 @@ def _req(**kwargs) -> GenerateVideoInput:
 
 
 def test_model_and_endpoints_are_wired(adapter):
-    """Pinned because both halves migrate independently.
+    """Pinned because both halves can drift independently.
 
-    The provider is the test-phase placement and becomes ``cfgpu`` on launch;
-    the endpoints are CFGPU's shared video routes and must NOT drift back to
-    MiniMax's native ``/v2/video_generation`` when that happens.
+    The provider is the built-in ``cfgpu`` one — the only provider that reads
+    the caller's per-request token, so a slip back to a named provider silently
+    puts every tenant on one shared credential. The endpoints are CFGPU's
+    shared video routes and must NOT drift to MiniMax's native
+    ``/v2/video_generation``.
     """
-    assert adapter.provider == "cfgpu-daily"
+    assert adapter.provider == "cfgpu"
     assert adapter.model_name == "MiniMax-H3"
     assert adapter.cfgpu_model_id == "MiniMax-H3"
     assert adapter.endpoint == "/video/generations"

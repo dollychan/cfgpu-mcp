@@ -8,18 +8,15 @@ display_name: "MiniMax H3"
 cfgpu_model_id: MiniMax-H3
 model_name: MiniMax-H3
 
-# ★ Test-phase placement. `cfgpu-daily` is the CFGPU daily environment
-# (config.yaml → providers.cfgpu-daily). Once the model ships on production
-# CFGPU, this line becomes `provider: cfgpu` — that single edit is the whole
-# migration, because the endpoints below are already the unified CFGPU ones and
-# the built-in `cfgpu` provider is synthesized from the top-level cfgpu_api block.
+# The built-in CFGPU provider, synthesized from the top-level `cfgpu_api` block
+# in config.yaml. It is the only provider that reads the caller's per-request
+# Authorization header (CFGPUClient.use_request_token) — every other provider
+# authenticates from its own `token_env`, so multi-tenant callers each pay with
+# their own credential here.
 #
-# Note what `cfgpu-daily` does NOT inherit from `cfgpu`: only the built-in
-# `cfgpu` provider reads the caller's per-request Authorization header
-# (CFGPUClient.use_request_token). Every other provider — this one included —
-# authenticates from its own `token_env`, so during the test phase all callers
-# share one daily credential. That ends by itself on the switch to `cfgpu`.
-provider: cfgpu-daily
+# (Was `cfgpu-daily` during the test phase. The endpoints below were already the
+# unified CFGPU video routes, so that placement was the only thing to migrate.)
+provider: cfgpu
 
 task_type: video
 # The unified CFGPU video routes, same as every other cfgpu video model — not

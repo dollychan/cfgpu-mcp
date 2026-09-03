@@ -41,14 +41,14 @@ providers:
     auth_scheme: raw            # 裸 token，不是 `Bearer <t>`
     token_env: COMFY_GATEWAY_TOKEN
     http_timeout: 60
-  cfgpu-daily:                  # CFGPU 日常环境；MiniMax-H3 上线后此段可删
+  cfgpu-daily:                  # CFGPU 日常环境（示例）；目前没有模型用它，可删
     base_url: https://<daily-host>/userapi/v1
     auth_scheme: bearer
     token_env: CFGPU_DAILY_API_TOKEN
     http_timeout: 120
 ```
 
-CFGPU 的日常环境也要写在这里：它是**另一台主机、另一份凭据**，不是内建的 `cfgpu` provider。因此它和 comfy 一样不读调用方逐请求带来的 `Authorization`，只认自己的 `token_env` —— 多租户部署下，测试期所有调用方共用这一份日常凭据。
+CFGPU 的日常环境也要写在这里：它是**另一台主机、另一份凭据**，不是内建的 `cfgpu` provider。因此它和 comfy 一样不读调用方逐请求带来的 `Authorization`，只认自己的 `token_env` —— 多租户部署下，所有调用方共用这一份日常凭据。MiniMax-H3 曾挂在这里，现已改用内建的 `cfgpu`，逐请求令牌对它生效。
 
 配套要在环境（或 `.env`）里放 `COMFY_GATEWAY_TOKEN=...`。
 

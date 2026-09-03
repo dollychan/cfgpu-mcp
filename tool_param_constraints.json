@@ -646,7 +646,7 @@
       "modelId": "MiniMax-H3",
       "modelName": "MiniMax-H3",
       "displayName": "MiniMax H3",
-      "note": "MiniMax H3 through the CFGPU video API (test-phase provider cfgpu-daily). Supports text-to-video, first/last-frame generation, or multimodal reference generation. first_frame / last_frame are mutually exclusive with all reference_* inputs; last_frame requires first_frame. Image-to-video infers geometry from the input image and sends no ratio at all; reference generation may use adaptive. This is the declared default landing spot for quality_tier=balanced, so an auto video call with no other arguments resolves here. with_audio is not sent to this API; watermark is, as aigc_watermark.",
+      "note": "MiniMax H3 through the CFGPU video API. Supports text-to-video, first/last-frame generation, or multimodal reference generation. first_frame / last_frame are mutually exclusive with all reference_* inputs; last_frame requires first_frame. Image-to-video infers geometry from the input image and sends no ratio at all; reference generation may use adaptive. This is the declared default landing spot for quality_tier=balanced, so an auto video call with no other arguments resolves here. with_audio is not sent to this API; watermark is, as aigc_watermark.",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "must contain non-whitespace text; max 7000 characters" },
         "model": { "type": "string", "value": "MiniMax-H3", "writable": "false" },
