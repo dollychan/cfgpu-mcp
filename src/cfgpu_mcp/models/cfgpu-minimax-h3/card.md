@@ -7,17 +7,17 @@
 | 模型名（`model` 参数） | `MiniMax-H3` |
 | 任务类型 | video |
 | 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference, audio_generate |
-| 成本档位 | 2/5 |
+| 成本档位 | 1/5 |
 | 速度档位 | 3/5 |
 
 ## 计费
 
 | `resolution` | 价格 |
 |---|---|
-| `720p` | 0.4 元 / 秒 |
-| `1080p` | 0.8 元 / 秒 |
+| `720p` | 0.1 元 / 秒 |
+| `1080p` | 0.5 元 / 秒 |
 
-按秒计价，`duration_seconds` 直接决定花费：1080p / 15 秒一次约 12 元。
+按秒计价，`duration_seconds` 直接决定花费：1080p / 15 秒一次约 8 元。
 
 ## 参数
 
