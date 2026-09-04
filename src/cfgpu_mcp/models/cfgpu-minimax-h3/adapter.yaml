@@ -31,6 +31,9 @@ capabilities:
   - image_to_video
   - first_last_frame
   - multi_modal_reference
+  # The upstream always includes a native audio track.  This describes output
+  # capability only: unlike models with a sound switch, audio cannot be off.
+  - audio_generate
 
 # Unified 720p/1080p tiers map to MiniMax's 768P/2K wire values (see
 # MinimaxH3Adapter._RESOLUTION_MAP). 480p is MiniMax-H3-Max only — a different

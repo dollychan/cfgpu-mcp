@@ -6,7 +6,7 @@
 |---|---|
 | 模型名（`model` 参数） | `MiniMax-H3` |
 | 任务类型 | video |
-| 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference |
+| 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference, audio_generate |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -29,7 +29,8 @@
 | `aspect_ratio` | `adaptive`、`21:9`、`16:9`、`4:3`、`1:1`、`3:4`、`9:16` | 见下 |
 | `watermark` | 布尔，默认 `false` | AIGC 标识水印 |
 
-`with_audio`、`prompt_extend` 不属于本模型的接口参数，传了不会生效。
+模型固定生成原生音频（`audio_generate`）；`with_audio` 不属于本模型的接口参数，
+传入 `false` 也无法关闭音频。`prompt_extend` 同样不属于接口参数，传了不会生效。
 
 **`adaptive` 在文生视频下会被替换成 `16:9`，不会报错。** `adaptive` 是 schema 默认值，
 含义是「你来定」，所以最朴素的 `generate_video(prompt=...)` 依然能路由到本模型；替换
