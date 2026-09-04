@@ -887,3 +887,31 @@ async def test_vision_validate_only_rejects_what_the_billed_path_rejects():
             regions=[{"image_index": 3, "box": [0.1, 0.1, 0.2, 0.2], "label": "标记1"}],
             validate_only=True,
         )
+
+
+# ── the description's reader is the model ─────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "input_model",
+    [GenerateImageInput, GenerateVideoInput],
+    ids=["image", "video"],
+)
+def test_the_description_states_ownership_instead_of_prescribing_the_approval_loop(input_model):
+    """Pins a *string*, deliberately — the string is the fix.
+
+    The description used to close with orchestration advice for the integrator ("validate
+    first, show the approval, then call again without this flag"). Its actual reader is the
+    model choosing arguments; one that believes it runs the approval loop follows that
+    advice, announces "I'll preflight this" to the user, and then receives a real, billed
+    generation, because a host that preflights owns this flag and overrides the model's
+    value. Ownership has to be stated where the model reads, or the takeover is a surprise.
+
+    Asserted as two halves so a rewrite of the wording is free but dropping either half is
+    not: the ownership claim, and the consequence that makes it actionable (it may bill).
+    """
+    description = input_model.model_fields["validate_only"].description
+
+    assert "belongs to the calling host" in description
+    assert "billed" in description.split("belongs to the calling host", 1)[1]
+    assert "show the approval" not in description, "the orchestration recipe belongs in CLIENT_GUIDE.md, not in a model-facing schema"

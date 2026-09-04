@@ -410,6 +410,21 @@ def label_field() -> Any:
 # word for the opposite behaviour would make a billing question ("did this send?")
 # answerable only by reading which spelling was used.
 
+# **The description below is read by a model, not by the integrator.** That distinction
+# was learned the hard way: it used to end with "intended for hosts that confirm with a
+# human before spending: validate first, show the approval, then call again without this
+# flag" — orchestration advice addressed to the host. The party that actually reads it is
+# the model choosing arguments, and a model that believes it is running the approval loop
+# follows that advice: it sends ``validate_only=true`` "to check first", announces the
+# preflight to the user, and then gets a real result back, because a host that preflights
+# owns this flag and overrides whatever the model wrote (deer-flow ``PreflightMiddleware``,
+# D2). The generation is real and billed; the user has just been told it was a dry run.
+#
+# So the description states **ownership**, and the orchestration recipe lives in
+# ``CLIENT_GUIDE.md`` where its reader is the integrator. The wording stays conditional
+# because this server has no way to know whether its caller preflights: a host that does
+# not is still free to use the flag, and for it the description is equally true.
+
 def validate_only_field() -> Any:
     """Declare the preflight switch (kept in one place so the four copies can't drift)."""
     return Field(
@@ -421,10 +436,13 @@ def validate_only_field() -> Any:
         "payload}` where `model_used` is the concrete model (so `model=\"auto\"` reports "
         "what routing picked) and `payload` is the exact request the real call would "
         "send. On any problem it raises the identical error the real call would, so a "
-        "pass here means the parameters are accepted. Intended for hosts that confirm "
-        "with a human before spending: validate first, show the approval, then call "
-        "again without this flag. Not a preview of the *output* — it says the request "
-        "is well-formed, not that generation will succeed.",
+        "pass here means the parameters are accepted. **This flag belongs to the calling "
+        "host, not to the model writing the arguments.** A host that preflights on your "
+        "behalf assigns it itself and ignores whatever you put here, so a call you send "
+        "with `validate_only=true` may well execute for real and be billed — leave it "
+        "unset and never describe a call as \"just a validation\" unless you are the host "
+        "running your own approval loop. Not a preview of the *output* — it says the "
+        "request is well-formed, not that generation will succeed.",
     )
 
 
