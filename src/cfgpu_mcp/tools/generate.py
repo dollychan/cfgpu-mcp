@@ -69,7 +69,7 @@ def register(mcp: FastMCP) -> None:
         reference_audios: Optional[list[str]] = None,
         duration_seconds: Optional[int] = None,
         aspect_ratio: str = "adaptive",
-        resolution: str = "720p",
+        resolution: Optional[str] = None,
         with_audio: bool = True,
         quality_tier: str = "balanced",
         watermark: bool = False,

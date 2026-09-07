@@ -11,11 +11,6 @@ if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import GenerateImageInput
 
 
-_RESOLUTION_MAP = {
-    "720p": "768P",
-    "1080p": "2K",
-}
-
 #: What the unified schema default ``adaptive`` becomes on text-to-video.
 #:
 #: Upstream requires an explicit ratio in that one scenario and rejects
@@ -89,7 +84,10 @@ class MinimaxH3Adapter(ModelAdapter):
         payload: dict = {
             "model": self.cfgpu_model_id,
             "content": content,
-            "resolution": _RESOLUTION_MAP[req.resolution],
+            # 768p → 768P / 2k → 2K. Case only: this model's two tiers are members of
+            # the unified enum in their own right (adapter.yaml `resolutions`), so there
+            # is no tier translation here — the same `.upper()` the 万相 family applies.
+            "resolution": self.resolve_resolution(req).upper(),
             "duration": self.resolve_duration_seconds(req),
             # Documented top-level key on this API (default false). Sent
             # explicitly, like the 万相 family does with its own `watermark`, so

@@ -554,7 +554,9 @@ def test_every_image_model_reports_safe_enum_fallbacks(model, resolution, aspect
         ("cf-imagine-video-1.5", {}, "1080p"),
         ("cfdream/minimax-h3", {}, "1080p"),
         ("cfdream/minimax-h3-r2v", {"reference_images": ["m_image"]}, "1080p"),
-        ("MiniMax-H3", {"aspect_ratio": "16:9"}, "1080p"),
+        # Not 1080p: this model offers 768p/2k and nothing else, so the nearest
+        # tier at or below 4k is its own 2k.
+        ("MiniMax-H3", {"aspect_ratio": "16:9"}, "2k"),
     ],
 )
 def test_every_video_model_checks_4k_against_its_resolution_set(

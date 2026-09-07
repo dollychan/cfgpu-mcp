@@ -80,7 +80,9 @@ class KlingVideoAdapter(ModelAdapter):
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
         ratio = req.aspect_ratio if req.aspect_ratio != "adaptive" else "16:9"
-        size = _SIZE_MAP.get((req.resolution, ratio), _SIZE_MAP[("720p", "16:9")])
+        size = _SIZE_MAP.get(
+            (self.resolve_resolution(req), ratio), _SIZE_MAP[("720p", "16:9")]
+        )
         # An untyped entry is a plain reference image; typed and untyped entries
         # may be mixed (e.g. a style reference alongside a first frame).
         image_list: list[dict] = []

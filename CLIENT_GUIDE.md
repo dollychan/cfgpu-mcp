@@ -674,14 +674,33 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 分辨率同理是逐模型的：`doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` **只支持 480p/720p**，
 > 传 `1080p` 会在发请求前被拒绝（需要 1080p 用 `doubao-seedance-2-0` / `wan-2-0`）。
 
+> **视频 `resolution` 的默认值是「不传」（2026-09-07 起）。** 统一枚举现在是
+> `480p / 720p / 768p / 1080p / 2k / 4k`，schema 默认值是 `None` —— 不传时各模型用**自己**的默认档
+> （除 `MiniMax-H3` 为 `768p` 外都是 `720p`）。这不是省事，是因为 `resolution` 会参与 `supports()`
+> 筛选：写死一个全队默认值，等于让不提供该档的模型被一个你根本没提的参数挤出 `model="auto"`。
+> **所以：需要哪一档就显式传哪一档，不需要就别传** —— 传了会同时缩小可选模型集合。
+>
+> `768p` / `2k` 是 `MiniMax-H3` 独有的两档（它只有这两档，没有 720p/1080p/480p），别的模型不接受。
+> 从前它们是靠「传 720p/1080p、内部翻译成 768P/2K」实现的，也就是说要 720p 的调用方被静默按
+> 768P 计费；现在两档是一等取值，原样上行（只做大写）。计价按秒且随该字段跳档：768P 0.4 元/秒、
+> 2K 0.8 元/秒。
+>
+> 向不支持某档的模型传该档，正式调用会在发请求前被拒；`validate_only=true` 则不报错，而是在
+> `corrected_args` 里给出**不高于请求值的最近一档**（`768p` → `720p`，`2k` → `1080p`，
+> `doubao-seedance-2-0-fast` 这种没有 1080p 的则 `2k` → `720p`），直接
+> `{**原参数, **corrected_args}` 覆盖后重发即可。反过来，向 `MiniMax-H3` 传它没有的档
+> （480p/720p/1080p）会回退到它最低的 `768p`。**不传 `resolution` 时 `corrected_args` 里不会出现它**
+> —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
+
 > **`model="auto"` 现在选谁（图片）**：`balanced` / `fast` 都是 `doubao-seedream-5-0-pro`；
 > Pro 被参数排除时（3K/4K、组图 `n>1`、联网搜索这三项它没有）退到 `doubao-seedream-5-0-lite`。
 > `best` 是 `cf-image-2`，被排除时退到 `cf-pro`。中文 prompt 仍会额外偏向 Seedream 家族。
 > **视频**：`balanced` 是 `MiniMax-H3`，`fast` 是 `doubao-seedance-2-0-fast`，
 > `best` 是 `doubao-seedance-2-5`（30 秒单段直出、最多 50 个参考素材、多语种旁白）。
 > 三档各有各的落点：日常请求想要的模型，未必是点名要快时想要的那个。被参数排除时
-> 才轮到别的模型 —— 例如 480p 或超过 15 秒都不在 `MiniMax-H3` 的能力内，`balanced`
-> 会自动退到 `doubao-seedance-2-0-fast`。
+> 才轮到别的模型 —— 例如 480p / 720p / 1080p（它只有 768p/2k）或超过 15 秒都不在 `MiniMax-H3`
+> 的能力内，`balanced` 会自动退到 `doubao-seedance-2-0-fast`。**不传 `resolution` 时不会发生这种
+> 排除**：那时每个模型用自己的默认档，`MiniMax-H3` 用 768p。
 > 这些落点由 `adapter.yaml` 的 `default_for` / `auto_priority` / `quality_rank` 声明，
 > 不是硬编码的名单，也不再像从前那样由 `adapter_id` 的字母序决定（那会让 auto 恒选
 > 族里最老的模型）。真正跑了哪个，永远以返回的 `model_used` 为准。

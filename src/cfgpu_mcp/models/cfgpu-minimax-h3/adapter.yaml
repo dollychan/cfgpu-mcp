@@ -35,10 +35,21 @@ capabilities:
   # capability only: unlike models with a sound switch, audio cannot be off.
   - audio_generate
 
-# Unified 720p/1080p tiers map to MiniMax's 768P/2K wire values (see
-# MinimaxH3Adapter._RESOLUTION_MAP). 480p is MiniMax-H3-Max only — a different
-# model id — so it is genuinely unsupported here rather than merely unmapped.
-resolutions: [720p, 1080p]
+# 768P and 2K are what this API actually produces, and they are members of the
+# unified enum in their own right — the adapter only upper-cases them. They used to
+# be reached by declaring 720p/1080p and translating in build_payload, which meant a
+# caller asking for 720p was silently billed for 768P and a caller asking for the two
+# real tiers had no way to spell them. 480p is MiniMax-H3-Max only — a different model
+# id — so it is genuinely unsupported here rather than merely unmapped.
+#
+# `default_resolution` is load-bearing, not cosmetic: `resolution` is checked by
+# supports(), so without it the schema's own omitted-value handling would have to pick
+# a fleet-wide tier this model does not offer, and MiniMax-H3 would be filtered out of
+# every call that did not name 768p/2k explicitly — including the plainest one,
+# generate_video(prompt=...), which is exactly what `default_for: [balanced]` below
+# exists to catch.
+resolutions: [768p, 2k]
+default_resolution: 768p
 max_duration_seconds: 15
 
 # ── Routing: the declared balanced default for video ─────────────────────────

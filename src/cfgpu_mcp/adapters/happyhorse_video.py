@@ -41,8 +41,9 @@ class HappyHorseVideoAdapter(ModelAdapter):
             inp["media"] = media
 
         parameters: dict = {}
-        if req.resolution and req.resolution != "adaptive":
-            parameters["resolution"] = req.resolution.upper()  # 720p → 720P
+        resolution = self.resolve_resolution(req)
+        if resolution and resolution != "adaptive":
+            parameters["resolution"] = resolution.upper()  # 720p → 720P
         if req.aspect_ratio and req.aspect_ratio != "adaptive":
             parameters["ratio"] = req.aspect_ratio
         duration_seconds = self.resolve_duration_seconds(req)
@@ -120,7 +121,7 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} does not support reference_videos"
         if req.reference_audios:
             return False, f"{self.adapter_id} does not support reference_audios"
-        if req.resolution == "480p":
+        if self.resolve_resolution(req) == "480p":
             return False, f"{self.adapter_id} minimum resolution is 720p"
         if self.resolve_duration_seconds(req) == -1:
             return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
@@ -154,8 +155,9 @@ class HappyHorseVideoEditAdapter(HappyHorseVideoAdapter):
             inp["media"] = media
 
         parameters: dict = {}
-        if req.resolution and req.resolution != "adaptive":
-            parameters["resolution"] = req.resolution.upper()  # 720p → 720P
+        resolution = self.resolve_resolution(req)
+        if resolution and resolution != "adaptive":
+            parameters["resolution"] = resolution.upper()  # 720p → 720P
 
         return self._finalize_payload(inp, parameters, req)
 
@@ -177,6 +179,6 @@ class HappyHorseVideoEditAdapter(HappyHorseVideoAdapter):
             return False, f"{self.adapter_id} does not support first_frame/last_frame"
         if req.reference_audios:
             return False, f"{self.adapter_id} does not support reference_audios"
-        if req.resolution == "480p":
+        if self.resolve_resolution(req) == "480p":
             return False, f"{self.adapter_id} minimum resolution is 720p"
         return True, ""

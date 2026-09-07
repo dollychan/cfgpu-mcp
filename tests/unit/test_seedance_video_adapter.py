@@ -438,10 +438,18 @@ def test_seedance_2_0_fast_and_mini_reject_above_720p(variant, resolution):
 
 
 def test_seedance_2_0_fast_and_mini_default_to_720p():
+    """An omitted resolution resolves per-model, and 720p is the fleet-wide default.
+
+    The schema no longer carries a concrete default (it is None = "you pick"), so the
+    720p these two need comes from ``default_resolution``, not from the tool argument.
+    """
     req = GenerateVideoInput(prompt="x")
-    assert req.resolution == "720p"
+    assert req.resolution is None
     for variant in ("doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini"):
-        assert _make_seedance_2_0_adapter(variant, ["480p", "720p"]).supports(req)[0]
+        adapter = _make_seedance_2_0_adapter(variant, ["480p", "720p"])
+        assert adapter.resolve_resolution(req) == "720p"
+        assert adapter.supports(req)[0]
+        assert adapter.build_payload(req)["resolution"] == "720p"
 
 
 def test_seedance_2_0_rejects_audio_only_reference():

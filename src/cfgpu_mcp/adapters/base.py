@@ -72,6 +72,14 @@ class PollConfig:
 #: typo in every adapter.yaml that named it.
 _QUALITY_TIERS = frozenset({"fast", "balanced", "best"})
 
+#: The fleet video-resolution vocabulary, ordered by output size. Read by
+#: ``validation_corrections`` to pick the nearest supported tier *at or below* the
+#: requested one, so a fallback never silently upgrades a caller into a pricier tier.
+#: Every member of ``GenerateVideoInput.resolution`` must appear here — a missing one
+#: is not an error but a silently skipped correction, which is why
+#: ``test_resolution_order_covers_the_whole_schema_enum`` pins the two together.
+_RESOLUTION_ORDER = {"480p": 0, "720p": 1, "768p": 2, "1080p": 3, "2k": 4, "4k": 5}
+
 
 class ModelAdapter(ABC):
     # Subclasses must declare these as class attributes
@@ -129,6 +137,16 @@ class ModelAdapter(ABC):
     max_duration_seconds: int    # video only: longest explicit duration accepted
     default_duration_seconds: int
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
+    #: The tier used when the caller omits ``resolution`` (video only).
+    #:
+    #: The schema default is ``None`` ("you pick") rather than a concrete tier for the
+    #: same reason ``duration_seconds`` is: ``resolution`` is checked by ``supports()``,
+    #: so a fleet-wide concrete default is a value every model must offer or be filtered
+    #: out of ``model="auto"`` by a request the caller never actually made. MiniMax H3
+    #: offers 768p/2k and no 720p at all, which under a ``"720p"`` schema default would
+    #: have removed it from every ordinary call — including the plainest one,
+    #: ``generate_video(prompt=...)`` — and made naming it explicitly a hard error.
+    default_resolution: str
     #: How many marked regions this model accepts on a single image, or None for no
     #: local limit. Declarative because it is per-model while the ``regions`` schema is
     #: per-tool: writing the tightest model's cap into the schema would present one
@@ -199,6 +217,10 @@ class ModelAdapter(ABC):
         # Models that have documented their set list it here; None means "no local
         # restriction", which is what every model did before this existed.
         instance.resolutions = config.get("resolutions")
+        # 720p was the schema-wide default before `resolution` became optional, so it
+        # stays the default here and no existing model's behaviour changes. A model
+        # whose set excludes it (MiniMax H3) must declare its own.
+        instance.default_resolution = config.get("default_resolution", "720p")
         instance.max_regions_per_image = config.get("max_regions_per_image")
         instance.max_reference_images = config.get("max_reference_images")
         instance.max_reference_videos = config.get("max_reference_videos")
@@ -269,10 +291,11 @@ class ModelAdapter(ABC):
                     f"4–{self.max_duration_seconds} seconds "
                     f"(or -1 for a model-chosen smart duration)"
                 )
-            if self.resolutions is not None and req.resolution not in self.resolutions:
+            resolution = self.resolve_resolution(req)
+            if self.resolutions is not None and resolution not in self.resolutions:
                 return False, (
                     f"{self.adapter_id} does not support resolution "
-                    f"{req.resolution} (supported: {', '.join(self.resolutions)})"
+                    f"{resolution} (supported: {', '.join(self.resolutions)})"
                 )
         return True, ""
 
@@ -293,10 +316,15 @@ class ModelAdapter(ABC):
 
         if not isinstance(req, GenerateVideoInput):
             return {}
+        # An omitted resolution is already this model's own tier, so there is nothing to
+        # correct — and writing the resolved value into corrected_args would turn a
+        # delegated choice into a pin the caller never asked for.
+        if req.resolution is None:
+            return {}
         if self.resolutions is None or req.resolution in self.resolutions:
             return {}
 
-        order = {"480p": 0, "720p": 1, "1080p": 2, "4k": 3}
+        order = _RESOLUTION_ORDER
         supported = [value for value in self.resolutions if value in order]
         if not supported:
             return {}
@@ -304,6 +332,10 @@ class ModelAdapter(ABC):
         lower = [value for value in supported if order[value] <= requested_rank]
         fallback = max(lower, key=order.__getitem__) if lower else min(supported, key=order.__getitem__)
         return {"resolution": fallback}
+
+    def resolve_resolution(self, req: "GenerateVideoInput") -> str:
+        """Resolve an omitted unified resolution to this model's own default tier."""
+        return req.resolution or self.default_resolution
 
     def resolve_duration_seconds(self, req: "GenerateVideoInput") -> int:
         """Resolve an omitted unified duration to this model's real default."""

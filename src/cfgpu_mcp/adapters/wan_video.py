@@ -86,7 +86,7 @@ class WanVideoAdapter(ModelAdapter):
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
         parameters: dict = {
-            "resolution": req.resolution.upper(),   # 720p → 720P
+            "resolution": self.resolve_resolution(req).upper(),   # 720p → 720P
             "prompt_extend": req.prompt_extend,
             "watermark": req.watermark,
             "duration": self.resolve_duration_seconds(req),

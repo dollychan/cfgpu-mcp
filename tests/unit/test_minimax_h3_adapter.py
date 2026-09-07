@@ -47,8 +47,18 @@ def test_model_and_endpoints_are_wired(adapter):
     assert "audio_generate" in adapter.capabilities
 
 
-@pytest.mark.parametrize("resolution,wire", [("720p", "768P"), ("1080p", "2K")])
-def test_text_to_video_payload_maps_resolution(adapter, resolution, wire):
+@pytest.mark.parametrize(
+    "resolution,wire",
+    [("768p", "768P"), ("2k", "2K"), (None, "768P")],
+    ids=["768p", "2k", "omitted-uses-model-default"],
+)
+def test_text_to_video_payload_upper_cases_resolution(adapter, resolution, wire):
+    """768P / 2K are first-class enum members now — the only transform left is case.
+
+    They used to be reached by declaring 720p/1080p and translating in build_payload,
+    so a caller asking for 720p was silently billed for 768P while the two tiers this
+    model actually offers had no spelling at all.
+    """
     payload = adapter.build_payload(_req(resolution=resolution, duration_seconds=5))
     assert payload == {
         "model": "MiniMax-H3",
@@ -228,6 +238,10 @@ def test_nested_task_error_message_is_preserved(adapter):
 @pytest.mark.parametrize("kwargs,needle", [
     ({"duration_seconds": -1}, "explicit duration"),
     ({"resolution": "480p"}, "does not support resolution"),
+    # The fleet default this model does not offer. Reachable only when named
+    # explicitly: an omitted resolution resolves to 768p, not to 720p.
+    ({"resolution": "720p"}, "does not support resolution 720p (supported: 768p, 2k)"),
+    ({"resolution": "1080p"}, "does not support resolution"),
     ({"last_frame": "https://x.test/last.png"}, "requires first_frame"),
     ({"first_frame": "https://x.test/first.png", "reference_videos": ["https://x.test/v.mp4"]},
      "mutually exclusive"),

@@ -38,7 +38,7 @@ async def generate_video(
     reference_audios: list[str] | None = None,
     duration_seconds: int | None = None,
     aspect_ratio: str = "adaptive",
-    resolution: str = "720p",
+    resolution: str | None = None,
     with_audio: bool = True,
     quality_tier: str = "balanced",
     watermark: bool = False,

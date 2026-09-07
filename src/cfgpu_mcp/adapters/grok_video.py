@@ -60,7 +60,7 @@ class GrokVideoAdapter(ModelAdapter):
             "prompt": req.prompt,
             "aspect_ratio": req.aspect_ratio if req.aspect_ratio != "adaptive" else _DEFAULT_RATIO,
             "video_length": str(self.resolve_duration_seconds(req)),
-            "resolution_name": req.resolution,   # lowercase tier, e.g. "720p"
+            "resolution_name": self.resolve_resolution(req),  # lowercase tier, e.g. "720p"
         }
         if refer_images:
             payload["refer_images"] = refer_images

@@ -98,6 +98,24 @@ def test_video_resolution_options_match_declared_resolutions(constraints, regist
         assert sorted(options) == sorted(adapter.resolutions), entry["modelName"]
 
 
+def test_video_resolution_default_matches_the_adapters_own_default(constraints, registry):
+    """The operator's pre-filled tier must be the one an omitted argument would send.
+
+    ``GenerateVideoInput.resolution`` defaults to None ("the model decides"), so the
+    concrete tier now lives in ``default_resolution``. A stale value here shows the
+    operator a tier the model may not even offer — MiniMax-H3 has no 720p at all — and
+    a HITL edit that "keeps the default" then fails the model's own supports() gate.
+    """
+    for entry in constraints["generate_video"]:
+        if entry["modelName"] == "auto":
+            continue
+        adapter = registry.get(entry["modelName"])
+        declared = (entry["args"].get("resolution") or {}).get("default")
+        if declared is None:
+            continue
+        assert declared == adapter.default_resolution, entry["modelName"]
+
+
 def test_video_duration_max_matches_declared_ceiling(constraints, registry):
     """A cap the front-end enforces but supports() does not costs a billed call."""
     for entry in constraints["generate_video"]:

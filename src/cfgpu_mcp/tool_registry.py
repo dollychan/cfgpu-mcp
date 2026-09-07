@@ -643,14 +643,20 @@ class GenerateVideoInput(BaseModel):
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",
     )
-    resolution: Literal["480p", "720p", "1080p", "4k"] = Field(
-        default="720p",
-        description="Video resolution. Doubao Seedance 2.0 supports 480p/720p/1080p/4k; "
-        "Doubao Seedance 2.5 supports 480p/720p/1080p; Doubao Seedance 2.0 fast and "
-        "2.0 mini support 480p/720p only. 1080p is also supported by WAN 2.0, Doubao "
-        "Seedance 1.5 Pro, and HappyHorse (HappyHorse's own default is 1080p). "
-        "WAN 2.0 Fast does NOT support 1080p for text-to-video (only 480p/720p; 1080p works "
-        "only with an image/video input). HappyHorse does not support 480p (minimum 720p).",
+    resolution: Optional[Literal["480p", "720p", "768p", "1080p", "2k", "4k"]] = Field(
+        default=None,
+        description="Video resolution. None (the default) uses the selected model's own "
+        "default tier, so an omitted resolution never rules a model out of automatic "
+        "selection — pass a value only when you actually need that tier. The tiers are a "
+        "fleet-wide vocabulary and each model offers a subset: Doubao Seedance 2.0 "
+        "supports 480p/720p/1080p/4k; Doubao Seedance 2.5 supports 480p/720p/1080p; "
+        "Doubao Seedance 2.0 fast and 2.0 mini support 480p/720p only. 1080p is also "
+        "supported by WAN 2.0, Doubao Seedance 1.5 Pro, and HappyHorse (HappyHorse's own "
+        "default is 1080p). WAN 2.0 Fast does NOT support 1080p for text-to-video (only "
+        "480p/720p; 1080p works only with an image/video input). HappyHorse does not "
+        "support 480p (minimum 720p). 768p and 2k belong to MiniMax H3 alone, which "
+        "offers those two and nothing else (768p is its default); no other model accepts "
+        "them. Call get_model_card or list_models for the chosen model's set.",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
