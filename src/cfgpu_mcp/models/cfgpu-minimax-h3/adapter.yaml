@@ -54,33 +54,42 @@ max_duration_seconds: 15
 
 # ── Routing: the declared balanced default for video ─────────────────────────
 #
-# cost_tier 2 (was 3, inherited from the submodel-hosted config) is a
-# *correction*, not a thumb on the scale. Against the by-the-second cohort at
-# 720p with no video input:
-#   cf-imagine-video 0.385 元/秒 (cost 2) · MiniMax-H3 0.4 · wan2.7-t2v 0.63
-#   (cost 3) · kling-video-o1 0.63 (cost 4) · happyhorse-1.0-t2v 0.945
-# 0.4 sits essentially on top of the one model already declared cost 2, so 3 was
-# simply wrong. (The Seedance family bills per token and cannot be lined up here
-# without a tokens-per-second figure — none of this claims H3 is cheaper than
-# doubao-seedance-2-0-fast.)
+# cost_tier 1 (was 3, inherited from the submodel-hosted config; briefly 2) is a
+# *correction*, not a thumb on the scale. Against the by-the-second cohort with
+# no video input, at each model's own entry tier:
+#   MiniMax-H3 0.1 元/秒 (768P; 0.5 at 2K) · cf-imagine-video 0.275/0.385
+#   (cost 2) · wan2.7-t2v 0.63 (cost 3) · kling-video-o1 0.63 (cost 4) ·
+#   happyhorse-1.0-t2v 0.945
+# 0.1 is the cheapest per-second figure in the fleet — under half of the next
+# model up — so both 3 and the 2 that replaced it understated it. (The Seedance
+# family bills per token and cannot be lined up here without a tokens-per-second
+# figure; none of this claims H3 is cheaper than doubao-seedance-2-0-mini, which
+# also declares cost 1.)
+#
+# The 2 came from reading this model's price as 0.4/0.8 元/秒, which is what
+# tool_param_constraints.json and this comment both said while card.md said
+# 0.1/0.5. card.md was right (confirmed 2026-09-07), and its 成本档位 1/5 had
+# been the only place already carrying the honest band.
 #
 # speed_tier 3 is the neutral, unmeasured value. It briefly read 4, purely to
 # lift this model into the top of the balanced band; that is exactly the input
 # corruption `default_for` exists to avoid, and it was wrong on its own terms —
 # a model we do *not* want serving `quality_tier="fast"` is not a model whose
 # speed tops the field. Replace it when real latency numbers exist.
-cost_tier: 2
+cost_tier: 1
 speed_tier: 3
 
 # ★ The decision, kept out of the estimate above.
 #
-# `auto_priority` could not carry this: it is a tie-break, and at speed 3 /
-# cost 2 the balanced score is 1 against doubao-seedance-2-0-fast's 2 — a later
-# sort key never speaks across a real gap. The only tier pair that would have
-# topped `balanced` without also topping `fast` is speed 3 / cost 1, and cost 1
-# claims this model is in the cheapest band while cf-imagine-video is both
-# cheaper and declared cost 2. So the routing decision is written as a routing
-# decision (router.selection_key's first key) instead of as a false price.
+# `auto_priority` could not carry this either, and the corrected cost_tier does
+# not rescue it. At speed 3 / cost 1 the balanced score is 2 — a *tie* with
+# doubao-seedance-2-0-fast, cf-imagine-video and wan-video-fast, not a win — and
+# the tie then breaks on `auto_priority`, where doubao-seedance-2-0-fast already
+# declares 2. So the heuristic still does not land here on its own; the routing
+# decision stays written as a routing decision (router.selection_key's first
+# key). Verified 2026-09-07: flipping cost_tier between 1 and 2 changes no
+# routing outcome across fast/balanced/best × t2v/i2v/r2v/720p/2k/20s, which is
+# the point — the tier is a price declaration, not the mechanism.
 #
 # Scoped to `balanced` alone, deliberately: `fast` stays with
 # doubao-seedance-2-0-fast (score 6, genuinely the faster model) and `best` stays
