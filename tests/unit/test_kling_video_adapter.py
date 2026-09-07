@@ -3,7 +3,7 @@ from cfgpu_mcp.adapters.kling_video import KlingVideoAdapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput
 
 
-def _make_adapter() -> KlingVideoAdapter:
+def _make_adapter(**overrides) -> KlingVideoAdapter:
     config = {
         "adapter_id": "kling-video-o1",
         "display_name": "Kling Video O1 (可灵 O1)",
@@ -23,7 +23,7 @@ def _make_adapter() -> KlingVideoAdapter:
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 600},
     }
-    return KlingVideoAdapter.from_config(config)
+    return KlingVideoAdapter.from_config({**config, **overrides})
 
 
 # ── build_payload ────────────────────────────────────────────────────────────
@@ -82,6 +82,48 @@ def test_with_audio_maps_to_sound_flag():
     adapter = _make_adapter()
     assert adapter.build_payload(GenerateVideoInput(prompt="x"))["sound"] == "on"
     assert adapter.build_payload(GenerateVideoInput(prompt="x", with_audio=False))["sound"] == "off"
+
+
+# ── validation_corrections: the sound switch is pinned, never implicit ───────
+
+@pytest.mark.parametrize("with_audio", [True, False])
+def test_validate_only_pins_with_audio(with_audio):
+    """Both values are echoed, including the True that the schema supplies for free.
+
+    The silent case is exactly the one worth pinning: a caller who never mentioned
+    audio gets `sound: on`, and an approval card built from their own arguments has
+    no audio row at all to approve.
+    """
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", with_audio=with_audio)
+
+    assert adapter.validation_corrections(req)["with_audio"] is with_audio
+
+
+def test_pinned_with_audio_is_the_value_the_payload_actually_sends():
+    """corrected_args and the payload must describe the same request.
+
+    A caller merges `{**args, **corrected_args}` blindly, so a pin that disagreed with
+    `sound` would make the submitted call differ from the one that was validated.
+    """
+    adapter = _make_adapter()
+    for with_audio, expected in ((True, "on"), (False, "off")):
+        req = GenerateVideoInput(prompt="x", with_audio=with_audio)
+        corrected = adapter.validation_corrections(req)
+        effective = req.model_copy(update=corrected)
+
+        assert adapter.build_payload(effective)["sound"] == expected
+
+
+def test_pinning_with_audio_does_not_displace_the_resolution_fallback():
+    """It composes with the base correction rather than replacing it."""
+    adapter = _make_adapter(resolutions=["480p", "720p", "1080p"])
+    req = GenerateVideoInput(prompt="x", resolution="2k", with_audio=False)
+
+    assert adapter.validation_corrections(req) == {
+        "resolution": "1080p",
+        "with_audio": False,
+    }
 
 
 def test_text_only_payload_has_no_media_arrays():

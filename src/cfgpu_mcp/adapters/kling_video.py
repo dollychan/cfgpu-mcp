@@ -119,6 +119,34 @@ class KlingVideoAdapter(ModelAdapter):
             payload.pop("seconds", None)
         return payload
 
+    def validation_corrections(self, req: "GenerateVideoInput") -> dict:
+        """Pin ``with_audio`` so a preflight never leaves the sound switch implicit.
+
+        ``sound`` is a real request field on this model, not an ignored unified flag:
+        Kling is one of four video families that honour ``with_audio`` at all (the 万相
+        2.6/2.7 and HappyHorse families never send it, Grok and MiniMax H3 always emit
+        audio and have no switch). Its own card documents **no upstream default** for
+        ``sound`` — so unlike every other honouring model, there is no "what happens if
+        nobody decides" to fall back on, and the decision is entirely the schema's
+        ``with_audio: bool = True``. That default is silent: an approval card built from
+        the caller's own arguments shows no audio row at all, and the human approves a
+        soundtrack nobody asked for.
+
+        So this is a *pin*, not a fallback — the same shape as pinning a delegated
+        ``model``, and for the same reason: an approval only means something if it names
+        what will run. The value is unchanged, which is the point; ``corrected_args`` is
+        merged blindly (``{**args, **corrected_args}``), so echoing the resolved value
+        makes the submitted call carry explicitly what the preflight validated.
+
+        Unconditional because it has to be: ``with_audio`` is a plain ``bool`` with a
+        concrete default, so a caller who passed ``True`` and one who passed nothing
+        arrive here identical. Filling it only "when omitted" is not expressible, and
+        guessing which case this is would leave exactly the silent one unpinned.
+        """
+        corrected = super().validation_corrections(req)
+        corrected["with_audio"] = req.with_audio
+        return corrected
+
     @staticmethod
     def _has_base_video(payload: dict) -> bool:
         return any(

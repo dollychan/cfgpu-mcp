@@ -686,6 +686,13 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 2K 0.5 元/秒 —— 0.1 是全队按秒计费里最便宜的一档，因此本模型的 `cost_tier` 是 1。
 >
 > 向不支持某档的模型传该档，正式调用会在发请求前被拒；`validate_only=true` 则不报错，而是在
+> **可灵（`kling-video-o1` / `kling-v3-omni`）的 `with_audio` 永远出现在 `corrected_args` 里**，
+> 无论取值是 true 还是 false。它在这两个模型上映射为真实请求字段 `sound`（万相 2.6/2.7、
+> HappyHorse 压根不发这个字段），而可灵 card 里 `sound` 的上游默认值是「-」—— 没有默认值，
+> 所以统一 Schema 那个静默的 `with_audio=true` 就是全部决定。要向人展示审批卡的宿主，请把
+> 这一行显示出来，并按 `{**原参数, **corrected_args}` 原样回传：否则卡片上根本没有音频这一
+> 行，人批准的是一条自带配乐的片子。这是**钉住**而不是纠正，值没有被改过。
+
 > `corrected_args` 里给出**不高于请求值的最近一档**（`768p` → `720p`，`2k` → `1080p`，
 > `doubao-seedance-2-0-fast` 这种没有 1080p 的则 `2k` → `720p`），直接
 > `{**原参数, **corrected_args}` 覆盖后重发即可。反过来，向 `MiniMax-H3` 传它没有的档

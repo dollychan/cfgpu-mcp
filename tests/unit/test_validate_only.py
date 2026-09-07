@@ -385,6 +385,42 @@ async def test_validate_only_rejects_what_supports_would_reject():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["kling-video-o1", "kling-v3-omni"])
+async def test_kling_preflight_pins_the_sound_switch(model):
+    """`with_audio` reaches corrected_args even when the caller never mentioned it.
+
+    Kling maps it to a real `sound` field and its card documents no upstream default,
+    so the schema's silent `True` is the whole decision. A host that shows an approval
+    card built from the caller's arguments would otherwise show no audio row at all.
+    """
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="海浪", model=model, validate_only=True
+        )
+
+    assert result["corrected_args"]["with_audio"] is True
+    assert result["payload"]["sound"] == "on"
+
+
+@pytest.mark.asyncio
+async def test_only_kling_pins_with_audio():
+    """The pin is per-model, not a fleet-wide change to corrected_args.
+
+    Seedance also honours the flag (as `generate_audio`), so this is a deliberate
+    scoping decision rather than an oversight: widening it is a call to make against
+    each card, not a side effect of touching one adapter.
+    """
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="海浪", model="doubao-seedance-2-0", validate_only=True
+        )
+
+    assert "with_audio" not in result["corrected_args"]
+
+
+@pytest.mark.asyncio
 async def test_validate_only_corrects_an_unsupported_resolution():
     """A safe enum fallback is applied to the payload and made reproducible."""
     a, b, c = _patched_real_registry(_client(), AsyncMock())
