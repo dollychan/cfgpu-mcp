@@ -79,7 +79,10 @@ async def generate_audio(
         raise
 
     if not wait:
-        return stamp_echo(pending_result(task.id, task.status), request_id=request_id, caption=caption, label=label)
+        return stamp_echo(
+            pending_result(task.id, task.status, created_at=task.created_at),
+            request_id=request_id, caption=caption, label=label,
+        )
 
     try:
         task, last_error = await tm.wait(task, adapter, req, timeout=timeout)
@@ -92,7 +95,7 @@ async def generate_audio(
     # of the task, is still just "not done yet" — the caller's next move is identical.
     if task.result is None:
         return stamp_echo(
-            pending_result(task.id, task.status, last_error),
+            pending_result(task.id, task.status, last_error, created_at=task.created_at),
             request_id=request_id, caption=caption, label=label,
         )
 

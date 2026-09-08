@@ -302,8 +302,9 @@ def _now_row(
     """Build an in-memory task row (created_at == updated_at == now).
 
     Lets create()/poll() return a Task from fields already in hand instead of a
-    read-back round-trip. Timestamps aren't surfaced to callers, so a sub-millisecond
-    drift from the persisted row is immaterial.
+    read-back round-trip. ``created_at`` does reach callers now — it is what
+    ``pending_result`` reports as ``elapsed_seconds`` — but only at whole-second
+    resolution, so a sub-millisecond drift from the persisted row stays immaterial.
     """
     now = time.time()
     return {

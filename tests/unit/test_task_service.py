@@ -489,3 +489,29 @@ async def test_get_status_flags_a_repoll_that_blew_up_outside_cfgpu_error():
     assert result["last_error"]["error_type"] == "unknown"
     assert "videoUrl" in result["last_error"]["message"]
     await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_pending_envelope_carries_elapsed_seconds():
+    """★ The plumbing, not the arithmetic — ``pending_result`` is unit-tested separately.
+
+    What this pins is that ``_present`` hands it the task's ``created_at`` at all. The
+    field's whole purpose is to give a polling caller something that *changes* between
+    otherwise identical ``status: "pending"`` replies; a call site that forgets to pass
+    the timestamp produces an envelope that still validates and still says nothing.
+    """
+    db = await _db_with_task("pending", "wan-2-0")
+    # Backdate the row so a plausibly-forgotten timestamp (elapsed 0) cannot pass.
+    await db.execute("UPDATE tasks SET created_at = created_at - 47 WHERE id = 'task-1'")
+    await db.commit()
+
+    client = MagicMock()
+    client.get = AsyncMock(return_value={"id": "task-1", "status": "running"})
+    adapter = _adapter(is_async=True)
+    adapter.extract_status.return_value = "running"
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["elapsed_seconds"] >= 47
+    await db.close()

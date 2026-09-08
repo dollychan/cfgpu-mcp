@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated, Any, Literal, Optional
@@ -970,6 +971,8 @@ def pending_result(
     task_id: str,
     status: str,
     last_error: dict[str, Any] | None = None,
+    *,
+    created_at: float | None = None,
 ) -> dict[str, Any]:
     """The non-terminal envelope: a task exists, no artifact yet, no error.
 
@@ -983,8 +986,22 @@ def pending_result(
     simply not finished. It stays in ``content`` rather than ``structuredContent``
     because it is something the model must act on — fix a credential, stop polling,
     tell the user — not host-only bookkeeping like ``usage`` / ``payload``.
+
+    ``elapsed_seconds`` — the task row's age — is the only fact a caller has about *how
+    long* this has been going on, and it is here because its absence was being filled in
+    by guesswork. A polling caller sees the same ``status: "pending"`` on its 1st and its
+    40th call — the two are indistinguishable — so an LLM narrates a duration it cannot
+    observe ("大概几分钟"). Nothing in this envelope ever licensed such a figure, and it is
+    reliably an underestimate: queue depth and run time differ by an order of magnitude
+    across the fleet, and no field here is an ETA. One measured number displaces the
+    invented one. Derived from ``created_at`` (epoch
+    seconds, written at insert), floored at 0 so clock skew between the writing and the
+    reading process cannot surface a negative age, and omitted entirely when the caller
+    has no timestamp to offer.
     """
     out: dict[str, Any] = {"task_id": task_id, "status": status}
+    if created_at is not None:
+        out["elapsed_seconds"] = int(max(0.0, time.time() - created_at))
     if last_error:
         out["last_error"] = last_error
     return out

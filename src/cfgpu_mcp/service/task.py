@@ -51,7 +51,7 @@ def _present(task: Any, last_error: dict[str, Any] | None = None) -> dict[str, A
     if task.status == "succeeded" and (result.get("urls") or result.get("inline_media")):
         return stamp_echo({**task.result, "payload": task.public_payload()}, request_id=request_id, caption=caption, label=label)
     return stamp_echo(
-        pending_result(task.id, task.status, last_error),
+        pending_result(task.id, task.status, last_error, created_at=task.created_at),
         request_id=request_id, caption=caption, label=label,
     )
 

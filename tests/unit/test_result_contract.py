@@ -165,3 +165,36 @@ def test_pending_result_omits_last_error_when_there_is_none():
     assert pending_result("t", "running") == {"task_id": "t", "status": "running"}
     assert pending_result("t", "running", {}) == {"task_id": "t", "status": "running"}
     assert "last_error" in pending_result("t", "running", {"error_type": "timeout"})
+
+
+def test_pending_result_reports_elapsed_seconds_from_created_at():
+    """★ The number a caller would otherwise invent.
+
+    An LLM handed a bare repeated ``status: "pending"`` narrates how long it has been
+    waiting from nothing at all — and for ``force_async`` models, whose queue depth is
+    unbounded by construction, the invented figure is reliably an underestimate. So the
+    age is measured and reported rather than left to be guessed.
+    """
+    import time
+
+    from cfgpu_mcp.tool_registry import pending_result
+
+    out = pending_result("t", "pending", created_at=time.time() - 47.4)
+    assert out["elapsed_seconds"] == 47
+    assert out["status"] == "pending"
+
+
+def test_pending_result_omits_elapsed_seconds_without_a_timestamp():
+    """Same rule as ``last_error``: the field's presence is what carries meaning."""
+    from cfgpu_mcp.tool_registry import pending_result
+
+    assert "elapsed_seconds" not in pending_result("t", "pending")
+
+
+def test_pending_result_floors_elapsed_seconds_at_zero():
+    """A row written by another process with a fast clock must not read as negative age."""
+    import time
+
+    from cfgpu_mcp.tool_registry import pending_result
+
+    assert pending_result("t", "pending", created_at=time.time() + 30)["elapsed_seconds"] == 0

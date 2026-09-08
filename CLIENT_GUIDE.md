@@ -328,13 +328,14 @@ asyncio.run(main())
 from cfgpu_mcp.service import task as task_svc
 
 async def poll():
-    # 查询状态：未完成时返回 {task_id, status} 信封；一旦成功，返回与 generate_*
-    # 完全一致的扁平结果（顶层 urls/expires_at/...）；失败则抛出 CFGPUError(task_failed)。
+    # 查询状态：未完成时返回 {task_id, status, elapsed_seconds} 信封；一旦成功，返回与
+    # generate_* 完全一致的扁平结果（顶层 urls/expires_at/...）；失败则抛 CFGPUError(task_failed)。
     status = await task_svc.get_status("task-abc123")
     if "urls" in status:
         print(status["urls"])             # 已成功
     else:
-        print(status["status"])           # 'pending' | 'running'
+        print(status["status"],            # 'pending' | 'running'
+              status["elapsed_seconds"])   # 已等待秒数——报它，不要自己估
 
     # 等待完成（内置指数退避轮询）→ 成功时直接是扁平结果，结构同 generate_*
     result = await task_svc.wait_for_task("task-abc123", timeout=300)
@@ -926,7 +927,8 @@ done
 ```json
 {
   "task_id": "task-abc123",
-  "status": "pending"
+  "status": "pending",
+  "elapsed_seconds": 0
 }
 ```
 
@@ -936,6 +938,7 @@ done
 {
   "task_id": "task-abc123",
   "status": "pending",
+  "elapsed_seconds": 0,
   "request_id": "gen-用户自选-01"
 }
 ```
@@ -945,8 +948,14 @@ done
 与 `generate_*` 保持一致：**任务成功后返回上方的扁平结果**（顶层 `urls` / `expires_at` / 元数据，外加 `artifact: true`），不再嵌套在 `result` 里。任务尚未完成时返回信封：
 
 ```json
-{ "task_id": "task-abc123", "status": "running" }
+{ "task_id": "task-abc123", "status": "running", "elapsed_seconds": 47 }
 ```
+
+`elapsed_seconds` 是**任务创建至今的整秒数**（下限 0），每个未终态信封都带。它是两次
+`pending` 回复之间唯一会变的字段——没有它，第 1 次和第 40 次轮询的返回逐字节相同，
+调用方（尤其是 LLM）只能凭空编一个「大概等了几分钟」。**要报等待时长就报这个数，不要
+自己估**：各模型的排队与生成耗时相差一个数量级，本层不提供预估，也没有任何字段可以
+被读成预估。
 
 > `task_status` 对**非终态的异步任务**会做一次实时上游轮询再返回，所以反复调用它即可把 `wait=false` 提交的任务驱动到完成（客户端驱动轮询）；`task_wait` 则阻塞轮询直到终态或超时。
 
@@ -962,7 +971,7 @@ done
 3. 否则                            → 没结束，用 result["task_id"] 继续 task_status
 ```
 
-**`status` 是机器枚举**，取值 `succeeded` / `running` / `pending`（`failed` 走 error 通道，等不到）。给人和模型读的那句话在 `note` 里，不要拿它做控制流。
+**`status` 是机器枚举**，取值 `succeeded` / `running` / `pending`（`failed` 走 error 通道，等不到）。给人和模型读的那句话在 `note` 里，不要拿它做控制流。`pending` 与 `running` 是**两个不同的事实**，不要合并：`pending` 表示上游报的是排队类状态（`queued` / `waiting` / `submitted` / `not_start`），任务还没开始跑；`running` 才是上游确认在执行。
 
 **`error: true` 一定意味着「这条线到此为止」**：任务还活着的情况绝不会走 error 通道。`generate_*(wait=true)` 等待超时、连续轮询失败放弃、轮询中撞上 token 失效——这三种任务都还在上游跑，返回的都是未终态信封而不是错误：
 
