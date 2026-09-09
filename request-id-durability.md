@@ -265,6 +265,22 @@ uuid 满足这一点的前提是**它被持久化**，而不是每次执行现�
 > `uuid5(NAMESPACE, f"{thread_id}:{message_id}:{tool_call_id}")`——纯函数，不依赖持久化，
 > 顺带保住可追溯性。只要钉点留在 `after_model`，uuid4 更简单，不必上这套。
 
+#### 实现期修正（2026-09-09）：后备方案已升为正式方案
+
+host 侧实现时，这个「将来」当场就到了，触发它的正是 §9.1(a)「钉点上移到所有 generate_* 出口」
+本身：覆盖全部调用意味着新增一个中间件去钉，而 HAM 的审批卡片与执行烘入是另外两个钉点。
+**uuid4 在多钉点下要求「恰好生成一次」**，于是正确性依赖两件事——钉点位置，以及中间件
+`after_model` 的调度顺序（LangChain 逆注册序派发）。其中一件尤其糟：审批卡片钉进的是**展示
+载荷**、不进 state，所以如果卡片先于写入 state 的那次钉，卡片显示 uuid-A、执行跑 uuid-B，
+前端记的和实际计费的对不上，而这不会报任何错。
+
+`uuid5(thread_id:message_id:tool_call_id)` 让这一整类问题消失：任何钩子、任何顺序，算出的都是
+同一个串。它同时仍然满足 D10 的原始诉求（thread_id 进摘要 → 跨租户撞号需要两个 thread id 相同），
+并且**不再依赖持久化**——D10 那条「唯一的硬条件」以及它「静默失效 = 双倍计费」的风险随之
+消失。代价只有一条：`message_id` 成了唯一的逐轮判别项，所以 AIMessage 没有 id 时**不钉**
+（记 WARNING）——不可恢复只是少一条退路，而按消息计数的 tool_call_id 在同一 thread 内撞号会
+返回**上一轮的产物**，那是错。正常图里不可达：`add_messages` 会给进入 state 的每条消息补 uuid。
+
 #### 代价：跨层可追溯性
 
 今天一个 `call_xxx` 能在 LLM transcript、审批卡片、MCP task 表、cfgpu 日志之间直接 grep 串
@@ -499,15 +515,24 @@ generate_*（`_needs_approval` 为假或被 `_excluded`）不带 request_id，�
 uuid 主键，也就退出了本设计的恢复能力。要让恢复覆盖全部 generate_*，deerflow 侧需要把钉的
 位置上移到所有 generate_* 出口。
 
-**(b) 钉的值。** 从 `tc["id"]` 改为 host 生成的 uuid4（D10）。
+**(b) 钉的值。** 从 `tc["id"]` 改为 `uuid5(NAMESPACE, "thread_id:message_id:tool_call_id")`
+（D10 + 其实现期修正）。
 
-**这两件事一起带一条硬约束**：新钉点必须仍然是写 AIMessage 的钩子（`after_model` 一族），
-使钉进 `args` 的 uuid 随 AIMessage 进 checkpoint。**不得把钉点放到 `wrap_tool_call` 等
-执行期位置**——那样每次重放都会现算一个新 uuid，D2 的去重静默失效，症状是双倍计费而没有
-任何报错或日志。这是本设计对 host 侧唯一的强制要求。
+原先的硬约束（钉点必须写 AIMessage，否则去重静默失效）**因为改用派生值而不再存在**：值是纯
+函数，重放重算即同值，不依赖任何持久化。留下的要求只有一条——`message_id` 缺失时不钉。
 
-对应地需要一条 host 侧回归测试：**同一条 AIMessage 重放两次，`args["request_id"]` 逐字节
-相同**。
+回归测试仍然要有，判据不变：**同一条 AIMessage 重放两次，`args["request_id"]` 逐字节相同**。
+
+**✅ 已实现（2026-09-09，deer-flow-cfgpu `cfdream-dev`）**：新增
+`agents/middlewares/request_id_middleware.py`（`RequestIdMiddleware`，`after_model`，在
+`cfdream_agent.py` 无条件注册，`ask` 只管审批不管计费恢复），HAM 的两个钉点改为共用同一个
+`pin_request_id`——建卡处保留既有值、执行烘入处 `overwrite=True` 无条件重算（那份 args 是
+客户端回传的，而这个句柄是跨租户共享表的主键，不是调用方可以挑的参数）。测试
+`backend/tests/test_request_id_middleware.py`（13 条）+ HAM 既有用例改判。
+
+**已知未覆盖**：上游 pristine 的 `agent.py::build_middlewares`（gateway / channels / embedded）
+不注册它——fork 边界，见 `cfgpu-docs/fork-shape.md`。那些形态若接了 cfgpu MCP，generate_* 会
+回落到 MCP 侧自生成的 uuid，即失去恢复与去重。consumer 是唯一 live 的 director 调用方。
 
 **以上都是 host 侧改动，与 MCP 侧 Phase 1 成对上线。** MCP 侧仍按 `request_id` 可能为 None
 编写（CLI / dispatcher / openai_tools 本来就不带），不依赖 host 一定钉上，也不关心它长什么
@@ -541,7 +566,9 @@ BUG-115 的未闭合面里。
 | `dispatching` 崩溃不可恢复 | 上游已计费，结果丢失 | D7 定案：不猜、不重试，只如实上报。窗口从今天的「整个 POST 时长 10–60s」缩到「POST 返回后到 update 之间」（毫秒级） |
 | `request_id` 对模型重试不稳定 | 模型自己重发 = 新的一次工具调用 = 新 `request_id` = 新提交 = 二次计费 | §2.2。要根治得靠上游幂等键（当前不提供）或 host 侧策略 |
 | 无租户隔离 | 任何 token 可查任何 id | D3 定案本期不做，**已知并接受**。撞号那半边已由 D10 消除 |
-| 去重依赖 host 侧持久化 | host 若在执行期现算 uuid，D2 静默失效 → 双倍计费 | D10 的硬条件；靠 §9.1 的重放回归测试守住 |
+| ~~去重依赖 host 侧持久化~~ | **已消除**（2026-09-09）：钉的值改为派生的 uuid5，重放重算即同值，不依赖持久化 | 见 D10 的实现期修正 |
+| AIMessage 无 id 时不钉 | 那次调用不可恢复（cfgpu 回落自生成 uuid），但不会拿到别人的产物 | `add_messages` 给入 state 的每条消息补 uuid，正常图里不可达 |
+| 上游 pristine 链不钉 | gateway / channels / embedded 接 cfgpu 时无恢复无去重 | fork 边界，consumer 是唯一 live 的 director 调用方 |
 | 跨层追溯需要一次 join | transcript 里的 tool_call_id 与 task 表里的 request_id 不再同值 | D10 的代价；钉点记一行 INFO 即为 join 表 |
 | Phase 1 无 sweeper | 崩溃留下的非终态行不会自我收敛 | 仍优于今天（今天连行都没有）；Phase 2 补 |
 | SQLite 单实例 | stdio/CLI 部署只有进程内 shield | 符合预期，那些部署没有多实例 |
@@ -593,10 +620,11 @@ D1 id 即 request_id / D2 冲突即去重 / D4 两个新状态 / D5 shield / D6 
 **Phase 3 — 吞吐（sync-model-to-async.md 的原目标，不在本篇）**
 后台 worker，让 `wait=False` 对同步模型真正有意义。地基已由 Phase 1/2 铺好。
 
-**配套（host 侧，另开）**
-§9.1 钉点上移 + 钉值改 uuid（D10）+ 重放一致性回归测试 + §9.2 超时文案合成——与 Phase 1
-成对上线。三者之中 D10 的硬条件（钉点必须写 AIMessage）是唯一会静默失效的一条，评审时优先
-看它。
+**配套（host 侧）— ✅ 已完成（2026-09-09，deer-flow-cfgpu）**
+§9.1 钉点上移（新增 `RequestIdMiddleware`，覆盖全部 generate_*）+ 钉值改派生 uuid5
+（D10 及其实现期修正）+ 重放一致性回归测试 + §9.2 超时文案改成
+`cfdream_task_status("<request_id>")`。原本标为「唯一会静默失效」的那条（钉点必须写
+AIMessage）已随派生值一并消除。
 
 ---
 
@@ -615,7 +643,7 @@ D1 id 即 request_id / D2 冲突即去重 / D4 两个新状态 / D5 shield / D6 
 | Phase 1 加 `list_tasks` | request_id 调用前已知、永不丢失，它的必要性大幅下降；而在无租户键（D3）时它打开的是「列出别人的任务」 |
 | 给 `task_status` 加 `request_id` 形参做别名 | 不增加能力，只增加模型填错的地方；docstring 一句话即可 |
 | 继续用 `tool_call_id` 当 `request_id` | 它的唯一性是 provider 的实现细节而非契约（短 id / 序号 id 都存在），而 D1 之后它是共享 PG 的主键；撞号的后果是 D2 去重命中，即跨租户返回别人的产物 |
-| 用 `uuid5(thread_id:message_id:tool_call_id)` 代替 uuid4 | 纯函数、执行期可算、保住可追溯性，但当前钉点在 `after_model` 已经持久化，uuid4 足够且更简单。留作「钉点不得不下移」时的后备 |
+| ~~用 `uuid5(thread_id:message_id:tool_call_id)` 代替 uuid4~~ | **实现期反转、已采纳**：§9.1(a) 的覆盖面改动本身就造出了多个钉点，而 uuid4 在多钉点下要求「恰好生成一次」，于是把正确性押在中间件调度顺序上——且卡片钉的是不进 state 的展示载荷，先后颠倒就会「卡片一个 id、执行另一个 id」且不报错。派生值让这一整类问题消失，并顺带消掉 D10 那条会静默失效的硬条件 |
 | 提交失败一律把行留在 `dispatching` | 对每一次 4xx 都宣布「可能已计费」，而 4xx 恰恰证明了相反的事；照实分流只多写一个判据函数 |
 | 继续用启动期 `CREATE TABLE IF NOT EXISTS` + `ADD COLUMN` 做迁移 | 只对纯增列成立，没有历史/次序/down；下一次删列或改类型时无处落脚（D11） |
 | 让 alembic 也管 `:memory:` | 每条连接就是一个独立的库，迁移会建出一个立刻被丢掉的库；改用逐列比对的测试来防漂移 |
