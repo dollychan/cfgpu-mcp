@@ -133,6 +133,12 @@ async def get_status(task_id: str) -> dict[str, Any]:
     # Re-poll only while the task is still in flight. succeeded / failed are
     # terminal: a succeeded-without-urls row is malformed data that poll()
     # converges to "failed" at write time, not something to retry on every read.
+    #
+    # `submitting` / `dispatching` are excluded for the opposite reason: they are very
+    # much in flight, but no upstream task id exists yet, so a poll would ask the
+    # upstream about a request_id it has never seen and read the 404 back as a failed
+    # task. Their status *is* the answer this call owes the caller — "not sent" vs
+    # "may have been sent" — and it is returned as-is by the envelope below.
     needs_repoll = task.status in ("pending", "running")
     last_error: dict[str, Any] | None = None
     if needs_repoll:

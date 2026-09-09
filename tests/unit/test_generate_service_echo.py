@@ -116,7 +116,7 @@ async def test_no_wait_envelope_echoes_caption_and_request_id():
         result = await video_service.generate_video(
             prompt="x", wait=False, caption=CAPTION, request_id="r-1"
         )
-    assert result["task_id"] == "cfgpu-task-1"
+    assert result["task_id"] == "r-1"   # the handle and the task id are one value
     assert result["caption"] == CAPTION
     assert result["request_id"] == "r-1"
     await db.close()
@@ -176,7 +176,9 @@ async def test_no_wait_envelope_echoes_label():
     a, b, c, d = _patched(_async_adapter(), repo, client)
     with a, b, c, d:
         result = await video_service.generate_video(prompt="x", wait=False, label=LABEL)
-    assert result["task_id"] == "cfgpu-task-1"
+    # No request_id was supplied, so the id is this server's own — the upstream's id is
+    # internal and must not be what the caller is handed back.
+    assert result["task_id"] and result["task_id"] != "cfgpu-task-1"
     assert result["label"] == LABEL
     await db.close()
 

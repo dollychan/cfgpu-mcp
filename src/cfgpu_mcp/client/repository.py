@@ -18,17 +18,31 @@ from urllib.parse import urlparse
 import aiosqlite
 
 from cfgpu_mcp.client import db as db_ops
+from cfgpu_mcp.client.migrations import ensure_schema
 
 
 class TaskRepository(ABC):
     @abstractmethod
-    async def insert_task(self, task_id: str, adapter_id: str, status: str, payload: dict) -> None: ...
+    async def insert_task(
+        self, task_id: str, adapter_id: str, status: str, payload: dict,
+        *, model_used: str | None = None,
+    ) -> bool:
+        """Insert a task row; return False (writing nothing) if the id already exists.
+
+        The conflict is not an error: with the caller's ``request_id`` as the primary
+        key it *is* the duplicate-submission signal, and swallowing it here is what
+        keeps a replayed call from being billed twice.
+        """
 
     @abstractmethod
-    async def update_task(self, task_id: str, status: str, result: dict | None = None, error: str | None = None) -> None: ...
+    async def update_task(
+        self, task_id: str, status: str, result: dict | None = None, error: str | None = None,
+        *, upstream_task_id: str | None = None, payload: dict | None = None,
+    ) -> None: ...
 
     @abstractmethod
-    async def get_task(self, task_id: str) -> dict | None: ...
+    async def get_task(self, task_id: str) -> dict | None:
+        """By primary key, falling back to ``upstream_task_id`` on a miss."""
 
     @abstractmethod
     async def list_running_tasks(self) -> list[dict]: ...
@@ -49,14 +63,29 @@ class SqliteTaskRepository(TaskRepository):
 
     @classmethod
     async def connect(cls, url: str) -> "SqliteTaskRepository":
+        # Migrations first: for a file-backed database Alembic owns the schema, and it
+        # has to have run before the first statement touches the table. It is a no-op
+        # for `:memory:`, which open_db creates at head itself — see client/migrations.
+        await ensure_schema(url)
         # open_db normalizes the path (~ expansion, parent mkdir, :memory: passthrough).
         return cls(await db_ops.open_db(_sqlite_path(url)))
 
-    async def insert_task(self, task_id: str, adapter_id: str, status: str, payload: dict) -> None:
-        await db_ops.insert_task(self._db, task_id, adapter_id, status, payload)
+    async def insert_task(
+        self, task_id: str, adapter_id: str, status: str, payload: dict,
+        *, model_used: str | None = None,
+    ) -> bool:
+        return await db_ops.insert_task(
+            self._db, task_id, adapter_id, status, payload, model_used=model_used
+        )
 
-    async def update_task(self, task_id: str, status: str, result: dict | None = None, error: str | None = None) -> None:
-        await db_ops.update_task(self._db, task_id, status, result=result, error=error)
+    async def update_task(
+        self, task_id: str, status: str, result: dict | None = None, error: str | None = None,
+        *, upstream_task_id: str | None = None, payload: dict | None = None,
+    ) -> None:
+        await db_ops.update_task(
+            self._db, task_id, status, result=result, error=error,
+            upstream_task_id=upstream_task_id, payload=payload,
+        )
 
     async def get_task(self, task_id: str) -> dict | None:
         return await db_ops.get_task(self._db, task_id)

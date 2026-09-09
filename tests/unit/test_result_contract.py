@@ -87,7 +87,10 @@ async def test_a_wait_that_times_out_returns_the_pending_envelope_not_an_error()
     assert "error" not in result
     assert "artifact" not in result
     assert result["status"] in ("pending", "running")
-    assert result["task_id"] == "cfgpu-task-1"
+    # Same value under both keys, and deliberately so: the task's identity *is* the
+    # caller's correlation handle now, which is what makes a submission recoverable
+    # from a handle the caller held before it ever called.
+    assert result["task_id"] == "req-7"
     assert result["request_id"] == "req-7"
     # No last_error: polling was healthy, we simply stopped waiting. Its absence is the
     # difference between "we watched it run" and "we lost sight of it".
@@ -111,7 +114,7 @@ async def test_losing_sight_of_a_task_reports_why_without_calling_it_a_failure()
         result = await image_service.generate_image(prompt="x", request_id="req-8")
 
     assert "error" not in result
-    assert result["task_id"] == "cfgpu-task-1"
+    assert result["task_id"] == "req-8"
     assert result["last_error"]["error_type"] == "auth"
     assert result["last_error"]["retryable"] is False
     await db.close()

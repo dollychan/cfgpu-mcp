@@ -545,7 +545,12 @@ class GenerateImageInput(BaseModel):
         "task_status/task_wait call. Use it to link an async result (whose tool_call id "
         "differs from this request's) back to this request. Unlike task_id it is known "
         "at call time and also works for synchronous models (which have no task_id). "
-        "Omitted from the response when not supplied.",
+        "It also **becomes** this task's id: if this call never returns (timeout, "
+        "connection drop, server restart), pass this same value to task_status to find "
+        "out what happened to it — and never resubmit before doing so, because the "
+        "generation may already have run and been charged for. Resending this call with "
+        "the same request_id is safe: it returns the existing task instead of "
+        "generating again. Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
     label: LabelStr = label_field()
@@ -686,7 +691,12 @@ class GenerateVideoInput(BaseModel):
         "task_status/task_wait call. Use it to link an async result (whose tool_call id "
         "differs from this request's) back to this request. Unlike task_id it is known "
         "at call time and also works for synchronous models (which have no task_id). "
-        "Omitted from the response when not supplied.",
+        "It also **becomes** this task's id: if this call never returns (timeout, "
+        "connection drop, server restart), pass this same value to task_status to find "
+        "out what happened to it — and never resubmit before doing so, because the "
+        "generation may already have run and been charged for. Resending this call with "
+        "the same request_id is safe: it returns the existing task instead of "
+        "generating again. Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
     label: LabelStr = label_field()
@@ -756,7 +766,12 @@ class GenerateAudioInput(BaseModel):
         "task_status/task_wait call. Use it to link an async result (whose tool_call id "
         "differs from this request's) back to this request. Unlike task_id it is known "
         "at call time and also works for synchronous models (which have no task_id). "
-        "Omitted from the response when not supplied.",
+        "It also **becomes** this task's id: if this call never returns (timeout, "
+        "connection drop, server restart), pass this same value to task_status to find "
+        "out what happened to it — and never resubmit before doing so, because the "
+        "generation may already have run and been charged for. Resending this call with "
+        "the same request_id is safe: it returns the existing task instead of "
+        "generating again. Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
     label: LabelStr = label_field()

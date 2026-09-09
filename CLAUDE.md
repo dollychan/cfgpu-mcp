@@ -26,6 +26,12 @@ CFGPU_RUN_INTEGRATION=1 pytest tests/integration/ -v
 cfgpu-mcp
 # or
 python -m cfgpu_mcp.server
+
+# Schema migrations. The server applies these itself on connect, so this is for
+# inspecting history, authoring a revision, or running a big one deliberately.
+DATABASE_URL=postgresql://... alembic upgrade head
+alembic history
+alembic revision -m "add a column"
 ```
 
 ## CLI usage
@@ -190,11 +196,34 @@ Tests: `tests/unit/test_validate_only.py` — the load-bearing ones are `assert_
 
 ### Sync vs. async models
 
-`is_async: false` in adapter YAML (e.g. Seedream) means the API returns the result in the POST response — no polling. `TaskManager.create()` branches on `adapter.is_async`: sync models parse the POST response immediately and write `succeeded` to DB; async models write `pending` and require polling via `TaskManager.wait()`.
+`is_async: false` in adapter YAML (e.g. Seedream) means the API returns the result in the POST response — no polling. `TaskManager.create()` branches on `adapter.is_async`: sync models parse the POST response immediately and write `succeeded`; async models write `pending` and require polling via `TaskManager.wait()`.
+
+### The task row is written before the upstream POST
+
+The ordering is load-bearing and is the thing to preserve when touching `create()`. Billing happens inside that POST — 10 to 60 seconds for a sync model — and until this change no row existed until *after* it returned, so any interruption in that window (agent cancel, dropped connection, a restart of this process) produced **money spent, no trace**. `create()` now: builds the payload → `insert_task(..., "submitting")` → `update_task("dispatching")` → `asyncio.shield(POST + parse + write-back)`.
+
+Four consequences worth knowing before changing anything here:
+
+- **The primary key is the caller's `request_id`** (falling back to a local uuid when absent — CLI, dispatcher). It is the only handle known *before* the call goes out, hence the only one a caller who never received a response can come back with. `task_status(request_id)` needs no new parameter: the two are the same value.
+- **A primary-key conflict is dedup, not an error.** `insert_task` returns a bool; on False `create()` returns the existing row and sends no POST. A terminal row returns its cached artifact — a repeated request_id is a replay of one call, never a second creative intent. This closes the checkpoint-replay double charge **only if the host persists the request_id**; a host that recomputes it per execution makes this silently a no-op, and the symptom is double billing with no error and no log.
+- **`submitting` / `dispatching` are this server's own statuses**, both non-terminal, deliberately absent from `_STATUS_MAP` (which translates upstream vocabulary). They answer "was this actually sent?" — provably not, versus cannot prove otherwise. Anything that enumerates live statuses must include them (`list_running_tasks`) and anything that polls upstream must exclude them (`service/task.py`'s `needs_repoll`, `wait()`), since no `upstream_task_id` exists yet.
+- **`asyncio.shield` keeps the write-back out of the caller's cancel scope.** By the time the POST is in flight the charge is incurred; the only open question is whether the result is recorded. It does not survive process death — nothing in-process can.
+
+A submit failure is recorded according to what it *proves* (`_record_submit_failure`): upstream answered and refused (4xx, content moderation, connect-phase timeout) converges the row to `failed`, because nothing was started; anything indeterminate (request-phase POST timeout, transport error, upstream 5xx) leaves it `dispatching`, clears `outcome_unknown`, and appends the executable next step naming `task_status("<request_id>")`. Full rationale, invariants and the deferred phases: `request-id-durability.md`.
+
+### Schema migrations
+
+Alembic (`src/cfgpu_mcp/migrations/`) is the sole authority for durable schemas — file-backed SQLite and Postgres. `SqliteTaskRepository.connect` / `PostgresTaskRepository.connect` `await ensure_schema(url)` before opening anything, so the code can never run one revision ahead of its store. Three things to know:
+
+- The migration environment is **async for both dialects** (`sqlite+aiosqlite` / `postgresql+asyncpg`) — this project declares no sync drivers. `ensure_schema` therefore runs Alembic on a worker thread, since `env.py` calls `asyncio.run`.
+- Every revision is **guarded** (`inspect(bind).has_table` / `get_columns`). Existing deployments have the table and no `alembic_version` row; the guards let `upgrade head` adopt them with no stamping step.
+- **`:memory:` is not migrated** — each connection is its own database, so migrating over a second connection would build one nobody uses. `client/db.py` keeps DDL for that case alone, and `test_migrations.py::test_migrated_schema_matches_the_in_memory_bootstrap` compares the two column-by-column so they cannot drift.
+
+Concurrent instances are serialized by `pg_advisory_xact_lock` inside Alembic's own transaction (`migrations/env.py`) — the same key the repository used before migrations existed.
 
 **Caller-supplied echo fields** (`request_id`, `caption`, `label`): `generate_*` accepts three optional handles that this server stores and hands back but never interprets. All ride the stored `payload` under reserved keys (`_request_id` / `_caption` / `_label` via `_stash_internal()`, stripped by `public_payload()` — which strips `*_ECHO_PAYLOAD_KEYS` rather than a hand-listed tuple, since that list is the thing that grows — so none reaches upstream) and are echoed by the **service layer** (`stamp_echo()`) — so all three modes (MCP, dispatcher, CLI) carry them, unlike the MCP-only `annotate_artifact`/`split_structured`. Always "add only when set" (`setdefault`); `understand_vision` (always sync, single-call, text result) has none.
 
-- **`request_id`** is a *correlation* handle: it joins an async artifact/error (returned later by `task_status`/`task_wait`, on a *different* tool_call) back to the originating request. Needed because `task_id` only exists after the POST returns and sync models have none.
+- **`request_id`** is a *correlation* handle: it joins an async artifact/error (returned later by `task_status`/`task_wait`, on a *different* tool_call) back to the originating request. Needed because `task_id` only exists after the POST returns and sync models have none. It is also **the task's primary key** — see "The task row is written before the upstream POST" above — which is what makes an interrupted `generate_*` recoverable and a replayed one free.
 - **`caption`** is a *label* for the artifact — for callers that keep their own asset ledger (DeerFlow/cf-dream registers each generated artifact as a **material** the user later refers to by a short id). Without a label supplied at call time, the ledger entry is nameless and the caller has to spend a second tool round trip naming it after the fact; riding the stored payload is what carries it across the two-phase `generate(wait=False) → task_wait` hop with no state on the caller's side. Truncated at `CAPTION_MAX_CHARS` (200) rather than rejected — a caption cannot affect the generated media, so failing the call over the length of a cosmetic label would cost the caller a turn for nothing.
 
 - **`label`** is the artifact's *name* — the short display/file name the same ledger shows to a person. **Two fields rather than one because they answer to two readers**: a caption is read by a *model* re-reading its ledger every turn and therefore wants to disambiguate; a label is read by a *person* in an asset panel and therefore wants to be short, stable, and filesystem-safe. A caption long enough to disambiguate is a bad file name; a file name short enough to display disambiguates nothing. They are also owned differently downstream — a host may let its agent rewrite the caption freely while the label stays the artifact's birth name — so merging them would let an unrelated model call rename a user's file. Capped at `LABEL_MAX_CHARS` (100), deliberately shorter than a caption, and **plain truncation only**: sanitizing (illegal characters, extension preservation) belongs to the host, which is the only side that knows its own storage rules. The two never fall back to one another — supplying one must not invent the other, because the fallback policy is the host's (only it knows whether its ledger wants a basename or a description).
@@ -276,7 +305,8 @@ Its `size` table is **computed, not transcribed**: unlike Seedream this family p
 - `adapters/registry.py` — YAML loading, `extends` merge, Python class resolution
 - `config.py` — Singleton registry/client/DB; `load_registry()` reads `disabled_models` from config.yaml
 - `router.py` — Scores adapters for `model="auto"` requests; Chinese prompts bias toward Seedream. Two declarative `adapter.yaml` fields keep the default pick out of the alphabetical `adapter_id` tie-break: `auto_priority` (the second sort key in `selection_key`, deliberately not a score bonus — folded into the score it would outweigh a real scoring difference) and `quality_rank` (`quality_tier="best"` only, replacing the `cost_tier` quality proxy for models that declare it). Both are inherited through `extends`, so a variant that must not inherit one zeroes it out explicitly
-- `task_manager.py` — Sync/async dispatch, exponential backoff polling, DB persistence
+- `task_manager.py` — Sync/async dispatch, exponential backoff polling, DB persistence; `create()` owns the write-before-POST ordering
+- `client/migrations.py` + `migrations/` — Alembic: the schema's source of truth for every durable store
 - `agent/dispatcher.py` — `dispatch_tool(name, inputs)` entry point for Mode B (Anthropic SDK)
 - `agent/openai_tools.py` — `get_openai_tools()` + `openai_dispatch_tool()` for OpenAI SDK
 - `agent/langgraph_tools.py` — `get_langgraph_tools()` returning `StructuredTool` list for LangGraph

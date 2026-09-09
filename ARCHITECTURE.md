@@ -244,8 +244,13 @@ TaskManager.create(adapter, req)
     │
     ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式
     │
-    ├─ [is_async=false] CFGPUClient.post() → adapter.parse_response() → DB 写 succeeded
-    └─ [is_async=true]  CFGPUClient.post() → 取 task_id（取不到则抛 CFGPUError）→ DB 写 pending
+    ├─ insert_task(request_id or uuid4, "submitting")   ← ★ 行先落，POST 后发
+    │      └─ 主键冲突 = 重复投递 → 直接返回既有行，不再 POST（不二次计费）
+    ├─ update_task("dispatching")      越过这条线「从未发出」不再可证
+    │
+    └─ asyncio.shield(_dispatch(...))  已计费的写回不进调用方的 cancel 作用域
+           ├─ [is_async=false] post() → parse_response() → update succeeded
+           └─ [is_async=true]  post() → 取上游 task_id → update pending + upstream_task_id
     │
     ▼ （wait=True 时继续）
 TaskManager.wait(task, adapter, req)
@@ -263,7 +268,7 @@ service 返回 dict → 访问层格式化 → 用户
 
 - `get_settings()` 从 config.yaml 加载配置（`settings.py`）。
 - `get_client(provider="cfgpu")` **按 provider 各持一个实例**（各自一个连接池），见 §3.4。默认 provider 的 `CFGPUClient` **不持有 token**——共享连接池，token 逐请求从 ContextVar 解析；`base_url`/超时来自 settings。非默认 provider 的 client 反过来：只认自己 `token_env` 里的服务端凭据，不看 ContextVar。`client_for(adapter)` 是给 `TaskManager` 用的解析器。`close()` 关闭全部 provider 的 client。
-- `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。该单例的初始化是 `async` 且首调时有 `await`，因此用 `asyncio.Lock` + 双重检查保护：否则一批并发工具调用会各自看到 `_repo is None` 并同时建仓库 / 跑建表 DDL，撞上 Postgres `CREATE TABLE` 的目录竞争（`pg_type_typname_nsp_index` 唯一键冲突 → `duplicate key (tasks)`）。跨实例同时启动的竞争则由 `PostgresTaskRepository._init_schema` 的事务级 advisory lock（`pg_advisory_xact_lock`）串行化建表，输家随后跑 `CREATE ... IF NOT EXISTS` 成空操作。
+- `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。该单例的初始化是 `async` 且首调时有 `await`，因此用 `asyncio.Lock` + 双重检查保护：否则一批并发工具调用会各自看到 `_repo is None` 并同时建仓库 / 跑 schema 迁移，撞上 Postgres `CREATE TABLE` 的目录竞争（`pg_type_typname_nsp_index` 唯一键冲突 → `duplicate key (tasks)`）。跨实例同时启动的竞争由 alembic 迁移环境里的事务级 advisory lock（`pg_advisory_xact_lock`，`migrations/env.py`）串行化，输家随后逐条跑成空操作。见 §「schema 迁移」。
 
 **请求头里的 `Accept-Encoding` 是写死的**（`cfgpu_client.ACCEPT_ENCODING = "gzip, deflate"`，逐请求随 `Authorization` 一起注入）。不写的话 aiohttp 会按**宿主机上恰好装了哪些可选编解码器**来生成这个头（`_gen_default_accept_encoding()`：`HAS_BROTLI` 为真就追加 `br`，`HAS_ZSTD` 为真就追加 `zstd`），于是线上的 wire 格式取决于部署环境的间接依赖。触发它的是一个挂在 Cloudflare 后面的上游（已下架的 `submodel` provider），客户端一声明 `br` 它就 brotli 压缩 JSON 返回；解压一旦失败，`http_parser` 抛的 `ContentEncodingError` 会在 payload 层被包成 `ClientPayloadError`，落到 `_request()` 的 `except aiohttp.ClientError` 上，最终变成一条 `网络请求失败：400, message:\n  Can not decode content-encoding: br` —— 而任务在上游其实好好的。`wait()` 会把它当可重试错误吞掉（连续 N 次才放弃），但 `task_status` 只轮询一次，一次就直接报给调用方。这里的 body 全是几百字节的 JSON（task 信封、URL），gzip 足够且由标准库支撑，固定这个集合等于零成本地让 wire 格式在所有宿主机上一致。测试：`test_accept_encoding_excludes_brotli`。
 
@@ -400,11 +405,24 @@ from cfgpu_mcp.adapters import seedance_video, seedream, async_image, happyhorse
 ### 状态机
 
 ```
-pending → running → succeeded
-                 └→ failed
+submitting ──► dispatching ──┬─[is_async=false]─► succeeded / failed
+（POST 确定    （无法证明     │
+  未发出）      未发出）      └─[is_async=true]──► pending → running → succeeded
+                                                                   └→ failed
 ```
 
-同步模型（Seedream）直接从 `pending` 跳到 `succeeded`，不经过 `running`。
+前两个状态是本服务自己的词汇，**不进 `_STATUS_MAP`**（那张表翻译上游状态，上游永远不会说这两个词），也不是终态。它们存在的唯一理由是把「这次提交到底发出去了没有」变成可判定的：
+
+| 状态 | 对调用方意味着什么 |
+|---|---|
+| `submitting` | 行已落、POST 确定未发出。上游没有计费，**重发是安全的** |
+| `dispatching` | POST 已派发或其响应已丢失。上游**可能已计费**，不要直接重发，先 `task_status` |
+
+代价是同步路径多一次本地 UPDATE，被一次 10–60s 的上游调用完全淹没。
+
+同步模型（Seedream）从 `dispatching` 直接跳到 `succeeded`，不经过 `pending` / `running`。
+
+判据点必须一起跟进，漏一处就是把新状态误读成别的东西：`list_running_tasks()` 要选中这两个状态（否则崩溃遗留的行没人收敛），`service/task.py` 的 `needs_repoll` 要**排除**它们（此时还没有 `upstream_task_id`，去轮询等于拿 request_id 问上游要一个它没见过的任务，404 会被读成任务失败），`wait()` 在这两个状态下改为**重读行**而不是轮询上游。
 
 ### Task 存储：可配置仓库（SQLite / Postgres）
 
@@ -421,21 +439,46 @@ task 状态通过 `TaskRepository` 接口持久化（`client/repository.py`）�
 
 ```sql
 tasks (
-    id          TEXT PRIMARY KEY,   -- CFGPU 返回的 task_id（异步）或 uuid4（同步）
-    adapter_id  TEXT,               -- 用于 task_wait 时重建 adapter
-    status      TEXT,               -- pending | running | succeeded | failed
-    payload     TEXT,               -- JSON，原始 API 请求体
-    result      TEXT,               -- JSON，NormalizedResult.to_dict()
-    error       TEXT,               -- 失败原因
-    created_at  REAL / DOUBLE PRECISION,
-    updated_at  REAL / DOUBLE PRECISION
+    id               TEXT PRIMARY KEY,   -- 调用方的 request_id；没给才回落 uuid4
+    adapter_id       TEXT,               -- 用于 task_wait 时重建 adapter
+    status           TEXT,               -- submitting | dispatching | pending | running | succeeded | failed
+    payload          TEXT,               -- JSON，原始 API 请求体
+    result           TEXT,               -- JSON，NormalizedResult.to_dict()
+    error            TEXT,               -- 失败原因
+    created_at       REAL / DOUBLE PRECISION,
+    updated_at       REAL / DOUBLE PRECISION,
+    upstream_task_id TEXT,               -- 上游自己的 id（异步）。纯内部，绝不回给调用方
+    model_used       TEXT                -- 公开模型名，供报表按模型分组
 )
--- Postgres 额外建索引 idx_tasks_status_created(status, created_at)
+-- idx_tasks_status_created(status, created_at)、idx_tasks_upstream(upstream_task_id)
 ```
+
+**主键是调用方的 `request_id`。** 这不是命名偏好，是恢复能力的前提：`request_id` 是调用**发出之前**就已知的唯一句柄，因此响应丢了它还在。行在 POST **之前**写入（`submitting`），POST 之前再推进到 `dispatching`——于是任何中断都留下痕迹，且痕迹能区分「确定没发出（重发安全）」与「无法证明没发出（别直接重发）」。这两条以前都不成立：同步模型的行要等 POST 返回才出现，中断的结果是**已计费、零痕迹**。详见 `request-id-durability.md`。
+
+`upstream_task_id` 是这次改动的另一半：主键让给了 `request_id`，上游 id 就得有自己的列。它只用来拼轮询 URL（`poll()` 读 `upstream_task_id or id`，`or id` 是给存量行的——那些行的 `id` 本身**就是**上游 id，不回填），**不出现在任何对调用方的返回里**。调用方与本服务之间只有一个 id。
+
+`model_used` 是 `adapter_id` 的冗余投影（两者一一对应），纯为报表存在：行现在先于 POST 落库，终态行的 `updated_at - created_at` 因此是真实的端到端时延，这一列让「按模型统计生成耗时」不必 join 注册表、也不必暴露内部 `adapter_id`。
 
 DB 的作用：`task status <task_id>` / `task wait <task_id>` 需要在进程重启后仍能查询和恢复任务。如果只在内存中存储，异步工作流（`--no-wait` / `wait=false` 后稍后查询）就无法工作。
 
 **多进程 / 多实例共享**：stdio 下每个 agent spawn 独立 server 进程，但共指同一 SQLite 文件（`~/.cfgpu/tasks.db`，WAL 支持并发读 + 单写）；需进程隔离则各设不同 `task_db.url`。streamable-http 多实例水平扩展时改用 Postgres，所有实例共指同一库——本地 SQLite 文件无法跨实例共享。
+
+### schema 迁移（alembic）
+
+**alembic 是所有持久化存储 schema 的唯一权威**（`src/cfgpu_mcp/migrations/`）：文件型 SQLite 与 Postgres 都归它管，schema 的每一次变更都写成一条 revision。仓库的 `connect()` 在建连接池 / 开库**之前** `await ensure_schema(url)`（`client/migrations.py`），因此不存在「代码已升级、库还差一版」的窗口。
+
+在连接期跑而不是做成部署步骤，是沿用这个服务本来的行为（以前是每次启动跑 `CREATE TABLE IF NOT EXISTS`）：实例由 systemd 各自重启，没有一个可以挂手工 `upgrade` 的协调点。由此带来的并发由 `migrations/env.py` 里的 `pg_advisory_xact_lock` 串行化——它取在 alembic 自己的事务里，覆盖整轮 upgrade，提交即释放。手工跑仍然可用，大迁移应当这么做：
+
+```bash
+DATABASE_URL=postgresql://... alembic upgrade head    # env.py 自己翻译成 async driver
+alembic history
+```
+
+三条实现上的取舍：
+
+- **迁移环境是异步的，两种方言都是**（`sqlite+aiosqlite` / `postgresql+asyncpg`）。本项目只声明了这两个驱动，让迁移另外拖一个 psycopg2 进来不值得。`ensure_schema` 因此把 alembic 放在工作线程里跑（`asyncio.to_thread`）——`env.py` 里的 `asyncio.run` 需要一个自己没有事件循环的线程。
+- **每条 revision 都是**「先查再做」**的**。所有现存部署都已经有 `tasks` 表却没有 `alembic_version` 行，guard 让 `upgrade head` 直接把这类库纳管，不需要运维判断它「实际上处在哪一版」，也不需要 stamp。
+- **`:memory:` 不走 alembic**：每条连接就是一个独立的库，对着第二条连接跑迁移只会建出一个立刻被丢掉的库。它由 `client/db.py` 里保留的那份 DDL 直接建在 head 上。两份描述同一个 schema 必然漂移，所以 `test_migrations.py::test_migrated_schema_matches_the_in_memory_bootstrap` 分别建两个库逐列比对——只在一边加列会在那里失败。
 
 **客户端驱动轮询**：`service/task.py` 的 `get_status()` 对**非终态的异步任务**（pending/running）或「已成功但 result 无 URL」的任务，做**一次**实时上游轮询并落库。这是 `wait=false` 客户端驱动模型的关键——每次 `task_status` 调用都带着调用方 token，服务端借它把异步任务往前推一步，无需为此挂住连接；客户端断开后凭 task_id 重连即可继续。仅对异步模型（`adapter.is_async`）执行——同步模型无 `poll_endpoint`，跳过。这次重查失败时**不阻断**，返回 DB 里的 stale 值，但「失败了却什么都不说」分三档：`auth` / `invalid_params` 直接抛（调用方可修，装成「还在跑」等于把人晾在那）；**不可重试**的错误（下架的 endpoint、上游会一直拒的 token）挂上 `last_error` 再返回未终态信封 —— 再查一次也是白查，只给一个 `status: "running"` 等于把调用方推进一个不会终止的循环，而任务本身确实还在上游跑，所以走 `last_error` 而不是 error 通道，与 `wait()` 对同一个错误的形状一致；可重试的（网络抖动、超时）才是原来那条静默路径，记一条日志、返回 stale，调用方下一步本来就是再查一次。非 `CFGPUError` 的异常（adapter 解析终态响应时崩了、仓储抖了一下）没有可信的分类，`retryable` 保守地留 `true`（绝不叫调用方停止轮询一个活任务），真正的信息是 `last_error` **出现了**：这个 running 是推断的，不是观测到的。
 
@@ -527,9 +570,11 @@ CFGPUError.from_http_response(status, body)
 | request 阶段 + GET（轮询） | 无关，轮询幂等 | `True` | — |
 | request 阶段 + POST（提交） | **不知道** | `False` | `True` |
 
-第三种是全系统唯一一个「既不能说成功、也不能说没发生」的错误：`TaskManager.create()` 的 POST（同步 / 异步两条路）都在 `insert_task` **之前**，所以请求阶段超时意味着**没有 task_id、没有落库**，而上游可能已经受理并计费——同步模型（Seedream / 万相 2.7 图像）整个生成都在这个 POST 里，`http_timeout: 120` 是能被一次 4K 出图逼近的。此前这里写死 `retryable=True`，等于向 agent 断言「重发是安全的」，照做就是双份计费。
+第三种曾是全系统唯一一个「既不能说成功、也不能说没发生」的错误：`TaskManager.create()` 的 POST（同步 / 异步两条路）都在 `insert_task` **之前**，所以请求阶段超时意味着**没有 task_id、没有落库**，而上游可能已经受理并计费——同步模型（Seedream / 万相 2.7 图像）整个生成都在这个 POST 里，`http_timeout: 120` 是能被一次 4K 出图逼近的。此前这里写死 `retryable=True`，等于向 agent 断言「重发是安全的」，照做就是双份计费。
 
 因此新增 `CFGPUError.outcome_unknown`，`to_tool_result_dict()` 只在为真时输出；`phase`（`connect` / `request`）也从 `original` 抬进了结果顶层——判断要不要重发的依据不该靠读散文。测试：`test_submit_timeout_is_not_retryable_and_says_the_outcome_is_unknown` / `test_poll_timeout_stays_retryable` / `test_connect_phase_timeout_is_retryable_even_on_a_submit`。
+
+**这条已经收窄。** 行现在先于 POST 落库，所以「没有可对账的东西」不再成立：`TaskManager._record_submit_failure` 在提交路径上接住这类错误，按它**证明了什么**分流——上游明确拒收的（4xx / connect 阶段超时 / 内容审核）把行收敛成 `failed`，因为那既没执行也没计费，说成「可能已计费」是把可重试的事说死了；证明不了的（request 阶段超时、传输层错误、上游 5xx）把行留在 `dispatching`，清掉 `outcome_unknown`，并在文案末尾补上真能执行的下一步：`task_status("<request_id>")`。`CFGPUClient` 那一层仍然照旧置位——它只看得见传输事实，看不见有没有落库；两层的分工就是这条收窄的实现方式。`outcome_unknown` 剩下的适用面只有「落库本身失败」。
 
 ### 失效 / 无权限端点：快速失败（非重试）
 
@@ -567,7 +612,9 @@ MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在�
 
 **`payload` 字段（真实 API 请求体回传）**：所有成功结果（`generate_*` 以及 `_present` 的成功分支）在 `NormalizedResult` 元数据之外追加 `payload` 字段，内容是 `Task.public_payload()` —— 即真正 POST 给该模型专属 API 的请求体（`adapter.build_payload(req)` 的产物，含 `cfgpu_model_id` 与各模型私有字段），而非通用工具入参。`public_payload()` 会剥除内部回显用的保留键 `_requested_aspect_ratio`（见 §异步 aspect_ratio 兜底），保证只暴露真实发往上游的字段。**该字段始终返回，不受 `return_metadata` 影响**：`return_metadata=False` 的精简输出（`urls` / `expires_at`）同样带上 `payload`。
 
-**`request_id`（调用方关联标识回显）**：`generate_*` 接受一个可选的 `request_id`，由调用方在**发起时**自选，用来把稍后经 `task_status` / `task_wait` 返回的异步 artifact / 失败 join 回原始的 generate 请求——异步流程里两者分属不同 tool_call，而 `task_id` 要等 POST 返回才有、同步模型更无 `task_id`，因此不能充当发起即得的关联键。实现复用 payload 保留键机制：`TaskManager.create()`（同步与异步两条路）经 `_stash_internal()` 把 `req.request_id` 存进 `_request_id` 保留键，`public_payload()` 与 `_requested_aspect_ratio` 一并剥除，故绝不上行到上游 API。回显在 **service 层**完成（`tool_registry.stamp_echo()`），而非 MCP wrapper——因此 MCP（Mode A）、Agent dispatcher（Mode B）、CLI（Mode C）三种直连 service 的模式一致生效；`_present()` 从 `task.payload` 取回并盖章成功/pending 两种形状，`CFGPUError.request_id` 则让失败结果（`to_tool_result_dict`）也带上它。一律"有值才加"（`setdefault`），不传时结果结构不变。`understand_vision` 恒同步、单次返回、无关联缺口，故不设此参数。
+**`request_id`（调用方关联标识回显 + 任务主键）**：`generate_*` 接受一个可选的 `request_id`，由调用方在**发起时**自选，用来把稍后经 `task_status` / `task_wait` 返回的异步 artifact / 失败 join 回原始的 generate 请求——异步流程里两者分属不同 tool_call，而 `task_id` 要等 POST 返回才有、同步模型更无 `task_id`，因此不能充当发起即得的关联键。
+
+**它同时就是任务的主键**（见 §「Task 存储」）。正因为它在调用发出前就已知，它是唯一一个**响应丢失也不会跟着丢**的句柄：一次 `generate_*` 没有返回结果（超时 / 断连 / 服务重启）时，把同一个 `request_id` 传给 `task_status` 就能查到它的最终状态，不必也不该先重发。反过来，同一个 `request_id` 再次提交会**命中主键冲突**，本服务返回既有行、不再 POST——非终态就是「上次还在跑」，终态就是「上次已经跑完，拿既有产物」。这关掉了 checkpoint 重放导致的二次计费，前提是调用方那侧的 `request_id` 是**持久化**的（每次重放现算一个新值，这条会静默失效，症状是双倍计费而没有任何报错）。它只覆盖「同一次调用被重复投递」，不覆盖模型自己决定重来——那是一次新的工具调用，会带一个新的 `request_id`。实现复用 payload 保留键机制：`TaskManager.create()`（同步与异步两条路）经 `_stash_internal()` 把 `req.request_id` 存进 `_request_id` 保留键，`public_payload()` 与 `_requested_aspect_ratio` 一并剥除，故绝不上行到上游 API。回显在 **service 层**完成（`tool_registry.stamp_echo()`），而非 MCP wrapper——因此 MCP（Mode A）、Agent dispatcher（Mode B）、CLI（Mode C）三种直连 service 的模式一致生效；`_present()` 从 `task.payload` 取回并盖章成功/pending 两种形状，`CFGPUError.request_id` 则让失败结果（`to_tool_result_dict`）也带上它。一律"有值才加"（`setdefault`），不传时结果结构不变。`understand_vision` 恒同步、单次返回、无关联缺口，故不设此参数。
 
 **`caption`（产物标签回显）**：与 `request_id` 同机制的第二个回显字段（同一个 `stamp_echo()`、同一套 `_stash_internal()` / `public_payload()` 保留键，键名 `_caption`），但用途不同——它是给**产物**起的一句人类可读短标签，服务端只存不解释。存在的理由是自建素材台账的客户端（DeerFlow / cf-dream 把每个生成产物登记为可用短 id 引用的 material）：标签若不能在发起时携带，台账条目就是无名的，只能事后再花一次工具调用补名字；而把它存进任务记录，正是**两段式**（`wait=False` → `task_wait`，产物晚一次 tool_call 才存在）无需客户端自持 `task_id → 标签` 映射的原因。两处刻意的取舍：①超长**截断不报错**（`CAPTION_MAX_CHARS=200`，`CaptionStr` 的 `AfterValidator`）——标签不影响出图，为它失败一整次调用不划算；②**失败路径不回显**——`CFGPUError` 带 `request_id` 不带 `caption`，调用失败即无产物可标注（由 `test_failed_task_carries_request_id_but_not_caption` 钉住）。三个 generate 工具的字段声明共用 `caption_field()`，避免三份副本漂移。
 

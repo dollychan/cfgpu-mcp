@@ -236,7 +236,12 @@ async def test_async_model_create_returns_pending():
     req = GenerateVideoInput(prompt="x")
     task = await tm.create(adapter, req)
     assert task.status == "pending"
-    assert task.id == "cfgpu-task-1"
+    # The row's key is this server's own (the caller sent no request_id, so a local
+    # uuid); the upstream's id lives in its own column and never leaves this side. They
+    # were the same value until the row started being written *before* the POST — at
+    # which point the upstream id does not exist yet and cannot be the key.
+    assert task.id != "cfgpu-task-1"
+    assert task.upstream_task_id == "cfgpu-task-1"
     await db.close()
 
 
@@ -251,11 +256,16 @@ async def test_async_create_raises_when_no_task_id():
     req = GenerateVideoInput(prompt="x")
     with pytest.raises(CFGPUError) as exc_info:
         await tm.create(adapter, req)
-    assert exc_info.value.error_type == "unknown"
+    # Not "unknown": the POST succeeded, so this generation is running and billed —
+    # only the handle to collect it was lost. That is a distinct outcome and a
+    # non-retryable one, because resending is what turns one charge into two.
+    assert exc_info.value.error_type == "submission_lost"
+    assert exc_info.value.retryable is False
     # The raw response rides the message: `original` is not surfaced by the tool
     # layer, so without it the caller cannot tell WHICH shape came back.
     assert '{"unexpected": "shape"}' in exc_info.value.user_message
-    # No bogus pending row should have been written.
+    # A row *is* written now (that is the point — the money was spent), but it is
+    # terminal, so nothing will keep polling it.
     assert await tm.list_running() == []
     await db.close()
 
@@ -394,7 +404,7 @@ async def test_wait_that_runs_out_of_budget_is_not_an_error():
     tm, db = await _make_tm()
     adapter = _async_adapter()
     tm._client_for(None).post = AsyncMock(return_value={"id": "task-timeout"})
-    req = GenerateVideoInput(prompt="x")
+    req = GenerateVideoInput(prompt="x", request_id="task-timeout")
     task = await tm.create(adapter, req)
 
     tm._client_for(None).get = AsyncMock(return_value={"id": "task-timeout", "status": "running"})
@@ -422,7 +432,7 @@ async def test_wait_is_clamped_to_the_hard_ceiling():
     tm, db = await _make_tm()
     adapter = _async_adapter()
     tm._client_for(None).post = AsyncMock(return_value={"id": "task-clamp"})
-    req = GenerateVideoInput(prompt="x")
+    req = GenerateVideoInput(prompt="x", request_id="task-clamp")
     task = await tm.create(adapter, req)
     tm._client_for(None).get = AsyncMock(return_value={"id": "task-clamp", "status": "running"})
 
@@ -446,7 +456,7 @@ async def test_adapter_default_timeout_is_clamped_too():
     adapter = _async_adapter()
     adapter.estimate_poll_timeout.return_value = 99999
     tm._client_for(None).post = AsyncMock(return_value={"id": "task-clamp-2"})
-    req = GenerateVideoInput(prompt="x")
+    req = GenerateVideoInput(prompt="x", request_id="task-clamp-2")
     task = await tm.create(adapter, req)
     tm._client_for(None).get = AsyncMock(return_value={"id": "task-clamp-2", "status": "running"})
 
@@ -472,7 +482,10 @@ async def _waiting_tm(get_side_effect):
     tm, db = await _make_tm()
     adapter = _async_adapter()
     tm._client_for(None).post = AsyncMock(return_value={"id": "task-1"})
-    req = GenerateVideoInput(prompt="x")
+    # request_id pins the row's key, so these wait() tests keep naming one id. Without
+    # it the key would be a local uuid — covered on its own in
+    # test_request_id_durability.py; here the id is incidental to what is under test.
+    req = GenerateVideoInput(prompt="x", request_id="task-1")
     task = await tm.create(adapter, req)
     tm._client_for(None).get = AsyncMock(side_effect=get_side_effect)
     return tm, db, adapter, req, task
@@ -596,7 +609,7 @@ async def test_list_running_excludes_completed():
     tm, db = await _make_tm()
     adapter = _async_adapter()
     tm._client_for(None).post = AsyncMock(return_value={"id": "task-run"})
-    req = GenerateVideoInput(prompt="x")
+    req = GenerateVideoInput(prompt="x", request_id="task-run")
     await tm.create(adapter, req)
 
     running = await tm.list_running()

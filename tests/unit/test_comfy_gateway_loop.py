@@ -133,9 +133,12 @@ async def test_generate_video_returns_a_handle_and_never_blocks(loop_env):
     finally:
         reset_request_token(tok)
 
-    assert handle["task_id"] == "gw-task-1"
+    # The handle is this server's id, not the gateway's (which stays internal). What
+    # matters to the caller is that the way back names the very id it was handed.
+    assert handle["task_id"] and handle["task_id"] != "gw-task-1"
     assert handle["status"] == "pending"
     assert "task_status" in handle["next_step"]   # the way back must be spelled out
+    assert handle["task_id"] in handle["next_step"]
     assert handle["note"]                         # and overriding `wait` must be explained
 
     # Exactly one call — the POST. Not one poll: nothing blocked.

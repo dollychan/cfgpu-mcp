@@ -146,12 +146,16 @@ class CFGPUClient:
         - **request phase on a GET** — polling is idempotent; asking again costs
           nothing and creates nothing.
         - **request phase on a POST** — the bytes went out and the answer did not
-          come back. Upstream may have accepted the job and started billing, and
-          because ``TaskManager.create`` POSTs *before* ``insert_task``, there is
-          neither a returned task_id nor a local row to reconcile against. Resending
-          is a coin flip on a double charge, so this is the one timeout that is not
-          retryable — and the one that sets ``outcome_unknown``, because "did this
-          take effect?" genuinely has no answer here.
+          come back. Upstream may have accepted the job and started billing, so
+          resending is a coin flip on a double charge and this is the one timeout that
+          is not retryable.
+
+        It also sets ``outcome_unknown``. This layer knows only the transport facts and
+        cannot see whether anything was recorded, so it reports the honest worst case;
+        ``TaskManager._record_submit_failure`` — which does know a row was written
+        before the POST — clears the flag and names the id to query. Keeping the two
+        apart is why the sentence below no longer claims there is nothing to reconcile:
+        on a submit path there now always is.
         """
         connect_phase = isinstance(exc, aiohttp.ConnectionTimeoutError)
         budget = self._timeout.connect if connect_phase else self._timeout.total
@@ -176,9 +180,8 @@ class CFGPUClient:
         indeterminate = not connect_phase and method.upper() == "POST"
         if indeterminate:
             detail += (
-                "（请求已经发出但没等到回应，上游可能已经受理并开始计费；"
-                "本服务没有拿到 task_id，也没有落库，无法确认。"
-                "重发有重复计费的风险，请先到上游侧确认。）"
+                "（请求已经发出但没等到回应，上游可能已经受理并开始计费，"
+                "本服务没有拿到 task_id。重发有重复计费的风险。）"
             )
         return CFGPUError(
             error_type="timeout",

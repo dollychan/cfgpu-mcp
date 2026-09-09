@@ -184,7 +184,9 @@ CFGPU_CONFIG=./config.yaml cfgpu-mcp # 监听 http://0.0.0.0:8080/mcp
 
 **逐请求 token**：HTTP 模式下，每个 MCP 请求用自己的 `Authorization: Bearer <token>` 头携带各自的 CFGPU Token——不再全局共用 `CFGPU_API_TOKEN`。未带头时回退到 `CFGPU_API_TOKEN` 环境变量。
 
-**断点续查**：`wait=false` 提交后立即返回 `task_id`；客户端周期性调 `task_status(task_id)`（每次都带 token），服务端借此实时推进任务。**异步模型**（视频等）即使客户端断开，凭 `task_id` 重连仍可查到结果；**同步模型**（Seedream 图片）结果只在该次响应返回，不可断点续查。
+**断点续查**：`wait=false` 提交后立即返回 `task_id`；客户端周期性调 `task_status(task_id)`（每次都带 token），服务端借此实时推进任务。即使客户端断开，凭 `task_id` 重连仍可查到结果。
+
+**同步模型也能续查了 —— 前提是提交时带了 `request_id`。** 任务行现在在上游 POST **之前**就落库，主键就是调用方给的 `request_id`，所以一次 `generate_image` 哪怕整个响应都丢了（超时 / 断连 / 服务重启），拿同一个 `request_id` 调 `task_status` 就能查到它的最终状态和产物。没带 `request_id` 的调用回落到服务端自生成的 id，那个 id 只在响应里出现一次——响应丢了就没了。**要恢复能力，就把 `request_id` 当必填字段来用。**
 
 > 多实例水平扩展必须用 Postgres：本地 SQLite 文件无法跨实例共享。单实例 HTTP 用 SQLite 亦可。详见 `docs/streamable/http-mcp-servers.md`。
 
@@ -863,7 +865,12 @@ done
 >
 > **`inline_media` 走 structuredContent（仅 Mode A / MCP 工具）**：`generate_audio` / `task_status` / `task_wait` 的返回被拆成 LLM 可见的 `content` 与客户端可见的 `structuredContent`，`inline_media`（连同 `usage` / `payload`）只出现在后者 —— base64 音频数据对模型毫无用处，进上下文只会挤爆窗口。客户端从 `structuredContent.inline_media` 取数据落盘；模型那边靠 `content` 里的 `artifact: true` + `status: "succeeded"` + `note` 就知道生成已完成。Mode B / B2 / B3 / CLI 直连 service 层，不做拆分，`inline_media` 就在结果顶层。
 
-> **`request_id`（调用方关联标识，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `request_id` 入参，服务端会将其**原样回显**在本次即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact / error 上（有值才出现，不传则响应结构完全不变）。用途——异步流程里 generate 与稍后返回 artifact 的 `task_status` / `task_wait` 分属**不同的 tool_call**，而 `task_id` 要等 POST 返回才有、同步模型更是没有 `task_id`；`request_id` 由调用方在**发起时**自选，从而在整条链路上提供一个稳定、可直接对应的关联键，用来把异步结果 / 失败 join 回原始请求。它只作关联用途，绝不进入上游 API 请求体（`payload` 中不出现）。此回显在 service 层完成，故 MCP、Agent dispatcher、CLI 三种模式一致生效。仅可能异步的 `generate_*` 支持；`understand_vision` 恒同步、单次返回，无关联缺口，故不设此参数。
+> **`request_id`（调用方关联标识，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `request_id` 入参，服务端会将其**原样回显**在本次即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact / error 上（有值才出现，不传则响应结构完全不变）。用途——异步流程里 generate 与稍后返回 artifact 的 `task_status` / `task_wait` 分属**不同的 tool_call**，而 `task_id` 要等 POST 返回才有、同步模型更是没有 `task_id`；`request_id` 由调用方在**发起时**自选，从而在整条链路上提供一个稳定、可直接对应的关联键，用来把异步结果 / 失败 join 回原始请求。它绝不进入上游 API 请求体（`payload` 中不出现）。此回显在 service 层完成，故 MCP、Agent dispatcher、CLI 三种模式一致生效。仅可能异步的 `generate_*` 支持；`understand_vision` 恒同步、单次返回，无关联缺口，故不设此参数。
+>
+> **它同时是任务 id，这带来两条能力**，都建议主动利用：
+>
+> 1. **断点恢复。** 返回的 `task_id` 与你传的 `request_id` 是同一个值，所以一次 generate 没能返回结果时（超时 / 断连 / 服务重启），直接 `task_status(那个 request_id)` 即可，不需要事先拿到过任何东西。
+> 2. **重发即去重。** 同一个 `request_id` 再次提交不会二次计费：服务端撞到主键就返回既有任务——还在跑就让你接着查，已经跑完就直接把既有产物给你。**因此它必须每次调用一个、且在你这侧是持久化的**：如果你每次重试都现算一个新值，这条保护静默失效，症状是双份账单而没有任何报错。反过来，模型真想重画一张时应当用一个**新的** `request_id`，否则拿回的是上一张。
 
 > **`caption`（产物标签，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `caption` 入参——一句人类可读的**短标签**（如 `"角色阿雅 第一版"` / `"封面图 v1"`），服务端同样**原样回显**在即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact 上。用途——客户端若自建素材台账（如 DeerFlow / cf-dream 把每个生成产物登记为可用短 id 引用的 **material**），不带标签的条目是无名的，只能在生成之后再花一次工具调用去补名字；把标签放在发起时携带即可省掉这一跳，而它随任务记录存储这一点，使**两段式**（`wait=False` → `task_wait`）也无需客户端自己维护 `task_id → 标签` 的映射。
 >
@@ -976,7 +983,16 @@ done
 3. 否则                            → 没结束，用 result["task_id"] 继续 task_status
 ```
 
-**`status` 是机器枚举**，取值 `succeeded` / `running` / `pending`（`failed` 走 error 通道，等不到）。给人和模型读的那句话在 `note` 里，不要拿它做控制流。`pending` 与 `running` 是**两个不同的事实**，不要合并：`pending` 表示上游报的是排队类状态（`queued` / `waiting` / `submitted` / `not_start`），任务还没开始跑；`running` 才是上游确认在执行。
+**`status` 是机器枚举**，取值 `succeeded` / `running` / `pending` / `submitting` / `dispatching`（`failed` 走 error 通道，等不到）。给人和模型读的那句话在 `note` 里，不要拿它做控制流。`pending` 与 `running` 是**两个不同的事实**，不要合并：`pending` 表示上游报的是排队类状态（`queued` / `waiting` / `submitted` / `not_start`），任务还没开始跑；`running` 才是上游确认在执行。
+
+后两个只在**恢复场景**下看得到——正常调用返回时早已越过它们。它们回答的是「这次提交到底发出去了没有」，这是决定能不能重发的唯一依据：
+
+| `status` | 含义 | 你该怎么做 |
+|---|---|---|
+| `submitting` | 请求确定还没发给上游 | 没有计费，**用相同参数重发是安全的** |
+| `dispatching` | 请求可能已发出、回应丢了 | **可能已经计费。不要重发**，继续用同一个 id 查，或提示用户核实 |
+
+两者都是未终态，形状与 `pending` / `running` 完全一致（`{task_id, status, elapsed_seconds}`），所以按未终态处理的客户端不需要改代码——只有想要「该不该重发」这个答案时才需要读它们。
 
 **`error: true` 一定意味着「这条线到此为止」**：任务还活着的情况绝不会走 error 通道。`generate_*(wait=true)` 等待超时、连续轮询失败放弃、轮询中撞上 token 失效——这三种任务都还在上游跑，返回的都是未终态信封而不是错误：
 
@@ -1037,7 +1053,9 @@ The request failed because the output video may be related to copyright restrict
 >
 > **`timeout` 分两种，顶层 `phase` 说明是哪一种，别改错配置项。** `phase: "request"` 是连上了但上游没在 `http_timeout` 内答完；`phase: "connect"` 是 DNS / TCP / TLS 没在 `connect_timeout` 内完成，**上游根本没收到请求** —— 这几乎总是部署机器到该上游的网络不通（内网环境、出口策略、DNS），把 `http_timeout` 调大不会有任何作用。两种都带 `original.elapsed`（实测耗时，不是配置值），拿它和两个配置值一比即可确认。
 >
-> **`outcome_unknown: true` 是唯一一种「不知道成没成」的结果，别盲目重发。** 只出现在**提交请求**（POST）的 `phase: "request"` 超时上：请求已经发出、回应没等到，上游可能已经受理并开始计费，而服务端既没拿到 `task_id` 也没落库，**无法从本服务确认**。这种情况 `retryable` 是 `false`——不是说重发一定失败，而是说重发有重复计费的风险，请先到上游侧确认。相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
+> **`outcome_unknown: true` 曾是唯一一种「不知道成没成」的结果。它现在基本不会再出现在提交路径上**：任务行先于 POST 落库，所以「既没拿到 task_id 也没落库」不再成立。提交请求（POST）的 `phase: "request"` 超时现在得到的是——`retryable: false`（重发有重复计费风险，这一点没变）、`task_id`（就是你传的 `request_id`）、以及一句明确的下一步：**先 `task_status("<request_id>")` 查这次提交的最终状态，不要直接重发**。查到 `dispatching` 就是「可能已计费」，查到 `succeeded` 就直接拿产物。相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
+>
+> 换句话说：**这一类失败从「无法确认」变成了「去查这个 id」。** 前提仍是你在提交时带了 `request_id`。
 
 **Mode B service 层直接调用**：service 函数抛出 `CFGPUError`，需自行捕获：
 

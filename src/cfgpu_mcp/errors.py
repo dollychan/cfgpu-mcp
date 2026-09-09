@@ -10,6 +10,11 @@ ErrorType = Literal[
     "invalid_params",
     "model_unavailable",
     "task_failed",
+    # The upstream accepted (and therefore likely billed) the submission, but the handle
+    # needed to collect its result did not survive. Deliberately not "task_failed": the
+    # task did not fail, and it is deliberately not retryable — resending is precisely
+    # the move that turns one charge into two.
+    "submission_lost",
     "auth",
     "timeout",
     "unknown",
@@ -92,17 +97,22 @@ class CFGPUError(Exception):
         #
         # It can only ever suppress: a type that has no hint never gains one.
         self.card_hint: bool | None = card_hint
-        # "The upstream may have accepted (and billed) this request; this server
-        # cannot tell." Set only where that is genuinely true — a request-phase
-        # timeout on a submit POST, where no task_id was ever returned and no task
-        # row was written, so there is nothing to poll and nothing to reconcile.
+        # "The upstream may have accepted (and billed) this request, and there is
+        # nothing on this side to reconcile it against."
         #
-        # Every other error answers "did this take effect?" definitively: an error
-        # carrying a task_id points at a live task, and one without a task_id means
-        # the request never took effect. This flag exists because that single
-        # residual case can answer neither, and collapsing it into either answer
-        # would be a lie — ``retryable=True`` would invite a double charge,
-        # ``retryable=False`` would imply nothing happened.
+        # Both halves are required, and the second one is what has narrowed. The flag
+        # was written for a request-phase timeout on a submit POST, back when
+        # ``TaskManager.create`` POSTed *before* writing the task row: no task_id came
+        # back and no row existed, so the question had no answer anywhere. Rows are now
+        # written before the POST (see request-id-durability.md I1), so that case has a
+        # row — one sitting in ``dispatching``, which says "may have been sent" far more
+        # precisely than a boolean can — and ``TaskManager._record_submit_failure``
+        # clears the flag as it hands back the id to query.
+        #
+        # What is left for it is the residual hole: the row write itself failing. Do not
+        # widen it back out. Every other error answers "did this take effect?"
+        # definitively, and collapsing an answerable case into this flag costs the
+        # caller its next move.
         self.outcome_unknown: bool = outcome_unknown
 
     def __repr__(self) -> str:
@@ -143,6 +153,7 @@ class CFGPUError(Exception):
             "task_failed": f"任务执行失败：{raw_msg}",
             "auth": "API Token 无效或已过期，请检查 CFGPU_API_TOKEN。",
             "timeout": "等待超时，任务可能仍在运行，可用 task_status 查询。",
+            "submission_lost": f"提交已被上游接受但结果无法取回：{raw_msg}",
             "unknown": f"未知错误（HTTP {status}）：{raw_msg}",
         }
         return CFGPUError(

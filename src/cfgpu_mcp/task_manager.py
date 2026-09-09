@@ -121,6 +121,49 @@ def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
 # values like "completed" never reach here — they map to "succeeded" first.
 _TERMINAL_STATUSES = {"succeeded", "failed"}
 
+#: Written before the upstream POST is issued: the row exists and the request provably
+#: has not left this process, so resending it costs nothing.
+SUBMITTING = "submitting"
+
+#: Written immediately before the POST. Past this line "it was never sent" is no longer
+#: provable — the bytes may be on the wire and the answer may be lost — so a caller that
+#: finds a row here must *not* blind-resend.
+DISPATCHING = "dispatching"
+
+#: The pair. A row in either state has no upstream task id yet, so there is nothing to
+#: poll upstream; both are non-terminal, and both are deliberately absent from
+#: ``_STATUS_MAP`` — that table translates the *upstream's* vocabulary and no upstream
+#: will ever say these words. The distinction between them is the whole answer to "did
+#: this submission take effect?", which before this existed could only be "unknown".
+_PRE_UPSTREAM_STATUSES = frozenset({SUBMITTING, DISPATCHING})
+
+#: Error types that prove the upstream *answered and declined*: it received the request,
+#: refused it, and started nothing. Only these may converge a row to ``failed`` at
+#: submit time.
+_REFUSAL_ERROR_TYPES = frozenset({
+    "auth", "invalid_params", "content_blocked",
+    "quota_exceeded", "model_unavailable", "rate_limit",
+})
+
+
+def _upstream_refused(e: CFGPUError) -> bool:
+    """Whether this submit failure proves nothing was started upstream.
+
+    The asymmetry is deliberate. Marking a refused submission ``failed`` is safe and
+    useful — it tells a later ``task_status`` "this cost you nothing, fix the argument
+    and go again". Marking an *indeterminate* one failed is the expensive mistake: a
+    request-phase POST timeout, a transport error, an upstream 5xx all leave a job that
+    may be running and billing, and a row that says "failed, safe to retry" is how one
+    generation gets paid for twice. Those stay ``dispatching``, which is this design's
+    word for "cannot prove it wasn't sent".
+    """
+    if e.outcome_unknown:
+        return False
+    if e.error_type == "timeout":
+        # Connect phase only: DNS/TCP/TLS never completed, so no byte reached upstream.
+        return e.original.get("phase") == "connect"
+    return e.error_type in _REFUSAL_ERROR_TYPES
+
 # Only media-producing tasks require a URL or inline blob. Vision understanding is
 # synchronous too, but its artifact is a text message and must not hit this guard.
 _MEDIA_TASK_TYPES = {"image", "video", "audio"}
@@ -298,6 +341,8 @@ def _now_row(
     *,
     result: dict | None = None,
     error: str | None = None,
+    upstream_task_id: str | None = None,
+    model_used: str | None = None,
 ) -> dict:
     """Build an in-memory task row (created_at == updated_at == now).
 
@@ -311,6 +356,7 @@ def _now_row(
         "id": task_id, "adapter_id": adapter_id, "status": status,
         "payload": payload, "result": result, "error": error,
         "created_at": now, "updated_at": now,
+        "upstream_task_id": upstream_task_id, "model_used": model_used,
     }
 
 
@@ -324,6 +370,12 @@ class Task:
         self.error: str | None = row.get("error")
         self.created_at: float = row["created_at"]
         self.updated_at: float = row["updated_at"]
+        # Internal only — the upstream's own handle, used to build the poll URL and
+        # nothing else. Never returned to a caller (see to_dict / service._present):
+        # it exists only once the POST answered, which is exactly when a recovering
+        # caller does not have it. ``.get`` because rows written before this column
+        # existed carry the upstream id *as* their ``id``.
+        self.upstream_task_id: str | None = row.get("upstream_task_id")
 
     def to_dict(self) -> dict:
         return {
@@ -525,77 +577,233 @@ class TaskManager:
         adapter: "ModelAdapter",
         req: "GenerateImageInput | GenerateVideoInput",
     ) -> Task:
+        """Submit a task, writing its row **before** the upstream POST.
+
+        The ordering is the feature, not an implementation detail. Billing happens
+        inside that POST — 10 to 60 seconds for a synchronous model — and until this
+        change no row existed until *after* it returned. Every interruption landing in
+        that window (the agent cancelling, the connection dropping, this process being
+        restarted) therefore produced the one outcome nothing can repair: the money is
+        spent, and there is no record anywhere on this side that it was ever spent. That
+        is what ``CFGPUError.outcome_unknown`` was written to describe, and what writing
+        the row first removes.
+
+        The row's key is the caller's ``request_id`` when it supplied one. That is the
+        only handle known *before* the call goes out, so it is the only one a caller who
+        never received a response can come back with. Callers that don't send one (CLI,
+        dispatcher) fall back to a local uuid and simply don't get the recovery path.
+
+        A primary-key conflict is not an error but the duplicate-submission signal: the
+        existing row is returned and no second POST is sent, which is what keeps a
+        replayed tool call from being billed twice. See request-id-durability.md.
+        """
         payload = adapter.build_payload(req)
-        task_id = str(uuid.uuid4())
+        request_id = getattr(req, "request_id", None)
+        task_id = request_id or str(uuid.uuid4())
+        stored_payload = _stash_internal(payload, req, aspect_ratio=adapter.is_async)
 
-        if not adapter.is_async:
-            # Synchronous model: POST → parse response immediately
-            resp = await self._client_for(adapter).post(adapter.endpoint, payload)
-            result: NormalizedResult = adapter.parse_response(resp)
-            # Always stamp the public model_name — adapters may set model_used from the
-            # upstream response's echoed "model" field, which is the internal
-            # cfgpu_model_id and must never reach the caller.
-            result.model_used = adapter.model_name
-            if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
-                result.aspect_ratio = getattr(req, "aspect_ratio", None)  # audio reqs have none
-            result_dict = result.to_dict(return_metadata=True)
-            if (
-                adapter.task_type in _MEDIA_TASK_TYPES
-                and not _has_media_artifact(result_dict)
-            ):
-                # Keep the synchronous path under the same success invariant as
-                # poll(): a media generation call cannot succeed without media. This
-                # also catches an upstream HTTP-200 business error whose response
-                # envelope an adapter does not yet recognise.
-                raise CFGPUError(
-                    error_type="task_failed",
-                    user_message=(
-                        "同步媒体 API 返回成功，但没有返回任何产物 URL 或内联媒体。"
-                        f"上游响应（截断）：{_truncate_json(resp)}"
-                    ),
-                    original={"adapter_id": adapter.adapter_id, "response": resp},
-                    retryable=False,
-                )
-            stored_payload = _stash_internal(payload, req, aspect_ratio=False)
-            await self._repo.insert_task(task_id, adapter.adapter_id, "succeeded", stored_payload)
-            await self._repo.update_task(task_id, "succeeded", result=result_dict)
-            # Every field is known here — build the Task in memory instead of re-reading.
-            return Task(_now_row(task_id, adapter.adapter_id, "succeeded", stored_payload, result=result_dict))
+        inserted = await self._repo.insert_task(
+            task_id, adapter.adapter_id, SUBMITTING, stored_payload,
+            model_used=adapter.model_name,
+        )
+        if not inserted:
+            return await self._existing(task_id)
 
-        # Async model: POST → get task_id from CFGPU → write pending
-        resp = await self._client_for(adapter).post(adapter.endpoint, payload)
-        cfgpu_task_id = adapter.extract_task_id(resp)
-        if not cfgpu_task_id:
-            # Without a real task_id we'd poll a bogus URL until timeout and
-            # report a misleading "timeout" error. Fail loudly with the raw
-            # response so the response-shape change is diagnosable.
+        # Past this update, "the POST was never issued" stops being provable.
+        await self._repo.update_task(task_id, DISPATCHING)
+
+        # The caller's cancellation must not take the write-back with it: by the time
+        # the POST is in flight the charge is already incurred, so the only question
+        # left is whether the result is recorded or lost. shield() keeps the answer
+        # "recorded" — the caller's own await raises CancelledError immediately, as it
+        # should, while this half runs to the row update. It does not survive the
+        # process dying; nothing in-process can, which is what the Phase 2 sweeper is
+        # for.
+        return await asyncio.shield(
+            self._dispatch(task_id, adapter, req, payload, stored_payload)
+        )
+
+    async def _existing(self, task_id: str) -> Task:
+        """The deduplicated arm of ``create``: this request_id has been submitted before.
+
+        A non-terminal row is handed back so the caller keeps waiting on the submission
+        that is already running. A *succeeded* one is handed back with its artifact —
+        deliberately not regenerated, because a repeated request_id is a replay of one
+        call, never a second creative intent (a model that wants another take issues a
+        new tool call, which carries a new request_id). A *failed* one is re-raised in
+        the same shape the original call reported, so the second caller learns the same
+        thing the first one did instead of receiving a task that will never advance.
+        """
+        row = await self._repo.get_task(task_id)
+        if row is None:
+            # Only reachable if the row vanished between the conflict and this read.
+            # Nothing deletes rows, so this is a "cannot happen" — but the alternative
+            # to naming it is a None dereference at the top of a billed path.
             raise CFGPUError(
                 error_type="unknown",
                 user_message=(
-                    "提交任务成功但未能从响应中解析出 task_id，可能是 API 响应结构变化。"
-                    f"响应原文（截断）：{_truncate_json(resp)}"
+                    f"request_id {task_id!r} 已被占用，但对应的任务行读不回来。"
+                    "请换一个 request_id 重新提交。"
                 ),
-                original={"adapter_id": adapter.adapter_id, "response": resp},
+                original={"task_id": task_id},
             )
-        stored_payload = _stash_internal(payload, req, aspect_ratio=True)
+        logger.info(
+            "request_id=%s 已存在（status=%s），返回既有任务，不再向上游提交",
+            task_id, row["status"],
+        )
+        task = Task(row)
+        if task.status == "failed":
+            raise CFGPUError(
+                error_type="task_failed",
+                user_message=task.error or "Task failed without error message",
+                original={"task_id": task_id},
+                request_id=task.payload.get(_REQUEST_ID_KEY),
+            )
+        return task
+
+    async def _dispatch(
+        self,
+        task_id: str,
+        adapter: "ModelAdapter",
+        req: "GenerateImageInput | GenerateVideoInput",
+        payload: dict,
+        stored_payload: dict,
+    ) -> Task:
+        """Everything from the POST onward. Runs inside ``create``'s shield.
+
+        The row already exists, so every terminal outcome here is an *update*; the only
+        thing that can still be lost is the verdict, never the fact that a submission
+        happened.
+        """
+        try:
+            resp = await self._client_for(adapter).post(adapter.endpoint, payload)
+        except CFGPUError as e:
+            await self._record_submit_failure(task_id, e)
+            raise
+        if not adapter.is_async:
+            return await self._finish_sync(task_id, adapter, req, stored_payload, resp)
+        return await self._finish_async(task_id, adapter, stored_payload, resp)
+
+    async def _record_submit_failure(self, task_id: str, e: CFGPUError) -> None:
+        """Write onto the row what this failure actually proves, and make the error say so.
+
+        ``outcome_unknown`` is cleared here rather than at the raise site because it
+        meant one specific thing — "the upstream may have billed and there is nothing on
+        this side to reconcile against". The second half of that sentence stopped being
+        true the moment the row was written first, and an error still carrying the flag
+        would send a caller looking for a remedy that no longer matches its situation.
+        What replaces it is a next step that can actually be executed: the id to query,
+        which is the caller's own request_id.
+        """
+        e.original.setdefault("task_id", task_id)
+        if _upstream_refused(e):
+            await self._repo.update_task(task_id, "failed", error=e.user_message)
+            return
+        await self._repo.update_task(task_id, DISPATCHING, error=e.user_message)
+        if e.outcome_unknown:
+            e.outcome_unknown = False
+            e.user_message += (
+                f'用 task_status("{task_id}") 查这次提交的最终状态，不要直接重发同一个任务。'
+            )
+
+    async def _finish_sync(
+        self,
+        task_id: str,
+        adapter: "ModelAdapter",
+        req: "GenerateImageInput | GenerateVideoInput",
+        stored_payload: dict,
+        resp: dict,
+    ) -> Task:
+        result: NormalizedResult = adapter.parse_response(resp)
+        # Always stamp the public model_name — adapters may set model_used from the
+        # upstream response's echoed "model" field, which is the internal
+        # cfgpu_model_id and must never reach the caller.
+        result.model_used = adapter.model_name
+        if not result.aspect_ratio:  # adapter didn't echo ratio → fall back to request
+            result.aspect_ratio = getattr(req, "aspect_ratio", None)  # audio reqs have none
+        result_dict = result.to_dict(return_metadata=True)
+        if (
+            adapter.task_type in _MEDIA_TASK_TYPES
+            and not _has_media_artifact(result_dict)
+        ):
+            # Keep the synchronous path under the same success invariant as
+            # poll(): a media generation call cannot succeed without media. This
+            # also catches an upstream HTTP-200 business error whose response
+            # envelope an adapter does not yet recognise.
+            message = (
+                "同步媒体 API 返回成功，但没有返回任何产物 URL 或内联媒体。"
+                f"上游响应（截断）：{_truncate_json(resp)}"
+            )
+            # The upstream answered, so this is terminal and known — converge the row
+            # rather than leaving it in dispatching for a sweeper to guess at.
+            await self._repo.update_task(task_id, "failed", error=message)
+            raise CFGPUError(
+                error_type="task_failed",
+                user_message=message,
+                original={"adapter_id": adapter.adapter_id, "response": resp, "task_id": task_id},
+                retryable=False,
+            )
+        await self._repo.update_task(task_id, "succeeded", result=result_dict)
+        # Every field is known here — build the Task in memory instead of re-reading.
+        return Task(_now_row(
+            task_id, adapter.adapter_id, "succeeded", stored_payload,
+            result=result_dict, model_used=adapter.model_name,
+        ))
+
+    async def _finish_async(
+        self,
+        task_id: str,
+        adapter: "ModelAdapter",
+        stored_payload: dict,
+        resp: dict,
+    ) -> Task:
+        upstream_task_id = adapter.extract_task_id(resp)
+        if not upstream_task_id:
+            # The POST succeeded, so this generation is running and billed; what was
+            # lost is only the handle to collect it. Recording that on the row is the
+            # entire difference from the previous behaviour, which raised and left
+            # nothing at all — the caller was told the submission failed while the job
+            # ran on upstream, unreachable and unaccounted for.
+            message = (
+                "提交已被上游接受（可能已计费），但没能从响应中解析出上游 task_id，"
+                "这次生成的结果无法取回。请不要直接重发同一个任务，先到上游侧确认。"
+                f"响应原文（截断）：{_truncate_json(resp)}"
+            )
+            await self._repo.update_task(task_id, "failed", error=message)
+            raise CFGPUError(
+                error_type="submission_lost",
+                user_message=message,
+                original={"adapter_id": adapter.adapter_id, "response": resp, "task_id": task_id},
+            )
         # Validated, not trusted: the stored payload is json.dumps()'d straight into
-        # the repository, so anything unserializable here fails the *insert* and loses
-        # the task outright — the caller would be told the submission failed while the
-        # job runs on upstream, unreachable. An ETA is never worth that, so keep only
-        # plain numbers and drop the rest silently.
+        # the repository, so anything unserializable here fails the *write* and with it
+        # the handoff to polling. An ETA is never worth that, so keep only plain
+        # numbers and drop the rest silently.
         eta = adapter.extract_eta(resp)
+        payload_update: dict | None = None
         if isinstance(eta, dict):
             clean = {k: v for k, v in eta.items() if isinstance(v, int | float)}
             if clean:
                 stored_payload = {**stored_payload, _ETA_KEY: clean}
-        await self._repo.insert_task(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload)
-        return Task(_now_row(cfgpu_task_id, adapter.adapter_id, "pending", stored_payload))
+                payload_update = stored_payload
+        await self._repo.update_task(
+            task_id, "pending",
+            upstream_task_id=upstream_task_id, payload=payload_update,
+        )
+        return Task(_now_row(
+            task_id, adapter.adapter_id, "pending", stored_payload,
+            upstream_task_id=upstream_task_id, model_used=adapter.model_name,
+        ))
 
     # ── Poll ─────────────────────────────────────────────────────────────────
 
     async def poll(self, task: Task, adapter: "ModelAdapter") -> Task:
         assert adapter.poll_endpoint, f"{adapter.adapter_id} has no poll_endpoint"
-        path = adapter.poll_endpoint.replace("{task_id}", task.id)
+        # The upstream is asked about its *own* id, never about this row's key. They
+        # diverged when the key became the caller's request_id; ``or task.id`` is the
+        # fallback for rows written before that, whose key *is* the upstream id. Those
+        # rows are not backfilled, so this fallback is permanent, not transitional.
+        path = adapter.poll_endpoint.replace("{task_id}", task.upstream_task_id or task.id)
         # The poll body is the *task record*, so its error field is the task's verdict,
         # not this HTTP call's failure — see CFGPUClient.get(raise_on_body_error=...).
         resp = await self._client_for(adapter).get(path, raise_on_body_error=False)
@@ -673,6 +881,10 @@ class TaskManager:
             "id": task.id, "adapter_id": task.adapter_id, "status": status,
             "payload": task.payload, "result": result_dict, "error": error_msg,
             "created_at": task.created_at, "updated_at": time.time(),
+            # Carried forward or the next poll in the same wait() loop would fall back
+            # to task.id and start asking the upstream about a request_id it has never
+            # seen — a 404 read as "the task failed".
+            "upstream_task_id": task.upstream_task_id,
         })
 
     # ── Wait ─────────────────────────────────────────────────────────────────
@@ -731,6 +943,17 @@ class TaskManager:
                     task.id, effective_timeout,
                 )
                 return WaitOutcome(task)
+
+            if task.status in _PRE_UPSTREAM_STATUSES:
+                # No upstream id yet, so there is nothing to ask upstream about. The
+                # row is the only thing that can advance this — the submission may
+                # still be in flight in this process (shielded past our caller's
+                # cancellation) or in another instance — so re-read it instead.
+                row = await self._repo.get_task(task.id)
+                if row is not None:
+                    task = Task(row)
+                interval = min(interval * backoff, max_interval)
+                continue
 
             try:
                 task = await self.poll(task, adapter)
