@@ -525,10 +525,24 @@ uuid 主键，也就退出了本设计的恢复能力。要让恢复覆盖全部
 
 **✅ 已实现（2026-09-09，deer-flow-cfgpu `cfdream-dev`）**：新增
 `agents/middlewares/request_id_middleware.py`（`RequestIdMiddleware`，`after_model`，在
-`cfdream_agent.py` 无条件注册，`ask` 只管审批不管计费恢复），HAM 的两个钉点改为共用同一个
-`pin_request_id`——建卡处保留既有值、执行烘入处 `overwrite=True` 无条件重算（那份 args 是
-客户端回传的，而这个句柄是跨租户共享表的主键，不是调用方可以挑的参数）。测试
-`backend/tests/test_request_id_middleware.py`（13 条）+ HAM 既有用例改判。
+`cfdream_agent.py` **无条件注册**，`ask` 只管审批不管计费恢复）。
+
+**"哪些工具要钉"由它独占**，判据是内建 `generate_*` 正则 **∪** `AgentConfig.request_id_tools`
+（fnmatch，新增字段）。后者只能加不能减——工具集只增不减，白名单会让每一个新加的 generate
+工具静默掉出恢复通路，而这个失败的唯一症状是一次双倍计费。刻意不复用既有的 `model_bindings`：
+那个字段回答的是"这工具属于哪个 task_type"，与"要不要恢复锚点"是两件事。
+
+HAM 因此**不再有第二份判据**：它只把 `tc["args"]` 里已钉好的值搬过自己重建 args 的两处
+（审批卡片、客户端 resume 回传）。代价是注册顺序变成承重的——`RequestIdMiddleware` 必须注册
+在 HAM 之后（`after_model` 逆序派发 → 先跑）；搞反是降级不是坏（什么都不钉，回落 MCP 自生成
+id），但仍由测试钉死。模型自己填的 `request_id` 会被覆盖：这个入参在 schema 里可见，模型复用
+一个先前见过的值会命中去重、拿回上一张产物。
+
+**顺带解除了一条部署前置**：`cfgpu-docs/prerequisites.md` P6C 原本要求"客户端每个 task 发
+`config.ask: true`" + "`generate_*` 恒在 `approval_required_tools`"，否则无人钉。钉点搬走之后
+这两条与 `request_id` 脱钩——把计费恢复能力挂在一个客户端可以不发的开关上，本来就是错的位置。
+
+测试 `backend/tests/test_request_id_middleware.py`（21 条）+ HAM 既有用例改判。
 
 **已知未覆盖**：上游 pristine 的 `agent.py::build_middlewares`（gateway / channels / embedded）
 不注册它——fork 边界，见 `cfgpu-docs/fork-shape.md`。那些形态若接了 cfgpu MCP，generate_* 会
