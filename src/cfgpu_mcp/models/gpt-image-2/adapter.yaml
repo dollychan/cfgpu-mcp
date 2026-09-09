@@ -20,6 +20,35 @@ speed_tier: 3
 # every descendant to 3 and let a pricier service tier of an older model win.
 quality_rank: 3
 
+# ★ The decision, kept out of the cost/speed estimate above.
+#
+# `auto_priority` could not have carried this. At speed 3 / cost 2 the balanced
+# score is 1 — a four-way *tie* with the whole Seedream family, which
+# auto_priority would indeed break. But the heuristic is not silent on a Chinese
+# prompt: router._score adds +2 to every doubao-seedream, so 5.0 Pro scores 3
+# against this model's 1 and wins on a key auto_priority never reaches. A default
+# that holds in English and flips in Chinese is not a default. Bending
+# speed_tier / cost_tier until the score agreed is the other non-option — both
+# feed *every* tier, so a number bent to win balanced would silently move fast
+# and best and leave the YAML asserting a price or a latency that is not true.
+#
+# Scoped to `balanced` alone. `fast` stays with doubao-seedream-5-0-pro
+# (auto_priority 2, on the same tie this model does not deserve to win when the
+# caller explicitly asked for speed); `best` already lands here anyway via
+# quality_rank 3, which is a separate declaration and stays separate.
+#
+# Not a pin: supports() runs first, so a request this model cannot serve (a
+# `regions` edit — no region_edit capability) drops it before this key is read
+# and the runner-up takes over normally.
+#
+# Known cost, accepted 2026-09-09: `n > 1` degrades. The +3 组图 bonus lives in
+# the score, which this key outranks, and GptImage2Adapter.build_payload never
+# sends `n` — so a balanced group request returns one image, silently, the way
+# `n` is ignored on every model without multi_image_group. Callers who need a
+# real 组图 name a Seedream. Pinned by
+# test_declared_default_outranks_the_group_bonus_and_n_degrades.
+default_for: [balanced]
+
 poll_config:
   base_interval: 3
   max_interval: 15

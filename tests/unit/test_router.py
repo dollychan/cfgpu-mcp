@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from cfgpu_mcp.adapters.registry import AdapterRegistry
-from cfgpu_mcp.router import ModelRouter, selection_key
+from cfgpu_mcp.router import _QUALITY_RANK_STEP, ModelRouter, selection_key
 from cfgpu_mcp.tool_registry import (
     GenerateImageInput,
     GenerateVideoInput,
@@ -36,10 +36,28 @@ def test_auto_balanced_returns_a_video_model():
 
 
 def test_chinese_prompt_prefers_seedream_for_image():
+    """The +2 Chinese bonus still orders the field; it no longer picks the winner.
+
+    ``gpt-image-2`` declares ``default_for: [balanced]``, and a declared default is
+    the *first* selection key — it outranks every score, this bonus included. So the
+    bias is asserted where it still decides anything: among the candidates chosen by
+    score. Asserting the winner instead would silently stop testing the bonus, since
+    the declared default answers a Chinese and an English prompt identically.
+    """
     router = _router()
     req = GenerateImageInput(prompt="一只可爱的猫咪", quality_tier="balanced")
-    adapter = router.select_model(req)
-    assert adapter.adapter_id.startswith("doubao-seedream")
+    scored = [
+        a for a in router._registry.list_all(task_type="image")
+        if a.adapter_id != "gpt-image-2" and a.supports(req)[0]
+    ]
+    ranked = sorted(
+        scored, key=lambda a: selection_key(router._score(a, req), a, "balanced")
+    )
+    assert ranked[0].adapter_id.startswith("doubao-seedream")
+    # And the bonus is what put it there: the same model scores 2 lower in English.
+    en = GenerateImageInput(prompt="a cute cat", quality_tier="balanced")
+    seedream = router._registry.get("doubao-seedream-5-0-pro")
+    assert router._score(seedream, req) == router._score(seedream, en) + 2
 
 
 def test_reference_videos_score_multi_modal_capable_adapter():
@@ -61,9 +79,19 @@ def test_best_tier_prefers_declared_quality_rank_over_price():
     """
     router = _router()
     best = router.select_model(GenerateImageInput(prompt="a cat", quality_tier="best"))
-    balanced = router.select_model(GenerateImageInput(prompt="a cat", quality_tier="balanced"))
     assert best.adapter_id == "gpt-image-2"
-    assert balanced.adapter_id != "gpt-image-2"
+    # Non-leak into "balanced" used to be pinned as `balanced != gpt-image-2`. That
+    # reading died when gpt-image-2 took `default_for: [balanced]` — it now wins that
+    # tier for an unrelated reason, so the winner can no longer tell us anything about
+    # quality_rank. Assert the mechanism instead: rank 3 is worth _QUALITY_RANK_STEP
+    # in "best" and exactly nothing in "balanced".
+    gpt = router._registry.get("gpt-image-2")
+    assert gpt.quality_rank == 3
+    req_best = GenerateImageInput(prompt="a cat", quality_tier="best")
+    req_balanced = GenerateImageInput(prompt="a cat", quality_tier="balanced")
+    rankless = router._score(gpt, req_best) - gpt.quality_rank * _QUALITY_RANK_STEP
+    assert rankless == gpt.cost_tier * 2 + gpt.speed_tier - gpt.cost_tier
+    assert router._score(gpt, req_balanced) == gpt.speed_tier - gpt.cost_tier
 
 
 def test_best_tier_runner_up_is_banana_pro():
@@ -85,36 +113,80 @@ def test_best_tier_runner_up_is_banana_pro():
     assert ranked[0].adapter_id == "nano-banana-pro"
 
 
-def test_auto_image_default_is_seedream_5_0_pro():
-    """The default pick is declared, not alphabetical.
+def test_auto_image_defaults_differ_per_quality_tier():
+    """Each image tier has its own declared winner, and the declarations do not mix.
 
-    Every Seedream shares speed_tier 3 / cost_tier 2, so before auto_priority the
-    family tied and the adapter_id tie-break handed every auto image request to the
-    oldest member (4.0).
+    "balanced" is gpt-image-2's by ``default_for`` — an operator decision that
+    outranks the score outright, in whichever language the prompt is written.
+    "fast" has no declaration and still falls to 5.0 Pro on ``auto_priority``: every
+    Seedream shares speed_tier 3 / cost_tier 2, so the family ties on score and the
+    adapter_id tie-break would otherwise hand it to the oldest member (4.0).
+    "best" is gpt-image-2's again, by ``quality_rank`` — a different field reaching
+    the same model, which is why the balanced assertion above proves nothing about
+    rank (see test_best_tier_prefers_declared_quality_rank_over_price).
     """
     router = _router()
-    for tier in ("balanced", "fast"):
+    expected = {
+        "balanced": "gpt-image-2",             # default_for
+        "fast": "doubao-seedream-5-0-pro",     # auto_priority
+        "best": "gpt-image-2",                 # quality_rank
+    }
+    for tier, adapter_id in expected.items():
         for prompt in ("a red panda", "一只红熊猫"):
             adapter = router.select_model(
                 GenerateImageInput(prompt=prompt, quality_tier=tier)
             )
-            assert adapter.adapter_id == "doubao-seedream-5-0-pro", (tier, prompt)
+            assert adapter.adapter_id == adapter_id, (tier, prompt)
 
 
 def test_auto_image_falls_back_to_5_0_lite_when_pro_unsupported():
-    # 4K exceeds Pro's pixel ceiling, so supports() drops it. The fallback must be
-    # the newest lite, not whichever name sorts first.
+    """4K exceeds 5.0 Pro's pixel ceiling, so supports() drops it; the fallback must
+    be the newest lite, not whichever name sorts first.
+
+    gpt-image-2 is excluded by hand rather than by the request: it accepts 4K, so a
+    plain ``select_model`` would return the declared balanced default and stop
+    exercising the Seedream ordering this test exists for.
+    """
     router = _router()
-    adapter = router.select_model(GenerateImageInput(prompt="a cat", resolution="4K"))
-    assert adapter.adapter_id == "doubao-seedream-5-0-lite"
+    req = GenerateImageInput(prompt="a cat", resolution="4K")
+    candidates = [
+        a for a in router._registry.list_all(task_type="image")
+        if a.adapter_id != "gpt-image-2" and a.supports(req)[0]
+    ]
+    assert "doubao-seedream-5-0-pro" not in {a.adapter_id for a in candidates}
+    ranked = sorted(
+        candidates, key=lambda a: selection_key(router._score(a, req), a, "balanced")
+    )
+    assert ranked[0].adapter_id == "doubao-seedream-5-0-lite"
 
 
-def test_group_request_avoids_the_model_that_ignores_n():
-    # 5.0 Pro is the default pick but has no multi_image_group; n>1 there silently
-    # returns a single image, so the group bonus must route around it.
+def test_declared_default_outranks_the_group_bonus_and_n_degrades():
+    """``n > 1`` no longer routes around the model that ignores it. Deliberate.
+
+    The +3 group bonus lives in ``_score``, and ``default_for`` is the key *above*
+    the score, so gpt-image-2 wins a balanced group request despite lacking
+    ``multi_image_group`` — its build_payload never sends ``n`` and the caller gets
+    one image. That is the documented cost of declaring a default: the operator
+    decision is allowed to overrule the heuristic, which is the whole point of
+    writing it down, and there is no signal downstream that can catch the mismatch
+    (``n`` is a compatibility hint every model without the capability ignores in
+    silence). Pinned so the degradation stays a decision on record rather than a
+    surprise; a caller who needs a real 组图 names a Seedream explicitly.
+
+    The bonus itself is untouched and still orders everyone below the default.
+    """
     router = _router()
-    adapter = router.select_model(GenerateImageInput(prompt="a cat", n=4))
-    assert "multi_image_group" in adapter.capabilities
+    req = GenerateImageInput(prompt="a cat", n=4)
+    adapter = router.select_model(req)
+    assert adapter.adapter_id == "gpt-image-2"
+    assert "multi_image_group" not in adapter.capabilities
+
+    runners_up = sorted(
+        (a for a in router._registry.list_all(task_type="image")
+         if a.adapter_id != "gpt-image-2" and a.supports(req)[0]),
+        key=lambda a: selection_key(router._score(a, req), a, "balanced"),
+    )
+    assert "multi_image_group" in runners_up[0].capabilities
 
 
 def test_video_defaults_differ_per_quality_tier():
@@ -263,7 +335,7 @@ def test_default_for_is_undeclared_by_default():
     """Absent = empty, so every model that says nothing routes exactly as before."""
     router = _router()
     declared = [a for a in router._registry.list_all() if a.default_for]
-    assert [a.adapter_id for a in declared] == ["cfgpu-minimax-h3"]
+    assert sorted(a.adapter_id for a in declared) == ["cfgpu-minimax-h3", "gpt-image-2"]
 
 
 def test_default_for_rejects_an_unknown_quality_tier():
@@ -314,16 +386,29 @@ def test_undeclared_model_scores_exactly_as_before():
 
 
 def test_image_reference_bonus_uses_real_capability():
+    """The +3 reference bonus keys on the capability, not on a model name.
+
+    Asserted below the declared balanced default for the same reason the Chinese
+    bonus is: ``default_for`` outranks the score, so the winner of a
+    ``reference_images`` request is gpt-image-2 regardless. Unlike the ``n > 1``
+    case that costs nothing silently — gpt-image-2 declares ``image_to_image`` and
+    _finalize_payload does forward ``reference_images`` upstream; what it lacks is
+    ``multi_image_fusion``, so a multi-image blend is served by a model not
+    specialised for it rather than dropped.
+    """
     router = _router()
-    # Seedream declares multi_image_fusion/multi_image_group; with reference_images
-    # it should win the +3 reference bonus over models lacking those capabilities.
     req = GenerateImageInput(
         prompt="cat",
         reference_images=["https://example.com/a.png", "https://example.com/b.png"],
         quality_tier="balanced",
     )
-    adapter = router.select_model(req)
-    caps = adapter.capabilities
+    assert router.select_model(req).adapter_id == "gpt-image-2"
+    ranked = sorted(
+        (a for a in router._registry.list_all(task_type="image")
+         if a.adapter_id != "gpt-image-2" and a.supports(req)[0]),
+        key=lambda a: selection_key(router._score(a, req), a, "balanced"),
+    )
+    caps = ranked[0].capabilities
     assert "multi_image_fusion" in caps or "multi_image_group" in caps
 
 

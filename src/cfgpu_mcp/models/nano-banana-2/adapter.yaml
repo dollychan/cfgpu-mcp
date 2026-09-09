@@ -9,3 +9,10 @@ speed_tier: 3
 
 # Not a "best" pick; zeroed rather than inherited from gpt-image-2 (3).
 quality_rank: 0
+
+# Zeroed rather than inherited from gpt-image-2 ([balanced]), and it covers the
+# whole subtree: -pro extends this file, -pro-official / -pro-premium extend -pro,
+# so all four would otherwise declare themselves the balanced default. Nothing
+# would have failed loudly — five declared defaults just fall through to the score,
+# which is the accidental ordering `default_for` exists to replace.
+default_for: []

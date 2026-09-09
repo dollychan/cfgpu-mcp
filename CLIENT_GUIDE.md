@@ -700,9 +700,14 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > （480p/720p/1080p）会回退到它最低的 `768p`。**不传 `resolution` 时 `corrected_args` 里不会出现它**
 > —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
 
-> **`model="auto"` 现在选谁（图片）**：`balanced` / `fast` 都是 `doubao-seedream-5-0-pro`；
-> Pro 被参数排除时（3K/4K、组图 `n>1`、联网搜索这三项它没有）退到 `doubao-seedream-5-0-lite`。
-> `best` 是 `cf-image-2`，被排除时退到 `cf-pro`。中文 prompt 仍会额外偏向 Seedream 家族。
+> **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
+> `fast` 是 `doubao-seedream-5-0-pro`，它被参数排除时（3K/4K、组图 `n>1`、联网搜索这三项
+> 它没有）退到 `doubao-seedream-5-0-lite`；`best` 被排除时退到 `cf-pro`。
+> 中文 prompt 仍偏向 Seedream 家族，但那是**分数**上的偏向，压不过 `balanced` 的声明默认，
+> 只在声明默认出局后才决定次序。
+> **`balanced` + `n>1` 请注意**：`cf-image-2` 不支持组图，`n` 会被静默忽略、只回一张图。
+> 需要组图请显式传 `model="doubao-seedream-5-0-lite"`（或别的 Seedream），或改用
+> `quality_tier="fast"`。
 > **视频**：`balanced` 是 `MiniMax-H3`，`fast` 是 `doubao-seedance-2-0-fast`，
 > `best` 是 `doubao-seedance-2-5`（30 秒单段直出、最多 50 个参考素材、多语种旁白）。
 > 三档各有各的落点：日常请求想要的模型，未必是点名要快时想要的那个。被参数排除时
