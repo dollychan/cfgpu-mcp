@@ -176,9 +176,16 @@ class CFGPUError(Exception):
         if self.model_id:
             result["model_id"] = self.model_id
         # Surface task_id (carried in ``original`` by task_failed / timeout errors)
-        # so the caller can re-query or report the exact failed task.
+        # so the caller can re-query or report the exact failed task — but only when
+        # there is no ``request_id`` below, which is the same value under a name the
+        # caller already knows (``request-id-durability.md`` D1). Two keys holding one
+        # string is how a caller learns to carry the one that stops being true; see
+        # ``tool_registry.stamp_echo``, which enforces the same single-handle rule on
+        # every success and pending envelope. The surviving case is worth keeping: a
+        # "Task 'x' not found" carries the id that was asked for and no request_id,
+        # because no row was there to hold one.
         task_id = self.original.get("task_id")
-        if task_id:
+        if task_id and not self.request_id:
             result["task_id"] = task_id
         # Which half of an HTTP timeout this was. "connect" is provably before any
         # byte reached the upstream; "request" means the bytes went out and the

@@ -116,7 +116,9 @@ async def test_no_wait_envelope_echoes_caption_and_request_id():
         result = await video_service.generate_video(
             prompt="x", wait=False, caption=CAPTION, request_id="r-1"
         )
-    assert result["task_id"] == "r-1"   # the handle and the task id are one value
+    # One handle, not two: the task's id *is* this request_id, so it is returned under
+    # the name the caller already knows and not also under a second one.
+    assert "task_id" not in result
     assert result["caption"] == CAPTION
     assert result["request_id"] == "r-1"
     await db.close()

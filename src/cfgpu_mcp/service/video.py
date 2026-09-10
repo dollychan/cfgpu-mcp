@@ -127,6 +127,7 @@ async def generate_video(
             request_id=request_id,
             caption=caption,
             label=label,
+            row_id=task.id,
         )
 
     try:
@@ -143,11 +144,11 @@ async def generate_video(
     if task.result is None:
         pending = pending_result(task.id, task.status, last_error, created_at=task.created_at)
         pending["next_step"] = f"用 task_status('{task.id}') 查询进度与结果"
-        return stamp_echo(pending, request_id=request_id, caption=caption, label=label)
+        return stamp_echo(pending, request_id=request_id, caption=caption, label=label, row_id=task.id)
 
     result = task.result
     # The real per-model API request is always surfaced, regardless of return_metadata.
     payload = task.public_payload()
     if not return_metadata:
-        return stamp_echo(lean_result(result, payload), request_id=request_id, caption=caption, label=label)
-    return stamp_echo({**result, "payload": payload}, request_id=request_id, caption=caption, label=label)
+        return stamp_echo(lean_result(result, payload), request_id=request_id, caption=caption, label=label, row_id=task.id)
+    return stamp_echo({**result, "payload": payload}, request_id=request_id, caption=caption, label=label, row_id=task.id)

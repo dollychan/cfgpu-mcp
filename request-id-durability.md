@@ -15,6 +15,13 @@
 （schema 迁移改由 alembic 承担）与 D12（`tasks` 增 `model_used` 列，供按模型统计生成时延），
 以及 §7.1 里「提交失败按它证明了什么分流」这条实现期补充。其余与本设计一致。
 
+**修订记录（2026-09-10，现网 trace 触发）**：I6 在**成功信封**上一直没有成立——`_present`
+成功分支返回的是 `task.result`（存下来的 `NormalizedResult`），而它的 `task_id` 是
+`adapter.parse_response` 从上游响应里解出来的**上游 id**。于是同一个任务，提交回执给的是
+`task_id = request_id`（行主键），`task_wait` 收产物那一跳给的却是另一个值，键名一模一样。
+连带定下**单一句柄**规则并把 §8.1 从「不加参数、改 docstring」改判为「改参数名」。详见 D13、
+§8.1、§11。
+
 ---
 
 ## 1. 背景
@@ -197,6 +204,9 @@ POST + parse + 写回结果整块放进 `asyncio.shield`。agent 断连时外层
 - `poll()` 用 `upstream_task_id or id` 拼 URL。`or id` 是给存量行的：老行的 `id` **就是**
   上游 id，该列为 NULL 时自动落回，行为与今天一致（I7）。
 - 它**不出现在** `to_dict()` / `pending_result()` / `_present()` 的任何返回里（I6）。
+  ⚠️ **2026-09-10 修订**：这条在 `_present` 的**成功**分支上原本不成立，见 D13。当时的
+  `test_upstream_task_id_never_surfaces_to_caller` 确实扫了 `_present`，但只扫了非终态的那一半
+  ——它断言的任务还没有 `result`，而漏掉的正是 `result` 这条路径。
 - 查询解析顺序：`id` → 未命中则 `upstream_task_id`。第二跳只为存量与兼容存在，走索引，
   只在未命中时发生。
 
@@ -321,6 +331,39 @@ POST 之后，这个差值只覆盖写库那一瞬），而按模型分组统计
 
 两条使用注意，写在这里免得报表跑出错误结论：**只统计终态行**（`updated_at` 会被每次轮询推
 进），以及**异步模型的差值含排队时间**，不是纯生成耗时。
+
+### D13 — 单一句柄：一次调用只给一个 id
+
+**2026-09-10 现网 trace 定案。** 同一次生成，模型先后看到两个 `task_id`：
+
+| 跳 | `task_id` | 实际是什么 |
+|---|---|---|
+| `generate_image` 回执 | `c286f37d…` | 行主键 = 调用方的 `request_id`（D1） |
+| `cfdream_task_wait` 收产物 | `47c466e3…` | **上游生成 id** |
+
+两个独立缺陷，一个症状：
+
+1. **I6 在成功分支上没有成立。** `_present` 成功时返回 `task.result`，即
+   `NormalizedResult.to_dict(return_metadata=True)`，其 `task_id` 来自
+   `adapter.parse_response`。`Task.to_dict()` 与 `pending_result()` 都守着 I6，只有这一条路
+   绕过了它们——它压根不是用行拼出来的。
+2. **带 `request_id` 时，非终态信封把同一个串给了两遍。** 单看无害，但正是它教会模型
+   「`task_id` 是个值得记住的东西」，然后缺陷 1 在半路改掉了这个东西的含义。
+
+**规则**：面向调用方的结果（成功／非终态／错误 dict）**恰好携带一个 id**。
+
+- 有 `request_id` → 它就是那个 id，`task_id` 不再出现。两者本就同值（D1），第二个键只是
+  在制造歧义。
+- 没有 → 是 `task_id`，且**必须是行 id**，绝不是上游的。这一条要**改写**而不能只是信任：
+  成功信封天生带着上游 id，放着不管就是给调用方一个查不到任何东西的串。
+
+**落点只有两处**，不是四个 service 调用点：`tool_registry.stamp_echo`（新增 `row_id` 形参
+——它是每个对外结果的必经之地）与 `CFGPUError.to_tool_result_dict`。存下来的行**不动**：
+对同步模型来说 `result.task_id` 是上游句柄的唯一留痕，诊断要用；I6 管的是「不出现在返回
+里」，不是「不许存」。
+
+**只改写、不新增**：`return_metadata=False` 是故意连句柄一起丢掉的，如果 `row_id` 能把它加
+回来，那就是从另一个文件绕过了那个语义。
 
 ---
 
@@ -478,23 +521,33 @@ agent                   MCP 实例                     上游
 
 ## 8. 工具面变更
 
-### 8.1 不加参数，改 docstring
+### 8.1 改参数名（2026-09-10 改判）
 
-因为 `id` 就是 `request_id`（D1），`task_status(task_id)` / `task_wait(task_id)` 的现有签名
-**已经**能承载恢复路径，不需要新增 `request_id` 参数。加一个纯同义参数只会扩大 schema
-表面而不增加任何能力。
+**原结论**是「不加参数、只改 docstring」：`id` 就是 `request_id`（D1），现有签名已经能承载
+恢复路径，加一个纯同义参数只会扩大 schema 表面。
 
-要改的是 docstring，让模型在恢复时刻知道该传什么：
+**那条理由现在依然成立，但它论证的是「不要*加*」，而这里要做的是「*改名*」**——参数个数不变，
+所以它拦不住。D13 把改名从可选变成必须：成功信封里的 `task_id` 已经被删掉了，一个叫
+`task_id` 的入参就指着一个不再存在的字段；更早之前它指着的那个字段，值还是上游的
+（`request-id-durability` I6 说它不该出现在任何返回里）。**参数应该叫调用方真正握着的那个
+东西**，而恢复时刻调用方握着的只有 `request_id`——`task_id` 要等 POST 答复才存在，那恰好是
+它什么都没有的时刻。
 
-> `task_id` — generate_* 返回的 id。**如果那次调用带了 `request_id`，两者是同一个值**：
-> 上一次 generate_* 没有返回结果（超时／连接中断／服务重启）时，把那次的 `request_id`
-> 传进来就能查到它的最终状态。
+于是：
 
-同时要在 docstring 里解释 `submitting` / `dispatching` 两个新状态对调用方分别意味着什么
+> `request_id` — 你在 generate_image / generate_video / generate_audio 里传的那个值。它**就是**
+> 那个任务的主键，不需要别的东西来找它。上一次 generate_* 没有返回结果（超时／连接中断／
+> 服务重启）时就用它来查，而不是重新提交：那次生成可能已经跑完并且已经计费。没传过
+> `request_id` 的调用会拿回一个服务端生成的 `task_id`，把那个值传进来即可。
+
+同时在 docstring 里解释 `submitting` / `dispatching` 两个新状态对调用方分别意味着什么
 （D4 表格那两句话）。
 
-> **备选**（未采纳）：额外加一个 `request_id` 形参做别名。否决理由是它不增加能力，而工具
-> schema 每多一个参数就多一处模型可以填错的地方。
+**兼容**：service 层同时接受 `task_id=`（`get_status` / `wait_for_task` 各多一个 keyword-only
+形参，由 `_row_key` 归一）。这不是给旧代码留的坟——CLI 的 `cfgpu task status <id>` 与 Mode B
+的 `dispatch_tool(name, inputs)` 传的是别人拼的 dict，而**没传 request_id 的调用方拿回的字段
+本来就叫 `task_id`**，它们说的是自己那一半的真话。**MCP 工具面只暴露一个名字**，所以模型侧
+没有二选一。原来那条「别加同义参数」的否决在模型面因此仍然生效。
 
 ### 8.2 是否新增 `list_tasks`
 
@@ -599,7 +652,8 @@ BUG-115 的未闭合面里。
 | `test_cancelled_request_still_writes_result` | I5：外层 `task.cancel()` 后仍能查到 `succeeded` |
 | `test_duplicate_request_id_returns_existing_live_task` | D2 非终态半边：第二次 create 不调 `client.post` |
 | `test_duplicate_request_id_returns_cached_terminal_result` | D2 终态半边：返回既有产物，不重新计费 |
-| `test_upstream_task_id_never_surfaces_to_caller` | I6：扫 `to_dict` / `pending_result` / `_present` 的输出 |
+| `test_upstream_task_id_never_surfaces_to_caller` | I6：扫 `to_dict` / `pending_result` / `_present` 的输出。**注意它原来只扫了 `_present` 的非终态一半**（断言用的任务还没有 `result`），成功分支的漏洞就活在那半边——2026-09-10 已补 |
+| `test_task_handle.py`（新文件，16 条） | D13：成功信封不带上游 id／无 request_id 时回落行 id／非终态不给重复句柄／错误 dict 同规则／`stamp_echo` 只改写不新增／工具 schema 的入参是 `request_id`／service 层仍收 `task_id=` |
 | `test_legacy_row_polls_by_id` | I7：`upstream_task_id IS NULL` 的老行仍能 poll |
 | `test_lookup_falls_back_to_upstream_task_id` | D6 第二跳 |
 | `test_dispatching_is_not_repolled` | §6 判据表：没有上游 id 时不去 poll |

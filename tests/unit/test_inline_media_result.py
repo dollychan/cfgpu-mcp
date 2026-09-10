@@ -162,7 +162,7 @@ async def test_task_tools_split_the_blob_out_of_the_llm_content(tool, svc):
     result = {"urls": [], "inline_media": [BLOB], "expires_at": None,
               "usage": {"characters": 34}, "payload": {"model": "MiniMax/speech-2.8-hd"}}
     with patch(svc, AsyncMock(return_value=result)):
-        out = await mcp.call_tool(tool, {"task_id": "task-1"})
+        out = await mcp.call_tool(tool, {"request_id": "task-1"})
 
     assert out.structuredContent["inline_media"] == [BLOB]
     content = json.loads(out.content[0].text)

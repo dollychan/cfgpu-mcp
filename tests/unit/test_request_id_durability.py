@@ -227,6 +227,18 @@ async def test_upstream_task_id_never_surfaces_to_caller():
     assert "cfgpu-upstream-9" not in str(task.to_dict())     # …and nowhere in the output
     assert "cfgpu-upstream-9" not in str(_present(task))
     assert "cfgpu-upstream-9" not in str(Task(await repo.get_task("req-hidden")).to_dict())
+
+    # The half this test used to miss: everything above holds while the task has no
+    # `result`, and _present's *success* branch does not go through `Task.to_dict()` at
+    # all — it returns the stored NormalizedResult, whose own `task_id` is the upstream's
+    # (adapter.parse_response put it there). That is the path that leaked, in production,
+    # on 2026-09-10. See D13; the rule itself is pinned in test_task_handle.py.
+    await repo.update_task(
+        "req-hidden", "succeeded",
+        result={"urls": ["https://cdn/v.mp4"], "task_id": "cfgpu-upstream-9"},
+    )
+    done = Task(await repo.get_task("req-hidden"))
+    assert "cfgpu-upstream-9" not in str(_present(done))
     await db.close()
 
 

@@ -865,16 +865,34 @@ class UnderstandVisionInput(BaseModel):
         return self
 
 
+#: Shared by both task tools: they take the same handle and must describe it identically.
+#:
+#: It is spelled ``request_id`` rather than ``task_id`` because that is the value a caller
+#: can actually be holding. ``request_id`` is known *before* the call goes out and is the
+#: task row's key (``request-id-durability.md`` D1/I2), so it survives the one situation
+#: these tools exist for — a ``generate_*`` whose response never arrived. A ``task_id``, by
+#: contrast, only exists once the POST answered, which is exactly when a recovering caller
+#: has nothing.
+_TASK_HANDLE_DESCRIPTION = (
+    "The `request_id` you passed to generate_image / generate_video / generate_audio. It "
+    "is that task's key, so nothing else is needed to find it. This is the move to make "
+    "when a generate_* call did not come back with a result — it timed out, the connection "
+    "dropped, the server restarted: the generation may already have run and been charged "
+    "for, so query it here instead of resubmitting. If you supplied no request_id, that "
+    "call returned a `task_id` instead — pass that same value here."
+)
+
+
 class TaskStatusInput(BaseModel):
     """Query the status of an async generation task."""
 
-    task_id: str = Field(description="Task ID returned by generate_image or generate_video")
+    request_id: str = Field(description=_TASK_HANDLE_DESCRIPTION)
 
 
 class TaskWaitInput(BaseModel):
     """Wait for an async generation task to complete and return the result."""
 
-    task_id: str = Field(description="Task ID to wait for")
+    request_id: str = Field(description=_TASK_HANDLE_DESCRIPTION)
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto")
 
 
@@ -996,6 +1014,12 @@ def pending_result(
     ``task_wait`` — so a caller distinguishes states by two booleans and one enum
     (``error`` -> ``artifact`` -> ``status``) rather than by which tool it called.
 
+    ``task_id`` here is the **row** key, and it is the caller's handle only when that
+    caller supplied no ``request_id``: ``stamp_echo`` drops it otherwise, since the two
+    would be the same string under two names. Build the envelope with it regardless —
+    this function does not know whether an echo is coming, and the rule lives in one
+    place on purpose (see ``stamp_echo``'s ``row_id``).
+
     ``last_error`` is present only when we stopped watching for a reason (see
     ``TaskManager.wait``); its absence means polling was healthy and the job is
     simply not finished. It stays in ``content`` rather than ``structuredContent``
@@ -1091,6 +1115,7 @@ def stamp_echo(
     request_id: str | None = None,
     caption: str | None = None,
     label: str | None = None,
+    row_id: str | None = None,
 ) -> Any:
     """Echo the caller's own handles onto a result dict (in place), if set.
 
@@ -1114,6 +1139,26 @@ def stamp_echo(
     failure back to its request is exactly what a correlation handle is for) but neither
     ``caption`` nor ``label`` — a failed call produced no artifact, so there is nothing
     to describe or name.
+
+    ``row_id`` is not an echo field — it is the task row's key, and it is here because
+    this function is the one place every caller-facing result passes through, which
+    makes it the only place the **single-handle rule** can be enforced without four
+    copies of it drifting apart:
+
+    - **A ``request_id`` means there is no second handle.** It *is* the row key
+      (``request-id-durability.md`` D1), so a sibling ``task_id`` carrying the same
+      string is a duplicate that teaches a model to carry the other name around.
+    - **Otherwise the handle is ``task_id``, and it is the row id.** Never the
+      upstream's — that one is internal (I6). It has to be rewritten rather than merely
+      trusted, because the success envelope is the stored ``NormalizedResult``, whose
+      ``task_id`` is whatever ``adapter.parse_response`` read out of the provider's
+      response. Left alone it hands the caller an id that queries nothing, and (2026-09-10,
+      production) does it *halfway through a job* whose earlier hop returned the row key
+      under the very same name.
+
+    Only ever rewritten, never introduced: ``return_metadata=False`` deliberately drops
+    the handle along with the rest of the metadata, and adding one back here would make
+    ``row_id`` a way to defeat that from a different file.
     """
     if not isinstance(result, dict):
         return result
@@ -1123,6 +1168,10 @@ def stamp_echo(
         result.setdefault("caption", caption)
     if label:
         result.setdefault("label", label)
+    if request_id:
+        result.pop("task_id", None)
+    elif row_id and "task_id" in result:
+        result["task_id"] = row_id
     return result
 
 

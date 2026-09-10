@@ -184,7 +184,7 @@ CFGPU_CONFIG=./config.yaml cfgpu-mcp # 监听 http://0.0.0.0:8080/mcp
 
 **逐请求 token**：HTTP 模式下，每个 MCP 请求用自己的 `Authorization: Bearer <token>` 头携带各自的 CFGPU Token——不再全局共用 `CFGPU_API_TOKEN`。未带头时回退到 `CFGPU_API_TOKEN` 环境变量。
 
-**断点续查**：`wait=false` 提交后立即返回 `task_id`；客户端周期性调 `task_status(task_id)`（每次都带 token），服务端借此实时推进任务。即使客户端断开，凭 `task_id` 重连仍可查到结果。
+**断点续查**：`wait=false` 提交后立即返回句柄；客户端周期性调 `task_status(...)`（每次都带 token），服务端借此实时推进任务。即使客户端断开，凭这个句柄重连仍可查到结果。传了 `request_id` 的调用，句柄就是它自己传的那个值（响应里不再另给 `task_id`）；没传的调用拿回服务端生成的 `task_id`，把它传给 `task_status` 的 `request_id` 参数即可。
 
 **同步模型也能续查了 —— 前提是提交时带了 `request_id`。** 任务行现在在上游 POST **之前**就落库，主键就是调用方给的 `request_id`，所以一次 `generate_image` 哪怕整个响应都丢了（超时 / 断连 / 服务重启），拿同一个 `request_id` 调 `task_status` 就能查到它的最终状态和产物。没带 `request_id` 的调用回落到服务端自生成的 id，那个 id 只在响应里出现一次——响应丢了就没了。**要恢复能力，就把 `request_id` 当必填字段来用。**
 
@@ -330,7 +330,7 @@ asyncio.run(main())
 from cfgpu_mcp.service import task as task_svc
 
 async def poll():
-    # 查询状态：未完成时返回 {task_id, status, elapsed_seconds} 信封；一旦成功，返回与
+    # 查询状态：未完成时返回 {<句柄>, status, elapsed_seconds} 信封；一旦成功，返回与
     # generate_* 完全一致的扁平结果（顶层 urls/expires_at/...）；失败则抛 CFGPUError(task_failed)。
     status = await task_svc.get_status("task-abc123")
     if "urls" in status:
@@ -827,7 +827,8 @@ done
 | `urls` | `list[str]` | ✓ | 生成的资源 URL 列表 |
 | `expires_at` | `str \| null` | ✓ | URL 过期时间（ISO 8601），通常 24 小时后失效 |
 | `inline_media` | `list[object]` | ✓（有才出现） | **内联产物**：部分模型不给下载链接，直接把媒体内容返回（目前仅 MiniMax 语音）。每项为 `{data, mime_type, filename}`，`data` 是 base64 编码的文件内容，可直接解码落盘。此时 `urls` 为空数组 —— `inline_media` 就是本次产物本身，因此与 `urls` 同级、**不受 `return_metadata` 影响**；无内联产物的模型不会出现该字段。MCP 下它走 `structuredContent` 侧信道（不进模型上下文），见 §content / structuredContent 拆分 |
-| `task_id` | `str \| null` | | 任务 ID；同步模型为 `null` |
+| `request_id` | `str` | ✓（传了才有） | 你在 generate_* 里传的那个值，原样回显。它**就是任务主键**，所以传了它的调用不会再拿到 `task_id`——见下方「单一句柄」 |
+| `task_id` | `str` | | **仅当本次调用没传 `request_id` 时出现**：服务端为这一行生成的 id，作用与 `request_id` 完全相同（拿它调 `task_status` / `task_wait`）。它**不是**上游服务自己的任务 id，那个是内部字段，任何返回里都不出现 |
 | `model_used` | `str \| null` | | 实际使用的模型公开标识（`model_name`，与 `list_models()`/`model` 参数同一套 id 空间；从不是内部的 `cfgpu_model_id`）。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
@@ -869,7 +870,7 @@ done
 >
 > **它同时是任务 id，这带来两条能力**，都建议主动利用：
 >
-> 1. **断点恢复。** 返回的 `task_id` 与你传的 `request_id` 是同一个值，所以一次 generate 没能返回结果时（超时 / 断连 / 服务重启），直接 `task_status(那个 request_id)` 即可，不需要事先拿到过任何东西。
+> 1. **断点恢复。** 你传的 `request_id` **就是**任务主键，所以一次 generate 没能返回结果时（超时 / 断连 / 服务重启），直接 `task_status(那个 request_id)` 即可，不需要事先拿到过任何东西。
 > 2. **重发即去重。** 同一个 `request_id` 再次提交不会二次计费：服务端撞到主键就返回既有任务——还在跑就让你接着查，已经跑完就直接把既有产物给你。**因此它必须每次调用一个、且在你这侧是持久化的**：如果你每次重试都现算一个新值，这条保护静默失效，症状是双份账单而没有任何报错。反过来，模型真想重画一张时应当用一个**新的** `request_id`，否则拿回的是上一张。
 
 > **`caption`（产物标签，可选，全模式生效）**：`generate_image` / `generate_video` / `generate_audio` 接受一个可选的 `caption` 入参——一句人类可读的**短标签**（如 `"角色阿雅 第一版"` / `"封面图 v1"`），服务端同样**原样回显**在即时响应，以及之后由 `task_status` / `task_wait` 返回的最终 artifact 上。用途——客户端若自建素材台账（如 DeerFlow / cf-dream 把每个生成产物登记为可用短 id 引用的 **material**），不带标签的条目是无名的，只能在生成之后再花一次工具调用去补名字；把标签放在发起时携带即可省掉这一跳，而它随任务记录存储这一点，使**两段式**（`wait=False` → `task_wait`）也无需客户端自己维护 `task_id → 标签` 的映射。
@@ -944,24 +945,27 @@ done
 }
 ```
 
-传入 `request_id` 时，即时响应与之后的 `task_status` / `task_wait` 结果都会带上它，供跨 tool_call 关联：
+传入 `request_id` 时，即时响应与之后的 `task_status` / `task_wait` 结果都会带上它，供跨 tool_call 关联——而 `task_id` 不再出现，因为那会是同一个串的第二个名字：
 
 ```json
 {
-  "task_id": "task-abc123",
   "status": "pending",
   "elapsed_seconds": 0,
   "request_id": "gen-用户自选-01"
 }
 ```
 
+> **单一句柄。** 每个返回（成功 / 未完成 / 错误）**只带一个 id**：传了 `request_id` 就是它，没传就是 `task_id`，两者都直接可用于 `task_status` / `task_wait`。这不是省字节——`task_id` 这个键曾在同一次生成里承载过两个不同的值（提交回执给行主键、收产物那一跳给上游 id），足以让调用方拿一个查不到任何东西的串去轮询。上游服务自己的任务 id 现在是纯内部字段，任何返回里都不出现。
+
 ### 异步任务查询（`task_status` / `task_wait`）
 
 与 `generate_*` 保持一致：**任务成功后返回上方的扁平结果**（顶层 `urls` / `expires_at` / 元数据，外加 `artifact: true`），不再嵌套在 `result` 里。任务尚未完成时返回信封：
 
 ```json
-{ "task_id": "task-abc123", "status": "running", "elapsed_seconds": 47 }
+{ "request_id": "gen-用户自选-01", "status": "running", "elapsed_seconds": 47 }
 ```
+
+（没传 `request_id` 的调用，这里是 `"task_id": "task-abc123"`。）
 
 `elapsed_seconds` 是**任务创建至今的整秒数**（下限 0），每个未终态信封都带。它是两次
 `pending` 回复之间唯一会变的字段——没有它，第 1 次和第 40 次轮询的返回逐字节相同，
@@ -980,7 +984,8 @@ done
 ```
 1. result["error"] is True        → 结束了（失败，或请求压根没成立）
 2. result["artifact"] is True     → 结束了（成功，urls / inline_media 就在结果里）
-3. 否则                            → 没结束，用 result["task_id"] 继续 task_status
+3. 否则                            → 没结束，用句柄继续 task_status
+                                     （result["request_id"]，没传过则 result["task_id"]）
 ```
 
 **`status` 是机器枚举**，取值 `succeeded` / `running` / `pending` / `submitting` / `dispatching`（`failed` 走 error 通道，等不到）。给人和模型读的那句话在 `note` 里，不要拿它做控制流。`pending` 与 `running` 是**两个不同的事实**，不要合并：`pending` 表示上游报的是排队类状态（`queued` / `waiting` / `submitted` / `not_start`），任务还没开始跑；`running` 才是上游确认在执行。
@@ -992,13 +997,13 @@ done
 | `submitting` | 请求确定还没发给上游 | 没有计费，**用相同参数重发是安全的** |
 | `dispatching` | 请求可能已发出、回应丢了 | **可能已经计费。不要重发**，继续用同一个 id 查，或提示用户核实 |
 
-两者都是未终态，形状与 `pending` / `running` 完全一致（`{task_id, status, elapsed_seconds}`），所以按未终态处理的客户端不需要改代码——只有想要「该不该重发」这个答案时才需要读它们。
+两者都是未终态，形状与 `pending` / `running` 完全一致（`{<句柄>, status, elapsed_seconds}`），所以按未终态处理的客户端不需要改代码——只有想要「该不该重发」这个答案时才需要读它们。
 
 **`error: true` 一定意味着「这条线到此为止」**：任务还活着的情况绝不会走 error 通道。`generate_*(wait=true)` 等待超时、连续轮询失败放弃、轮询中撞上 token 失效——这三种任务都还在上游跑，返回的都是未终态信封而不是错误：
 
 ```json
 {
-  "task_id": "task-abc123",
+  "request_id": "gen-用户自选-01",
   "status": "running",
   "last_error": {
     "error_type": "auth",
@@ -1025,7 +1030,7 @@ done
 The request failed because the output video may be related to copyright restrictions.
 ```
 
-这种响应现在收敛成标准的终态错误（`error: true`、`error_type: "task_failed"`、`retryable: false`，带 `task_id` 和 `request_id`），`generate_*(wait=true)` / `task_status` / `task_wait` 三处一致。此前它被当成一次「轮询失败」，于是拿到的是 `status: "running"` + `last_error{error_type: "unknown", retryable: true}` —— 一条永远不会再变的任务，却被告知继续轮询。**所以：看到 `last_error` 就按上面那条走（再查一次 / 先修凭据），不必怀疑任务其实已经死了。**
+这种响应现在收敛成标准的终态错误（`error: true`、`error_type: "task_failed"`、`retryable: false`，带句柄——传了 `request_id` 就是它，否则是 `task_id`），`generate_*(wait=true)` / `task_status` / `task_wait` 三处一致。此前它被当成一次「轮询失败」，于是拿到的是 `status: "running"` + `last_error{error_type: "unknown", retryable: true}` —— 一条永远不会再变的任务，却被告知继续轮询。**所以：看到 `last_error` 就按上面那条走（再查一次 / 先修凭据），不必怀疑任务其实已经死了。**
 
 > 两个不在这套契约里的例外：`validate_only` 预检返回 `{validated, model_used, …}`，三个键一个都没有，判据是 `"validated" in result`；`understand_vision` 返回文本，没有 `artifact` / `task_id`，恒同步，终态判据只有「没有 `error`」。
 
@@ -1047,13 +1052,13 @@ The request failed because the output video may be related to copyright restrict
 
 `error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
 
-> **任务还活着时不会走这个通道。** 等待超时、连续轮询失败放弃、轮询中 token 失效——这三种都返回上一节的未终态信封（带 `task_id`，可能带 `last_error`），不是错误。所以拿到 error dict 就可以认定这条线已经结束，不必再去反推。
+> **任务还活着时不会走这个通道。** 等待超时、连续轮询失败放弃、轮询中 token 失效——这三种都返回上一节的未终态信封（带句柄，可能带 `last_error`），不是错误。所以拿到 error dict 就可以认定这条线已经结束，不必再去反推。
 >
 > 单次轮询请求打不通不会立刻判失败：可重试的错误会被吸收，连续 5 次才放弃。真正的上限是该模型的轮询超时（`poll_config.default_timeout`，H3 是 1500s），与单次 HTTP 超时（`http_timeout`）是两回事。
 >
 > **`timeout` 分两种，顶层 `phase` 说明是哪一种，别改错配置项。** `phase: "request"` 是连上了但上游没在 `http_timeout` 内答完；`phase: "connect"` 是 DNS / TCP / TLS 没在 `connect_timeout` 内完成，**上游根本没收到请求** —— 这几乎总是部署机器到该上游的网络不通（内网环境、出口策略、DNS），把 `http_timeout` 调大不会有任何作用。两种都带 `original.elapsed`（实测耗时，不是配置值），拿它和两个配置值一比即可确认。
 >
-> **`outcome_unknown: true` 曾是唯一一种「不知道成没成」的结果。它现在基本不会再出现在提交路径上**：任务行先于 POST 落库，所以「既没拿到 task_id 也没落库」不再成立。提交请求（POST）的 `phase: "request"` 超时现在得到的是——`retryable: false`（重发有重复计费风险，这一点没变）、`task_id`（就是你传的 `request_id`）、以及一句明确的下一步：**先 `task_status("<request_id>")` 查这次提交的最终状态，不要直接重发**。查到 `dispatching` 就是「可能已计费」，查到 `succeeded` 就直接拿产物。相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
+> **`outcome_unknown: true` 曾是唯一一种「不知道成没成」的结果。它现在基本不会再出现在提交路径上**：任务行先于 POST 落库，所以「既没拿到 task_id 也没落库」不再成立。提交请求（POST）的 `phase: "request"` 超时现在得到的是——`retryable: false`（重发有重复计费风险，这一点没变）、`request_id`（你自己传的那个值，行主键）、以及一句明确的下一步：**先 `task_status("<request_id>")` 查这次提交的最终状态，不要直接重发**。查到 `dispatching` 就是「可能已计费」，查到 `succeeded` 就直接拿产物。相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
 >
 > 换句话说：**这一类失败从「无法确认」变成了「去查这个 id」。** 前提仍是你在提交时带了 `request_id`。
 

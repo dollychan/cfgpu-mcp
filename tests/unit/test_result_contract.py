@@ -87,10 +87,12 @@ async def test_a_wait_that_times_out_returns_the_pending_envelope_not_an_error()
     assert "error" not in result
     assert "artifact" not in result
     assert result["status"] in ("pending", "running")
-    # Same value under both keys, and deliberately so: the task's identity *is* the
-    # caller's correlation handle now, which is what makes a submission recoverable
-    # from a handle the caller held before it ever called.
-    assert result["task_id"] == "req-7"
+    # The task's identity *is* the caller's correlation handle now (D1) — which is what
+    # makes a submission recoverable from something the caller held before it ever
+    # called. It is therefore returned once, under the name the caller supplied: the
+    # same string under a second key is what let `task_id` drift into meaning the
+    # upstream's id on the artifact hop (see test_task_handle.py).
+    assert "task_id" not in result
     assert result["request_id"] == "req-7"
     # No last_error: polling was healthy, we simply stopped waiting. Its absence is the
     # difference between "we watched it run" and "we lost sight of it".
@@ -114,7 +116,8 @@ async def test_losing_sight_of_a_task_reports_why_without_calling_it_a_failure()
         result = await image_service.generate_image(prompt="x", request_id="req-8")
 
     assert "error" not in result
-    assert result["task_id"] == "req-8"
+    assert result["request_id"] == "req-8"   # the one handle; see test_task_handle.py
+    assert "task_id" not in result
     assert result["last_error"]["error_type"] == "auth"
     assert result["last_error"]["retryable"] is False
     await db.close()

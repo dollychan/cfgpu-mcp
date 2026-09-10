@@ -17,8 +17,17 @@ def _present(task: Any, last_error: dict[str, Any] | None = None) -> dict[str, A
     the top level), plus the real per-model API ``payload``, is returned —
     identical to what ``generate_image`` / ``generate_video`` return — so callers
     see one structure regardless of which tool produced the artifact. Non-terminal
-    tasks fall back to the ``{task_id, status}`` envelope (mirrors generate's
-    ``wait=False``). The caller's echo fields — ``request_id``, ``caption`` and
+    tasks fall back to the ``{<handle>, status}`` envelope (mirrors generate's
+    ``wait=False``).
+
+    Both shapes carry exactly one handle, and ``stamp_echo``'s ``row_id`` decides which:
+    ``request_id`` when the caller supplied one, the row id otherwise. It is the success
+    branch that needs it. That dict is the stored ``NormalizedResult``, whose own
+    ``task_id`` is the **upstream's** — so returning it breaks I6 *and* hands the caller
+    an id that queries nothing, which in production (2026-09-10) meant one job answering
+    to two different values under one key.
+
+    The caller's echo fields — ``request_id``, ``caption`` and
     ``label``, all stashed in the stored payload at create time — are echoed on both
     shapes, so an async artifact can be joined back to the originating generate_* request
     and carries the description and name that request gave it. This is the whole point of
@@ -49,10 +58,13 @@ def _present(task: Any, last_error: dict[str, Any] | None = None) -> dict[str, A
     label = task.payload.get(_LABEL_KEY)
     result = task.result or {}
     if task.status == "succeeded" and (result.get("urls") or result.get("inline_media")):
-        return stamp_echo({**task.result, "payload": task.public_payload()}, request_id=request_id, caption=caption, label=label)
+        return stamp_echo(
+            {**task.result, "payload": task.public_payload()},
+            request_id=request_id, caption=caption, label=label, row_id=task.id,
+        )
     return stamp_echo(
         pending_result(task.id, task.status, last_error, created_at=task.created_at),
-        request_id=request_id, caption=caption, label=label,
+        request_id=request_id, caption=caption, label=label, row_id=task.id,
     )
 
 
@@ -110,10 +122,33 @@ def _raise_if_failed(task: Any) -> None:
         )
 
 
-async def get_status(task_id: str) -> dict[str, Any]:
+def _row_key(request_id: str | None, task_id: str | None) -> str:
+    """The task row key, from either spelling of the same parameter.
+
+    The parameter is ``request_id`` now: that is the value a caller holds *before* the
+    call goes out, and the row's key (D1), so it is the only one that survives a lost
+    response. ``task_id`` stays accepted because it is not merely a legacy alias — a
+    caller that supplied no ``request_id`` gets a server-generated id back under exactly
+    that name, and the CLI (`cfgpu task status <id>`) and the Mode B dispatcher (which
+    is handed a dict somebody else built) both still speak it.
+
+    Neither one given is a caller bug, not a lookup miss, so it must not read as
+    "task not found" — the two have opposite remedies.
+    """
+    handle = request_id or task_id
+    if not handle:
+        raise CFGPUError(
+            error_type="invalid_params",
+            user_message="缺少 request_id：请传入 generate_* 调用时使用的 request_id（未提供 request_id 的调用则传它返回的 task_id）。",
+        )
+    return handle
+
+
+async def get_status(request_id: str | None = None, *, task_id: str | None = None) -> dict[str, Any]:
     from cfgpu_mcp.config import client_for, get_task_repository, get_registry
     from cfgpu_mcp.task_manager import TaskManager
 
+    task_id = _row_key(request_id, task_id)
     repo = await get_task_repository()
     tm = TaskManager(client_for, repo)
     try:
@@ -185,12 +220,15 @@ async def get_status(task_id: str) -> dict[str, Any]:
 
 
 async def wait_for_task(
-    task_id: str,
+    request_id: str | None = None,
     timeout: int | None = None,
+    *,
+    task_id: str | None = None,
 ) -> dict[str, Any]:
     from cfgpu_mcp.config import client_for, get_task_repository, get_registry
     from cfgpu_mcp.task_manager import TaskManager
 
+    task_id = _row_key(request_id, task_id)
     repo = await get_task_repository()
     registry = get_registry()
     tm = TaskManager(client_for, repo)
