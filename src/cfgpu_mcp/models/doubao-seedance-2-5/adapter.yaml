@@ -32,4 +32,4 @@ allow_audio_only_reference: true
 resolutions: [480p, 720p, 1080p]
 
 poll_config:
-  default_timeout: 900
+  default_timeout: 3000

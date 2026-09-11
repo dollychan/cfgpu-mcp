@@ -35,19 +35,27 @@ MAX_CONSECUTIVE_POLL_FAILURES = 5
 #: Hard ceiling on how long a single tool call may block, whatever the adapter's
 #: ``poll_config.default_timeout`` says and whatever the caller passes as ``timeout``.
 #:
-#: ★ The bound that matters is not ours — it is the MCP client's own request timeout,
-#: which is typically 60s and never minutes. Blocking past it does not buy patience;
-#: it destroys the call: the client gives up, the session is torn down, and the
-#: non-terminal result we would have returned (task_id and all) is never delivered.
-#: The caller is then left waiting on a job it can no longer name, resume, or cancel.
-#: That is exactly what happened on 2026-08-14 — see the incident note in
+#: Raised 600 → 3000 on 2026-09-11. The original bound was never really ours: it assumed
+#: the MCP client holds a request timeout of tens of seconds, so blocking past it does not
+#: buy patience but destroys the call — the client gives up, the session is torn down, and
+#: the non-terminal result we would have returned (task_id and all) is never delivered,
+#: leaving the caller waiting on a job it can no longer name, resume or cancel. That is
+#: exactly what happened on 2026-08-14; see the incident note in
 #: models/cfdream-minimax-h3/adapter.yaml.
 #:
-#: 10 minutes is already far past any client's patience; it exists only so a
-#: misconfigured ``default_timeout`` cannot reintroduce an unbounded wait. Models
-#: whose real latency approaches this should set ``force_async: true`` instead of
-#: raising it — waiting longer is not the fix, not waiting is.
-MAX_WAIT_SECONDS = 600
+#: What changed is that assumption, not the hazard. The deployment this serves runs
+#: deerflow with ``tool_call_timeout: 0`` — the host imposes no deadline of its own — and
+#: real latency across the video fleet routinely runs past ten minutes. So this ceiling is
+#: no longer a proxy for the client's patience; it is only a floor under configuration
+#: error, so that a misconfigured ``default_timeout`` cannot reintroduce an unbounded wait.
+#:
+#: Two things follow. It must stay at or above every adapter's ``default_timeout``, or
+#: those numbers are silently clamped (``wait()`` logs it on every call, which is noise
+#: standing in for a value someone thought was in effect). And it is **not** a licence to
+#: block: a model whose real latency approaches this still belongs behind
+#: ``force_async: true``, because a blocked call holds a run slot, checkpoints nothing,
+#: and takes the whole super-step down with it if the process dies mid-wait.
+MAX_WAIT_SECONDS = 3000
 
 #: Resolves the client for a given adapter's upstream — see ``config.client_for``.
 ClientResolver = Callable[["ModelAdapter"], CFGPUClient]
