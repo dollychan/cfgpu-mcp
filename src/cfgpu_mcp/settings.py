@@ -64,6 +64,19 @@ class ProviderSettings:
 
 
 @dataclass
+class CanvasDbSettings:
+    """Read-only MySQL connection settings for the current-project canvas."""
+
+    host: str
+    port: int
+    database: str
+    user: str
+    password: str
+    pool_min: int = 1
+    pool_max: int = 5
+
+
+@dataclass
 class Settings:
     transport: str = "stdio"  # "stdio" | "streamable-http"
     http: HttpSettings = field(default_factory=HttpSettings)
@@ -82,6 +95,7 @@ class Settings:
     disabled_tools: list[str] | None = None
     #: Keyed by provider name; always contains DEFAULT_PROVIDER.
     providers: dict[str, ProviderSettings] = field(default_factory=dict)
+    canvas_db: CanvasDbSettings | None = None
 
 
 def _config_path() -> Path | None:
@@ -93,7 +107,7 @@ def _config_path() -> Path | None:
     return default if default.exists() else None
 
 
-def _expand_env(value: str) -> str:
+def _expand_env(value: str, field: str) -> str:
     """Expand a leading ``$VAR`` / ``${VAR}`` reference to its environment value.
 
     Lets config.yaml keep the DB URL (which carries a password) out of the file:
@@ -112,7 +126,7 @@ def _expand_env(value: str) -> str:
         return value
     resolved = os.getenv(name)
     if resolved is None:
-        raise ValueError(f"task_db.url references ${name}, but that environment variable is not set")
+        raise ValueError(f"{field} references ${name}, but that environment variable is not set")
     return resolved
 
 
@@ -209,11 +223,12 @@ def load_settings() -> Settings:
             s.connect_timeout = parse_positive_float(str(api["connect_timeout"]), s.connect_timeout)
 
         task_db = data.get("task_db") or {}
-        s.task_db_url = _expand_env(task_db.get("url", s.task_db_url))
+        s.task_db_url = _expand_env(task_db.get("url", s.task_db_url), "task_db.url")
         s.task_db_pool_min = int(task_db.get("pool_min", s.task_db_pool_min))
         s.task_db_pool_max = int(task_db.get("pool_max", s.task_db_pool_max))
 
         s.providers = _parse_providers(data.get("providers") or {})
+        s.canvas_db = _parse_canvas_db(data.get("canvas_db"))
 
         _reject_enabled_models(data)
         s.disabled_models = _parse_name_list(data.get("disabled_models"), "disabled_models")
@@ -292,3 +307,29 @@ def _parse_providers(raw: object) -> dict[str, ProviderSettings]:
             ),
         )
     return out
+
+
+def _parse_canvas_db(raw: object) -> CanvasDbSettings | None:
+    """Parse the optional canvas reader connection without storing secrets in YAML."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError(f"canvas_db must be a mapping, got {type(raw).__name__}")
+    allowed = {"host", "port", "database", "user", "password", "pool_min", "pool_max"}
+    unknown = set(raw) - allowed
+    if unknown:
+        raise ValueError(f"canvas_db has unknown keys: {sorted(unknown)}")
+    values: dict[str, str] = {}
+    for key in ("host", "port", "database", "user", "password"):
+        if key not in raw or raw[key] in (None, ""):
+            raise ValueError(f"canvas_db.{key} is required")
+        values[key] = _expand_env(raw[key], f"canvas_db.{key}")
+    return CanvasDbSettings(
+        host=values["host"],
+        port=int(values["port"]),
+        database=values["database"],
+        user=values["user"],
+        password=values["password"],
+        pool_min=int(raw.get("pool_min", 1)),
+        pool_max=int(raw.get("pool_max", 5)),
+    )

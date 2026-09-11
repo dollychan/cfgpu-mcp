@@ -57,6 +57,17 @@ task_db:
   pool_min: 1                  # Postgres connection pool (ignored by SQLite)
   pool_max: 10
 
+# Optional read-only MySQL source for inspect_canvas. Uncomment this entire
+# block only when canvas access is enabled; values may reference `.env` vars.
+# canvas_db:
+#   host: $MYSQL_DB_HOST_DAILY
+#   port: $DB_PORT
+#   database: $DB_DATABASE
+#   user: $DB_USER
+#   password: $MYSQL_DB_PASSWORD_DAILY
+#   pool_min: 1
+#   pool_max: 5
+
 disabled_models:               # blacklist; omit / null / [] = load all models
   # Models listed here are not registered: they stay out of list_models, out of
   # each tool's `model` enum, and out of `model="auto"` routing. Name a model by
@@ -77,7 +88,7 @@ disabled_tools:                # MCP tools to not expose; omit / null / [] = all
   # unregistered, so calling it returns "unknown tool".
   #
   # Valid names (an unknown one fails at startup):
-  #   generate_image  generate_video  generate_audio  understand_vision
+  #   generate_image  generate_video  generate_audio  understand_vision  inspect_canvas
   #   task_status  task_wait  list_models  get_model_card
   #
   # Note task_status / task_wait are how async generation results are collected —

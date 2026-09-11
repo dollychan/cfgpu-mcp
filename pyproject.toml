@@ -38,6 +38,7 @@ dependencies = [
     "aiosqlite>=0.19",
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
+    "aiomysql>=0.2",
 ]
 
 [project.optional-dependencies]
