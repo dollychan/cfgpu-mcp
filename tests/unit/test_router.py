@@ -366,15 +366,11 @@ def test_default_for_accepts_a_bare_string():
     assert adapter.default_for == frozenset({"fast"})
 
 
-def test_default_for_yields_to_supports_rather_than_pinning():
-    """A declared default that cannot serve the request is gone before it is read.
-
-    480p is outside MiniMax H3's resolution set, so the balanced pick falls to the
-    runner-up instead of the request failing on the default's own limitation.
-    """
+def test_default_for_remains_eligible_when_it_supports_the_request():
+    """480p is a MiniMax H3 native tier, so the balanced default remains eligible."""
     router = _router()
     adapter = router.select_model(GenerateVideoInput(prompt="waves", resolution="480p"))
-    assert adapter.adapter_id == "doubao-seedance-2-0-fast"
+    assert adapter.adapter_id == "cfgpu-minimax-h3"
 
 
 def test_undeclared_model_scores_exactly_as_before():

@@ -35,20 +35,20 @@ capabilities:
   # capability only: unlike models with a sound switch, audio cannot be off.
   - audio_generate
 
-# 768P and 2K are what this API actually produces, and they are members of the
-# unified enum in their own right — the adapter only upper-cases them. They used to
+# 480P, 768P and 2K are what this API actually produces, and they are members of the
+# unified enum in their own right — the adapter only upper-cases them. The latter two used to
 # be reached by declaring 720p/1080p and translating in build_payload, which meant a
 # caller asking for 720p was silently billed for 768P and a caller asking for the two
-# real tiers had no way to spell them. 480p is MiniMax-H3-Max only — a different model
-# id — so it is genuinely unsupported here rather than merely unmapped.
+# real tiers had no way to spell them. 480p is now also a native MiniMax-H3 tier;
+# all three values are passed without tier translation.
 #
 # `default_resolution` is load-bearing, not cosmetic: `resolution` is checked by
 # supports(), so without it the schema's own omitted-value handling would have to pick
 # a fleet-wide tier this model does not offer, and MiniMax-H3 would be filtered out of
-# every call that did not name 768p/2k explicitly — including the plainest one,
+# every call that did not name one of its tiers explicitly — including the plainest one,
 # generate_video(prompt=...), which is exactly what `default_for: [balanced]` below
 # exists to catch.
-resolutions: [768p, 2k]
+resolutions: [480p, 768p, 2k]
 default_resolution: 768p
 max_duration_seconds: 15
 
@@ -56,20 +56,19 @@ max_duration_seconds: 15
 #
 # cost_tier 1 (was 3, inherited from the submodel-hosted config; briefly 2) is a
 # *correction*, not a thumb on the scale. Against the by-the-second cohort with
-# no video input, at each model's own entry tier:
-#   MiniMax-H3 0.1 元/秒 (768P; 0.5 at 2K) · cf-imagine-video 0.275/0.385
+# no video input, at each model's own default tier:
+#   MiniMax-H3 0.1 元/秒 (480P; 0.2 at the default 768P, 0.5 at 2K) ·
+#   cf-imagine-video 0.275/0.385
 #   (cost 2) · wan2.7-t2v 0.63 (cost 3) · kling-video-o1 0.63 (cost 4) ·
 #   happyhorse-1.0-t2v 0.945
-# 0.1 is the cheapest per-second figure in the fleet — under half of the next
-# model up — so both 3 and the 2 that replaced it understated it. (The Seedance
+# 0.2 at the default tier is still the cheapest per-second figure in the fleet,
+# so both 3 and the 2 that replaced it understated it. (The Seedance
 # family bills per token and cannot be lined up here without a tokens-per-second
 # figure; none of this claims H3 is cheaper than doubao-seedance-2-0-mini, which
 # also declares cost 1.)
 #
-# The 2 came from reading this model's price as 0.4/0.8 元/秒, which is what
-# tool_param_constraints.json and this comment both said while card.md said
-# 0.1/0.5. card.md was right (confirmed 2026-09-07), and its 成本档位 1/5 had
-# been the only place already carrying the honest band.
+# The tier is based on the current per-second output prices; input video and
+# images are billed separately by the selected resolution tier.
 #
 # speed_tier 3 is the neutral, unmeasured value. It briefly read 4, purely to
 # lift this model into the top of the balanced band; that is exactly the input
@@ -88,13 +87,13 @@ speed_tier: 3
 # declares 2. So the heuristic still does not land here on its own; the routing
 # decision stays written as a routing decision (router.selection_key's first
 # key). Verified 2026-09-07: flipping cost_tier between 1 and 2 changes no
-# routing outcome across fast/balanced/best × t2v/i2v/r2v/720p/2k/20s, which is
+# routing outcome across fast/balanced/best × t2v/i2v/r2v/480p/720p/2k/20s, which is
 # the point — the tier is a price declaration, not the mechanism.
 #
 # Scoped to `balanced` alone, deliberately: `fast` stays with
 # doubao-seedance-2-0-fast (score 6, genuinely the faster model) and `best` stays
-# with doubao-seedance-2-5 (quality_rank, 39 vs 6). Not a pin either — 480p or a
-# duration past 15s removes this model in supports(), and the runner-up
+# with doubao-seedance-2-5 (quality_rank, 39 vs 6). Not a pin either — 720p/1080p
+# or a duration past 15s removes this model in supports(), and the runner-up
 # (doubao-seedance-2-0-fast, auto_priority 2) takes over.
 default_for: [balanced]
 

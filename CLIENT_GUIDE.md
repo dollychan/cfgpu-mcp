@@ -683,10 +683,11 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 筛选：写死一个全队默认值，等于让不提供该档的模型被一个你根本没提的参数挤出 `model="auto"`。
 > **所以：需要哪一档就显式传哪一档，不需要就别传** —— 传了会同时缩小可选模型集合。
 >
-> `768p` / `2k` 是 `MiniMax-H3` 独有的两档（它只有这两档，没有 720p/1080p/480p），别的模型不接受。
+> `MiniMax-H3` 支持 `480p` / `768p` / `2k` 三档；其中 `768p` / `2k` 为它独有，`720p` / `1080p` 不支持。
 > 从前它们是靠「传 720p/1080p、内部翻译成 768P/2K」实现的，也就是说要 720p 的调用方被静默按
-> 768P 计费；现在两档是一等取值，原样上行（只做大写）。计价按秒且随该字段跳档：768P 0.1 元/秒、
-> 2K 0.5 元/秒 —— 0.1 是全队按秒计费里最便宜的一档，因此本模型的 `cost_tier` 是 1。
+> 768P 计费；现在原生档位是一等取值，原样上行（只做大写）。输入视频 / 输出视频分别按秒计费：
+> 480P 为 0.1 元、768P 为 0.2 元、2K 为 0.5 元；输入图片则分别为 0.04 / 0.08 / 0.1 元每张（前 5 张免费）。
+> 480P 的 0.1 元/秒是全队按秒计费里最便宜的一档，因此本模型的 `cost_tier` 是 1。
 >
 > 向不支持某档的模型传该档，正式调用会在发请求前被拒；`validate_only=true` 则不报错，而是在
 > **可灵（`kling-video-o1` / `kling-v3-omni`）的 `with_audio` 永远出现在 `corrected_args` 里**，
@@ -699,7 +700,7 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `corrected_args` 里给出**不高于请求值的最近一档**（`768p` → `720p`，`2k` → `1080p`，
 > `doubao-seedance-2-0-fast` 这种没有 1080p 的则 `2k` → `720p`），直接
 > `{**原参数, **corrected_args}` 覆盖后重发即可。反过来，向 `MiniMax-H3` 传它没有的档
-> （480p/720p/1080p）会回退到它最低的 `768p`。**不传 `resolution` 时 `corrected_args` 里不会出现它**
+> （720p/1080p）会回退到不高于请求值的最近一档（分别为 `480p` / `768p`）。**不传 `resolution` 时 `corrected_args` 里不会出现它**
 > —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
@@ -713,7 +714,7 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > **视频**：`balanced` 是 `MiniMax-H3`，`fast` 是 `doubao-seedance-2-0-fast`，
 > `best` 是 `doubao-seedance-2-5`（30 秒单段直出、最多 50 个参考素材、多语种旁白）。
 > 三档各有各的落点：日常请求想要的模型，未必是点名要快时想要的那个。被参数排除时
-> 才轮到别的模型 —— 例如 480p / 720p / 1080p（它只有 768p/2k）或超过 15 秒都不在 `MiniMax-H3`
+> 才轮到别的模型 —— 例如 720p / 1080p（它支持 480p/768p/2k）或超过 15 秒都不在 `MiniMax-H3`
 > 的能力内，`balanced` 会自动退到 `doubao-seedance-2-0-fast`。**不传 `resolution` 时不会发生这种
 > 排除**：那时每个模型用自己的默认档，`MiniMax-H3` 用 768p。
 > 这些落点由 `adapter.yaml` 的 `default_for` / `auto_priority` / `quality_rank` 声明，

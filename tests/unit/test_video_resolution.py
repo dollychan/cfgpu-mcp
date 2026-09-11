@@ -12,7 +12,7 @@ most calls — while every existing test keeps passing.
 Second, the schema default is ``None`` on purpose, and that is the load-bearing part.
 ``resolution`` is checked by ``supports()``, so a concrete fleet-wide default is a value
 every model must offer or be filtered out of ``model="auto"`` by a request the caller
-never made. MiniMax H3 offers 768p/2k and no 720p at all, so under the old ``"720p"``
+never made. MiniMax H3 offers 480p/768p/2k and no 720p at all, so under the old ``"720p"``
 default it would have been unreachable by the plainest possible call and a hard error
 when named explicitly — the same failure ``_T2V_DEFAULT_RATIO`` exists to avoid one
 field over.
@@ -126,7 +126,7 @@ def test_minimax_h3_is_the_only_model_offering_768p_and_2k(registry):
 
 def test_minimax_h3_sends_its_tiers_verbatim_apart_from_case(registry):
     adapter = registry.get("MiniMax-H3")
-    for asked, wire in (("768p", "768P"), ("2k", "2K"), (None, "768P")):
+    for asked, wire in (("480p", "480P"), ("768p", "768P"), ("2k", "2K"), (None, "768P")):
         req = GenerateVideoInput(prompt="x", aspect_ratio="16:9", resolution=asked)
         assert adapter.build_payload(req)["resolution"] == wire
 
@@ -145,13 +145,13 @@ def test_the_bare_call_reaches_minimax_h3_at_its_own_default(registry):
     assert adapter.build_payload(req)["resolution"] == "768P"
 
 
-def test_naming_minimax_h3_with_720p_fails_and_names_the_two_real_tiers(registry):
+def test_naming_minimax_h3_with_720p_fails_and_names_the_real_tiers(registry):
     """No silent substitution: 720p used to be translated to 768P behind the caller."""
     adapter = registry.get("MiniMax-H3")
     ok, reason = adapter.supports(GenerateVideoInput(prompt="x", resolution="720p"))
 
     assert not ok
-    assert "768p, 2k" in reason
+    assert "480p, 768p, 2k" in reason
 
 
 # ── validate_only: a model that does not offer the tier says what to send ────
@@ -173,10 +173,8 @@ def test_naming_minimax_h3_with_720p_fails_and_names_the_two_real_tiers(registry
         ("doubao-seedance-2-0", {}, "2k", "1080p"),
         ("doubao-seedance-2-0-fast", {}, "2k", "720p"),
         ("happyhorse-1.0-t2v", {}, "2k", "1080p"),
-        # And in the other direction: MiniMax H3 has no tier at or below 480p, so the
-        # fallback takes its lowest rather than refusing.
-        ("MiniMax-H3", {"aspect_ratio": "16:9"}, "480p", "768p"),
-        ("MiniMax-H3", {"aspect_ratio": "16:9"}, "720p", "768p"),
+        # MiniMax H3 supports 480p directly; 720p falls back to that lower tier.
+        ("MiniMax-H3", {"aspect_ratio": "16:9"}, "720p", "480p"),
         ("MiniMax-H3", {"aspect_ratio": "16:9"}, "1080p", "768p"),
     ],
 )

@@ -660,9 +660,9 @@ class GenerateVideoInput(BaseModel):
         "supported by WAN 2.0, Doubao Seedance 1.5 Pro, and HappyHorse (HappyHorse's own "
         "default is 1080p). WAN 2.0 Fast does NOT support 1080p for text-to-video (only "
         "480p/720p; 1080p works only with an image/video input). HappyHorse does not "
-        "support 480p (minimum 720p). 768p and 2k belong to MiniMax H3 alone, which "
-        "offers those two and nothing else (768p is its default); no other model accepts "
-        "them. Call get_model_card or list_models for the chosen model's set.",
+        "support 480p (minimum 720p). 768p and 2k belong to MiniMax H3 alone; it also "
+        "offers 480p and defaults to 768p. No other model accepts 768p or 2k. Call "
+        "get_model_card or list_models for the chosen model's set.",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")

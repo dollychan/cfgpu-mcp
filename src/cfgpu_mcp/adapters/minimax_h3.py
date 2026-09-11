@@ -84,9 +84,9 @@ class MinimaxH3Adapter(ModelAdapter):
         payload: dict = {
             "model": self.cfgpu_model_id,
             "content": content,
-            # 768p → 768P / 2k → 2K. Case only: this model's two tiers are members of
-            # the unified enum in their own right (adapter.yaml `resolutions`), so there
-            # is no tier translation here — the same `.upper()` the 万相 family applies.
+            # 480p → 480P / 768p → 768P / 2k → 2K. Case only: these native tiers are
+            # members of the unified enum in their own right (adapter.yaml `resolutions`),
+            # so there is no tier translation here — the same `.upper()` the 万相 family applies.
             "resolution": self.resolve_resolution(req).upper(),
             "duration": self.resolve_duration_seconds(req),
             # Documented top-level key on this API (default false). Sent

@@ -124,7 +124,7 @@ def image_cmd(
               default="adaptive", show_default=True)
 # The full fleet vocabulary, and no default: an omitted -r means "the model's own
 # tier", which is what lets `cfgpu generate video "..."` reach a model whose set
-# excludes 720p (MiniMax H3 offers 768p/2k only). 4k had been missing outright, so
+# excludes 720p (MiniMax H3 offers 480p/768p/2k). 4k had been missing outright, so
 # Doubao Seedance 2.0's top tier was unaskable from the CLI.
 @click.option("--resolution", "-r",
               type=click.Choice(["480p", "720p", "768p", "1080p", "2k", "4k"]),

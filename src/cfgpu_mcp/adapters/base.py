@@ -143,7 +143,7 @@ class ModelAdapter(ABC):
     #: same reason ``duration_seconds`` is: ``resolution`` is checked by ``supports()``,
     #: so a fleet-wide concrete default is a value every model must offer or be filtered
     #: out of ``model="auto"`` by a request the caller never actually made. MiniMax H3
-    #: offers 768p/2k and no 720p at all, which under a ``"720p"`` schema default would
+    #: offers 480p/768p/2k and no 720p at all, which under a ``"720p"`` schema default would
     #: have removed it from every ordinary call — including the plainest one,
     #: ``generate_video(prompt=...)`` — and made naming it explicitly a hard error.
     default_resolution: str
