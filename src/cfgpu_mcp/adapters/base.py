@@ -64,6 +64,23 @@ class PollConfig:
         )
 
 
+#: The quality tiers ``default_for`` may name — the same three
+#: ``GenerateImageInput / GenerateVideoInput / GenerateAudioInput.quality_tier``
+#: admits. Duplicated rather than imported from tool_registry, which imports this
+#: module; ``test_quality_tier_vocabulary_matches_the_schema`` pins the two in
+#: step, since a tier added to the schema but not here would be rejected as a
+#: typo in every adapter.yaml that named it.
+_QUALITY_TIERS = frozenset({"fast", "balanced", "best"})
+
+#: The fleet video-resolution vocabulary, ordered by output size. Read by
+#: ``validation_corrections`` to pick the nearest supported tier *at or below* the
+#: requested one, so a fallback never silently upgrades a caller into a pricier tier.
+#: Every member of ``GenerateVideoInput.resolution`` must appear here — a missing one
+#: is not an error but a silently skipped correction, which is why
+#: ``test_resolution_order_covers_the_whole_schema_enum`` pins the two together.
+_RESOLUTION_ORDER = {"480p": 0, "720p": 1, "768p": 2, "1080p": 3, "2k": 4, "4k": 5}
+
+
 class ModelAdapter(ABC):
     # Subclasses must declare these as class attributes
     adapter_id: str
@@ -84,9 +101,52 @@ class ModelAdapter(ABC):
     capabilities: set[str]
     cost_tier: int               # 1-5
     speed_tier: int              # 1-5
+    #: Tie-break for ``model="auto"`` (all quality tiers). Without it a tie falls
+    #: through to alphabetical ``adapter_id``, which encodes nothing about the
+    #: model: eight of the ten image models share speed_tier 3 / cost_tier 2, so
+    #: the whole family scored level and the alphabetically first — the *oldest* —
+    #: name won every request. Default 0 = "no opinion", the previous behaviour.
+    auto_priority: int
+    #: Flagship declaration, read only by ``quality_tier="best"``. cost_tier used
+    #: to stand in for this ("pricier tends to mean flagship"), which ranks the
+    #: *billing tier* rather than the output — a premium-priced service tier of an
+    #: older model outranked a newer flagship. The proxy remains for models that
+    #: declare no rank. Default 0 = undeclared.
+    quality_rank: int
+    #: Quality tiers this model is the declared default landing spot for, e.g.
+    #: ``["balanced"]``. Empty = undeclared, which is what every model did before
+    #: this existed.
+    #:
+    #: **Distinct from ``auto_priority``, and deliberately stronger.**
+    #: ``auto_priority`` breaks ties *within* a score, so it can only ever pick
+    #: among models the heuristic already rates equally — it cannot express "we
+    #: have decided", only "when the heuristic is silent, prefer this one".
+    #: Encoding a decision by inflating ``speed_tier`` / ``cost_tier`` until the
+    #: heuristic agrees is the alternative, and it corrupts the inputs: those two
+    #: feed *every* tier's score, so a number bent to win one tier silently moves
+    #: the others, and the file then states a cost or a latency that is not true.
+    #: This field keeps the estimate and the decision in separate places.
+    #:
+    #: Scoped per quality tier because "which model is the default" genuinely has
+    #: different answers for different asks: the model we want for an ordinary
+    #: request need not be the one we want when the caller explicitly asks for
+    #: speed. It is applied only among candidates ``supports()`` already accepted,
+    #: so it is a preference and not a pin — a model that cannot serve the request
+    #: is gone before this is read, and the next-best candidate takes over.
+    default_for: frozenset[str]
     max_duration_seconds: int    # video only: longest explicit duration accepted
     default_duration_seconds: int
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
+    #: The tier used when the caller omits ``resolution`` (video only).
+    #:
+    #: The schema default is ``None`` ("you pick") rather than a concrete tier for the
+    #: same reason ``duration_seconds`` is: ``resolution`` is checked by ``supports()``,
+    #: so a fleet-wide concrete default is a value every model must offer or be filtered
+    #: out of ``model="auto"`` by a request the caller never actually made. MiniMax H3
+    #: offers 480p/768p/2k and no 720p at all, which under a ``"720p"`` schema default would
+    #: have removed it from every ordinary call — including the plainest one,
+    #: ``generate_video(prompt=...)`` — and made naming it explicitly a hard error.
+    default_resolution: str
     #: How many marked regions this model accepts on a single image, or None for no
     #: local limit. Declarative because it is per-model while the ``regions`` schema is
     #: per-tool: writing the tightest model's cap into the schema would present one
@@ -123,6 +183,27 @@ class ModelAdapter(ABC):
         instance.capabilities = set(config.get("capabilities", []))
         instance.cost_tier = config.get("cost_tier", 3)
         instance.speed_tier = config.get("speed_tier", 3)
+        # Both default to 0 = undeclared, so a model that says nothing routes
+        # exactly as it did before these existed. Note they are inherited through
+        # ``extends`` like every other field: a variant that must *not* inherit a
+        # parent's rank has to zero it out explicitly (see the nano-banana chain).
+        instance.auto_priority = config.get("auto_priority", 0)
+        instance.quality_rank = config.get("quality_rank", 0)
+        # A bare string is tolerated for the same reason disabled_models tolerates
+        # one: forgetting YAML list syntax for a single entry is the common slip,
+        # and reading it as a one-item list is unambiguous. An unknown tier name is
+        # not tolerated — it would silently declare nothing, which looks exactly
+        # like the model simply losing on score.
+        default_for = config.get("default_for") or []
+        if isinstance(default_for, str):
+            default_for = [default_for]
+        unknown = set(default_for) - _QUALITY_TIERS
+        if unknown:
+            raise ValueError(
+                f"{instance.adapter_id}: default_for has unknown quality tiers "
+                f"{sorted(unknown)} (valid: {sorted(_QUALITY_TIERS)})"
+            )
+        instance.default_for = frozenset(default_for)
         # GenerateVideoInput's own validator allows the widest range any model in
         # the fleet accepts (4–30, for Doubao Seedance 2.5). Every narrower model
         # declares its real ceiling here so supports() can reject locally instead
@@ -136,6 +217,10 @@ class ModelAdapter(ABC):
         # Models that have documented their set list it here; None means "no local
         # restriction", which is what every model did before this existed.
         instance.resolutions = config.get("resolutions")
+        # 720p was the schema-wide default before `resolution` became optional, so it
+        # stays the default here and no existing model's behaviour changes. A model
+        # whose set excludes it (MiniMax H3) must declare its own.
+        instance.default_resolution = config.get("default_resolution", "720p")
         instance.max_regions_per_image = config.get("max_regions_per_image")
         instance.max_reference_images = config.get("max_reference_images")
         instance.max_reference_videos = config.get("max_reference_videos")
@@ -206,10 +291,11 @@ class ModelAdapter(ABC):
                     f"4–{self.max_duration_seconds} seconds "
                     f"(or -1 for a model-chosen smart duration)"
                 )
-            if self.resolutions is not None and req.resolution not in self.resolutions:
+            resolution = self.resolve_resolution(req)
+            if self.resolutions is not None and resolution not in self.resolutions:
                 return False, (
                     f"{self.adapter_id} does not support resolution "
-                    f"{req.resolution} (supported: {', '.join(self.resolutions)})"
+                    f"{resolution} (supported: {', '.join(self.resolutions)})"
                 )
         return True, ""
 
@@ -230,10 +316,15 @@ class ModelAdapter(ABC):
 
         if not isinstance(req, GenerateVideoInput):
             return {}
+        # An omitted resolution is already this model's own tier, so there is nothing to
+        # correct — and writing the resolved value into corrected_args would turn a
+        # delegated choice into a pin the caller never asked for.
+        if req.resolution is None:
+            return {}
         if self.resolutions is None or req.resolution in self.resolutions:
             return {}
 
-        order = {"480p": 0, "720p": 1, "1080p": 2, "4k": 3}
+        order = _RESOLUTION_ORDER
         supported = [value for value in self.resolutions if value in order]
         if not supported:
             return {}
@@ -241,6 +332,10 @@ class ModelAdapter(ABC):
         lower = [value for value in supported if order[value] <= requested_rank]
         fallback = max(lower, key=order.__getitem__) if lower else min(supported, key=order.__getitem__)
         return {"resolution": fallback}
+
+    def resolve_resolution(self, req: "GenerateVideoInput") -> str:
+        """Resolve an omitted unified resolution to this model's own default tier."""
+        return req.resolution or self.default_resolution
 
     def resolve_duration_seconds(self, req: "GenerateVideoInput") -> int:
         """Resolve an omitted unified duration to this model's real default."""

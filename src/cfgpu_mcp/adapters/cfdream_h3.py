@@ -75,7 +75,7 @@ class CfdreamH3Adapter(ModelAdapter):
             "model": self.cfgpu_model_id,
             "prompt": req.prompt,
             "duration_seconds": self.resolve_duration_seconds(req),
-            "resolution": req.resolution,
+            "resolution": self.resolve_resolution(req),
             "aspect_ratio": req.aspect_ratio,
             "with_audio": req.with_audio,
         }

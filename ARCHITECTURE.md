@@ -133,16 +133,43 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 ```
 基础分（quality_tier）:
   fast   → speed_tier × 2 - cost_tier
-  best   → cost_tier × 2 + speed_tier - cost_tier（以 cost_tier 作质量代理：越贵≈越优）
+  best   → quality_rank × 11 + cost_tier × 2 + speed_tier - cost_tier
   balanced → speed_tier - cost_tier
 
 加分项:
   图像请求有 reference_images 且模型支持 multi_image_fusion/multi_image_group → +3
+  图像请求 n > 1 且模型支持 multi_image_group → +3
+  图像请求有 regions 且模型支持 region_edit → +3
   视频请求有 reference_images/videos/audios 且模型支持 multi_modal_reference → +3
   中文 prompt 且模型是 doubao-seedream-* → +2
+
+同分时依次比 auto_priority、adapter_id 字母序（后者是确定性兜底，不依赖文件系统遍历顺序）
 ```
 
-这意味着：默认 balanced 模式下，低成本高速模型优先；中文 prompt 会偏向 Seedream；有参考媒体时优先选择支持多模态参考的模型。
+**`auto_priority` / `quality_rank` —— 把「谁是默认」写出来，而不是让字母表决定。** 打分只看 `speed_tier` / `cost_tier` 两个 1-5 的粗档，而十个图像模型里八个都是 `speed=3, cost=2`，于是整族同分、真正的选择器变成了 `sorted(adapter_id)`：`doubao-seedream-4-0` < `4-5` < `5-0-lite` < `5-0-pro`，`model="auto"` 每一次都把请求交给**最老**的那个，而这件事在任何一份配置里都写不出来也读不出来。两个字段各修一半：
+
+- **`auto_priority`（缺省 0）**：同分时的显式偏好。当前 `doubao-seedream-5-0-pro: 2`（图像默认落点）、`doubao-seedream-5-0-lite: 1`（Pro 被 `supports()` 排除时的兜底 —— 3K/4K、组图 `n>1`、联网搜索都是 Pro 没有的能力）、`doubao-seedance-2-0-fast: 2`（视频 fast 档的默认落点）。**它是排序的第二关键字，不是加分项**（`router.selection_key`）：加进总分就会压过真实的分差 —— 视频默认落点的 priority 2 会在 best 档反超 `kling-v3-omni` 高一分的旗舰代理，把一次 best 请求交给一个因为「快」才被选中的模型。作为第二关键字，它只在第一关键字沉默时开口。
+- **`quality_rank`（缺省 0，仅 best 档生效）**：显式的旗舰声明。此前 best 用 `cost_tier` 当质量代理（「越贵≈越优」），排的其实是**计费档**而非产出质量 —— 于是同一个模型的 premium 服务档（`cost_tier=4`）能压过真正的新旗舰。当前 `gpt-image-2: 3`（图像 best 首选）、`nano-banana-pro: 2`（首选被 `supports()` 排除时接替）、`doubao-seedance-2-5: 3`（视频 best 首选 —— 30 秒单段直出、50 个参考素材、多语种旁白，`cost_tier` 却比 `kling-v3-omni` 低一档，代理排不出来）。**代理并未废除**，仍作用于未声明 rank 的模型，两个 rank 都被 `supports()` 排除时次序照旧（视频仍回到 `kling-v3-omni`）。一个 rank 步长记 11 分，高于 `cost_tier + speed_tier` 的理论最大值 10，故任何已声明的 rank 必定压过未声明者，rank 之间的次序也绝不会被价格差翻转。
+
+- **`default_for`（缺省空集，按 quality_tier 分档）**：**显式声明的默认落点**，是 `selection_key` 的**第一关键字**，压过分数。当前 `cfgpu-minimax-h3: [balanced]`（视频）、`gpt-image-2: [balanced]`（图像）。
+
+**它和 `auto_priority` 看着像，强度是故意不同的。** `auto_priority` 是同分内的 tie-break，只能在启发式**已经打成平手**的模型之间挑，表达不了「我们定了」，只能表达「启发式沉默时优先这个」。而把一个决定编码成默认落点，另一条路是**把 `speed_tier`/`cost_tier` 掰到启发式同意为止** —— 那会污染输入：这两个字段喂的是**每一档**的分数，为赢下一档而掰的数会悄悄挪动另外两档，且 YAML 从此写着一个不成立的价格或时延。`default_for` 把「估计」和「决定」分开放。
+
+`MiniMax-H3` 就是这么来的：它诚实的 speed 3 / cost 1（480P 输出 0.1 元/秒、默认 768P 输出 0.2、2K 输出 0.5）在 balanced 档记 2 分，与 `doubao-seedance-2-0-fast` / `cf-imagine-video` / `wan-video-fast` **打平而非胜出**，平局再落到 `auto_priority`，那里 `doubao-seedance-2-0-fast` 已经声明了 2。也就是说启发式无论如何都不会自己落到这里，于是路由决定写成路由决定。**反过来说，`cost_tier` 也不是这条路由的机关**：它只是当前价格声明，输入视频与图片另按相同分辨率档位计费。
+
+`gpt-image-2` 是第二例（2026-09-09），理由不同：它在 balanced 档记 1 分，与整个 Seedream 家族**四路打平**，平局本来是 `auto_priority` 能解的。解不了的是中文 —— `_score` 给每个 `doubao-seedream` 加 2 分，于是中文 prompt 下 5.0 Pro 记 3 分、直接在**分数**这一关就赢了，`auto_priority` 作为第三关键字根本轮不到开口。一个英文成立、中文翻盘的默认不是默认。同样只声明 `balanced`：`fast` 留给 `doubao-seedream-5-0-pro`（同一个平局，但调用方点名要快时不该给这个模型），`best` 本就由 `quality_rank: 3` 落在这里，是另一个字段的另一次声明，两者互不代表。
+
+**它有一处已知的、接受了的退化：`n > 1`。** 组图的 +3 加分在**分数**里，而 `default_for` 是分数**之上**的一关，所以 balanced 档的组图请求照样落到 `gpt-image-2` —— 它没有 `multi_image_group`，`GptImage2Adapter.build_payload` 从不发送 `n`，调用方会**静默地**拿到一张图。这不是漏洞而是声明默认的标价：允许运营决定压过启发式正是把它写下来的全部意义，而 `n` 在全队的策略本就是「无能力的模型静默忽略」，下游没有任何信号能捕获这次错配。需要真组图的调用方显式点名 Seedream。`test_declared_default_outranks_the_group_bonus_and_n_degrades` 把这次退化钉成**记录在案的决定**而不是意外。`reference_images` 是同一条路的轻症：`gpt-image-2` 有 `image_to_image` 且 `_finalize_payload` 确实把参考图发上去了，缺的只是 `multi_image_fusion`，属于「由一个非专精的模型来做」而不是「被丢掉」。
+
+**按档划分是它的安全属性，不是装饰。** 「谁是默认」对不同的问法本就有不同答案：日常请求想要的模型，未必是调用方点名要快时想要的那个。`MiniMax-H3` 只声明 `balanced`，所以 `fast` 仍归 `doubao-seedance-2-0-fast`（6 分，确实更快），`best` 仍归 `doubao-seedance-2-5`（`quality_rank`，39 比 6）。**也不是钉死**：它只在 `supports()` 已经放行的候选里生效，720p/1080p 或超过 15 秒会让 H3 在读到这个字段之前就出局，兜底自然接手。`selection_key` 的 `quality_tier` 参数**没有缺省值** —— 它现在决定第一关键字，漏传会得到一个看起来仍然合法、实际排错了的次序。
+
+**默认落点必须接得住最朴素的那次调用。** `generate_video(prompt=...)` 不带其它参数时 `aspect_ratio` 是 `adaptive`，而 MiniMax 的文生视频恰恰拒绝 `adaptive` —— 若把它当成 `supports()` 里的硬错误，这个模型就会在**它正要当默认的那种请求形状上**被悄悄剔出候选集，每次都落到亚军身上且毫无迹象。所以 `adaptive` 在 `build_payload` 里被替换成 `16:9`（`_T2V_DEFAULT_RATIO`，与 `WanVideoAdapter` 把不支持的比例映射到 16:9 是同一处理），`validation_corrections` 把这次替换报进 `corrected_args`。只有文生视频这么做：参考素材生视频里 `adaptive` 本就是上游默认值且合法，在那里替换等于越过素材自己的画幅。`test_video_default_needs_no_arguments_beyond_a_prompt` 钉住这条。
+
+**三个字段都随 `extends` 继承**，和其它 YAML 字段一样 —— 而 `gpt-image-2` 正是整条 nano-banana 链的父节点、`doubao-seedream-5-0-lite` 是 4.0 / 4.5 的父节点，所以不该继承的变体必须在自己的 YAML 里显式清零（`nano-banana-2` / `-pro-official` / `-pro-premium` 的 `quality_rank: 0`，`doubao-seedream-4-0` / `4-5` 的 `auto_priority: 0`，以及 `nano-banana-2` 的 `default_for: []` —— 这一处清零覆盖整条子树：`-pro` extends 它、`-pro-official` / `-pro-premium` 又 extends `-pro`，不清的话四个模型会一起声明自己是 balanced 默认，五个声明再落回分数决胜，正好退回 `default_for` 要取代的那种偶然次序，且全程不报错）。两个 Seedance 声明都落在 `wan-2-0` 链的叶子上（`2-0-fast` / `2-5` 无子节点），故无需清零 —— 但若日后有模型 `extends` 它们，这一条同样适用。漏掉一处不会报错，只会让一个没人提名的模型悄悄升上首选。`test_declared_ranks_are_not_inherited_down_the_extends_chain` 钉住这组解析后的值。
+
+**`n > 1` 的加分是必需的，不是锦上添花。** 5.0 Pro 是图像默认落点，却是唯一没有 `multi_image_group` 的 Seedream，而 `n` 对没有该能力的模型是**静默忽略**的兼容提示（见 Seedream 组图一节）—— 请求四张、拿回一张、没有任何报错。所以这一条与参考图加分同权，把组图请求从默认落点上引开。一个已知的次序：`quality_tier="best"` 的 rank 权重高于它，best + `n>1` 仍会落到 `cf-image-2` 并只回一张图 —— best 是调用方显式点的名，rank 让路给一个静默降级更糟。
+
+这意味着：默认 balanced 模式下，低成本高速模型优先（同分则按 `auto_priority`）；中文 prompt 会偏向 Seedream；有参考媒体时优先选择支持多模态参考的模型。
 
 ### 3.4 Provider —— 模型可以不来自 CFGPU
 
@@ -157,9 +184,16 @@ providers:
     auth_scheme: raw              # 裸 token，不是 `Bearer <t>`
     token_env: COMFY_GATEWAY_TOKEN
     http_timeout: 60
+  cfgpu-daily:                    # CFGPU 日常环境（示例：CFGPU 的另一台主机）
+    base_url: https://<daily-host>/userapi/v1
+    auth_scheme: bearer
+    token_env: CFGPU_DAILY_API_TOKEN
+    http_timeout: 120
 ```
 
 `cfgpu` 这个 provider **不在这里声明**，它由顶层 `cfgpu_api:` 段合成 —— 否则 `base_url` 就有了两个可以互相打架的来源。
+
+**CFGPU 自己的日常环境仍然是「另一个 provider」，不是内建的那个。** 不同主机、不同凭据，于是下面第 2 条对它同样成立：`cfgpu-daily` 不读调用方逐请求带来的 Authorization，只认 `CFGPU_DAILY_API_TOKEN`，所有调用方共用这一份凭据。模型从日常环境搬到生产 CFGPU 时，把该模型 `adapter.yaml` 里的 `provider:` 改成 `cfgpu` 就是整个迁移 —— 前提是它的 `endpoint` / `poll_endpoint` 从一开始就写 CFGPU 的统一视频路由（`/video/generations`、`/video/tasks/{task_id}`），而不是上游原生的路径。MiniMax-H3 已经走完这一步（2026-09-03），现在挂在内建的 `cfgpu` 上，逐请求令牌因此对它生效；目前没有模型再用 `cfgpu-daily`。
 
 三条不显然的约束：
 
@@ -210,8 +244,13 @@ TaskManager.create(adapter, req)
     │
     ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式
     │
-    ├─ [is_async=false] CFGPUClient.post() → adapter.parse_response() → DB 写 succeeded
-    └─ [is_async=true]  CFGPUClient.post() → 取 task_id（取不到则抛 CFGPUError）→ DB 写 pending
+    ├─ insert_task(request_id or uuid4, "submitting")   ← ★ 行先落，POST 后发
+    │      └─ 主键冲突 = 重复投递 → 直接返回既有行，不再 POST（不二次计费）
+    ├─ update_task("dispatching")      越过这条线「从未发出」不再可证
+    │
+    └─ asyncio.shield(_dispatch(...))  已计费的写回不进调用方的 cancel 作用域
+           ├─ [is_async=false] post() → parse_response() → update succeeded
+           └─ [is_async=true]  post() → 取上游 task_id → update pending + upstream_task_id
     │
     ▼ （wait=True 时继续）
 TaskManager.wait(task, adapter, req)
@@ -229,9 +268,9 @@ service 返回 dict → 访问层格式化 → 用户
 
 - `get_settings()` 从 config.yaml 加载配置（`settings.py`）。
 - `get_client(provider="cfgpu")` **按 provider 各持一个实例**（各自一个连接池），见 §3.4。默认 provider 的 `CFGPUClient` **不持有 token**——共享连接池，token 逐请求从 ContextVar 解析；`base_url`/超时来自 settings。非默认 provider 的 client 反过来：只认自己 `token_env` 里的服务端凭据，不看 ContextVar。`client_for(adapter)` 是给 `TaskManager` 用的解析器。`close()` 关闭全部 provider 的 client。
-- `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。该单例的初始化是 `async` 且首调时有 `await`，因此用 `asyncio.Lock` + 双重检查保护：否则一批并发工具调用会各自看到 `_repo is None` 并同时建仓库 / 跑建表 DDL，撞上 Postgres `CREATE TABLE` 的目录竞争（`pg_type_typname_nsp_index` 唯一键冲突 → `duplicate key (tasks)`）。跨实例同时启动的竞争则由 `PostgresTaskRepository._init_schema` 的事务级 advisory lock（`pg_advisory_xact_lock`）串行化建表，输家随后跑 `CREATE ... IF NOT EXISTS` 成空操作。
+- `get_task_repository()` 按 `task_db.url` 的 scheme 选择 `SqliteTaskRepository` 或 `PostgresTaskRepository`（`client/repository.py`）。取代了旧的 `get_db()`。该单例的初始化是 `async` 且首调时有 `await`，因此用 `asyncio.Lock` + 双重检查保护：否则一批并发工具调用会各自看到 `_repo is None` 并同时建仓库 / 跑 schema 迁移，撞上 Postgres `CREATE TABLE` 的目录竞争（`pg_type_typname_nsp_index` 唯一键冲突 → `duplicate key (tasks)`）。跨实例同时启动的竞争由 alembic 迁移环境里的事务级 advisory lock（`pg_advisory_xact_lock`，`migrations/env.py`）串行化，输家随后逐条跑成空操作。见 §「schema 迁移」。
 
-**请求头里的 `Accept-Encoding` 是写死的**（`cfgpu_client.ACCEPT_ENCODING = "gzip, deflate"`，逐请求随 `Authorization` 一起注入）。不写的话 aiohttp 会按**宿主机上恰好装了哪些可选编解码器**来生成这个头（`_gen_default_accept_encoding()`：`HAS_BROTLI` 为真就追加 `br`，`HAS_ZSTD` 为真就追加 `zstd`），于是线上的 wire 格式取决于部署环境的间接依赖。submodel provider（`h3.submodel.ai`）在 Cloudflare 后面，客户端一声明 `br` 它就 brotli 压缩 JSON 返回；解压一旦失败，`http_parser` 抛的 `ContentEncodingError` 会在 payload 层被包成 `ClientPayloadError`，落到 `_request()` 的 `except aiohttp.ClientError` 上，最终变成一条 `网络请求失败：400, message:\n  Can not decode content-encoding: br` —— 而任务在上游其实好好的。`wait()` 会把它当可重试错误吞掉（连续 N 次才放弃），但 `task_status` 只轮询一次，一次就直接报给调用方。这里的 body 全是几百字节的 JSON（task 信封、URL），gzip 足够且由标准库支撑，固定这个集合等于零成本地让 wire 格式在所有宿主机上一致。测试：`test_accept_encoding_excludes_brotli`。
+**请求头里的 `Accept-Encoding` 是写死的**（`cfgpu_client.ACCEPT_ENCODING = "gzip, deflate"`，逐请求随 `Authorization` 一起注入）。不写的话 aiohttp 会按**宿主机上恰好装了哪些可选编解码器**来生成这个头（`_gen_default_accept_encoding()`：`HAS_BROTLI` 为真就追加 `br`，`HAS_ZSTD` 为真就追加 `zstd`），于是线上的 wire 格式取决于部署环境的间接依赖。触发它的是一个挂在 Cloudflare 后面的上游（已下架的 `submodel` provider），客户端一声明 `br` 它就 brotli 压缩 JSON 返回；解压一旦失败，`http_parser` 抛的 `ContentEncodingError` 会在 payload 层被包成 `ClientPayloadError`，落到 `_request()` 的 `except aiohttp.ClientError` 上，最终变成一条 `网络请求失败：400, message:\n  Can not decode content-encoding: br` —— 而任务在上游其实好好的。`wait()` 会把它当可重试错误吞掉（连续 N 次才放弃），但 `task_status` 只轮询一次，一次就直接报给调用方。这里的 body 全是几百字节的 JSON（task 信封、URL），gzip 足够且由标准库支撑，固定这个集合等于零成本地让 wire 格式在所有宿主机上一致。测试：`test_accept_encoding_excludes_brotli`。
 
 程序退出时必须调用 `await config.close()`，以关闭 `aiohttp.ClientSession` 和 task 仓库（SQLite 连接 / Postgres 连接池）。各访问层各自负责调用：CLI 在 `_run()` 的 `finally` 中调用；stdio MCP server 通过 FastMCP 的 `lifespan` 上下文在关闭阶段调用。**不能用 `atexit` + `asyncio.run()`**——那会新建事件循环去关闭绑定在 server 原循环上的 `ClientSession`，触发 "Event loop is closed" 告警；lifespan 在 server 自身的事件循环内退出，确保 session 在它被创建的同一循环上关闭。
 
@@ -366,11 +405,24 @@ from cfgpu_mcp.adapters import seedance_video, seedream, async_image, happyhorse
 ### 状态机
 
 ```
-pending → running → succeeded
-                 └→ failed
+submitting ──► dispatching ──┬─[is_async=false]─► succeeded / failed
+（POST 确定    （无法证明     │
+  未发出）      未发出）      └─[is_async=true]──► pending → running → succeeded
+                                                                   └→ failed
 ```
 
-同步模型（Seedream）直接从 `pending` 跳到 `succeeded`，不经过 `running`。
+前两个状态是本服务自己的词汇，**不进 `_STATUS_MAP`**（那张表翻译上游状态，上游永远不会说这两个词），也不是终态。它们存在的唯一理由是把「这次提交到底发出去了没有」变成可判定的：
+
+| 状态 | 对调用方意味着什么 |
+|---|---|
+| `submitting` | 行已落、POST 确定未发出。上游没有计费，**重发是安全的** |
+| `dispatching` | POST 已派发或其响应已丢失。上游**可能已计费**，不要直接重发，先 `task_status` |
+
+代价是同步路径多一次本地 UPDATE，被一次 10–60s 的上游调用完全淹没。
+
+同步模型（Seedream）从 `dispatching` 直接跳到 `succeeded`，不经过 `pending` / `running`。
+
+判据点必须一起跟进，漏一处就是把新状态误读成别的东西：`list_running_tasks()` 要选中这两个状态（否则崩溃遗留的行没人收敛），`service/task.py` 的 `needs_repoll` 要**排除**它们（此时还没有 `upstream_task_id`，去轮询等于拿 request_id 问上游要一个它没见过的任务，404 会被读成任务失败），`wait()` 在这两个状态下改为**重读行**而不是轮询上游。
 
 ### Task 存储：可配置仓库（SQLite / Postgres）
 
@@ -387,27 +439,56 @@ task 状态通过 `TaskRepository` 接口持久化（`client/repository.py`）�
 
 ```sql
 tasks (
-    id          TEXT PRIMARY KEY,   -- CFGPU 返回的 task_id（异步）或 uuid4（同步）
-    adapter_id  TEXT,               -- 用于 task_wait 时重建 adapter
-    status      TEXT,               -- pending | running | succeeded | failed
-    payload     TEXT,               -- JSON，原始 API 请求体
-    result      TEXT,               -- JSON，NormalizedResult.to_dict()
-    error       TEXT,               -- 失败原因
-    created_at  REAL / DOUBLE PRECISION,
-    updated_at  REAL / DOUBLE PRECISION
+    id               TEXT PRIMARY KEY,   -- 调用方的 request_id；没给才回落 uuid4
+    adapter_id       TEXT,               -- 用于 task_wait 时重建 adapter
+    status           TEXT,               -- submitting | dispatching | pending | running | succeeded | failed
+    payload          TEXT,               -- JSON，原始 API 请求体
+    result           TEXT,               -- JSON，NormalizedResult.to_dict()
+    error            TEXT,               -- 失败原因
+    created_at       REAL / DOUBLE PRECISION,
+    updated_at       REAL / DOUBLE PRECISION,
+    upstream_task_id TEXT,               -- 上游自己的 id（异步）。纯内部，绝不回给调用方
+    model_used       TEXT                -- 公开模型名，供报表按模型分组
 )
--- Postgres 额外建索引 idx_tasks_status_created(status, created_at)
+-- idx_tasks_status_created(status, created_at)、idx_tasks_upstream(upstream_task_id)
 ```
+
+**主键是调用方的 `request_id`。** 这不是命名偏好，是恢复能力的前提：`request_id` 是调用**发出之前**就已知的唯一句柄，因此响应丢了它还在。行在 POST **之前**写入（`submitting`），POST 之前再推进到 `dispatching`——于是任何中断都留下痕迹，且痕迹能区分「确定没发出（重发安全）」与「无法证明没发出（别直接重发）」。这两条以前都不成立：同步模型的行要等 POST 返回才出现，中断的结果是**已计费、零痕迹**。详见 `request-id-durability.md`。
+
+`upstream_task_id` 是这次改动的另一半：主键让给了 `request_id`，上游 id 就得有自己的列。它只用来拼轮询 URL（`poll()` 读 `upstream_task_id or id`，`or id` 是给存量行的——那些行的 `id` 本身**就是**上游 id，不回填），**不出现在任何对调用方的返回里**。调用方与本服务之间只有一个 id。
+
+`model_used` 是 `adapter_id` 的冗余投影（两者一一对应），纯为报表存在：行现在先于 POST 落库，终态行的 `updated_at - created_at` 因此是真实的端到端时延，这一列让「按模型统计生成耗时」不必 join 注册表、也不必暴露内部 `adapter_id`。
 
 DB 的作用：`task status <task_id>` / `task wait <task_id>` 需要在进程重启后仍能查询和恢复任务。如果只在内存中存储，异步工作流（`--no-wait` / `wait=false` 后稍后查询）就无法工作。
 
 **多进程 / 多实例共享**：stdio 下每个 agent spawn 独立 server 进程，但共指同一 SQLite 文件（`~/.cfgpu/tasks.db`，WAL 支持并发读 + 单写）；需进程隔离则各设不同 `task_db.url`。streamable-http 多实例水平扩展时改用 Postgres，所有实例共指同一库——本地 SQLite 文件无法跨实例共享。
 
-**客户端驱动轮询**：`service/task.py` 的 `get_status()` 对**非终态的异步任务**（pending/running）或「已成功但 result 无 URL」的任务，做**一次**实时上游轮询并落库。这是 `wait=false` 客户端驱动模型的关键——每次 `task_status` 调用都带着调用方 token，服务端借它把异步任务往前推一步，无需为此挂住连接；客户端断开后凭 task_id 重连即可继续。仅对异步模型（`adapter.is_async`）执行——同步模型无 `poll_endpoint`，跳过；轮询失败以 `logger.debug()` 记录、返回 DB 中的 stale 值，不阻断。
+### schema 迁移（alembic）
+
+**alembic 是所有持久化存储 schema 的唯一权威**（`src/cfgpu_mcp/migrations/`）：文件型 SQLite 与 Postgres 都归它管，schema 的每一次变更都写成一条 revision。仓库的 `connect()` 在建连接池 / 开库**之前** `await ensure_schema(url)`（`client/migrations.py`），因此不存在「代码已升级、库还差一版」的窗口。
+
+在连接期跑而不是做成部署步骤，是沿用这个服务本来的行为（以前是每次启动跑 `CREATE TABLE IF NOT EXISTS`）：实例由 systemd 各自重启，没有一个可以挂手工 `upgrade` 的协调点。由此带来的并发由 `migrations/env.py` 里的 `pg_advisory_xact_lock` 串行化——它取在 alembic 自己的事务里，覆盖整轮 upgrade，提交即释放。手工跑仍然可用，大迁移应当这么做：
+
+```bash
+DATABASE_URL=postgresql://... alembic upgrade head    # env.py 自己翻译成 async driver
+alembic history
+```
+
+三条实现上的取舍：
+
+- **迁移环境是异步的，两种方言都是**（`sqlite+aiosqlite` / `postgresql+asyncpg`）。本项目只声明了这两个驱动，让迁移另外拖一个 psycopg2 进来不值得。`ensure_schema` 因此把 alembic 放在工作线程里跑（`asyncio.to_thread`）——`env.py` 里的 `asyncio.run` 需要一个自己没有事件循环的线程。
+- **每条 revision 都是**「先查再做」**的**。所有现存部署都已经有 `tasks` 表却没有 `alembic_version` 行，guard 让 `upgrade head` 直接把这类库纳管，不需要运维判断它「实际上处在哪一版」，也不需要 stamp。
+- **`:memory:` 不走 alembic**：每条连接就是一个独立的库，对着第二条连接跑迁移只会建出一个立刻被丢掉的库。它由 `client/db.py` 里保留的那份 DDL 直接建在 head 上。两份描述同一个 schema 必然漂移，所以 `test_migrations.py::test_migrated_schema_matches_the_in_memory_bootstrap` 分别建两个库逐列比对——只在一边加列会在那里失败。
+
+**客户端驱动轮询**：`service/task.py` 的 `get_status()` 对**非终态的异步任务**（pending/running）或「已成功但 result 无 URL」的任务，做**一次**实时上游轮询并落库。这是 `wait=false` 客户端驱动模型的关键——每次 `task_status` 调用都带着调用方 token，服务端借它把异步任务往前推一步，无需为此挂住连接；客户端断开后凭 task_id 重连即可继续。仅对异步模型（`adapter.is_async`）执行——同步模型无 `poll_endpoint`，跳过。这次重查失败时**不阻断**，返回 DB 里的 stale 值，但「失败了却什么都不说」分三档：`auth` / `invalid_params` 直接抛（调用方可修，装成「还在跑」等于把人晾在那）；**不可重试**的错误（下架的 endpoint、上游会一直拒的 token）挂上 `last_error` 再返回未终态信封 —— 再查一次也是白查，只给一个 `status: "running"` 等于把调用方推进一个不会终止的循环，而任务本身确实还在上游跑，所以走 `last_error` 而不是 error 通道，与 `wait()` 对同一个错误的形状一致；可重试的（网络抖动、超时）才是原来那条静默路径，记一条日志、返回 stale，调用方下一步本来就是再查一次。非 `CFGPUError` 的异常（adapter 解析终态响应时崩了、仓储抖了一下）没有可信的分类，`retryable` 保守地留 `true`（绝不叫调用方停止轮询一个活任务），真正的信息是 `last_error` **出现了**：这个 running 是推断的，不是观测到的。
 
 ### 指数退避轮询
 
-`_STATUS_MAP`（模块级常量）将 CFGPU API 返回的原始状态映射到内部状态（`succeeded` / `failed` / `running` / `pending`），避免每次 `poll()` 调用重建 dict。
+`_STATUS_MAP`（模块级常量）将上游返回的原始状态映射到内部状态（`succeeded` / `failed` / `running` / `pending`），经 `_normalize_status()` **大小写折叠 + trim** 后查表，避免每次 `poll()` 调用重建 dict。
+
+**这张表的重点是那些「终态但不开心」的取值**（`canceled` / `cancelled` / `expired` / `rejected` / `timeout` / `unknown`），不是装饰：查不到的状态回落成 `running`，而对一个**终态**取值来说，这个回落就是一次无限轮询 —— 任务已经结束、上游永远不会再变，调用方却被告知继续查。此前只有 grok / happyhorse / wan_video 三个 adapter 各自手写了一份塌缩逻辑，三份列表已经开始漂移（只有 grok 认识 `cancelled`）；**没写这份逻辑的 adapter —— 包括跑在 base 实现上的整个 Seedance 家族 —— 完全没有防护**。同理，base 的 `extract_status()` 原样返回 `resp["status"]`，只有那三个 adapter 自己做了 `.lower()`，于是一个喊大写的上游（`"SUCCEEDED"`）会被读成 running，一条已经生成好的视频被永远轮询下去。
+
+表里那些**在途同义词**（`queued` / `waiting` / `submitted` / `in_progress` / `not_start`）是为了相反的目的：它们让「这个状态**确实**没见过」变成一个有意义的判断 —— `_normalize_status()` 认不出时返回 `None`（不是 `running`），`poll()` 据此才敢把「未知状态 + body 里带失败原因」判成失败，而不必担心误杀一个只是把「排队中」拼成别的写法的活任务。认不出时还会打一条 `logger.warning` 点名该状态值：一个没人映射过的终态值，除此之外没有任何浮上来的机会。
 
 ```python
 interval = base_interval                        # 默认 5s
@@ -418,23 +499,47 @@ while not done:
 
 每个模型的轮询参数在 `adapter.yaml` 的 `poll_config` 中配置，`SeedanceVideoAdapter` 还根据请求参数（时长、是否有参考媒体）动态延长 `estimate_poll_timeout()`。
 
-**失败原因的提取（`_extract_error_message`）**：上游对「原因写在哪」毫无共识，故按形状逐个试探 —— 万相视频是顶层 `error`（成功时为 `null`，失败时是 dict 或字符串），Submodel 嵌在 `task.error`，gpt-image-2 / Nano Banana 在 `data.error_msg`（如 Azure 安全系统拒绝），DashScope 形状的视频 API（HappyHorse、万相 2.6/2.7）则用 `output.code` + `output.message`（成功时两者为 `null`），两段都在时拼成 `code: message` —— code（如 `InvalidParameter.DataInspection`，即内容审核拒绝）常常是唯一说清「为什么」的一半，message 反而笼统。**顶层的 `message` 一律不读**：图片 API 即使任务失败也把它设成 `"success"`（那说的是「这次查询成功」），读了只会把失败报告成成功；`output.message` 是另一回事，它描述的是任务本身。全都取不到才回落到 `Task failed (upstream reported no error detail)` —— 这条兜底文案出现，意味着上游真的什么都没说，不是解析漏了。
+**失败原因的提取（`_extract_error_message`）**：上游对「原因写在哪」毫无共识，故按形状逐个试探 —— 万相视频是顶层 `error`（成功时为 `null`，失败时是 dict 或字符串），MiniMax H3 嵌在 `task.error`，gpt-image-2 / Nano Banana 在 `data.error_msg`（如 Azure 安全系统拒绝），DashScope 形状的视频 API（HappyHorse、万相 2.6/2.7）则用 `output.code` + `output.message`（成功时两者为 `null`），两段都在时拼成 `code: message` —— code（如 `InvalidParameter.DataInspection`，即内容审核拒绝）常常是唯一说清「为什么」的一半，message 反而笼统。**顶层的 `message` 一律不读**：图片 API 即使任务失败也把它设成 `"success"`（那说的是「这次查询成功」），读了只会把失败报告成成功；`output.message` 是另一回事，它描述的是任务本身。全都取不到才回落到 `Task failed (upstream reported no error detail)` —— 这条兜底文案出现，意味着上游真的什么都没说，不是解析漏了。
 
-**轮询失败 ≠ 任务失败。** 一次 poll 打不通，只说明这条 socket 有问题；任务在上游照跑不误。所以 `wait()` 会**吸收可重试的**轮询错误（`CFGPUError.retryable`），真正的边界是**轮询超时**（`estimate_poll_timeout()`），不是第一次网络抖动：
-
-```python
-try:
-    task = await self.poll(task, adapter)
-except CFGPUError as e:
-    e.original.setdefault("task_id", task.id)    # 任何放弃路径都必须带回 task_id
-    if not e.retryable:
-        raise                                     # 4xx：token 错、任务不存在 —— 再问也不会变
-    consecutive_failures += 1                     # 连续 MAX_CONSECUTIVE_POLL_FAILURES(5) 次才放弃
-```
+**轮询失败 ≠ 任务失败。** 一次 poll 打不通，只说明这条 socket 有问题；任务在上游照跑不误。所以 `wait()` 会**吸收可重试的**轮询错误（`CFGPUError.retryable`），真正的边界是**轮询超时**（`estimate_poll_timeout()`），不是第一次网络抖动。
 
 计数是**连续**的，一次 poll 成功即清零 —— 「每隔一轮抖一下」是上游慢，不是上游没了，不该累积成放弃。
 
-之所以要这样：共置的 comfy-gateway 在上传产物时会冻住自己的事件循环（comfy-gateway PLAN.md D12），落在那个窗口里的 poll 必然超时。此前的行为是**直接判整个调用失败**——一条已经生成完的视频就此丢掉，而 `wait=True` 的调用方压根没拿到过 task_id，连补查都做不到。因此凡是放弃的路径（含非可重试的直接 `raise`），抛出的错误都被补上 `task_id`，`to_tool_result_dict()` 会把它透到结果顶层。
+之所以要这样：共置的 comfy-gateway 在上传产物时会冻住自己的事件循环（comfy-gateway PLAN.md D12），落在那个窗口里的 poll 必然超时。此前的行为是**直接判整个调用失败**——一条已经生成完的视频就此丢掉，而 `wait=True` 的调用方压根没拿到过 task_id，连补查都做不到。
+
+**反过来也要成立：HTTP 200 + body 里的 error ≠ 轮询失败，那是任务的判决。** 传输层是成功的 —— 上游收到了这次 GET 并回了 200，body 就是**任务记录本身**，其中的 `error` 描述的是任务，不是这次调用。`CFGPUClient._request()` 过去对 200 body 里非空的顶层 `error` 一律抛错（对 POST 是对的：提交被拒，那确实是这次调用失败了），于是一条被上游判死的任务以 `CFGPUError` 的形态到达 `wait()`，正好落进上面那套「轮询失败要吸收」的逻辑里 —— 连吞 5 次后返回 `status: "running"` + `last_error`，而 `get_status()` 的单次重查更直接把它当 transient 记一条日志、返回 stale 的 running 行。结果是这条任务**在两个工具里都永远不会结束**：上游不会改主意，调用方被告知继续轮询。
+
+（真实案例，2026-09-02：Seedance i2v 提交后上游回 `{"error": {"message": "The request failed because the output video may be related to copyright restrictions."}}`，调用方拿到 `error_type: "unknown"` / `retryable: true` / `status: "running"`。）
+
+所以判定权交回给知道「任务记录长什么样」的那一层：`CFGPUClient.get(path, raise_on_body_error=False)` 是**只给轮询用的退出口**（默认仍然抛，POST 完全不变），`TaskManager.poll()` 拿到原始 body 后自己判。两个细节是有意的：
+
+- **判据是「body 里有没有 error 对象」（`_has_body_error`），不是「能不能解析出原因」。** 这两件事必须分开：`_extract_error_message` 产出的是**给人看的原因**，它取不到是正常的（error 对象里只有 code，或者字段形状还没人映射过）；把终态判定挂在「解析得出原因」上，等于让一个没见过的 error 形状**静默地**当作运行中任务 —— 正是这条路径要终结的那种故障。判据与 client 原本抛错的条件逐字对齐，因此凡是过去会浮上来的响应，现在都收敛成终态失败，没有一条被吞掉。原因解析不出时错误文案带上响应截断（`_truncate_json`），既给调用方线索，也给下一个要教会 parser 这个形状的人线索。
+- **不看 `status` 字段。** 这类 body 常常只有原因、根本没有 status，而回落成 `running` 会把它读成「运行中」—— 这就是 bug 本身。唯一的例外是 `succeeded`：已经交付了产物就不该被一个残留的 error 字段推翻，而「succeeded 但无产物」下面本来就有守卫接着。
+
+同一个故障还能从另一侧到达：**状态查不到，同时 body 里带着失败原因**（DashScope 的 `output.code`、异步图片家族的 `data.error_msg` —— 都不是 client 当年会抛的那个顶层 `error`）。这一条也判失败，但**只在状态认不出时**（`_normalize_status()` 返回 `None`）生效，而不是「只要解析出原因就判死」：上游明确说 running / pending 就信它 —— 为一个残留的原因字段杀掉一个正在计费的活任务，比多轮询一个死任务糟得多。
+
+测试：`test_poll_treats_an_http_200_body_error_as_terminal`、`test_poll_body_error_without_a_parseable_reason_still_fails_with_an_excerpt`、`test_wait_raises_task_failed_for_a_body_error_instead_of_reporting_running`、`test_get_status_converges_when_the_repoll_body_carries_an_upstream_error`，以及 client 侧的 `test_post_still_raises_on_an_http_200_body_error` / `test_get_raises_on_a_body_error_by_default`。
+
+**这条推论走到底，就是「活着的任务永远不走 error」——`wait()` 只为真正 `failed` 的任务抛错。** 它返回 `WaitOutcome(task, last_error)`，三条任务仍然活着的退出路径都返回而不抛：
+
+| 退出路径 | `last_error` | 含义 |
+|---|---|---|
+| 等待预算耗尽 | 无 | 轮询一路正常，任务就是还没做完 |
+| 连续 `MAX_CONSECUTIVE_POLL_FAILURES` 次失败放弃 | 有 | 上游够不着，任务状态未知 |
+| 遇到不可重试的轮询错误（token 失效等） | 有 | 同上，且不会自愈 |
+
+`task_status` 的单次重查按同一套判据分档（见上文「客户端驱动轮询」），所以「我有一段时间没看见这个任务了」在两个工具里是同一个形状 —— 调用方不必因为换了个工具就换一套读法。
+
+理由是「等待超时」是**等**的属性，不是**任务**的属性：任务已创建、正在跑，调用方的下一步（`task_status(task_id)`）与 `wait=False` 完全相同，因此返回同一个信封才是诚实的。此前把它报成 `error: true`，逼得每个调用方都要用 `error_type` × `task_id` 反推「这到底结束了没有」——而 `task_failed`（带 task_id、确实终态）和 `timeout`（带 task_id、还活着）在这张真值表里长得一模一样。
+
+`last_error` 回答的是**「为什么这次没等到结果」**，不是「任务怎么了」，故：
+
+- **键名不叫 `error`**，也不带 `error: true` —— 顶层 `error` 是终态判据，嵌套一个同名键会招来按键名探测的误判。
+- **保留 `error_type` 而非只给一句 message** —— 它决定下一步动作：`auth` 要先修凭据再轮询，`timeout` / `unknown` 直接再轮询。只给字符串等于逼调用方解析文本做控制流。
+- **字段的有无本身就是信号**：没有它 = 我一直在正常观察，任务确实在跑；有它 = 我有一段时间没看见了，`status: "running"` 只代表**未观测到终态**。少了这个区分，一个坏 token 会让调用方拿着它无限轮询下去。
+- 其中的 `retryable` 收窄回唯一正确的含义：**再调一次 `task_status` 有没有希望**。它不再兼职「重发整个请求安全吗」——活任务已经不会以 error 形态出现了。
+
+凡是放弃的路径仍然必须带回 `task_id`（`e.original.setdefault("task_id", task.id)` 保留），它是 `wait=True` 调用方唯一的补救入口。测试：`tests/unit/test_result_contract.py`。
 
 ---
 
@@ -453,7 +558,23 @@ CFGPUError.from_http_response(status, body)
     status = 429 → error_type = "rate_limit"
 ```
 
-`retryable` 字段由 `_RETRYABLE` 集合决定（`rate_limit`、`model_unavailable`、`unknown`），调用方可据此决定是否重试。目前系统内部没有自动重试，该字段供外部调用方使用。
+`retryable` 字段默认由 `_RETRYABLE` 集合决定（`rate_limit`、`model_unavailable`、`unknown`），调用方可据此决定是否重试。目前系统内部没有自动重试，该字段供外部调用方使用。它在调用方那一侧只有一个含义：**重发这个请求安全吗**。
+
+### HTTP 超时：三种处境，三种答案
+
+`_request()` 同时服务提交（POST）和轮询（GET），所以 `CFGPUClient._timeout_error()` 一个抛出点覆盖了三种语义完全不同的处境，`retryable` 必须按 **method × phase** 分流，而不是一律 `True`：
+
+| 处境 | 上游收到了吗 | `retryable` | `outcome_unknown` |
+|---|---|---|---|
+| connect 阶段（DNS / TCP / TLS 未完成） | 明确没有 | `True` | — |
+| request 阶段 + GET（轮询） | 无关，轮询幂等 | `True` | — |
+| request 阶段 + POST（提交） | **不知道** | `False` | `True` |
+
+第三种曾是全系统唯一一个「既不能说成功、也不能说没发生」的错误：`TaskManager.create()` 的 POST（同步 / 异步两条路）都在 `insert_task` **之前**，所以请求阶段超时意味着**没有 task_id、没有落库**，而上游可能已经受理并计费——同步模型（Seedream / 万相 2.7 图像）整个生成都在这个 POST 里，`http_timeout: 120` 是能被一次 4K 出图逼近的。此前这里写死 `retryable=True`，等于向 agent 断言「重发是安全的」，照做就是双份计费。
+
+因此新增 `CFGPUError.outcome_unknown`，`to_tool_result_dict()` 只在为真时输出；`phase`（`connect` / `request`）也从 `original` 抬进了结果顶层——判断要不要重发的依据不该靠读散文。测试：`test_submit_timeout_is_not_retryable_and_says_the_outcome_is_unknown` / `test_poll_timeout_stays_retryable` / `test_connect_phase_timeout_is_retryable_even_on_a_submit`。
+
+**这条已经收窄。** 行现在先于 POST 落库，所以「没有可对账的东西」不再成立：`TaskManager._record_submit_failure` 在提交路径上接住这类错误，按它**证明了什么**分流——上游明确拒收的（4xx / connect 阶段超时 / 内容审核）把行收敛成 `failed`，因为那既没执行也没计费，说成「可能已计费」是把可重试的事说死了；证明不了的（request 阶段超时、传输层错误、上游 5xx）把行留在 `dispatching`，清掉 `outcome_unknown`，并在文案末尾补上真能执行的下一步：`task_status("<request_id>")`。`CFGPUClient` 那一层仍然照旧置位——它只看得见传输事实，看不见有没有落库；两层的分工就是这条收窄的实现方式。`outcome_unknown` 剩下的适用面只有「落库本身失败」。
 
 ### 失效 / 无权限端点：快速失败（非重试）
 
@@ -487,11 +608,13 @@ FastMCP 捕获异常后设置 `isError: true`，但 MCP 客户端是否将其内
 
 MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在结果顶层追加 `"artifact": True`，与 error dict 的 `"error": True` 顶层布尔标记对称，供 MCP 客户端快速判断"本次结果含可渲染产物"。
 
-`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且**有产物**（非空 `urls` 或非空 `inline_media`，与 `annotate_artifact()` / `TaskManager.poll()` 的成功判据一致）时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成时返回 `{task_id, status}` 信封（对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。**失败任务**由 `_raise_if_failed(task)` 抛出标准 `CFGPUError(task_failed)`（带 `model_id`——由 `registry.get(task.adapter_id).model_name` 映射得到，不暴露内部 `adapter_id`），经工具层 `tool_error_dict` 转成与 `task_wait` / `generate_*` 完全一致的 error dict——`task_status` 不再有独有的 `{status: "failed", error: "<string>"}` 信封。`wait_for_task()` 重建用于超时估算的最小 `req` 时也按 `adapter.task_type` 完整映射到对应 Input 类型（image/video/audio/understand），避免把错误的 Input 喂给 per-type 的 `estimate_poll_timeout()` 覆盖。
+`task_status` / `task_wait` 的返回结构与 `generate_*` 对齐：`service/task.py` 的 `_present(task)` 在任务成功且**有产物**（非空 `urls` 或非空 `inline_media`，与 `annotate_artifact()` / `TaskManager.poll()` 的成功判据一致）时直接返回扁平的 `NormalizedResult` dict（顶层 `urls` / `expires_at` / 元数据），与 `generate_*` 完全一致；未完成时返回 `{task_id, status}` 信封（`tool_registry.pending_result()`，对应 generate 的 `wait=False`）。因此不再出现 `result` 嵌套层。**失败任务**由 `_raise_if_failed(task)` 抛出标准 `CFGPUError(task_failed)`（带 `model_id`——由 `registry.get(task.adapter_id).model_name` 映射得到，不暴露内部 `adapter_id`），经工具层 `tool_error_dict` 转成与 `task_wait` / `generate_*` 完全一致的 error dict——`task_status` 不再有独有的 `{status: "failed", error: "<string>"}` 信封。`wait_for_task()` 重建用于超时估算的最小 `req` 时也按 `adapter.task_type` 完整映射到对应 Input 类型（image/video/audio/understand），避免把错误的 Input 喂给 per-type 的 `estimate_poll_timeout()` 覆盖。
 
 **`payload` 字段（真实 API 请求体回传）**：所有成功结果（`generate_*` 以及 `_present` 的成功分支）在 `NormalizedResult` 元数据之外追加 `payload` 字段，内容是 `Task.public_payload()` —— 即真正 POST 给该模型专属 API 的请求体（`adapter.build_payload(req)` 的产物，含 `cfgpu_model_id` 与各模型私有字段），而非通用工具入参。`public_payload()` 会剥除内部回显用的保留键 `_requested_aspect_ratio`（见 §异步 aspect_ratio 兜底），保证只暴露真实发往上游的字段。**该字段始终返回，不受 `return_metadata` 影响**：`return_metadata=False` 的精简输出（`urls` / `expires_at`）同样带上 `payload`。
 
-**`request_id`（调用方关联标识回显）**：`generate_*` 接受一个可选的 `request_id`，由调用方在**发起时**自选，用来把稍后经 `task_status` / `task_wait` 返回的异步 artifact / 失败 join 回原始的 generate 请求——异步流程里两者分属不同 tool_call，而 `task_id` 要等 POST 返回才有、同步模型更无 `task_id`，因此不能充当发起即得的关联键。实现复用 payload 保留键机制：`TaskManager.create()`（同步与异步两条路）经 `_stash_internal()` 把 `req.request_id` 存进 `_request_id` 保留键，`public_payload()` 与 `_requested_aspect_ratio` 一并剥除，故绝不上行到上游 API。回显在 **service 层**完成（`tool_registry.stamp_echo()`），而非 MCP wrapper——因此 MCP（Mode A）、Agent dispatcher（Mode B）、CLI（Mode C）三种直连 service 的模式一致生效；`_present()` 从 `task.payload` 取回并盖章成功/pending 两种形状，`CFGPUError.request_id` 则让失败结果（`to_tool_result_dict`）也带上它。一律"有值才加"（`setdefault`），不传时结果结构不变。`understand_vision` 恒同步、单次返回、无关联缺口，故不设此参数。
+**`request_id`（调用方关联标识回显 + 任务主键）**：`generate_*` 接受一个可选的 `request_id`，由调用方在**发起时**自选，用来把稍后经 `task_status` / `task_wait` 返回的异步 artifact / 失败 join 回原始的 generate 请求——异步流程里两者分属不同 tool_call，而 `task_id` 要等 POST 返回才有、同步模型更无 `task_id`，因此不能充当发起即得的关联键。
+
+**它同时就是任务的主键**（见 §「Task 存储」）。正因为它在调用发出前就已知，它是唯一一个**响应丢失也不会跟着丢**的句柄：一次 `generate_*` 没有返回结果（超时 / 断连 / 服务重启）时，把同一个 `request_id` 传给 `task_status` 就能查到它的最终状态，不必也不该先重发。反过来，同一个 `request_id` 再次提交会**命中主键冲突**，本服务返回既有行、不再 POST——非终态就是「上次还在跑」，终态就是「上次已经跑完，拿既有产物」。这关掉了 checkpoint 重放导致的二次计费，前提是调用方那侧的 `request_id` 是**持久化**的（每次重放现算一个新值，这条会静默失效，症状是双倍计费而没有任何报错）。它只覆盖「同一次调用被重复投递」，不覆盖模型自己决定重来——那是一次新的工具调用，会带一个新的 `request_id`。实现复用 payload 保留键机制：`TaskManager.create()`（同步与异步两条路）经 `_stash_internal()` 把 `req.request_id` 存进 `_request_id` 保留键，`public_payload()` 与 `_requested_aspect_ratio` 一并剥除，故绝不上行到上游 API。回显在 **service 层**完成（`tool_registry.stamp_echo()`），而非 MCP wrapper——因此 MCP（Mode A）、Agent dispatcher（Mode B）、CLI（Mode C）三种直连 service 的模式一致生效；`_present()` 从 `task.payload` 取回并盖章成功/pending 两种形状，`CFGPUError.request_id` 则让失败结果（`to_tool_result_dict`）也带上它。一律"有值才加"（`setdefault`），不传时结果结构不变。`understand_vision` 恒同步、单次返回、无关联缺口，故不设此参数。
 
 **`caption`（产物标签回显）**：与 `request_id` 同机制的第二个回显字段（同一个 `stamp_echo()`、同一套 `_stash_internal()` / `public_payload()` 保留键，键名 `_caption`），但用途不同——它是给**产物**起的一句人类可读短标签，服务端只存不解释。存在的理由是自建素材台账的客户端（DeerFlow / cf-dream 把每个生成产物登记为可用短 id 引用的 material）：标签若不能在发起时携带，台账条目就是无名的，只能事后再花一次工具调用补名字；而把它存进任务记录，正是**两段式**（`wait=False` → `task_wait`，产物晚一次 tool_call 才存在）无需客户端自持 `task_id → 标签` 映射的原因。两处刻意的取舍：①超长**截断不报错**（`CAPTION_MAX_CHARS=200`，`CaptionStr` 的 `AfterValidator`）——标签不影响出图，为它失败一整次调用不划算；②**失败路径不回显**——`CFGPUError` 带 `request_id` 不带 `caption`，调用失败即无产物可标注（由 `test_failed_task_carries_request_id_but_not_caption` 钉住）。三个 generate 工具的字段声明共用 `caption_field()`，避免三份副本漂移。
 
@@ -499,7 +622,29 @@ MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在�
 
 **`inline_media`（无 URL 的内联产物）**：部分模型不给下载链接，直接把媒体内容返回 —— 目前只有 MiniMax 语音（十六进制字符串在 `output.data.audio`，`MiniMaxSpeechAdapter` 解码后转 base64 存进 `NormalizedResult.inline_media`，每项 `{data, mime_type, filename}`）。对这类模型 **`inline_media` 就是产物本身**，因此凡是判断"有没有产物"的地方都必须是 `urls` **或** `inline_media`：`annotate_artifact()`（打 `artifact` 标记）、`TaskManager.create()` / `poll()` 的"成功但无产物 → 失败"守卫、`_present()`（`task_status` / `task_wait` 的成功分支）、`tool_registry.lean_result()`（`return_metadata=False` 的精简输出，三个 generate service 共用同一个 helper，避免各写一份而漂移）。同步 guard 只适用于 `image` / `video` / `audio`，文本型 `understand` 明确豁免。MiniMax 还会检查 HTTP 200 内的 `output.base_resp.status_code`，例如 `2054 / voice id not exist` 会直接返回 `invalid_params`，而不是落成空成功结果。`return_metadata` 屏蔽的是**元数据**（`task_id` / `model_used` / `aspect_ratio` / `seed` / `usage`），从不屏蔽产物 —— 少了这条，MiniMax 的精简结果就是一个 `urls: []` 的空壳。同步模型也会经由 `generate_audio(wait=False)` → `task_status` 走到 `_present()`，故那一处同样必须认 `inline_media`。MCP 工具层则把它划入 `structured_keys`（`generate_audio` 与 `tools/tasks.py` 的两个工具都是），base64 数据只进 `structuredContent`，绝不进模型上下文。测试见 `tests/unit/test_inline_media_result.py`。
 
-`tool_registry.annotate_artifact(result)` 是单一实现：当 `result` 含非空 `urls` 或非空 `inline_media`（顶层；并保留对嵌套 `result.urls` 的兼容判断作兜底）时打标记；无产物的结果（`wait=False` 的 pending、轮询中的 running、error dict）原样返回。`tools/generate.py`、`tools/tasks.py` 在各工具 `return` 处包一层调用。该标记只在 MCP 工具层加，service / dispatcher / CLI 的原始返回不受影响。
+`tool_registry.annotate_artifact(result)` 是单一实现：当 `result` 含非空 `urls` 或非空 `inline_media`（顶层；并保留对嵌套结果的兼容判断作兜底，两个分支的判据一致，都认 `urls` 或 `inline_media`）时打标记；无产物的结果（`wait=False` 的 pending、轮询中的 running、error dict）原样返回。`tools/generate.py`、`tools/tasks.py` 在各工具 `return` 处包一层调用。该标记只在 MCP 工具层加，service / dispatcher / CLI 的原始返回不受影响。
+
+### 统一的结果契约：`error` / `artifact` / `status`
+
+`generate_*`、`task_status`、`task_wait` 三类工具返回**同一套形状**，调用方按固定顺序判断 `error` → `artifact` → `status` 即可回答「这个请求结束了没有」：
+
+| 形状 | 判据 | 含义 |
+|---|---|---|
+| 终态·成功 | `artifact: true` | `urls` / `inline_media` + 元数据 + `payload` |
+| 未终态 | 无 `error`、无 `artifact` | `{task_id, status}`（+ 可选 `last_error`） |
+| 终态·失败 | `error: true` | `error_type` / `message` / `retryable`（+ `model_id` / `task_id` / `phase` / `outcome_unknown`） |
+
+**失败仍然走 error 而不是 `status: "failed"`**，是刻意的：`_raise_if_failed` 存在的理由就是让三类工具的失败形状一致，而 `error_type` / `retryable` / `card_hint` 才是携带补救措施的地方——换成一个枚举值等于把一整套可执行的诊断降级成一个词。于是 `status` 的取值实际只用到 `succeeded` / `running` / `pending`，`failed` 是个空成员，调用方不必等它。
+
+**`status` 是机器枚举，不再兼放散文。** `annotate_artifact()` 此前把 `"Success. URLs already generated; …"` 直接写进 `status`，于是同一个键上同时住着 `"running"` 和一句英文——最自然的写法 `status == "succeeded"` 永远为假，而唯一能用的写法是解析散文做控制流；更糟的是调用方必须**先知道自己拿到的是哪种形状**，才能正确读那个本该用来判断形状的键。现在 `status` 只放枚举（`TASK_STATUS_VALUES`），散文挪到 `note`。
+
+那句散文有真实职责，不能删：宿主若把 `urls` 从 LLM 可见的 content 里改写掉（DeerFlow 的 MaterialsMiddleware），模型就失去了「生成已完成」的**内容内**证据，会对一个已经出图的任务继续轮询。它顺带修掉一个隐患——`"Partial success."` 过去是 `status` 的**取值**，很容易被读成第三种状态而继续轮询，而它其实是终态（那句话自己写着「重跑是拿到它们的唯一办法」）；现在拆成 `status: "succeeded"` + 非空 `partial_errors`，状态与瑕疵各归各位。
+
+**「成功但无产物」在展示层也收敛成失败。** `_raise_if_failed` 除了 `status == "failed"`，还把「`succeeded` 且既无 `urls` 也无 `inline_media`」当作失败呈现（只读视图，不回写数据库，讨论留痕）。理由是 `get_status` 刻意**不**重查终态行（那是脏数据，不是在途工作），于是这种行过去会落进未终态信封并带着 `status: "succeeded"` —— 按上表的判据读就是「还没完，继续轮询」，而它永远不会变。当前代码写不出这种行（`create()` 与 `poll()` 在写入时就已转成 `failed`），但早于那两道守卫的历史行正是会变成死循环的那一种。
+
+**唯一的例外是 `validate_only` 预检**：它返回 `{validated, model_used, …}`，三个键一个都没有（`annotate_artifact` 也刻意不给它盖章），入口判据是 `validated in result`。`understand_vision` 也不在这套契约里——产物是文本，无 `artifact` 标记、无 `task_id`、恒同步，终态判据只有「没有 `error`」。
+
+测试：`tests/unit/test_result_contract.py`。
 
 ---
 
@@ -526,13 +671,14 @@ src/cfgpu_mcp/
 │   ├── seedream.py             Seedream 系列 Python Adapter（同步模型；5.0 lite / 5.0 Pro / 4.5 / 4.0 共用。Pro 为单图模型并静默忽略 n>1；所有档位均映射为精确像素，不上行档位名）
 │   ├── async_image.py          _AsyncImageBase + GptImage2 / NanoBanana Adapter
 │   ├── happyhorse_video.py     HappyHorse 的 Python Adapter（DashScope 风格）
-│   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds/sound + image_list/video_list）
+│   ├── kling_video.py          Kling Video O1 的 Python Adapter（flat prompt/size/mode/seconds/sound + image_list/video_list）；validation_corrections 把 with_audio 钉进 corrected_args
 │   ├── wan_video.py            万相 2.6/2.7 视频家族 Adapter（HappyHorse 风格请求 + Seedance 标准轮询；_build_input 钩子区分 2.6 扁平字段 / 2.7 media 数组）
 │   ├── grok_video.py           Grok Imagine Video 1.5 的 Python Adapter（扁平 video_length/resolution_name/refer_images + data 包裹的轮询响应）
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
 │   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）
 │   ├── cfdream_h3.py           MiniMax H3（provider: comfy，自建 comfy-gateway）：t2v/i2v/flf2v 与 r2v 两套权重各一个类，互斥的素材槽位在 supports() 里判，使 auto 能在两者间路由
-│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3 触发注册
+│   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立；id 键名同理三种拼法一起读（`task_id` / CFGPU 实际应答的 `taskId` / 信封内的 `id`，见 _TASK_ID_KEYS）
+│   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3、minimax_h3 触发注册
 │
 ├── models/
 │   ├── wan-2-0/
@@ -612,6 +758,9 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── cfdream-minimax-h3-r2v/
 │   │   ├── adapter.yaml        MiniMax H3 参考素材生视频，extends: cfdream-minimax-h3, card_base: ~（另一套权重，不与上者混用）
+│   │   └── card.md
+│   ├── cfgpu-minimax-h3/
+│   │   ├── adapter.yaml        MiniMax-H3（provider: cfgpu，内建；逐请求令牌对它生效），resolutions: [480p, 768p, 2k] + default_resolution: 768p，4–15s
 │   │   └── card.md
 │   ├── grok-imagine-video-1-5/
 │   │   ├── adapter.yaml        Grok Imagine Video 1.5，GrokVideoAdapter（公开 id cf-imagine-video-1.5）
@@ -801,9 +950,15 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 跨多数模型、用户高频调整的开关应做成**通用参数**（typed field），而不是埋在 free-form 的 `model_specific` 里。已有两个范例：
 
 - `with_audio`：视频音频开关，`SeedanceVideoAdapter` 映射为 `generate_audio`。
-- `watermark`：水印开关，类型为 `bool`，**默认 `false`**。Agent / MCP / service 三层的默认值保持一致；即使 caller 未传值，支持水印字段的 adapter 也会显式写入上游 payload。不同 API 形状分开处理：`seedream`、`seedance_video` 和 `happyhorse` 使用顶层 `payload["watermark"]`，WAN 2.6/2.7 使用 `payload["parameters"]["watermark"]`。它们都在 `model_specific` 合并之前写入，因此显式的模型私有值仍可覆盖。上游没有该请求字段的 adapter（GPT Image / Nano Banana、Grok、Kling、MiniMax H3 等）继续忽略它，避免传入未知字段。
+- `watermark`：水印开关，类型为 `bool`，**默认 `false`**。Agent / MCP / service 三层的默认值保持一致；即使 caller 未传值，支持水印字段的 adapter 也会显式写入上游 payload。不同 API 形状分开处理：`seedream`、`seedance_video` 和 `happyhorse` 使用顶层 `payload["watermark"]`，WAN 2.6/2.7 使用 `payload["parameters"]["watermark"]`。它们都在 `model_specific` 合并之前写入，因此显式的模型私有值仍可覆盖。`MiniMax-H3` 的该字段叫 `aigc_watermark`（AIGC 标识水印），同样每次显式写入。上游没有该请求字段的 adapter（GPT Image / Nano Banana、Grok、Kling、以及走 comfy-gateway 的 `cfdream/minimax-h3*`）继续忽略它，避免传入未知字段。
 - `n`：图片组图数量（1-15），默认 1。声明了 `multi_image_group` 能力的模型才认 `n>1`，且各家 API 的写法不同：Seedream 系写成 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`wan2.7-image` 写成 `parameters.enable_sequential=true` + `parameters.n`（上限 12，超出由 `supports()` 在发请求前拒绝），**两个键永远一起下发**——只发 `enable_sequential` 时上游的 `n` 默认值是 12，那是 12 张的账单。不支持该能力的图像模型（包括 Seedream 5.0 Pro、gpt-image-2、nano-banana）静默忽略 `n`，继续发送其他参数并生成单张图片。两家的 `n` 都是上限而非张数。
-- `resolution`（视频）：开放 `1080p`，WAN 2.0 / Doubao Seedance 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**分辨率是逐模型的取值集合**：能查到官方取值范围的模型在 `adapter.yaml` 用 `resolutions: [...]` 声明（Seedance 2.5 / 2.0 fast / 2.0 mini 均为 `[480p, 720p]`，Seedance 2.0 为 `[480p, 720p, 1080p]`），由 `ModelAdapter.supports()` 统一校验；未声明（`None`）= 不做本地限制，即该字段引入前的行为。否则上游会回 `the parameter resolution specified in the request is not valid for model X in i2v`。**另一例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
+- `resolution`（视频）：统一枚举是 `480p / 720p / 768p / 1080p / 2k / 4k`，**默认值是 `None`，不是某一档**。**分辨率是逐模型的取值集合**：能查到官方取值范围的模型在 `adapter.yaml` 用 `resolutions: [...]` 声明（Seedance 2.5 / 2.0 fast / 2.0 mini 均为 `[480p, 720p]`，Seedance 2.0 为 `[480p, 720p, 1080p, 4k]`，MiniMax-H3 为 `[480p, 768p, 2k]`），由 `ModelAdapter.supports()` 统一校验；未声明（`None`）= 不做本地限制，即该字段引入前的行为。否则上游会回 `the parameter resolution specified in the request is not valid for model X in i2v`。`1080p` 由 WAN 2.0 / Doubao Seedance 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**另一例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
+
+- `with_audio`：统一开关，但**只有四个族真的会发它** —— 可灵（`sound: on/off`）、Seedance（`generate_audio`）、`cfdream/minimax-h3*`（`with_audio`）；万相 2.6/2.7 与 HappyHorse 压根不发，Grok 与 `MiniMax-H3` 恒出音频、没有开关。**可灵额外把它钉进 `corrected_args`**（`KlingVideoAdapter.validation_corrections`，2026-09-07）：它的 card 里 `sound` 的默认值写的是「-」，即上游没有默认值，于是统一 Schema 那个 `with_audio: bool = True` 就是全部决定 —— 而它是静默的。按调用方原始参数生成的审批卡上没有音频这一行，人却批准了一条自带配乐的片子。所以这是**钉住（pin）而非回退**，与 `model="auto"` 解析后回钉具体模型同形、同理由：审批只有在指明「到底会跑什么」时才有意义。**无条件钉**，因为它必须无条件：`with_audio` 是带具体默认值的裸 `bool`，传了 `True` 的调用方和什么都没传的调用方到这里完全一样，「只在缺省时补」根本不可表达，而猜错的那一半恰恰是唯一需要补的那一半。范围也是刻意只给可灵的 —— Seedance 同样认这个字段，要不要一并钉是逐个 card 该做的判断，不是改一个 adapter 的副作用（`test_only_kling_pins_with_audio` 钉住这条边界）。
+
+  **默认值为什么是 `None`（`default_resolution`，2026-09-07）。** `resolution` 是 `supports()` 会读的字段，所以一个写死的全队默认值等于「每个模型都必须支持这一档，否则会被一个调用方根本没提的参数挤出 `model="auto"`」。MiniMax-H3 恰好是这种模型：它有 480P / 768P / 2K 三档，却没有 720p。于是统一 Schema 的默认值改成 `None`（= 「你来定」），真实档位落在 `adapter.yaml` 的 `default_resolution`（缺省 `720p`，与改动前完全一致，只有 MiniMax-H3 写 `768p`），由 `ModelAdapter.resolve_resolution(req)` 解析 —— 与 `duration_seconds` → `default_duration_seconds` 完全同构。**所有 adapter 读的都是 `self.resolve_resolution(req)`，不是 `req.resolution`。** 不这么做的代价不是抽象缺失，而是最朴素的一次调用 `generate_video(prompt=...)` 会绕开 `MiniMax-H3` 的 `default_for: [balanced]` 声明，而显式点名 `model="MiniMax-H3"` 又会直接报「不支持 720p」—— 和 `_T2V_DEFAULT_RATIO` 当初躲开的是同一个坑。相应地 `validation_corrections` 对 `resolution is None` 返回 `{}`：那已经是该模型自己的档位，把它写进 `corrected_args` 等于把一个「交给模型决定」钉成调用方从没做过的选择。
+
+  **`480p` / `768p` / `2k` 是 MiniMax-H3 的一等原生取值，不是别名。** `768p` / `2k` 从前是靠「声明 720p/1080p，再在 `build_payload` 里翻译成 768P/2K」实现的，结果是：要 720p 的调用方被静默按 768P 出片和计费，而这个模型的原生档位反而没有拼法。现在 adapter 只做 `.upper()`，翻译表已删除。其他模型**不**接受 `768p` / `2k` —— `supports()` 拒绝，`validate_only` 通过 `validation_corrections` 回退到「不高于请求值的最近一档」（`768p` → `720p`，`2k` → `1080p`，Seedance 2.0 fast 这种没有 1080p 的则 `2k` → `720p`）。档位次序表是 `adapters/base.py` 的 `_RESOLUTION_ORDER`，**必须与统一枚举逐一对应**：漏一个不会报错，只会让那一档静默跳过回退，`validate_only` 于是放行一个正式调用必然拒绝的请求（`test_resolution_order_covers_the_whole_schema_enum` 钉住这一点）。
 - `quality_tier`：**双重身份**——既是 `model="auto"` 的路由打分输入（`router.py`），也被部分 adapter 映射进 payload，**选定模型后仍然生效**：`KlingVideoAdapter` → `mode`（`best` → `pro`，其余 `std`），`GptImage2Adapter` → `quality`（`fast`/`balanced`/`best` → `low`/`medium`/`high`），`WanImageAdapter` → `parameters.thinking_mode`（`fast` → `false`，其余 `true`；且只在纯文生图场景下发，那是上游唯一承认它生效的场景）。三档与这些 API 自身的档位一一对应，故复用该参数而不新增一个近义的 `quality` 工具参数。其余 adapter 不读取它，选定模型后即为纯路由偏好。两处映射都写在 `payload.update(req.model_specific)` **之前**，故 `model_specific` 仍可覆盖。
 - `resolution`（图片）：**必须在 `build_payload` 里显式下发**——图片 API 按分辨率档位分段计价（GPT Image 2：1K/2K/4K 三档），adapter 漏读该字段不会报错，只会让每次调用都静默落到模型自身的默认档，且账单与预期不符。`SeedreamAdapter` 映射为像素 `size`，`WanImageAdapter` 同样映射为像素 `size`（分隔符是 `*`，且档位表是按每档总像素预算算出来的，不是抄来的），`NanoBananaAdapter` 映射为 `image_size`，`GptImage2Adapter` 原样下发 `resolution`（三档都是字面量 `1K` / `2K` / `4K`，空串会被上游判参数错误——早期版本把 `1K` 翻成 `""`，上游回的正是 `resolution 参数必须为 '1K'、'2K' 或 '4K'`）。注意 `ModelAdapter.supports()` 里的 `resolutions` 声明式校验**只对视频生效**（`isinstance(req, GenerateVideoInput)` 分支内），图片侧默认不做本地取值拦截（`SeedreamAdapter` 与 `WanImageAdapter` 在各自的 `supports()` 里自行拦截，见下）：统一 Schema 比单个模型宽（`3K` 之于 GPT Image 2、`21:9` 之于 GPT Image 2 / nano-banana），这些值原样上行、**由上游拒绝**。
 - `duration_seconds`（视频）：允许 `-1`（智能时长，`SeedanceVideoAdapter` 直接透传）。Pydantic 校验器只卡**全机队最宽**的范围 4–30（来自 `doubao-seedance-2-5`，单段 30 秒直出）；**每个模型真实的上限写在各自 `adapter.yaml` 的 `max_duration_seconds`**（缺省 15 = 2.5 之前的全局上限，故其余模型行为不变；`doubao-seedance-1-5-pro` 为 12），由 `ModelAdapter.supports()` 统一拒绝。这样超限在本地报错而不是被上游 POST 拒绝，且 `model="auto"` 能绕开时长不够的模型。`happyhorse` 另外拒绝 `-1`。

@@ -166,27 +166,60 @@ def test_image_schema_exposes_n():
 
 
 def test_annotate_artifact_flags_top_level_urls():
-    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
+    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_NOTE, annotate_artifact
     out = annotate_artifact({"urls": ["https://x"], "expires_at": None})
     assert out["artifact"] is True
-    # terminal hint lets the LLM see generation is done even after MaterialsMiddleware
-    # strips urls out of the content → no redundant task_status/task_wait polling.
-    assert out["status"] == _ARTIFACT_DONE_STATUS
+    assert out["status"] == "succeeded"
+    # The prose hint lets the LLM see generation is done even after MaterialsMiddleware
+    # strips urls out of the content → no redundant task_status/task_wait polling. It
+    # rides `note`, not `status`, so the enum stays machine-readable.
+    assert out["note"] == _ARTIFACT_DONE_NOTE
+
+
+def test_status_is_an_enum_not_a_sentence():
+    """★ ``status`` used to hold both ``"running"`` and an English sentence.
+
+    That made the obvious test — ``status == "succeeded"`` — permanently false, while
+    the only tests that worked parsed prose for control flow. A caller had to already
+    know which shape it held in order to read the key it would have used to find out.
+    """
+    from cfgpu_mcp.tool_registry import TASK_STATUS_VALUES, annotate_artifact, pending_result
+
+    done = annotate_artifact({"urls": ["https://x"]})
+    running = pending_result("t", "running")
+
+    for shape in (done, running):
+        assert shape["status"] in TASK_STATUS_VALUES
+    assert done["status"] == "succeeded"
+    assert running["status"] == "running"
 
 
 def test_annotate_artifact_flags_nested_task_result():
-    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
+    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_NOTE, annotate_artifact
     out = annotate_artifact(
         {"task_id": "t", "status": "succeeded", "result": {"urls": ["https://y"]}, "error": None}
     )
     assert out["artifact"] is True
-    assert out["status"] == _ARTIFACT_DONE_STATUS
+    assert out["status"] == "succeeded"
+    assert out["note"] == _ARTIFACT_DONE_NOTE
+
+
+def test_nested_inline_media_is_flagged_like_nested_urls():
+    """The nested branch tested ``urls`` alone while the top-level one tested both, so a
+    model whose artifact arrives inline (MiniMax speech) would have been demoted to
+    "no artifact" in the one shape that nests. Same invariant on both branches."""
+    from cfgpu_mcp.tool_registry import annotate_artifact
+    out = annotate_artifact(
+        {"task_id": "t", "result": {"urls": [], "inline_media": [{"b64": "aGk="}]}}
+    )
+    assert out["artifact"] is True
+    assert out["status"] == "succeeded"
 
 
 def test_annotate_artifact_skips_results_without_urls():
-    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
+    from cfgpu_mcp.tool_registry import annotate_artifact
     # empty urls, pending no-wait, running task, and error dicts get no flag — and no
-    # done-status hint (the raw in-flight status must survive untouched).
+    # done note (the raw in-flight status must survive untouched).
     for d in (
         {"urls": [], "expires_at": None},
         {"task_id": "t", "status": "pending"},
@@ -195,7 +228,8 @@ def test_annotate_artifact_skips_results_without_urls():
     ):
         out = annotate_artifact(d)
         assert "artifact" not in out
-        assert out.get("status") != _ARTIFACT_DONE_STATUS
+        assert "note" not in out
+        assert out.get("status") != "succeeded"
 
 
 def test_annotate_artifact_passes_through_non_dict():
@@ -441,7 +475,7 @@ def test_split_structured_passes_through_non_dict():
 
 def test_task_result_end_to_end_annotate_then_split():
     # task_status/task_wait success: flat NormalizedResult + payload, same as generate.
-    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
+    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_NOTE, annotate_artifact
     service_result = {
         "urls": ["https://cdn.cfgpu.com/vid.mp4"],
         "expires_at": None,
@@ -457,15 +491,16 @@ def test_task_result_end_to_end_annotate_then_split():
     content = json.loads(out.content[0].text)
     # urls + terminal status hint stay LLM-facing; usage/payload routed to side channel
     assert content["artifact"] is True
-    assert content["status"] == _ARTIFACT_DONE_STATUS
+    assert content["status"] == "succeeded"
+    assert content["note"] == _ARTIFACT_DONE_NOTE
     assert content["urls"] == ["https://cdn.cfgpu.com/vid.mp4"]
     assert "usage" not in content and "payload" not in content
     assert set(out.structuredContent) == {"usage", "payload"}
 
 
 def test_task_result_pending_passes_through_split_without_flag():
-    # in-flight poll: no urls → no artifact flag, no done hint, empty side channel.
-    from cfgpu_mcp.tool_registry import _ARTIFACT_DONE_STATUS, annotate_artifact
+    # in-flight poll: no urls → no artifact flag, no done note, empty side channel.
+    from cfgpu_mcp.tool_registry import annotate_artifact
     out = split_structured(
         annotate_artifact({"task_id": "cgt-1", "status": "running"}),
         structured_keys=("usage", "payload"),
@@ -474,7 +509,6 @@ def test_task_result_pending_passes_through_split_without_flag():
     assert out.structuredContent is None
     content = json.loads(out.content[0].text)
     assert content == {"task_id": "cgt-1", "status": "running"}
-    assert content["status"] != _ARTIFACT_DONE_STATUS
 
 
 def test_reshape_vision_result_hoists_message_and_splits_reasoning():
@@ -561,6 +595,9 @@ def test_a_partial_result_is_not_announced_as_plain_success():
         "partial_errors": [{"index": 1, "code": "content_blocked", "message": "x"}],
     })
     assert full["artifact"] is True and partial["artifact"] is True
-    assert full["status"].startswith("Success.")
-    assert partial["status"].startswith("Partial success.")
-    assert "partial_errors" in partial["status"]
+    assert full["note"].startswith("Success.")
+    assert partial["note"].startswith("Partial success.")
+    assert "partial_errors" in partial["note"]
+    # Both are terminal. "Partial success" was a *status value* before, which invited
+    # exactly the re-poll the sentence warns against; the enum now says done either way.
+    assert full["status"] == partial["status"] == "succeeded"

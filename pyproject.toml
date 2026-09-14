@@ -38,6 +38,11 @@ dependencies = [
     "aiosqlite>=0.19",
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
+    # Schema migrations for the task store. Core rather than optional: every deployment
+    # mode opens that store on startup, and a store whose schema is one revision behind
+    # fails at the first query, not at an opt-in moment.
+    "alembic>=1.13",
+    "sqlalchemy>=2.0",
 ]
 
 [project.optional-dependencies]

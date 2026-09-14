@@ -45,7 +45,11 @@ class SeedanceVideoAdapter(ModelAdapter):
             or req.reference_videos
             or req.reference_audios
         )
-        if self.adapter_id == "wan-2-0-fast" and is_t2v and req.resolution in {"1080p", "4k"}:
+        if (
+            self.adapter_id == "wan-2-0-fast"
+            and is_t2v
+            and self.resolve_resolution(req) in {"1080p", "4k"}
+        ):
             corrected["resolution"] = "720p"
         return corrected
 
@@ -102,7 +106,7 @@ class SeedanceVideoAdapter(ModelAdapter):
             "content": content,
             "ratio": req.aspect_ratio,
             "duration": self.resolve_duration_seconds(req),
-            "resolution": req.resolution,
+            "resolution": self.resolve_resolution(req),
             "generate_audio": req.with_audio,
             "watermark": req.watermark,
         }
@@ -191,7 +195,7 @@ class SeedanceVideoAdapter(ModelAdapter):
         if (
             self.adapter_id == "wan-2-0-fast"
             and is_t2v
-            and req.resolution == "1080p"
+            and self.resolve_resolution(req) == "1080p"
         ):
             return False, (
                 "wan-2-0-fast does not support 1080p for text-to-video "

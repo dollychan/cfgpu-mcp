@@ -4,11 +4,16 @@ from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.task_manager import _ETA_KEY, Task
-from cfgpu_mcp.tool_registry import GenerateVideoInput, lean_result, stamp_echo
+from cfgpu_mcp.tool_registry import GenerateVideoInput, lean_result, pending_result, stamp_echo
 
 
 def _handle(task: "Task", *, forced: bool) -> dict[str, Any]:
     """The submission receipt: task_id, status, and the upstream's ETA if it gave one.
+
+    Built on ``pending_result`` rather than assembled by hand, so a receipt and a
+    timed-out wait agree on the base envelope — including ``elapsed_seconds``, which is
+    ~0 here and is kept anyway: a field that appears only sometimes is one a caller
+    learns to not rely on.
 
     ``next_step`` is spelled out because this is the whole point of the async shape —
     a caller that walks away without polling has produced a video nobody will collect.
@@ -16,7 +21,7 @@ def _handle(task: "Task", *, forced: bool) -> dict[str, Any]:
     and did not get to, and a tool that quietly ignores an argument is worse than one
     that explains why.
     """
-    out: dict[str, Any] = {"task_id": task.id, "status": task.status}
+    out: dict[str, Any] = pending_result(task.id, task.status, created_at=task.created_at)
     eta = task.payload.get(_ETA_KEY) or {}
     out.update({k: v for k, v in eta.items() if v is not None})
     out["next_step"] = f"用 task_status('{task.id}') 查询进度与结果"
@@ -38,7 +43,7 @@ async def generate_video(
     reference_audios: list[str] | None = None,
     duration_seconds: int | None = None,
     aspect_ratio: str = "adaptive",
-    resolution: str = "720p",
+    resolution: str | None = None,
     with_audio: bool = True,
     quality_tier: str = "balanced",
     watermark: bool = False,
@@ -122,21 +127,28 @@ async def generate_video(
             request_id=request_id,
             caption=caption,
             label=label,
+            row_id=task.id,
         )
 
     try:
-        task = await tm.wait(task, adapter, req, timeout=timeout)
+        task, last_error = await tm.wait(task, adapter, req, timeout=timeout)
     except CFGPUError as e:
         e.model_id = adapter.model_name
         e.request_id = request_id
         raise
 
+    # Same envelope as the wait=False receipt: a wait that ran out of budget, or that
+    # lost sight of the task, is still just "not done yet". ``next_step`` is repeated
+    # here for the same reason it exists there — this is now the shape a timed-out
+    # wait returns, and a caller that walks away leaves a paid-for video uncollected.
     if task.result is None:
-        return stamp_echo({"task_id": task.id, "status": task.status}, request_id=request_id, caption=caption, label=label)
+        pending = pending_result(task.id, task.status, last_error, created_at=task.created_at)
+        pending["next_step"] = f"用 task_status('{task.id}') 查询进度与结果"
+        return stamp_echo(pending, request_id=request_id, caption=caption, label=label, row_id=task.id)
 
     result = task.result
     # The real per-model API request is always surfaced, regardless of return_metadata.
     payload = task.public_payload()
     if not return_metadata:
-        return stamp_echo(lean_result(result, payload), request_id=request_id, caption=caption, label=label)
-    return stamp_echo({**result, "payload": payload}, request_id=request_id, caption=caption, label=label)
+        return stamp_echo(lean_result(result, payload), request_id=request_id, caption=caption, label=label, row_id=task.id)
+    return stamp_echo({**result, "payload": payload}, request_id=request_id, caption=caption, label=label, row_id=task.id)

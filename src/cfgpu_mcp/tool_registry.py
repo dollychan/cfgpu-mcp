@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated, Any, Literal, Optional
@@ -410,6 +411,21 @@ def label_field() -> Any:
 # word for the opposite behaviour would make a billing question ("did this send?")
 # answerable only by reading which spelling was used.
 
+# **The description below is read by a model, not by the integrator.** That distinction
+# was learned the hard way: it used to end with "intended for hosts that confirm with a
+# human before spending: validate first, show the approval, then call again without this
+# flag" — orchestration advice addressed to the host. The party that actually reads it is
+# the model choosing arguments, and a model that believes it is running the approval loop
+# follows that advice: it sends ``validate_only=true`` "to check first", announces the
+# preflight to the user, and then gets a real result back, because a host that preflights
+# owns this flag and overrides whatever the model wrote (deer-flow ``PreflightMiddleware``,
+# D2). The generation is real and billed; the user has just been told it was a dry run.
+#
+# So the description states **ownership**, and the orchestration recipe lives in
+# ``CLIENT_GUIDE.md`` where its reader is the integrator. The wording stays conditional
+# because this server has no way to know whether its caller preflights: a host that does
+# not is still free to use the flag, and for it the description is equally true.
+
 def validate_only_field() -> Any:
     """Declare the preflight switch (kept in one place so the four copies can't drift)."""
     return Field(
@@ -421,10 +437,13 @@ def validate_only_field() -> Any:
         "payload}` where `model_used` is the concrete model (so `model=\"auto\"` reports "
         "what routing picked) and `payload` is the exact request the real call would "
         "send. On any problem it raises the identical error the real call would, so a "
-        "pass here means the parameters are accepted. Intended for hosts that confirm "
-        "with a human before spending: validate first, show the approval, then call "
-        "again without this flag. Not a preview of the *output* — it says the request "
-        "is well-formed, not that generation will succeed.",
+        "pass here means the parameters are accepted. **This flag belongs to the calling "
+        "host, not to the model writing the arguments.** A host that preflights on your "
+        "behalf assigns it itself and ignores whatever you put here, so a call you send "
+        "with `validate_only=true` may well execute for real and be billed — leave it "
+        "unset and never describe a call as \"just a validation\" unless you are the host "
+        "running your own approval loop. Not a preview of the *output* — it says the "
+        "request is well-formed, not that generation will succeed.",
     )
 
 
@@ -511,7 +530,13 @@ class GenerateImageInput(BaseModel):
         "explicitly by models whose upstream API supports it. Not supported by "
         "gpt-image-2 / nano-banana models (ignored there).",
     )
-    wait: bool = Field(default=True, description="Wait for task completion before returning")
+    wait: bool = Field(
+        default=True,
+        description="Leave unset. The call waits for the task and returns the finished "
+        "artifact; submitting without waiting does not make anything faster, it only "
+        "costs you the result. (A few models are fixed-async and return a receipt "
+        "regardless — collect those with task_status(request_id).)",
+    )
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
     return_metadata: bool = Field(default=True, description="Include seed, model_used, usage in response")
     model_specific: Optional[dict] = Field(
@@ -526,7 +551,12 @@ class GenerateImageInput(BaseModel):
         "task_status/task_wait call. Use it to link an async result (whose tool_call id "
         "differs from this request's) back to this request. Unlike task_id it is known "
         "at call time and also works for synchronous models (which have no task_id). "
-        "Omitted from the response when not supplied.",
+        "It also **becomes** this task's id: if this call never returns (timeout, "
+        "connection drop, server restart), pass this same value to task_status to find "
+        "out what happened to it — and never resubmit before doing so, because the "
+        "generation may already have run and been charged for. Resending this call with "
+        "the same request_id is safe: it returns the existing task instead of "
+        "generating again. Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
     label: LabelStr = label_field()
@@ -625,14 +655,20 @@ class GenerateVideoInput(BaseModel):
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",
     )
-    resolution: Literal["480p", "720p", "1080p", "4k"] = Field(
-        default="720p",
-        description="Video resolution. Doubao Seedance 2.0 supports 480p/720p/1080p/4k; "
-        "Doubao Seedance 2.5 supports 480p/720p/1080p; Doubao Seedance 2.0 fast and "
-        "2.0 mini support 480p/720p only. 1080p is also supported by WAN 2.0, Doubao "
-        "Seedance 1.5 Pro, and HappyHorse (HappyHorse's own default is 1080p). "
-        "WAN 2.0 Fast does NOT support 1080p for text-to-video (only 480p/720p; 1080p works "
-        "only with an image/video input). HappyHorse does not support 480p (minimum 720p).",
+    resolution: Optional[Literal["480p", "720p", "768p", "1080p", "2k", "4k"]] = Field(
+        default=None,
+        description="Video resolution. None (the default) uses the selected model's own "
+        "default tier, so an omitted resolution never rules a model out of automatic "
+        "selection — pass a value only when you actually need that tier. The tiers are a "
+        "fleet-wide vocabulary and each model offers a subset: Doubao Seedance 2.0 "
+        "supports 480p/720p/1080p/4k; Doubao Seedance 2.5 supports 480p/720p/1080p; "
+        "Doubao Seedance 2.0 fast and 2.0 mini support 480p/720p only. 1080p is also "
+        "supported by WAN 2.0, Doubao Seedance 1.5 Pro, and HappyHorse (HappyHorse's own "
+        "default is 1080p). WAN 2.0 Fast does NOT support 1080p for text-to-video (only "
+        "480p/720p; 1080p works only with an image/video input). HappyHorse does not "
+        "support 480p (minimum 720p). 768p and 2k belong to MiniMax H3 alone; it also "
+        "offers 480p and defaults to 768p. No other model accepts 768p or 2k. Call "
+        "get_model_card or list_models for the chosen model's set.",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
@@ -646,7 +682,13 @@ class GenerateVideoInput(BaseModel):
         description="Use an LLM to rewrite and expand the prompt before generation. "
         "Used by WAN 2.6/2.7; disabling it reduces latency and preserves the original prompt.",
     )
-    wait: bool = Field(default=True, description="Wait for task completion before returning")
+    wait: bool = Field(
+        default=True,
+        description="Leave unset. The call waits for the task and returns the finished "
+        "artifact; submitting without waiting does not make anything faster, it only "
+        "costs you the result. (A few models are fixed-async and return a receipt "
+        "regardless — collect those with task_status(request_id).)",
+    )
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
     return_metadata: bool = Field(default=True, description="Include seed, model_used, usage in response")
     model_specific: Optional[dict] = Field(
@@ -661,7 +703,12 @@ class GenerateVideoInput(BaseModel):
         "task_status/task_wait call. Use it to link an async result (whose tool_call id "
         "differs from this request's) back to this request. Unlike task_id it is known "
         "at call time and also works for synchronous models (which have no task_id). "
-        "Omitted from the response when not supplied.",
+        "It also **becomes** this task's id: if this call never returns (timeout, "
+        "connection drop, server restart), pass this same value to task_status to find "
+        "out what happened to it — and never resubmit before doing so, because the "
+        "generation may already have run and been charged for. Resending this call with "
+        "the same request_id is safe: it returns the existing task instead of "
+        "generating again. Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
     label: LabelStr = label_field()
@@ -716,7 +763,13 @@ class GenerateAudioInput(BaseModel):
         "surprised, calm, fluent, or whisper. None lets the model infer emotion from text.",
     )
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
-    wait: bool = Field(default=True, description="Wait for task completion before returning")
+    wait: bool = Field(
+        default=True,
+        description="Leave unset. The call waits for the task and returns the finished "
+        "artifact; submitting without waiting does not make anything faster, it only "
+        "costs you the result. (A few models are fixed-async and return a receipt "
+        "regardless — collect those with task_status(request_id).)",
+    )
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
     return_metadata: bool = Field(default=True, description="Include model_used, usage in response")
     model_specific: Optional[dict] = Field(
@@ -731,7 +784,12 @@ class GenerateAudioInput(BaseModel):
         "task_status/task_wait call. Use it to link an async result (whose tool_call id "
         "differs from this request's) back to this request. Unlike task_id it is known "
         "at call time and also works for synchronous models (which have no task_id). "
-        "Omitted from the response when not supplied.",
+        "It also **becomes** this task's id: if this call never returns (timeout, "
+        "connection drop, server restart), pass this same value to task_status to find "
+        "out what happened to it — and never resubmit before doing so, because the "
+        "generation may already have run and been charged for. Resending this call with "
+        "the same request_id is safe: it returns the existing task instead of "
+        "generating again. Omitted from the response when not supplied.",
     )
     caption: CaptionStr = caption_field()
     label: LabelStr = label_field()
@@ -825,16 +883,34 @@ class UnderstandVisionInput(BaseModel):
         return self
 
 
+#: Shared by both task tools: they take the same handle and must describe it identically.
+#:
+#: It is spelled ``request_id`` rather than ``task_id`` because that is the value a caller
+#: can actually be holding. ``request_id`` is known *before* the call goes out and is the
+#: task row's key (``request-id-durability.md`` D1/I2), so it survives the one situation
+#: these tools exist for — a ``generate_*`` whose response never arrived. A ``task_id``, by
+#: contrast, only exists once the POST answered, which is exactly when a recovering caller
+#: has nothing.
+_TASK_HANDLE_DESCRIPTION = (
+    "The `request_id` you passed to generate_image / generate_video / generate_audio. It "
+    "is that task's key, so nothing else is needed to find it. This is the move to make "
+    "when a generate_* call did not come back with a result — it timed out, the connection "
+    "dropped, the server restarted: the generation may already have run and been charged "
+    "for, so query it here instead of resubmitting. If you supplied no request_id, that "
+    "call returned a `task_id` instead — pass that same value here."
+)
+
+
 class TaskStatusInput(BaseModel):
     """Query the status of an async generation task."""
 
-    task_id: str = Field(description="Task ID returned by generate_image or generate_video")
+    request_id: str = Field(description=_TASK_HANDLE_DESCRIPTION)
 
 
 class TaskWaitInput(BaseModel):
     """Wait for an async generation task to complete and return the result."""
 
-    task_id: str = Field(description="Task ID to wait for")
+    request_id: str = Field(description=_TASK_HANDLE_DESCRIPTION)
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto")
 
 
@@ -921,12 +997,71 @@ class NormalizedResult:
 
 # ── Artifact flagging ────────────────────────────────────────────────────────
 
-_ARTIFACT_DONE_STATUS = "Success. URLs already generated; no further task_status/task_wait polling needed."
-_ARTIFACT_PARTIAL_STATUS = (
+#: ``status`` is a machine enum and nothing else. Only three of these can appear in a
+#: tool result: a *failed* task leaves as an error dict (see ``_raise_if_failed``), so
+#: ``"failed"`` is a member callers must never wait for.
+TASK_STATUS_VALUES = ("succeeded", "running", "pending", "failed")
+
+#: The human-readable half, which used to occupy ``status`` itself. It has a real job —
+#: hosts that rewrite ``urls`` out of the LLM-facing content (DeerFlow's
+#: MaterialsMiddleware) leave the model with no in-content evidence that generation
+#: finished, and without this it keeps polling a task that is already done. But sharing
+#: a key with the enum made ``status`` answer to two types at once: ``status ==
+#: "succeeded"`` — the obvious test — was permanently false, while the only tests that
+#: worked parsed English prose for control flow. So the sentence moved to ``note`` and
+#: ``status`` got its key back.
+_ARTIFACT_DONE_NOTE = "Success. URLs already generated; no further task_status/task_wait polling needed."
+_ARTIFACT_PARTIAL_NOTE = (
     "Partial success. The URLs listed are already generated (no further "
     "task_status/task_wait polling needed), but some requested images failed — see "
     "partial_errors for which and why. Re-running is the only way to obtain them."
 )
+
+
+def pending_result(
+    task_id: str,
+    status: str,
+    last_error: dict[str, Any] | None = None,
+    *,
+    created_at: float | None = None,
+) -> dict[str, Any]:
+    """The non-terminal envelope: a task exists, no artifact yet, no error.
+
+    The single shape for "not done" across ``generate_*(wait=False)``,
+    ``generate_*(wait=True)`` that ran out of budget, ``task_status`` and
+    ``task_wait`` — so a caller distinguishes states by two booleans and one enum
+    (``error`` -> ``artifact`` -> ``status``) rather than by which tool it called.
+
+    ``task_id`` here is the **row** key, and it is the caller's handle only when that
+    caller supplied no ``request_id``: ``stamp_echo`` drops it otherwise, since the two
+    would be the same string under two names. Build the envelope with it regardless —
+    this function does not know whether an echo is coming, and the rule lives in one
+    place on purpose (see ``stamp_echo``'s ``row_id``).
+
+    ``last_error`` is present only when we stopped watching for a reason (see
+    ``TaskManager.wait``); its absence means polling was healthy and the job is
+    simply not finished. It stays in ``content`` rather than ``structuredContent``
+    because it is something the model must act on — fix a credential, stop polling,
+    tell the user — not host-only bookkeeping like ``usage`` / ``payload``.
+
+    ``elapsed_seconds`` — the task row's age — is the only fact a caller has about *how
+    long* this has been going on, and it is here because its absence was being filled in
+    by guesswork. A polling caller sees the same ``status: "pending"`` on its 1st and its
+    40th call — the two are indistinguishable — so an LLM narrates a duration it cannot
+    observe ("大概几分钟"). Nothing in this envelope ever licensed such a figure, and it is
+    reliably an underestimate: queue depth and run time differ by an order of magnitude
+    across the fleet, and no field here is an ETA. One measured number displaces the
+    invented one. Derived from ``created_at`` (epoch
+    seconds, written at insert), floored at 0 so clock skew between the writing and the
+    reading process cannot surface a negative age, and omitted entirely when the caller
+    has no timestamp to offer.
+    """
+    out: dict[str, Any] = {"task_id": task_id, "status": status}
+    if created_at is not None:
+        out["elapsed_seconds"] = int(max(0.0, time.time() - created_at))
+    if last_error:
+        out["last_error"] = last_error
+    return out
 
 
 def annotate_artifact(result: Any) -> Any:
@@ -947,16 +1082,20 @@ def annotate_artifact(result: Any) -> Any:
         return result
     if result.get("urls") or result.get("inline_media"):
         result["artifact"] = True
+        result["status"] = "succeeded"
         # A bare "Success." over a group where half the images were blocked reads as the
         # summary and would be believed; the model needs the qualifier next to the count.
-        result["status"] = (
-            _ARTIFACT_PARTIAL_STATUS if result.get("partial_errors") else _ARTIFACT_DONE_STATUS
+        # Note this stays a *note*, not a status: a partial group is still terminal, and
+        # spelling it as a third status value invited exactly the re-poll it warns against.
+        result["note"] = (
+            _ARTIFACT_PARTIAL_NOTE if result.get("partial_errors") else _ARTIFACT_DONE_NOTE
         )
     else:
         nested = result.get("result")
-        if isinstance(nested, dict) and nested.get("urls"):
+        if isinstance(nested, dict) and (nested.get("urls") or nested.get("inline_media")):
             result["artifact"] = True
-            result["status"] = _ARTIFACT_DONE_STATUS
+            result["status"] = "succeeded"
+            result["note"] = _ARTIFACT_DONE_NOTE
     return result
 
 
@@ -994,6 +1133,7 @@ def stamp_echo(
     request_id: str | None = None,
     caption: str | None = None,
     label: str | None = None,
+    row_id: str | None = None,
 ) -> Any:
     """Echo the caller's own handles onto a result dict (in place), if set.
 
@@ -1017,6 +1157,26 @@ def stamp_echo(
     failure back to its request is exactly what a correlation handle is for) but neither
     ``caption`` nor ``label`` — a failed call produced no artifact, so there is nothing
     to describe or name.
+
+    ``row_id`` is not an echo field — it is the task row's key, and it is here because
+    this function is the one place every caller-facing result passes through, which
+    makes it the only place the **single-handle rule** can be enforced without four
+    copies of it drifting apart:
+
+    - **A ``request_id`` means there is no second handle.** It *is* the row key
+      (``request-id-durability.md`` D1), so a sibling ``task_id`` carrying the same
+      string is a duplicate that teaches a model to carry the other name around.
+    - **Otherwise the handle is ``task_id``, and it is the row id.** Never the
+      upstream's — that one is internal (I6). It has to be rewritten rather than merely
+      trusted, because the success envelope is the stored ``NormalizedResult``, whose
+      ``task_id`` is whatever ``adapter.parse_response`` read out of the provider's
+      response. Left alone it hands the caller an id that queries nothing, and (2026-09-10,
+      production) does it *halfway through a job* whose earlier hop returned the row key
+      under the very same name.
+
+    Only ever rewritten, never introduced: ``return_metadata=False`` deliberately drops
+    the handle along with the rest of the metadata, and adding one back here would make
+    ``row_id`` a way to defeat that from a different file.
     """
     if not isinstance(result, dict):
         return result
@@ -1026,6 +1186,10 @@ def stamp_echo(
         result.setdefault("caption", caption)
     if label:
         result.setdefault("label", label)
+    if request_id:
+        result.pop("task_id", None)
+    elif row_id and "task_id" in result:
+        result["task_id"] = row_id
     return result
 
 

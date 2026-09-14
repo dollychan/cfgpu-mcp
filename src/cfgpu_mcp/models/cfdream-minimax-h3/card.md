@@ -122,8 +122,12 @@ MiniMax H3 本地权重，由自建 comfy-gateway 提供（不是 CFGPU 平台�
 
 ## 异步与超时
 
-异步模型：`generate_video` 默认 `wait=true` 会替你轮询；`wait=false` 则拿
-`task_id` 后自行 `task_status` / `task_wait`。
+**本模型固定异步**（`adapter.yaml` 的 `force_async: true`）：`generate_video` 无论 `wait`
+传什么都立刻返回回执，所以不必传 `wait`。
+
+用**提交时用的那个 `request_id`** 调 `task_status` / `task_wait` 取产物：任务以它为主键
+落库，同一个 `request_id` 重复提交只会返回既有任务、不会二次下单，而换一个新 id 重投就是
+二次计费。没有另一个 `task_id` 要等。
 
 单卡串行，同一时刻只跑一个任务，所以**排队时间可能远大于生成时间**。
 稳态 5s 视频 @480p 约 96s GPU，冷启动（换权重）再加约 47s；720p / 1080p 按像素数
@@ -131,7 +135,7 @@ MiniMax H3 本地权重，由自建 comfy-gateway 提供（不是 CFGPU 平台�
 （1080p + 15s，外推 ~20min）留的，不是常态耗时。
 
 超过 1500s 本侧会报 timeout，但**任务不会被取消** —— 网关那边跑完仍会落库，
-之后再 `task_status` 同一个 `task_id` 依然拿得到产物。
+之后再用同一个 `request_id` 调 `task_status` 依然拿得到产物。
 
 ## 产物有效期
 

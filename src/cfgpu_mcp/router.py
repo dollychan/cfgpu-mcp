@@ -19,6 +19,55 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+#: Weight of one ``quality_rank`` step in the "best" tier. cost_tier + speed_tier
+#: can reach 10 (both capped at 5), so a step of 11 guarantees that any declared
+#: rank outranks every undeclared model and that the rank order can never be
+#: overturned by a price difference between two ranked models.
+_QUALITY_RANK_STEP = 11
+
+
+def selection_key(
+    score: int, adapter: "ModelAdapter", quality_tier: str
+) -> tuple[int, int, int, str]:
+    """Ordering for ``model="auto"``: declared default, then score, preference, name.
+
+    **``default_for`` outranks the score; ``auto_priority`` does not.** The two look
+    similar and are deliberately different strengths:
+
+    - ``auto_priority`` is a **tie-break, not a bonus**. It must separate models the
+      score left level without ever outweighing a real scoring difference. Folded
+      into the score it would do exactly that: a video default carrying priority 2
+      would outrank the flagship proxy by a point in the "best" tier, handing a best
+      request to a model picked for being *fast*. As a later key it can only speak
+      when the earlier ones are silent.
+    - ``default_for`` is an **operator decision for one named quality tier**, so it
+      is allowed to overrule the heuristic — that is the whole point of writing it
+      down. The alternative for expressing "this is our default" was bending
+      ``speed_tier`` / ``cost_tier`` until the score agreed, which corrupts the
+      inputs: both feed *every* tier's score, so a number bent to win one tier
+      silently moves the others, and the YAML ends up asserting a latency or a price
+      that is not true. Scoping it to a tier is what keeps it from leaking: a model
+      declared the balanced default says nothing about "fast" or "best".
+
+    It is not a pin. ``select_model`` has already dropped every candidate whose
+    ``supports()`` refused the request, so a declared default that cannot serve this
+    particular call is simply not here, and the next-best candidate wins normally.
+
+    The trailing ``adapter_id`` keeps selection deterministic and independent of
+    registry/filesystem iteration order.
+
+    ``quality_tier`` is required rather than defaulted: it now changes the *first*
+    key, and a caller that omitted it would get a silently wrong ordering that
+    still looks like a valid ranking.
+    """
+    return (
+        0 if quality_tier in adapter.default_for else 1,
+        -score,
+        -adapter.auto_priority,
+        adapter.adapter_id,
+    )
+
+
 def _is_chinese(text: str) -> bool:
     return any(unicodedata.category(ch).startswith("Lo") for ch in text[:100])
 
@@ -152,9 +201,10 @@ class ModelRouter:
                 user_message="没有可用的模型支持当前请求，请检查参数或手动指定 model。",
                 original={},
             )
-        # Highest score wins; break ties deterministically by adapter_id so
-        # selection never depends on registry/filesystem iteration order.
-        scored.sort(key=lambda x: (-x[0], x[1].adapter_id))
+        # A model declared the default for this quality tier wins outright; failing
+        # that, highest score. See selection_key for the full ordering.
+        quality_tier = getattr(req, "quality_tier", "balanced")
+        scored.sort(key=lambda x: selection_key(x[0], x[1], quality_tier))
         return scored[0][1]
 
     def _score(
@@ -169,12 +219,18 @@ class ModelRouter:
         if quality_tier == "fast":
             score += adapter.speed_tier * 2 - adapter.cost_tier
         elif quality_tier == "best":
-            # No model declares an explicit quality flag, so use cost_tier as a
-            # proxy: pricier models tend to be the higher-quality flagships.
+            # quality_rank is the explicit flagship declaration. cost_tier stays as
+            # the proxy for models that declare none (every video and audio model
+            # today): pricier tends to mean flagship — but only tends to, which is
+            # why a declared rank always wins over it.
+            score += adapter.quality_rank * _QUALITY_RANK_STEP
             score += adapter.cost_tier * 2
             score += adapter.speed_tier - adapter.cost_tier
         else:  # balanced (and understand)
             score += adapter.speed_tier - adapter.cost_tier
+
+        # NOTE: auto_priority is deliberately *not* added here — it is a tie-break
+        # applied after the score, see selection_key.
 
         # Reference media capability bonus
         if isinstance(req, GenerateImageInput):
@@ -182,6 +238,14 @@ class ModelRouter:
                 "multi_image_fusion" in adapter.capabilities
                 or "multi_image_group" in adapter.capabilities
             ):
+                score += 3
+            # n > 1 asks for a 组图. A model without the capability does not fail — n is
+            # a compatibility hint it silently ignores and it returns a single image —
+            # so nothing downstream can catch a mismatch here. That makes this a real
+            # preference rather than a tie-break, at the same magnitude as the fusion
+            # bonus. (It matters now that auto_priority pins 5.0 Pro, the one Seedream
+            # *without* the capability, as the default pick.)
+            if req.n > 1 and "multi_image_group" in adapter.capabilities:
                 score += 3
             # Region editing does not need to be *filtered* for here — supports() already
             # rejects every model without the capability, so a regions request cannot

@@ -10,4 +10,4 @@ cost_tier: 2
 speed_tier: 4
 
 poll_config:
-  default_timeout: 300
+  default_timeout: 1800

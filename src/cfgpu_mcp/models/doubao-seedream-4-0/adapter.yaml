@@ -5,3 +5,6 @@ adapter_id: doubao-seedream-4-0
 display_name: "Doubao Seedream 4.0"
 cfgpu_model_id: doubao-seedream-4-0-250828
 model_name: doubao-seedream-4-0
+
+# Superseded by 5.0; zeroed rather than inherited from doubao-seedream-5-0-lite (1).
+auto_priority: 0

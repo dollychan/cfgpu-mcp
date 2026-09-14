@@ -86,7 +86,7 @@ class WanVideoAdapter(ModelAdapter):
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
         parameters: dict = {
-            "resolution": req.resolution.upper(),   # 720p → 720P
+            "resolution": self.resolve_resolution(req).upper(),   # 720p → 720P
             "prompt_extend": req.prompt_extend,
             "watermark": req.watermark,
             "duration": self.resolve_duration_seconds(req),
@@ -113,7 +113,8 @@ class WanVideoAdapter(ModelAdapter):
         # Poll response uses camelCase taskStatus with UPPERCASE values (SUCCEEDED).
         output = self._output(resp)
         status = (output.get("taskStatus") or output.get("task_status") or "running").lower()
-        # "canceled" and "unknown" aren't in task_manager's _STATUS_MAP; collapse to failed
+        # "canceled" / "unknown" are terminal here. _STATUS_MAP collapses them centrally
+        # as well; this line keeps the upstream's documented vocabulary next to the card.
         if status in ("canceled", "unknown"):
             return "failed"
         return status

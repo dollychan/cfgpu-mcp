@@ -4,7 +4,7 @@
 # Directory name flattens the slash in model_name — same convention as
 # minimax-speech-2-8-hd / MiniMax/speech-2.8-hd.
 adapter_id: cfdream-minimax-h3
-display_name: "MiniMax H3"
+display_name: "MiniMax H3 (Comfy Gateway)"
 cfgpu_model_id: cfdream/minimax-h3      # the `model` field sent to the gateway
 model_name: cfdream/minimax-h3          # the only public identifier
 

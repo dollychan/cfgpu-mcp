@@ -10,6 +10,11 @@ ErrorType = Literal[
     "invalid_params",
     "model_unavailable",
     "task_failed",
+    # The upstream accepted (and therefore likely billed) the submission, but the handle
+    # needed to collect its result did not survive. Deliberately not "task_failed": the
+    # task did not fail, and it is deliberately not retryable — resending is precisely
+    # the move that turns one charge into two.
+    "submission_lost",
     "auth",
     "timeout",
     "unknown",
@@ -67,6 +72,7 @@ class CFGPUError(Exception):
         model_id: str | None = None,
         request_id: str | None = None,
         card_hint: bool | None = None,
+        outcome_unknown: bool = False,
     ) -> None:
         super().__init__(user_message)
         self.error_type: ErrorType = error_type
@@ -91,6 +97,23 @@ class CFGPUError(Exception):
         #
         # It can only ever suppress: a type that has no hint never gains one.
         self.card_hint: bool | None = card_hint
+        # "The upstream may have accepted (and billed) this request, and there is
+        # nothing on this side to reconcile it against."
+        #
+        # Both halves are required, and the second one is what has narrowed. The flag
+        # was written for a request-phase timeout on a submit POST, back when
+        # ``TaskManager.create`` POSTed *before* writing the task row: no task_id came
+        # back and no row existed, so the question had no answer anywhere. Rows are now
+        # written before the POST (see request-id-durability.md I1), so that case has a
+        # row — one sitting in ``dispatching``, which says "may have been sent" far more
+        # precisely than a boolean can — and ``TaskManager._record_submit_failure``
+        # clears the flag as it hands back the id to query.
+        #
+        # What is left for it is the residual hole: the row write itself failing. Do not
+        # widen it back out. Every other error answers "did this take effect?"
+        # definitively, and collapsing an answerable case into this flag costs the
+        # caller its next move.
+        self.outcome_unknown: bool = outcome_unknown
 
     def __repr__(self) -> str:
         return f"CFGPUError(type={self.error_type!r}, retryable={self.retryable}, msg={self.user_message!r})"
@@ -130,6 +153,7 @@ class CFGPUError(Exception):
             "task_failed": f"任务执行失败：{raw_msg}",
             "auth": "API Token 无效或已过期，请检查 CFGPU_API_TOKEN。",
             "timeout": "等待超时，任务可能仍在运行，可用 task_status 查询。",
+            "submission_lost": f"提交已被上游接受但结果无法取回：{raw_msg}",
             "unknown": f"未知错误（HTTP {status}）：{raw_msg}",
         }
         return CFGPUError(
@@ -152,24 +176,40 @@ class CFGPUError(Exception):
         if self.model_id:
             result["model_id"] = self.model_id
         # Surface task_id (carried in ``original`` by task_failed / timeout errors)
-        # so the caller can re-query or report the exact failed task.
+        # so the caller can re-query or report the exact failed task — but only when
+        # there is no ``request_id`` below, which is the same value under a name the
+        # caller already knows (``request-id-durability.md`` D1). Two keys holding one
+        # string is how a caller learns to carry the one that stops being true; see
+        # ``tool_registry.stamp_echo``, which enforces the same single-handle rule on
+        # every success and pending envelope. The surviving case is worth keeping: a
+        # "Task 'x' not found" carries the id that was asked for and no request_id,
+        # because no row was there to hold one.
         task_id = self.original.get("task_id")
-        if task_id:
+        if task_id and not self.request_id:
             result["task_id"] = task_id
+        # Which half of an HTTP timeout this was. "connect" is provably before any
+        # byte reached the upstream; "request" means the bytes went out and the
+        # answer did not come back. Only the second one can leave work behind, so a
+        # caller deciding whether to resend needs it — and reading it out of prose
+        # is exactly what a structured field is for.
+        phase = self.original.get("phase")
+        if phase:
+            result["phase"] = phase
+        if self.outcome_unknown:
+            result["outcome_unknown"] = True
         # Echo the caller's correlation handle so a failed generate/task can be joined
         # back to the originating request (works even for sync models with no task_id).
         if self.request_id:
             result["request_id"] = self.request_id
         return result
 
-    @staticmethod
-    def timeout(task_id: str, elapsed: int) -> "CFGPUError":
-        return CFGPUError(
-            error_type="timeout",
-            user_message=f"等待超时（{elapsed}s），任务 {task_id} 可能仍在运行，可用 task_status 查询。",
-            original={"task_id": task_id, "elapsed": elapsed},
-            retryable=False,
-        )
+    # NOTE: there used to be a ``CFGPUError.timeout(task_id, elapsed)`` constructor for
+    # "the wait ran out but the task is alive". That case no longer produces an error at
+    # all — ``TaskManager.wait`` hands the task back as a non-terminal result instead
+    # (see ``WaitOutcome``), because an ``error: True`` about a healthy running job is
+    # what forced callers to reconstruct "is this over?" from ``error_type`` x
+    # ``task_id``. The constructor is gone rather than merely unused so it cannot be
+    # reached for again.
 
 
 def tool_error_dict(e: Exception) -> dict:

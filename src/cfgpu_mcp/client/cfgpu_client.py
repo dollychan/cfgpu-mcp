@@ -4,12 +4,15 @@ import asyncio
 import json as _json
 import logging
 import os
-import aiohttp
+import time
 
-logger = logging.getLogger(__name__)
+import aiohttp
 
 from cfgpu_mcp.context import get_request_token
 from cfgpu_mcp.errors import CFGPUError
+from cfgpu_mcp.settings import DEFAULT_PROVIDER
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://www.cfgpu.com/userapi/v1"
 
@@ -27,8 +30,9 @@ DEFAULT_CONNECT_TIMEOUT = 10.0
 # depends on the deployment's transitive dependencies — and if that decode then
 # fails, aiohttp raises ContentEncodingError("Can not decode content-encoding:
 # br"), which surfaces as a bogus "网络请求失败" on an otherwise healthy poll.
-# Submodel sits behind Cloudflare, which brotli-encodes JSON as soon as the
-# client offers `br`, so that path was live in production.
+# The case that surfaced it was a Cloudflare-fronted provider (the since-retired
+# `submodel` host), which brotli-encodes JSON as soon as the client offers `br`.
+# That provider is gone; the pin is not host-specific and stays.
 #
 # Every body here is small JSON (a task envelope, a URL); gzip already covers it
 # and is stdlib-backed, so pinning the set costs nothing and makes the wire
@@ -101,6 +105,99 @@ class CFGPUClient:
             raise CFGPUError(error_type="auth", user_message=msg, original={})
         return token
 
+    def _timeout_setting_path(self, field: str = "http_timeout") -> str:
+        """The config.yaml key that actually governs *this* client's ``field``.
+
+        Only the built-in ``cfgpu`` provider reads ``cfgpu_api.*``. Every other
+        provider carries its own, and ``config.get_client`` prefers it whenever it
+        is set — so naming the top-level key in a non-cfgpu timeout sends the
+        reader to a knob that changes nothing for the model that just failed. They
+        raise it, retry, time out identically, and now distrust the message. Same
+        discipline as ``card_hint``: a remedy that cannot work is worse than no
+        remedy.
+        """
+        if self._provider == DEFAULT_PROVIDER:
+            return f"cfgpu_api.{field}"
+        return f"providers.{self._provider}.{field}"
+
+    def _timeout_error(
+        self, exc: BaseException, url: str, elapsed: float, method: str = "GET"
+    ) -> CFGPUError:
+        """Turn an aiohttp timeout into an error that names the phase that failed.
+
+        ``aiohttp.ConnectionTimeoutError`` — DNS, TCP and TLS, i.e. everything
+        before a byte is sent — subclasses ``asyncio.TimeoutError`` just like the
+        total-budget timeout does, so one handler catches both. Reporting both
+        with ``timeout.total`` printed a number that had not elapsed and pointed
+        at ``http_timeout``, a knob that cannot move a connect failure: raised
+        120 → 300, retried, failed in the same 10 seconds, and the message was
+        now twice wrong. (2026-09-02, MiniMax-H3 on cfgpu-daily: the server could
+        not reach the daily host at all; the log gap was exactly
+        ``connect_timeout``.) Same discipline as ``_timeout_setting_path``.
+
+        ``elapsed`` is measured, not read off the config — it is the one number
+        that distinguishes the two cases without trusting this classification.
+
+        ``method`` and the phase together decide ``retryable``, which at the agent
+        boundary means one specific thing: *is resending this request safe?*
+
+        - **connect phase** — DNS/TCP/TLS never completed, so the upstream received
+          nothing whatever the verb was. Safe to resend.
+        - **request phase on a GET** — polling is idempotent; asking again costs
+          nothing and creates nothing.
+        - **request phase on a POST** — the bytes went out and the answer did not
+          come back. Upstream may have accepted the job and started billing, so
+          resending is a coin flip on a double charge and this is the one timeout that
+          is not retryable.
+
+        It also sets ``outcome_unknown``. This layer knows only the transport facts and
+        cannot see whether anything was recorded, so it reports the honest worst case;
+        ``TaskManager._record_submit_failure`` — which does know a row was written
+        before the POST — clears the flag and names the id to query. Keeping the two
+        apart is why the sentence below no longer claims there is nothing to reconcile:
+        on a submit path there now always is.
+        """
+        connect_phase = isinstance(exc, aiohttp.ConnectionTimeoutError)
+        budget = self._timeout.connect if connect_phase else self._timeout.total
+        field = "connect_timeout" if connect_phase else "http_timeout"
+        if connect_phase:
+            detail = (
+                f"{elapsed:.1f}s 内没能与 provider {self._provider!r} 建立连接"
+                f"（DNS / TCP / TLS 都在这一步，上游还没收到任何请求）。"
+                "这通常是这台机器到该上游的网络不通，而不是上游慢 —— "
+                f"增大 {self._timeout_setting_path()} 不会有任何作用。"
+                f"请先确认本机能否访问 {self._base_url}，再考虑在 config.yaml 增大 "
+                f"{self._timeout_setting_path(field)}。"
+            )
+        else:
+            detail = (
+                f"请求超时（已耗时 {elapsed:.1f}s，上限 {budget}s，"
+                f"provider {self._provider!r}），请稍后重试或在 config.yaml 增大 "
+                f"{self._timeout_setting_path(field)}。"
+            )
+        # A submit whose response was lost is the only case that can have left
+        # billed work behind under a task_id nobody will ever see.
+        indeterminate = not connect_phase and method.upper() == "POST"
+        if indeterminate:
+            detail += (
+                "（请求已经发出但没等到回应，上游可能已经受理并开始计费，"
+                "本服务没有拿到 task_id。重发有重复计费的风险。）"
+            )
+        return CFGPUError(
+            error_type="timeout",
+            user_message=detail,
+            original={
+                "url": url,
+                "phase": "connect" if connect_phase else "request",
+                "method": method.upper(),
+                "elapsed": round(elapsed, 1),
+                "timeout": budget,
+                "provider": self._provider,
+            },
+            retryable=not indeterminate,
+            outcome_unknown=indeterminate,
+        )
+
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(timeout=self._timeout)
@@ -109,10 +206,23 @@ class CFGPUClient:
     async def post(self, path: str, json: dict) -> dict:
         return await self._request("POST", path, json=json)
 
-    async def get(self, path: str) -> dict:
-        return await self._request("GET", path)
+    async def get(self, path: str, *, raise_on_body_error: bool = True) -> dict:
+        """GET, optionally letting an HTTP-200 body error through to the caller.
 
-    async def _request(self, method: str, path: str, **kwargs) -> dict:
+        ``raise_on_body_error=False`` is what ``TaskManager.poll`` passes. On a poll
+        the transport succeeded — HTTP 200, the upstream answered — and the body *is*
+        the task record, so its ``error`` field is the task's verdict, not this call's
+        failure. Raising it here made a dead task indistinguishable from an unreachable
+        one: ``wait()`` absorbed it as a transient poll failure and handed back
+        ``status: "running"``, and ``get_status``'s re-poll swallowed it as transient
+        and returned the stale running row — forever. Deciding that belongs to the layer
+        that knows what a task record looks like.
+        """
+        return await self._request("GET", path, raise_on_body_error=raise_on_body_error)
+
+    async def _request(
+        self, method: str, path: str, *, raise_on_body_error: bool = True, **kwargs
+    ) -> dict:
         url = f"{self._base_url}/{path.lstrip('/')}"
         if method == "POST" and os.getenv("CFGPU_DRY_RUN"):
             logger.info("DRY-RUN POST %s\n%s", url, _json.dumps(kwargs.get("json", {}), ensure_ascii=False, indent=2))
@@ -122,6 +232,7 @@ class CFGPUClient:
             "Accept-Encoding": ACCEPT_ENCODING,
         }
         session = await self._get_session()
+        started = time.monotonic()
         try:
             async with session.request(method, url, headers=headers, **kwargs) as resp:
                 body: dict = {}
@@ -133,7 +244,8 @@ class CFGPUClient:
                 if not isinstance(body, dict):
                     body = {"_raw": body}
 
-                if not resp.ok or (isinstance(body.get("error"), dict) and body["error"]):
+                body_error = isinstance(body.get("error"), dict) and bool(body["error"])
+                if not resp.ok or (body_error and raise_on_body_error):
                     raise CFGPUError.from_http_response(resp.status, body)
                 # Full response logging — DEBUG by default; INFO (pretty-printed)
                 # when CFGPU_LOG_RESPONSES is set, to verify adapter / card.md.
@@ -148,11 +260,8 @@ class CFGPUClient:
         except CFGPUError:
             raise
         except asyncio.TimeoutError as e:
-            raise CFGPUError(
-                error_type="timeout",
-                user_message=f"请求超时（{self._timeout.total}s），请稍后重试或在 config.yaml 增大 cfgpu_api.http_timeout。",
-                original={"url": url, "timeout": self._timeout.total},
-                retryable=True,
+            raise self._timeout_error(
+                e, url, elapsed=time.monotonic() - started, method=method
             ) from e
         except aiohttp.ClientError as e:
             raise CFGPUError(
