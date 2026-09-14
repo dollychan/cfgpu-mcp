@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
 from cfgpu_mcp.client.cfgpu_client import CFGPUClient
-from cfgpu_mcp.client.canvas_repo import CanvasRepository
 from cfgpu_mcp.client.repository import TaskRepository, create_task_repository
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.settings import DEFAULT_PROVIDER, Settings, load_settings
@@ -21,13 +20,11 @@ _settings: Settings | None = None
 _registry: AdapterRegistry | None = None
 _clients: dict[str, CFGPUClient] = {}   # provider name → client (one pool each)
 _repo: TaskRepository | None = None
-_canvas_repo: CanvasRepository | None = None
 
 # Serializes the async repo singleton init: without it, a burst of concurrent
 # tool calls all see _repo is None and each open a repository / run schema DDL,
 # racing on Postgres' CREATE TABLE (pg_type unique index → "duplicate key").
 _repo_lock = asyncio.Lock()
-_canvas_repo_lock = asyncio.Lock()
 
 
 def get_settings() -> Settings:
@@ -154,28 +151,12 @@ async def get_task_repository() -> TaskRepository:
     return _repo
 
 
-async def get_canvas_repository() -> CanvasRepository:
-    """Return the lazy singleton read-only canvas repository."""
-    global _canvas_repo
-    if _canvas_repo is None:
-        async with _canvas_repo_lock:
-            if _canvas_repo is None:
-                settings = get_settings().canvas_db
-                if settings is None:
-                    raise RuntimeError("canvas_db is not configured")
-                _canvas_repo = await CanvasRepository.connect(settings)
-    return _canvas_repo
-
-
 async def close() -> None:
     """Close shared resources (call on shutdown)."""
-    global _repo, _canvas_repo
+    global _repo
     for client in list(_clients.values()):
         await client.close()
     _clients.clear()
     if _repo:
         await _repo.close()
         _repo = None
-    if _canvas_repo:
-        await _canvas_repo.close()
-        _canvas_repo = None

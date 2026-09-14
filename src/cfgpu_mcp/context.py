@@ -15,7 +15,6 @@ from __future__ import annotations
 from contextvars import ContextVar, Token
 
 _request_token: ContextVar[str | None] = ContextVar("cfgpu_api_token", default=None)
-_project_id: ContextVar[str | None] = ContextVar("cfdream_project_id", default=None)
 
 
 def set_request_token(token: str | None) -> Token:
@@ -31,18 +30,3 @@ def reset_request_token(token: Token) -> None:
 def get_request_token() -> str | None:
     """Current request's token, or None when unset (stdio / outside a request)."""
     return _request_token.get()
-
-
-def set_project_id(project_id: str | None) -> Token:
-    """Bind the authoritative canvas project for the current HTTP request."""
-    return _project_id.set(project_id)
-
-
-def reset_project_id(token: Token) -> None:
-    """Restore the previous project binding after a request completes."""
-    _project_id.reset(token)
-
-
-def get_project_id() -> str | None:
-    """Current request's project identity, or None outside streamable HTTP."""
-    return _project_id.get()

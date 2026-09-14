@@ -91,8 +91,6 @@ pip install "cfgpu-mcp[cli]"
 
 > 模型黑名单（`disabled_models`）、工具黑名单（`disabled_tools`）、API base URL、超时、`task_db.url`、`transport` 等均只在 **config.yaml** 配置（见 `config.example.yaml`），不再有环境变量 override。需要从环境读 DB URL 时，在 `task_db.url` 写 `$DATABASE_URL`。
 
-启用 `inspect_canvas` 时，在 `config.yaml` 配置只读 `canvas_db`（见模板）。其 `host`、`port`、`database`、`user`、`password` 均可用 `$ENV_VAR` 引用由 `CFGPU_DOTENV` 加载的环境变量；HTTP 调用还必须提供 `X-Cfdream-Project-Id`，项目身份不会成为工具参数。
-
 ## CLI 用法
 
 ```bash

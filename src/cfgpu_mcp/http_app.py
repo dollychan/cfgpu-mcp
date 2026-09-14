@@ -22,12 +22,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from cfgpu_mcp import config
-from cfgpu_mcp.context import (
-    reset_project_id,
-    reset_request_token,
-    set_project_id,
-    set_request_token,
-)
+from cfgpu_mcp.context import reset_request_token, set_request_token
 
 logger = logging.getLogger(__name__)
 
@@ -49,15 +44,6 @@ def _token_from_scope(scope: dict) -> str | None:
     return None
 
 
-def _project_id_from_scope(scope: dict) -> str | None:
-    """Extract the request's authoritative canvas project header."""
-    for key, value in scope.get("headers") or []:
-        if key == b"x-cfdream-project-id":
-            project_id = value.decode("latin-1").strip()
-            return project_id or None
-    return None
-
-
 class RequestContextMiddleware:
     """Pure-ASGI middleware: token binding (http) + resource cleanup (lifespan)."""
 
@@ -67,11 +53,9 @@ class RequestContextMiddleware:
     async def __call__(self, scope, receive, send) -> None:
         if scope["type"] == "http":
             token = set_request_token(_token_from_scope(scope))
-            project_id = set_project_id(_project_id_from_scope(scope))
             try:
                 await self.app(scope, receive, send)
             finally:
-                reset_project_id(project_id)
                 reset_request_token(token)
             return
 
