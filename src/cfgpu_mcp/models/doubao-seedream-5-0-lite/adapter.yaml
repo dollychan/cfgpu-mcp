@@ -16,3 +16,9 @@ capabilities:
 
 cost_tier: 2
 speed_tier: 3
+
+# Second choice for model="auto" behind 5.0 Pro (2): taken whenever supports()
+# rules Pro out — 3K/4K, 组图 n>1, 联网搜索 — none of which Pro offers. 4.0 / 4.5
+# extend this file and zero it back out, so the fallback is the newest lite rather
+# than the alphabetically first name.
+auto_priority: 1

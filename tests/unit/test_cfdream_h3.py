@@ -244,8 +244,10 @@ def test_declared_resolution_list_rejects_the_new_seedance_4k_tier(t2v):
     """The fleet enum includes Seedance 2.0's 4k, while H3 remains capped at 1080p."""
     from typing import get_args
 
-    fleet = set(get_args(GenerateVideoInput.model_fields["resolution"].annotation))
-    assert fleet == {"480p", "720p", "1080p", "4k"}
+    # Optional[Literal[...]] — get_args gives (Literal[...], NoneType), so unwrap.
+    annotation = GenerateVideoInput.model_fields["resolution"].annotation
+    fleet = set(get_args(get_args(annotation)[0]))
+    assert fleet == {"480p", "720p", "768p", "1080p", "2k", "4k"}
     assert set(t2v.resolutions) == {"480p", "720p", "1080p"}
 
     ok, reason = t2v.supports(GenerateVideoInput(prompt="x", resolution="4k"))

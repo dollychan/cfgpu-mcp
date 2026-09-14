@@ -122,7 +122,11 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
 单卡串行，同一时刻只跑一个任务，排队时间可能远大于生成时间。
 稳态 5s 视频约 96s GPU；**从 `cfdream/minimax-h3` 切换过来要换权重**，
 那一单会额外多约 47s；720p / 1080p 按像素数成倍往上。本侧轮询上限 1500s，超时不取消任务 ——
-网关那边跑完仍会落库，之后再 `task_status` 同一个 `task_id` 依然拿得到产物。
+网关那边跑完仍会落库，之后再用同一个 `request_id` 调 `task_status` 依然拿得到产物。
+
+**本模型固定异步**（继承自 `cfdream/minimax-h3` 的 `force_async: true`）：`generate_video`
+无论 `wait` 传什么都立刻返回回执，不必传 `wait`；凭 `request_id` 取产物，没有另一个
+`task_id` 要等。
 
 ## 产物有效期
 

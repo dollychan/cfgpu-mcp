@@ -385,6 +385,42 @@ async def test_validate_only_rejects_what_supports_would_reject():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["kling-video-o1", "kling-v3-omni"])
+async def test_kling_preflight_pins_the_sound_switch(model):
+    """`with_audio` reaches corrected_args even when the caller never mentioned it.
+
+    Kling maps it to a real `sound` field and its card documents no upstream default,
+    so the schema's silent `True` is the whole decision. A host that shows an approval
+    card built from the caller's arguments would otherwise show no audio row at all.
+    """
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="海浪", model=model, validate_only=True
+        )
+
+    assert result["corrected_args"]["with_audio"] is True
+    assert result["payload"]["sound"] == "on"
+
+
+@pytest.mark.asyncio
+async def test_only_kling_pins_with_audio():
+    """The pin is per-model, not a fleet-wide change to corrected_args.
+
+    Seedance also honours the flag (as `generate_audio`), so this is a deliberate
+    scoping decision rather than an oversight: widening it is a call to make against
+    each card, not a side effect of touching one adapter.
+    """
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="海浪", model="doubao-seedance-2-0", validate_only=True
+        )
+
+    assert "with_audio" not in result["corrected_args"]
+
+
+@pytest.mark.asyncio
 async def test_validate_only_corrects_an_unsupported_resolution():
     """A safe enum fallback is applied to the payload and made reproducible."""
     a, b, c = _patched_real_registry(_client(), AsyncMock())
@@ -554,7 +590,9 @@ def test_every_image_model_reports_safe_enum_fallbacks(model, resolution, aspect
         ("cf-imagine-video-1.5", {}, "1080p"),
         ("cfdream/minimax-h3", {}, "1080p"),
         ("cfdream/minimax-h3-r2v", {"reference_images": ["m_image"]}, "1080p"),
-        ("submodel/minimax-h3", {"aspect_ratio": "16:9"}, "1080p"),
+        # Not 1080p: this model offers 480p/768p/2k, so the nearest
+        # tier at or below 4k is its own 2k.
+        ("MiniMax-H3", {"aspect_ratio": "16:9"}, "2k"),
     ],
 )
 def test_every_video_model_checks_4k_against_its_resolution_set(
@@ -887,3 +925,31 @@ async def test_vision_validate_only_rejects_what_the_billed_path_rejects():
             regions=[{"image_index": 3, "box": [0.1, 0.1, 0.2, 0.2], "label": "标记1"}],
             validate_only=True,
         )
+
+
+# ── the description's reader is the model ─────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "input_model",
+    [GenerateImageInput, GenerateVideoInput],
+    ids=["image", "video"],
+)
+def test_the_description_states_ownership_instead_of_prescribing_the_approval_loop(input_model):
+    """Pins a *string*, deliberately — the string is the fix.
+
+    The description used to close with orchestration advice for the integrator ("validate
+    first, show the approval, then call again without this flag"). Its actual reader is the
+    model choosing arguments; one that believes it runs the approval loop follows that
+    advice, announces "I'll preflight this" to the user, and then receives a real, billed
+    generation, because a host that preflights owns this flag and overrides the model's
+    value. Ownership has to be stated where the model reads, or the takeover is a surprise.
+
+    Asserted as two halves so a rewrite of the wording is free but dropping either half is
+    not: the ownership claim, and the consequence that makes it actionable (it may bill).
+    """
+    description = input_model.model_fields["validate_only"].description
+
+    assert "belongs to the calling host" in description
+    assert "billed" in description.split("belongs to the calling host", 1)[1]
+    assert "show the approval" not in description, "the orchestration recipe belongs in CLIENT_GUIDE.md, not in a model-facing schema"

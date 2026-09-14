@@ -48,7 +48,7 @@
 | resolution + aspect_ratio | size | 映射成像素 `宽x高`，`aspect_ratio=adaptive` 时按 16:9 处理 |
 | quality_tier | mode | `best` → `pro`，其余 → `std` |
 | duration_seconds | seconds | 转成字符串透传；不支持 `-1` 智能时长 |
-| with_audio | sound | `true` → `on`，`false` → `off` |
+| with_audio | sound | `true` → `on`，`false` → `off`。**preflight 会把它钉进 `corrected_args`**：`sound` 在本模型是真实请求字段（万相 2.6/2.7、HappyHorse 压根不发它），而上表里 `sound` 的默认值是「-」—— 上游没有默认值，所以统一 Schema 那个静默的 `true` 就是全部决定。不钉住的话，按调用方原始参数生成的审批卡上根本没有音频这一行 |
 | first_frame | image_list[] | `{"image": url, "type": "first_frame"}` |
 | last_frame | image_list[] | `{"image": url, "type": "end_frame"}`；需与 `first_frame` 同时给出 |
 | reference_images | image_list[] | `{"image": url}`（不带 `type`） |

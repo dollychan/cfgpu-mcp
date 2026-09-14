@@ -68,12 +68,13 @@ Tool-specific parameters are documented in each model's skill / card. Key ones:
   "urls": ["https://.../output.mp4"],
   "expires_at": "2026-06-25T12:00:00Z",
   "artifact": true,
-  "status": "Success. URLs already generated; no further task_status/task_wait polling needed.",
+  "status": "succeeded",
+  "note": "Success. URLs already generated; no further task_status/task_wait polling needed.",
   "model_used": "...", "seed": 15233            // when return_metadata=true
 }
 ```
 
-Give the user the `urls`. **Warn that links expire (~24 h) — download promptly.** When you see `artifact: true` + the success `status`, generation is **done** — do not keep polling `task_status`/`task_wait`. (`usage`/`payload` are routed to `structuredContent`, a client side-channel, so you may not see them in content — that's expected.)
+Give the user the `urls`. **Warn that links expire (~24 h) — download promptly.** When you see `artifact: true`, generation is **done** — do not keep polling `task_status`/`task_wait`. (`usage`/`payload` are routed to `structuredContent`, a client side-channel, so you may not see them in content — that's expected.)
 
 ### Vision understanding (`understand_vision`)
 
@@ -91,14 +92,42 @@ task_status({ "task_id": "cgt-..." })                 // → status snapshot (se
 task_wait({ "task_id": "cgt-...", "timeout": 600 })   // blocks, then final result
 ```
 
-`task_status` / `task_wait` return `{ "task_id", "status", "result", "error" }`. Normalized `status` is one of:
+`task_status` / `task_wait` return the **same shape as `generate_*`**: on success the flat
+result above (`urls` + `artifact: true`), otherwise `{ "task_id", "status" }`.
 
-| status | meaning | what to do |
-|---|---|---|
-| `pending` | queued, not started | keep waiting / `task_wait` |
-| `running` | in progress | keep waiting / `task_wait` |
-| `succeeded` | done | read `result.urls` |
-| `failed` | terminal failure | read `error` — do **not** retry the same `task_id` |
+### Is this request finished? — one rule for all three tools
+
+Check in this order:
+
+1. `error: true` → **finished.** It failed, or the request never took effect.
+2. `artifact: true` → **finished, succeeded.** `urls` / `inline_media` are right there.
+3. otherwise → **not finished.** Call `task_status(task_id)` again.
+
+`status` is a machine enum: `succeeded` / `running` / `pending`. (`failed` never appears —
+a failed task comes back as an error dict. Don't wait for it.) The human-readable
+sentence is in `note`; don't branch on it.
+
+**A live task never comes back as an error.** A `wait=true` call that ran out of budget,
+gave up after repeated poll failures, or hit an expired token mid-poll all return the
+non-terminal envelope — the job is still running upstream. So an error dict always means
+this line is over.
+
+When the envelope carries `last_error`, it says **why we stopped watching**, not what
+happened to the task:
+
+```json
+{ "task_id": "cgt-...", "status": "running",
+  "last_error": { "error_type": "auth", "message": "...", "retryable": false } }
+```
+
+- **No `last_error`** → polling was healthy, the job just isn't done. Poll again.
+- **With `last_error`** → we lost sight of it; `status: "running"` means *not observed
+  terminal*, not *confirmed running*. Read `last_error.error_type`: `auth` means fix the
+  credential **before** polling again (its `retryable` is false — polling as-is is
+  wasted); `timeout` / `unknown` mean just poll again.
+
+`last_error.retryable` answers only "is another `task_status` worth it" — not "is
+resending the whole request safe".
 
 ## Error handling
 
@@ -121,7 +150,7 @@ Always surface `message` to the user. Check `retryable` before retrying. When `a
 | `rate_limit` | ✅ | too many requests (HTTP 429) | Back off and retry after a short delay. |
 | `model_unavailable` | ✅* | model temporarily down, **or** retired/no-access endpoint | Try another model, or `model="auto"`. *Dead/retired endpoints come back `retryable:false` — switch models, don't retry. |
 | `task_failed` | ❌ | upstream rendering failed | Read `message`; adjust inputs and resubmit as a **new** task. |
-| `timeout` | ❌ | `wait` exceeded `timeout`; job may still be running | The task is **not** dead — call `task_status`/`task_wait` on the same `task_id` to collect it later. |
+| `timeout` | see → | an HTTP call to the upstream timed out (**not** the wait — a wait that runs out returns the non-terminal envelope, not an error) | Read `phase`. `connect` → the upstream never received it, safe to retry. `request` on a poll → retry. `request` on a submit → comes with `outcome_unknown: true` and `retryable: false`: the job may already have been accepted and billed under a `task_id` nobody will ever see. **Do not blindly resend** — tell the user to check the upstream side. |
 | `unknown` | ✅ | unclassified upstream error | Retry once; if it persists, surface `message`. |
 
 ### Domain / scenario errors (surface inside `message`)
@@ -146,6 +175,10 @@ If you call a tool with an out-of-range value the schema rejects, you get a vali
 ### Generic non-cfgpu errors
 
 `{ "error": true, "message": "..." }` with no `error_type` is a non-cfgpu exception (network, DB, bug). Surface `message`; retry once for transient network errors.
+
+`outcome_unknown: true` is the one result that can answer neither "it happened" nor "it
+didn't" — only ever on a submit whose response was lost. Never resend on your own
+judgement; say so and let the user decide.
 
 ## Quick recipes
 

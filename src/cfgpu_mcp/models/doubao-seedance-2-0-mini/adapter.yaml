@@ -17,4 +17,4 @@ speed_tier: 3
 resolutions: [480p, 720p]
 
 poll_config:
-  default_timeout: 300
+  default_timeout: 3000

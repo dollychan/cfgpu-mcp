@@ -14,6 +14,7 @@ import json
 import time
 from typing import TYPE_CHECKING
 
+from cfgpu_mcp.client.migrations import ensure_schema
 from cfgpu_mcp.client.repository import TaskRepository
 # Shared, backend-agnostic row contract (same one the SQLite backend uses).
 from cfgpu_mcp.client.task_row import row_to_dict as _row_to_dict
@@ -21,29 +22,11 @@ from cfgpu_mcp.client.task_row import row_to_dict as _row_to_dict
 if TYPE_CHECKING:
     import asyncpg
 
-# Columns must match cfgpu_mcp.client.task_row.COLUMNS (and db.py's DDL).
-_CREATE_TABLE = """
-CREATE TABLE IF NOT EXISTS tasks (
-    id          TEXT PRIMARY KEY,
-    adapter_id  TEXT NOT NULL,
-    status      TEXT NOT NULL,
-    payload     TEXT NOT NULL,
-    result      TEXT,
-    error       TEXT,
-    created_at  DOUBLE PRECISION NOT NULL,
-    updated_at  DOUBLE PRECISION NOT NULL
-)
-"""
-
-# Drives list_running_tasks(); also speeds a future background reconciler.
-_CREATE_INDEX = "CREATE INDEX IF NOT EXISTS idx_tasks_status_created ON tasks(status, created_at)"
-
-# CREATE TABLE IF NOT EXISTS is not race-safe at the catalog level: two instances
-# starting together can both pass the existence check and collide inserting the
-# table's row type into pg_type (unique index pg_type_typname_nsp_index). A fixed
-# transaction-scoped advisory lock funnels schema creation so the loser waits and
-# then no-ops. Key is an arbitrary stable int64 tag for "cfgpu.tasks schema".
-_SCHEMA_LOCK_KEY = 0x0CF6_7A5C_0000_0001
+# Non-terminal statuses list_running_tasks() must select — kept in step with db.py's
+# _LIVE_STATUSES. The two pre-upstream ones are this server's own vocabulary: a row that
+# has been written but whose upstream POST has not (provably) gone out yet. A query that
+# cannot see them is a sweeper that can never converge a crashed submission.
+_LIVE_STATUSES = ("submitting", "dispatching", "pending", "running")
 
 
 class PostgresTaskRepository(TaskRepository):
@@ -52,52 +35,70 @@ class PostgresTaskRepository(TaskRepository):
 
     @classmethod
     async def connect(cls, url: str, pool_min: int = 1, pool_max: int = 10) -> "PostgresTaskRepository":
+        # The schema is Alembic's (``client/migrations.py``), not this class's. It used
+        # to be created here by CREATE TABLE IF NOT EXISTS under an advisory lock; the
+        # lock still exists, in ``migrations/env.py``, for the same reason — instances
+        # start independently and can reach the same DDL at the same moment.
+        await ensure_schema(url)
         import asyncpg
 
         pool = await asyncpg.create_pool(dsn=url, min_size=pool_min, max_size=pool_max)
-        repo = cls(pool)
-        await repo._init_schema()
-        return repo
+        return cls(pool)
 
-    async def _init_schema(self) -> None:
-        async with self._pool.acquire() as con:
-            # Hold a transaction-scoped advisory lock so concurrent instances
-            # serialize the (catalog-unsafe) CREATE TABLE; the lock auto-releases
-            # on commit. The loser then runs CREATE ... IF NOT EXISTS as a no-op.
-            async with con.transaction():
-                await con.execute("SELECT pg_advisory_xact_lock($1)", _SCHEMA_LOCK_KEY)
-                await con.execute(_CREATE_TABLE)
-                await con.execute(_CREATE_INDEX)
+    async def insert_task(
+        self, task_id: str, adapter_id: str, status: str, payload: dict,
+        *, model_used: str | None = None,
+    ) -> bool:
+        """Insert, returning False when the id is already taken (nothing is written).
 
-    async def insert_task(self, task_id: str, adapter_id: str, status: str, payload: dict) -> None:
+        ``ON CONFLICT DO NOTHING`` rather than a read-then-insert: this is a *shared*
+        store, so two instances can be replaying the same request_id at the same
+        instant, and only the database can settle which of them submits. asyncpg
+        reports the row count in the command tag ("INSERT 0 1" / "INSERT 0 0").
+        """
         now = time.time()
         async with self._pool.acquire() as con:
-            await con.execute(
-                "INSERT INTO tasks (id, adapter_id, status, payload, created_at, updated_at)"
-                " VALUES ($1, $2, $3, $4, $5, $6)",
-                task_id, adapter_id, status, json.dumps(payload), now, now,
+            tag = await con.execute(
+                "INSERT INTO tasks (id, adapter_id, status, payload, created_at, updated_at, model_used)"
+                " VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING",
+                task_id, adapter_id, status, json.dumps(payload), now, now, model_used,
             )
+        return str(tag).rsplit(" ", 1)[-1] == "1"
 
-    async def update_task(self, task_id: str, status: str, result: dict | None = None, error: str | None = None) -> None:
+    async def update_task(
+        self, task_id: str, status: str, result: dict | None = None, error: str | None = None,
+        *, upstream_task_id: str | None = None, payload: dict | None = None,
+    ) -> None:
+        # COALESCE keeps "not given" distinct from "set to NULL" for the two optional
+        # columns, so a status-only update never erases the upstream id or the payload.
         async with self._pool.acquire() as con:
             await con.execute(
-                "UPDATE tasks SET status=$1, result=$2, error=$3, updated_at=$4 WHERE id=$5",
+                "UPDATE tasks SET status=$1, result=$2, error=$3, updated_at=$4,"
+                " upstream_task_id=COALESCE($5, upstream_task_id),"
+                " payload=COALESCE($6, payload)"
+                " WHERE id=$7",
                 status,
                 json.dumps(result) if result is not None else None,
                 error,
                 time.time(),
+                upstream_task_id,
+                json.dumps(payload) if payload is not None else None,
                 task_id,
             )
 
     async def get_task(self, task_id: str) -> dict | None:
+        """By primary key, falling back to the upstream id — see db.get_task."""
         async with self._pool.acquire() as con:
             row = await con.fetchrow("SELECT * FROM tasks WHERE id=$1", task_id)
+            if row is None:
+                row = await con.fetchrow("SELECT * FROM tasks WHERE upstream_task_id=$1", task_id)
             return _row_to_dict(row) if row else None
 
     async def list_running_tasks(self) -> list[dict]:
         async with self._pool.acquire() as con:
             rows = await con.fetch(
-                "SELECT * FROM tasks WHERE status IN ('pending', 'running') ORDER BY created_at"
+                "SELECT * FROM tasks WHERE status = ANY($1::text[]) ORDER BY created_at",
+                list(_LIVE_STATUSES),
             )
             return [_row_to_dict(r) for r in rows]
 

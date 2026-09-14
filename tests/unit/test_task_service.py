@@ -61,15 +61,21 @@ def _patch_config(db, client, adapter):
 
 @pytest.mark.asyncio
 async def test_get_status_sync_model_skips_repoll():
+    from cfgpu_mcp.errors import CFGPUError
+
     db = await _db_with_succeeded_task("doubao-seedream-5-0-lite")
     client = MagicMock()
     client.get = AsyncMock()  # poll would call this
     p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=False))
     with p_db, p_client, p_reg:
-        result = await task_service.get_status("task-1")
-    # Sync model: no poll attempted, stale result returned without raising
+        with pytest.raises(CFGPUError) as exc:
+            await task_service.get_status("task-1")
+    # The invariant under test: a sync model is never re-polled.
     client.get.assert_not_called()
-    assert result["status"] == "succeeded"
+    # And the row itself (succeeded, no artifact) converges to a terminal failure rather
+    # than being handed back as `status: "succeeded"` with nothing in it — that shape
+    # reads as "not done yet" under the result contract, i.e. poll a terminal row forever.
+    assert exc.value.error_type == "task_failed"
     await db.close()
 
 
@@ -97,16 +103,25 @@ async def test_get_status_failed_task_raises_standard_error():
 async def test_get_status_succeeded_async_task_is_terminal():
     """A task already persisted as 'succeeded' is terminal: get_status does NOT
     re-poll upstream (poll() converges a urls-less success to 'failed' at write
-    time, so a stale succeeded record is never re-fetched on every read)."""
+    time, so a stale succeeded record is never re-fetched on every read).
+
+    Being terminal, it must also *present* as terminal. A succeeded row with no
+    artifact used to fall through to the non-terminal envelope, which the result
+    contract reads as "poll again" — an instruction that can never be satisfied for a
+    row nothing will ever re-poll.
+    """
+    from cfgpu_mcp.errors import CFGPUError
+
     db = await _db_with_succeeded_task("wan-2-0")
     client = MagicMock()
     client.get = AsyncMock(return_value={"status": "succeeded", "output": {}})
     adapter = _adapter(is_async=True)
     p_db, p_client, p_reg = _patch_config(db, client, adapter)
     with p_db, p_client, p_reg:
-        result = await task_service.get_status("task-1")
+        with pytest.raises(CFGPUError) as exc:
+            await task_service.get_status("task-1")
     client.get.assert_not_called()           # terminal: no upstream poll
-    assert result["status"] == "succeeded"
+    assert exc.value.error_type == "task_failed"
     await db.close()
 
 
@@ -360,4 +375,143 @@ async def test_failed_task_carries_request_id_but_not_caption():
     err = exc_info.value.to_tool_result_dict()
     assert err["request_id"] == "r-7"
     assert "caption" not in err
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_converges_when_the_repoll_body_carries_an_upstream_error():
+    """task_status must resolve the task, not report it running forever.
+
+    Its re-poll swallows transient poll errors on purpose (a stale running row is the
+    right answer when the network hiccuped). A copyright/moderation rejection arriving
+    as an HTTP-200 body error used to land in that same branch — classified `unknown`,
+    logged as transient — so every subsequent task_status returned the stale running
+    row and the task could never resolve through this tool at all.
+    """
+    from cfgpu_mcp.errors import CFGPUError
+
+    db = await _db_with_task("pending", "wan-2-0", request_id="r-7")
+    client = MagicMock()
+    client.get = AsyncMock(return_value={
+        "id": "task-1",
+        "error": {"message": "The request failed because the output video may be "
+                             "related to copyright restrictions."},
+    })
+    adapter = _adapter(is_async=True)
+    adapter.extract_status.side_effect = lambda r: r.get("status", "running")
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        with pytest.raises(CFGPUError) as exc:
+            await task_service.get_status("task-1")
+
+    err = exc.value
+    assert err.error_type == "task_failed"
+    assert err.retryable is False
+    assert "copyright restrictions" in err.user_message
+    assert err.request_id == "r-7"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_marks_a_non_retryable_repoll_failure_on_the_envelope():
+    """A re-poll error that will not heal must not present as a plain running task.
+
+    task_status swallows transient poll failures on purpose — the stale record is the
+    right answer when the network hiccuped. But a non-retryable one (a retired endpoint,
+    a token the upstream will keep rejecting) makes every future call fail the same way,
+    so a bare `status: "running"` sends the caller into a loop that cannot terminate.
+    The task really is still alive upstream, so this rides `last_error` rather than the
+    error channel — the same shape `task_wait` produces for the same error.
+    """
+    from cfgpu_mcp.errors import CFGPUError
+
+    db = await _db_with_task("pending", "wan-2-0", request_id="r-1")
+    client = MagicMock()
+    client.get = AsyncMock(side_effect=CFGPUError(
+        error_type="model_unavailable",
+        user_message="所选模型暂不可用，请尝试其他模型。",
+        original={},
+        retryable=False,
+    ))
+    adapter = _adapter(is_async=True)
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["status"] in ("pending", "running")
+    assert "error" not in result                      # the task is alive; not the error channel
+    assert result["last_error"]["error_type"] == "model_unavailable"
+    assert result["last_error"]["retryable"] is False
+    # elapsed / consecutive_failures are properties of a *wait*; one re-poll has neither.
+    assert "elapsed" not in result["last_error"]
+    assert result["request_id"] == "r-1"
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_stays_silent_about_a_retryable_repoll_failure():
+    """The ordinary case is unchanged: a blip returns the stale record with no noise."""
+    from cfgpu_mcp.errors import CFGPUError
+
+    db = await _db_with_task("pending", "wan-2-0")
+    client = MagicMock()
+    client.get = AsyncMock(side_effect=CFGPUError(
+        error_type="timeout", user_message="请求超时", original={}, retryable=True,
+    ))
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=True))
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["status"] == "pending"
+    assert "last_error" not in result
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_flags_a_repoll_that_blew_up_outside_cfgpu_error():
+    """An adapter that crashes parsing a terminal body recurs on every call.
+
+    It carries no classification we can trust, so `retryable` stays True (never tell a
+    caller to stop polling a live task) — the *presence* of last_error is the news:
+    this "running" was never observed.
+    """
+    db = await _db_with_task("pending", "wan-2-0")
+    client = MagicMock()
+    client.get = AsyncMock(return_value={"id": "task-1", "status": "succeeded"})
+    adapter = _adapter(is_async=True)
+    adapter.extract_status.return_value = "succeeded"
+    adapter.parse_response.side_effect = KeyError("videoUrl")
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["status"] == "pending"
+    assert result["last_error"]["error_type"] == "unknown"
+    assert "videoUrl" in result["last_error"]["message"]
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_get_status_pending_envelope_carries_elapsed_seconds():
+    """★ The plumbing, not the arithmetic — ``pending_result`` is unit-tested separately.
+
+    What this pins is that ``_present`` hands it the task's ``created_at`` at all. The
+    field's whole purpose is to give a polling caller something that *changes* between
+    otherwise identical ``status: "pending"`` replies; a call site that forgets to pass
+    the timestamp produces an envelope that still validates and still says nothing.
+    """
+    db = await _db_with_task("pending", "wan-2-0")
+    # Backdate the row so a plausibly-forgotten timestamp (elapsed 0) cannot pass.
+    await db.execute("UPDATE tasks SET created_at = created_at - 47 WHERE id = 'task-1'")
+    await db.commit()
+
+    client = MagicMock()
+    client.get = AsyncMock(return_value={"id": "task-1", "status": "running"})
+    adapter = _adapter(is_async=True)
+    adapter.extract_status.return_value = "running"
+    p_db, p_client, p_reg = _patch_config(db, client, adapter)
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["elapsed_seconds"] >= 47
     await db.close()
