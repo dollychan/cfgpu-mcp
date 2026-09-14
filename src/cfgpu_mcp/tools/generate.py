@@ -85,12 +85,14 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Generate video from text prompt, image, or multimodal references using CFGPU models.
 
-        Some models always return immediately with a `task_id` and an ETA, ignoring
+        Some models are fixed-async: they return a receipt immediately and ignore
         `wait` — they run on a single serial GPU where the queue makes the total time
-        unpredictable (tens of minutes is normal). When the reply carries `task_id`
-        and `next_step` instead of `urls`, the video is NOT ready: poll
-        `task_status(task_id)` until it returns the artifact. Do not resubmit — that
-        just adds another job to the same queue behind the one already running.
+        unpredictable (tens of minutes is normal). When the reply carries `next_step`
+        and a status instead of `urls`, the video is NOT ready: poll
+        `task_status(request_id)` — the same `request_id` you submitted with, which is
+        the task's key — until it returns the artifact. Do not resubmit: repeating the
+        same `request_id` just hands back the existing task, and a *new* one starts a
+        second billed job behind the one already running.
         """
         try:
             return split_structured(annotate_artifact(await video_service.generate_video(

@@ -84,8 +84,12 @@ HEIC/HEIF，单文件 ≤ 30 MB，边长 [256, 5760] px，宽高比 [0.4, 2.5]�
 }
 ```
 
-异步模型：`generate_video` 返回 `task_id`，用 `task_status` / `task_wait` 取结果；
-`wait=True` 时服务端代为轮询（默认上限 900 秒）。
+上游异步，但 `generate_video` **默认同步返回产物** —— 服务端替你轮询（上限 900 秒），
+调用方不必传 `wait`。
+
+结果没收到时（调用被中断、连接断开、本侧超时）用**提交时用的那个 `request_id`** 调
+`task_status` / `task_wait` 取回：任务以它为主键落库，同一个 `request_id` 重复提交只会
+返回既有任务、不会二次下单，而换一个新 id 重投就是二次计费。没有另一个 `task_id` 要等。
 
 ## 错误
 

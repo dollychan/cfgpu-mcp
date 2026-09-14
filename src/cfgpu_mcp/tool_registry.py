@@ -530,7 +530,13 @@ class GenerateImageInput(BaseModel):
         "explicitly by models whose upstream API supports it. Not supported by "
         "gpt-image-2 / nano-banana models (ignored there).",
     )
-    wait: bool = Field(default=True, description="Wait for task completion before returning")
+    wait: bool = Field(
+        default=True,
+        description="Leave unset. The call waits for the task and returns the finished "
+        "artifact; submitting without waiting does not make anything faster, it only "
+        "costs you the result. (A few models are fixed-async and return a receipt "
+        "regardless — collect those with task_status(request_id).)",
+    )
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
     return_metadata: bool = Field(default=True, description="Include seed, model_used, usage in response")
     model_specific: Optional[dict] = Field(
@@ -676,7 +682,13 @@ class GenerateVideoInput(BaseModel):
         description="Use an LLM to rewrite and expand the prompt before generation. "
         "Used by WAN 2.6/2.7; disabling it reduces latency and preserves the original prompt.",
     )
-    wait: bool = Field(default=True, description="Wait for task completion before returning")
+    wait: bool = Field(
+        default=True,
+        description="Leave unset. The call waits for the task and returns the finished "
+        "artifact; submitting without waiting does not make anything faster, it only "
+        "costs you the result. (A few models are fixed-async and return a receipt "
+        "regardless — collect those with task_status(request_id).)",
+    )
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
     return_metadata: bool = Field(default=True, description="Include seed, model_used, usage in response")
     model_specific: Optional[dict] = Field(
@@ -751,7 +763,13 @@ class GenerateAudioInput(BaseModel):
         "surprised, calm, fluent, or whisper. None lets the model infer emotion from text.",
     )
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
-    wait: bool = Field(default=True, description="Wait for task completion before returning")
+    wait: bool = Field(
+        default=True,
+        description="Leave unset. The call waits for the task and returns the finished "
+        "artifact; submitting without waiting does not make anything faster, it only "
+        "costs you the result. (A few models are fixed-async and return a receipt "
+        "regardless — collect those with task_status(request_id).)",
+    )
     timeout: Optional[int] = Field(default=None, description="Max wait seconds, None=auto estimate")
     return_metadata: bool = Field(default=True, description="Include model_used, usage in response")
     model_specific: Optional[dict] = Field(
