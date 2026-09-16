@@ -91,10 +91,10 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
             "tasks",
             "cost_tier",
             "speed_tier",
-            "is_async",
         }
         assert "adapter_id" not in model
         assert "capabilities" not in model
+        assert "is_async" not in model
         assert "multi_modal_reference" not in model["tasks"]
 
 

@@ -159,7 +159,6 @@ async def list_model_profiles(
                 "tasks": tasks,
                 "cost_tier": adapter.cost_tier,
                 "speed_tier": adapter.speed_tier,
-                "is_async": adapter.is_async,
             }
         )
 
