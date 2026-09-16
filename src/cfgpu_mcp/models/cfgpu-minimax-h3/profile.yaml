@@ -1,0 +1,7 @@
+schema_version: 1
+tasks:
+  - text_to_video
+  - image_to_video
+  - first_last_frame
+  - reference_to_video
+  - synced_audio_output

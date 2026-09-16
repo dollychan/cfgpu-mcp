@@ -1,0 +1,6 @@
+schema_version: 1
+tasks:
+  - text_to_image
+  - image_to_image
+  - multi_image_fusion
+  - region_edit

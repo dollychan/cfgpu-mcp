@@ -166,7 +166,7 @@ class CFGPUError(Exception):
     def to_tool_result_dict(self) -> dict:
         message = self.user_message
         if self.card_hint is not False and self.model_id and self.error_type in _CARD_HINT_TYPES:
-            message += f" 请调用 get_model_card 获取模型 {self.model_id} 的详细参数说明和使用示例。"
+            message += " 请根据校验原因调整通用参数，或重新选择支持该任务的模型。"
         result: dict = {
             "error": True,
             "error_type": self.error_type,

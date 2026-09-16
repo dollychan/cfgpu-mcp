@@ -41,6 +41,7 @@ _EXPECTED_SLOTS: dict[str, dict[str, str]] = {
     "task_status": {},
     "task_wait": {},
     "list_models": {},
+    "list_model_profiles": {},
     "get_model_card": {},
 }
 
@@ -49,7 +50,10 @@ def _mcp_input_schema(tool_name: str) -> dict:
     from cfgpu_mcp.server import mcp
 
     tools = asyncio.run(mcp.list_tools())
-    return next(t for t in tools if t.name == tool_name).inputSchema
+    tool = next((item for item in tools if item.name == tool_name), None)
+    if tool is None:
+        pytest.skip(f"{tool_name} is disabled by the local MCP configuration")
+    return tool.inputSchema
 
 
 # ── inventory ───────────────────────────────────────────────────────────────

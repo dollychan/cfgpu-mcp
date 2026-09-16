@@ -15,6 +15,7 @@ from cfgpu_mcp.tool_registry import (
     TaskStatusInput,
     TaskWaitInput,
     ListModelsInput,
+    ListModelProfilesInput,
     GetModelCardInput,
 )
 
@@ -27,6 +28,7 @@ _EXPECTED_SCHEMAS = {
     "task_status":    TaskStatusInput,
     "task_wait":      TaskWaitInput,
     "list_models":    ListModelsInput,
+    "list_model_profiles": ListModelProfilesInput,
     "get_model_card": GetModelCardInput,
 }
 
@@ -145,6 +147,12 @@ def test_list_models_coroutine_is_model_service():
     assert tool.coroutine is svc.list_models
 
 
+def test_list_model_profiles_coroutine_is_model_service():
+    from cfgpu_mcp.service import model as svc
+    tool = next(t for t in get_langgraph_tools() if t.name == "list_model_profiles")
+    assert tool.coroutine is svc.list_model_profiles
+
+
 # ── filtering ─────────────────────────────────────────────────────────────────
 
 def test_task_types_image_excludes_generate_video():
@@ -161,7 +169,7 @@ def test_task_types_video_excludes_generate_image():
 
 def test_task_type_filter_keeps_generic_tools():
     names = [t.name for t in get_langgraph_tools(task_types=["image"])]
-    for generic in ("task_status", "task_wait", "list_models", "get_model_card"):
+    for generic in ("task_status", "task_wait", "list_models", "list_model_profiles", "get_model_card"):
         assert generic in names
 
 

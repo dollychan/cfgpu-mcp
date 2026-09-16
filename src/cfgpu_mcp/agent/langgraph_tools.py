@@ -24,6 +24,7 @@ def _get_service_coroutines() -> dict[str, Any]:
         "task_status":    task_svc.get_status,
         "task_wait":      task_svc.wait_for_task,
         "list_models":    model_svc.list_models,
+        "list_model_profiles": model_svc.list_model_profiles,
         "get_model_card": model_svc.get_model_card,
     }
 

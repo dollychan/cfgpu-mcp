@@ -1,0 +1,138 @@
+schema_version: 1
+
+# Agent-facing media task vocabulary.  IDs are stable semantic contracts, not
+# adapter capability names and not provider/API parameter names.
+tasks:
+  text_to_video:
+    media_type: video
+    name: Text to video
+    description: Create a new video from a text description.
+    prompt_guidance: Describe the subject, action, scene, style, and desired camera movement.
+  image_to_video:
+    media_type: video
+    name: Image to video
+    description: Animate a supplied image as the opening visual of a new video.
+    prompt_guidance: Describe the motion to add while preserving the supplied image's subject and composition.
+  first_last_frame:
+    media_type: video
+    name: First and last frame video
+    description: Create a video constrained by both an opening image and an ending image.
+    prompt_guidance: Describe the transition and the motion that connects the two supplied frames.
+  reference_to_video:
+    media_type: video
+    name: Reference-guided video
+    description: Create a new video guided by supplied reference images, videos, or audio.
+    prompt_guidance: State which visual, character, motion, or audio qualities to preserve from the references.
+  video_edit:
+    media_type: video
+    name: Video edit
+    description: Modify an existing source video while retaining the requested parts of it.
+    prompt_guidance: Identify the source-video element to change and explicitly state what must remain unchanged.
+  video_extend:
+    media_type: video
+    name: Video extension
+    description: Continue an existing video beyond its current ending.
+    prompt_guidance: Describe the next action, continuity details, and the intended ending.
+  synced_audio_output:
+    media_type: video
+    name: Synchronized audio output
+    description: Produce video with model-generated speech, sound effects, or music synchronized to the picture.
+    prompt_guidance: Describe the desired audible events, dialogue, ambience, or music in addition to the visuals.
+  audio_driven_video:
+    media_type: video
+    name: Audio-driven video
+    description: Use supplied audio to drive the timing or performance of a generated video.
+    prompt_guidance: Provide the driving audio and describe the visual performer or motion that should follow it.
+  web_grounded_generation:
+    media_type: cross_media
+    name: Web-grounded generation
+    description: Use web information to enhance a generation request when the model supports it.
+    prompt_guidance: State the factual topic to ground; do not assume a particular search parameter or source format.
+
+  text_to_image:
+    media_type: image
+    name: Text to image
+    description: Create a new image from a text description.
+    prompt_guidance: Describe subject, composition, lighting, style, and important details.
+  image_to_image:
+    media_type: image
+    name: Image transformation
+    description: Create an image by transforming one supplied image.
+    prompt_guidance: State the intended change and the visual identity that should be retained.
+  multi_image_fusion:
+    media_type: image
+    name: Multi-image fusion
+    description: Combine information from multiple supplied images into one result.
+    prompt_guidance: State the role each reference plays and how they should be combined.
+  multi_image_group:
+    media_type: image
+    name: Image series
+    description: Create a coherent group or sequence of related images.
+    prompt_guidance: Describe the shared subject and the controlled variation across the set.
+  region_edit:
+    media_type: image
+    name: Region edit
+    description: Edit a selected region of a supplied image while preserving the rest.
+    prompt_guidance: Identify the selected area, the requested replacement, and the surrounding context to preserve.
+
+  text_to_speech:
+    media_type: audio
+    name: Text to speech
+    description: Synthesize spoken audio from text.
+    prompt_guidance: Provide the script, desired language, voice, and delivery style.
+  expressive_speech:
+    media_type: audio
+    name: Expressive speech
+    description: Control the emotion or expressive delivery of synthesized speech.
+    prompt_guidance: Describe the emotion, intensity, pace, and performance style.
+  pronunciation_control:
+    media_type: audio
+    name: Pronunciation control
+    description: Specify pronunciations for words or names in synthesized speech.
+    prompt_guidance: Provide the affected terms and their intended pronunciations.
+
+  image_understanding:
+    media_type: understand
+    name: Image understanding
+    description: Answer questions about, describe, or extract information from images.
+    prompt_guidance: Ask a concrete question and provide the relevant image or images.
+  image_reasoning:
+    media_type: understand
+    name: Image reasoning
+    description: Reason about relationships, anomalies, or conclusions supported by an image.
+    prompt_guidance: State the reasoning goal and the evidence to inspect in the image.
+  video_understanding:
+    media_type: understand
+    name: Video understanding
+    description: Answer questions about, summarize, or analyze a video.
+    prompt_guidance: State the event, time range, or question to analyze and provide the video.
+  long_video_understanding:
+    media_type: understand
+    name: Long-video understanding
+    description: Analyze a long video and retrieve information across its duration.
+    prompt_guidance: Specify the event, time range, or cross-video question of interest.
+  long_document_understanding:
+    media_type: understand
+    name: Long-document understanding
+    description: Analyze and answer questions about a long document.
+    prompt_guidance: State the requested extraction, comparison, or conclusion and provide the document.
+  region_understanding:
+    media_type: understand
+    name: Region understanding
+    description: Answer questions about a selected region of an image.
+    prompt_guidance: Identify the selected region and ask a concrete question about it.
+  tool_calling:
+    media_type: understand
+    name: Tool calling
+    description: Select and call declared tools as part of a reasoning workflow.
+    prompt_guidance: Provide the available tools and the task objective; tool schemas remain a control-layer concern.
+  visual_agent:
+    media_type: understand
+    name: Visual agent
+    description: Combine visual understanding with multi-step task execution.
+    prompt_guidance: State the goal, the visual inputs, and any permitted actions.
+  long_context:
+    media_type: understand
+    name: Long context
+    description: Reason over a large amount of supplied context.
+    prompt_guidance: State the question and identify the relevant material within the context.

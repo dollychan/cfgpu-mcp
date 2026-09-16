@@ -100,6 +100,23 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 `list_models()` 返回 `model_id`（即 `model_name`）+ `display_name`，**不回传 `adapter_id` 或 `cfgpu_model_id`**。新开发者最常见的错误：在 `build_payload()` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传给调用方/写进对外可见的结果。`registry.get()` 依次按 `model_name` → `adapter_id` → `cfgpu_model_id` → `display_name` 解析，因此旧调用方传 `adapter_id`/`cfgpu_model_id` 仍能命中，但工具 schema 的 `model` 枚举、`list_models`、`model_used`、错误 `model_id` 只会**出现** `model_name` 的取值。
 
+#### Agent-facing media task profiles
+
+`capabilities/media_tasks.yaml` is the single vocabulary of stable, user-facing
+media tasks.  Each `models/<adapter_id>/profile.yaml` contains only a
+`schema_version` and a list of IDs from that vocabulary.  It must never contain
+adapter capability aliases (such as `multi_modal_reference`), payload field
+names, or parameter ranges.  In particular, `reference_to_video` and
+`video_edit` are distinct tasks even when a provider transports both through a
+reference-video field.
+
+`list_model_profiles()` returns this catalog and is the only model-selection
+tool an agent should receive. Profiles are selection metadata; `adapter.yaml`,
+`tool_param_constraints.json`, and adapter validation remain the authoritative
+control-plane definitions of actual parameters and legal values.  The profile
+files are deliberately not model cards and do not change the current
+`validate_only` / HITL execution path.
+
 **四种 `task_type`**：`image` / `video` / `audio` 三类都是**媒体生成**（返回 `urls`），而 `understand`（视觉理解 / 图像推理 / 视频理解，如 Qwen3-VL）是**返回文本**的对话类任务——走 OpenAI 兼容的 `/model/v1/chat/completions`，结果落在 `NormalizedResult.message`（assistant 消息 `{role, content[, reasoning_content]}`，回答是 `content`、Thinking 模型的推理过程是 `reasoning_content`）与 `response_id`，`urls` 为空。其工具返回 chat-completion 结构 `{id, model, message, payload[, usage]}`（`usage` 受 `return_metadata` 控制）。路由、`supports()`、`select_model()` 都按 `task_type` 隔离，understand 请求永远不会选中媒体模型，反之亦然。
 
 ### 3.2 同步模型 vs 异步模型
@@ -589,7 +606,7 @@ CFGPUError.from_http_response(status, body)
 
 ### card.md 提示机制
 
-当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.model_name` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加提示：`"请调用 get_model_card 获取模型 {model_id} 的详细参数说明和使用示例。"`, 同时在 dict 中添加 `model_id` 字段，方便 LLM 直接用该值调用 `get_model_card`。**agent 侧只见 `model_id`（全局唯一的 `model_name`），从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`**——`registry.get()` 同时按 `model_name` 解析，故 agent 拿 `model_id` 即可命中。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
+当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.model_name` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加「根据校验原因调整通用参数，或重新选择支持该任务的模型」；同时在 dict 中添加 `model_id`，方便可信调用方关联实际模型。它**不会**引导 LLM 去读 `get_model_card`：agent 应以 `list_model_profiles` 的 canonical task 选型，具体参数合法性仍由 MCP preflight / adapter 校验决定。**agent 侧只见 `model_id`（全局唯一的 `model_name`），从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`**。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
 
 ### 错误在各层的展示方式
 
@@ -680,9 +697,13 @@ src/cfgpu_mcp/
 │   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立；id 键名同理三种拼法一起读（`task_id` / CFGPU 实际应答的 `taskId` / 信封内的 `id`，见 _TASK_ID_KEYS）
 │   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3、minimax_h3 触发注册
 │
+├── capabilities/
+│   └── media_tasks.yaml        Agent 侧统一任务词典；不含 adapter 别名或 API 参数规则
+│
 ├── models/
 │   ├── wan-2-0/
 │   │   ├── adapter.yaml        完整配置
+│   │   ├── profile.yaml        仅引用 capabilities/media_tasks.yaml 的 canonical task ID
 │   │   └── card.md             模型说明
 │   ├── wan-2-0-fast/
 │   │   ├── adapter.yaml        只写差异，extends: wan-2-0
@@ -796,7 +817,7 @@ src/cfgpu_mcp/
 │   ├── audio.py                generate_audio()（语音合成 / TTS）
 │   ├── vision.py               understand_vision()（视觉理解 / 图像推理 / 视频理解，返回文本）
 │   ├── task.py                 get_status() / wait_for_task()
-│   └── model.py                list_models() / get_model_card()
+│   └── model.py                list_model_profiles() / list_models() / get_model_card()
 │
 ├── tools/                      Mode A：FastMCP 工具注册（参数重声明层）
 │   ├── generate.py

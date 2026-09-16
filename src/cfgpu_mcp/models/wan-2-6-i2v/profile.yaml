@@ -1,0 +1,4 @@
+schema_version: 1
+tasks:
+  - image_to_video
+  - audio_driven_video

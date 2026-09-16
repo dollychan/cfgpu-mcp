@@ -1,0 +1,5 @@
+schema_version: 1
+tasks:
+  - text_to_speech
+  - expressive_speech
+  - pronunciation_control

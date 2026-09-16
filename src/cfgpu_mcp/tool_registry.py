@@ -93,9 +93,8 @@ def media_field(
     Caps and mutual exclusions are the opposite shape: they are per-model (this schema is
     per-tool), so a host that reads them as enforceable would reject calls that are legal
     on the model actually being used. There is deliberately no ``max_items`` / ``excludes``
-    / ``requires`` key; such limits live in the prose as model-relative guidance, with
-    ``get_model_card`` / ``list_models`` as the authority and cfgpu's own validation as
-    the enforcement point.
+    / ``requires`` key; such limits are owned by adapter validation. The agent-facing
+    profile catalog is selection guidance, not a substitute for that enforcement.
 
     Every media slot is optional and defaults to ``None`` (kept here rather than at each
     call site so the eight declarations stay comparable; the schema-consistency test pins
@@ -455,7 +454,7 @@ class GenerateImageInput(BaseModel):
     prompt: str = Field(description="Text description of the image to generate")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'doubao-seedream-5-0-lite'), "
+        description="A single model_id from list_model_profiles (e.g. 'doubao-seedream-5-0-lite'), "
         "a list of model_ids to restrict automatic selection to those candidates "
         "(e.g. ['doubao-seedream-5-0-lite', 'cf-pro']), or 'auto' to choose from all models",
     )
@@ -483,8 +482,8 @@ class GenerateImageInput(BaseModel):
         slot="Regions of `reference_images` to edit, as boxes the user marked. Supply "
         "this only for a positional edit ('replace what is inside this box'); a "
         "whole-image edit ('make it watercolour') needs no regions. Accepted only by "
-        "models carrying the `region_edit` capability — check with list_models / "
-        "get_model_card; passing regions to a model without it is a hard error, never a "
+        "models whose profile lists `region_edit`; passing regions to a model without it "
+        "is a hard error, never a "
         "silent whole-image edit. Write every region you pass here into `prompt` as a "
         "`[[label]]` placeholder, in the clause it belongs to — that is where the region "
         "is rendered into the sentence (as coordinates, or as a phrase like '图2中框选的"
@@ -581,7 +580,7 @@ class GenerateVideoInput(BaseModel):
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'wan-video'), "
+        description="A single model_id from list_model_profiles (e.g. 'wan-video'), "
         "a list of model_ids to restrict automatic selection to those candidates "
         "(e.g. ['wan-video', 'wan-video-fast']), or 'auto' to choose from all models",
     )
@@ -603,26 +602,22 @@ class GenerateVideoInput(BaseModel):
         accepts=["https_url", "asset_url"],
     )
     reference_images: Optional[list[str]] = media_field(
-        slot="Reference images that guide the generation (role=reference_image). Typically "
-        "up to 9 (up to 30 on Doubao Seedance 2.5), and on most models mutually exclusive "
-        "with first_frame / last_frame — call get_model_card for the chosen model's actual "
-        "limits.",
+        slot="Reference images that guide the generation. Model-specific counts and input "
+        "combinations are validated by MCP before execution.",
         role="image",
         arity="many",
         accepts=["https_url", "asset_url"],
     )
     reference_videos: Optional[list[str]] = media_field(
-        slot="Reference videos that guide the generation (role=reference_video). Support and "
-        "limits vary by model (the Seedance 2.0 family takes up to 3, Seedance 2.5 up to 10) "
-        "— call get_model_card for the chosen model.",
+        slot="Reference videos that guide the generation. Model-specific support and limits "
+        "are validated by MCP before execution.",
         role="video",
         arity="many",
         accepts=["https_url", "asset_url"],
     )
     reference_audios: Optional[list[str]] = media_field(
-        slot="Reference audio that guides the generation (role=reference_audio). Support, "
-        "limits, and whether audio may be supplied without an accompanying image or video "
-        "vary by model — call get_model_card for the chosen model.",
+        slot="Reference audio that guides the generation. Model-specific combinations and "
+        "limits are validated by MCP before execution.",
         role="audio",
         arity="many",
         accepts=["https_url", "asset_url"],
@@ -667,8 +662,8 @@ class GenerateVideoInput(BaseModel):
         "default is 1080p). WAN 2.0 Fast does NOT support 1080p for text-to-video (only "
         "480p/720p; 1080p works only with an image/video input). HappyHorse does not "
         "support 480p (minimum 720p). 768p and 2k belong to MiniMax H3 alone; it also "
-        "offers 480p and defaults to 768p. No other model accepts 768p or 2k. Call "
-        "get_model_card or list_models for the chosen model's set.",
+        "offers 480p and defaults to 768p. No other model accepts 768p or 2k. MCP "
+        "validates the chosen model's supported set before execution.",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
@@ -721,7 +716,7 @@ class GenerateAudioInput(BaseModel):
     text: str = Field(description="Text to synthesize into speech")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'seed-tts-2.0'), "
+        description="A single model_id from list_model_profiles (e.g. 'seed-tts-2.0'), "
         "a list of model_ids to restrict automatic selection to those candidates "
         "(e.g. ['MiniMax/speech-2.8-hd', 'MiniMax/speech-2.8-turbo']), or 'auto' to choose from all voice models",
     )
@@ -812,7 +807,7 @@ class UnderstandVisionInput(BaseModel):
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'qwen3.6-plus'), "
+        description="A single model_id from list_model_profiles (e.g. 'qwen3.6-plus'), "
         "a list of model_ids to restrict automatic selection to those candidates, "
         "or 'auto' to choose from all vision-understanding models. Prefer 'auto' "
         "unless a specific model is required — an unknown id falls back to auto.",
@@ -920,6 +915,19 @@ class ListModelsInput(BaseModel):
     task_type: Optional[Literal["image", "video", "audio", "understand"]] = Field(
         default=None,
         description="Filter by task type, None returns all models",
+    )
+
+
+class ListModelProfilesInput(BaseModel):
+    """List agent-facing model profiles with canonical tasks and prompt guidance only."""
+
+    task_type: Optional[Literal["image", "video", "audio", "understand"]] = Field(
+        default=None,
+        description="Filter by media task type, None returns the complete profile catalog",
+    )
+    task_id: Optional[str] = Field(
+        default=None,
+        description="Filter by one canonical task ID returned in task_catalog, such as 'video_edit'",
     )
 
 
@@ -1250,6 +1258,7 @@ _REGISTRY: list[tuple[str, type[BaseModel]]] = [
     ("task_status",     TaskStatusInput),
     ("task_wait",       TaskWaitInput),
     ("list_models",     ListModelsInput),
+    ("list_model_profiles", ListModelProfilesInput),
     ("get_model_card",  GetModelCardInput),
 ]
 

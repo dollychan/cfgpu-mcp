@@ -18,6 +18,17 @@ def register(mcp: FastMCP) -> None:
             return [tool_error_dict(e)]
 
     @mcp.tool()
+    async def list_model_profiles(
+        task_type: Optional[str] = None,
+        task_id: Optional[str] = None,
+    ) -> dict:
+        """List agent-facing model profiles with canonical tasks and prompt guidance only."""
+        try:
+            return await model_service.list_model_profiles(task_type, task_id)
+        except Exception as e:
+            return tool_error_dict(e)
+
+    @mcp.tool()
     async def get_model_card(model_name: str) -> str:
         """Get detailed model information, parameters, and usage examples."""
         try:

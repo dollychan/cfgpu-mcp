@@ -1,0 +1,7 @@
+schema_version: 1
+tasks:
+  - text_to_image
+  - image_to_image
+  - multi_image_fusion
+  - multi_image_group
+  - web_grounded_generation

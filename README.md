@@ -72,7 +72,7 @@ pip install "cfgpu-mcp[cli]"
 }
 ```
 
-重启客户端后即可在对话中使用 `generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`list_models`、`get_model_card` 等工具。
+重启客户端后即可在对话中使用 `generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`list_model_profiles`、`list_models`、`get_model_card` 等工具。
 
 > 若已 `pip install`，把 `command` 改为 `cfgpu-mcp`、`args` 置为 `[]` 即可。
 

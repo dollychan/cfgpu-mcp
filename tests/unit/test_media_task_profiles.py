@@ -1,0 +1,99 @@
+"""Keep agent-facing task profiles complete, canonical, and free of adapter aliases."""
+
+from pathlib import Path
+
+import pytest
+import yaml
+
+
+ROOT = Path(__file__).parent.parent.parent
+MODELS_DIR = ROOT / "src" / "cfgpu_mcp" / "models"
+TASKS_PATH = ROOT / "src" / "cfgpu_mcp" / "capabilities" / "media_tasks.yaml"
+PROFILE_KEYS = {"schema_version", "tasks"}
+
+
+def _load_yaml(path: Path) -> dict:
+    data = yaml.safe_load(path.read_text())
+    assert isinstance(data, dict), path
+    return data
+
+
+def test_media_task_dictionary_has_stable_descriptions():
+    data = _load_yaml(TASKS_PATH)
+    assert data["schema_version"] == 1
+    tasks = data["tasks"]
+    assert isinstance(tasks, dict) and tasks
+
+    for task_id, task in tasks.items():
+        assert task_id.replace("_", "").isalnum(), task_id
+        assert task["media_type"] in {"video", "image", "audio", "understand", "cross_media"}
+        assert all(isinstance(task[field], str) and task[field] for field in ("name", "description", "prompt_guidance"))
+
+
+def test_every_adapter_has_a_canonical_task_profile():
+    adapters = {path.parent for path in MODELS_DIR.glob("*/adapter.yaml")}
+    profiles = {path.parent for path in MODELS_DIR.glob("*/profile.yaml")}
+    assert profiles == adapters
+
+
+def test_profiles_reference_only_known_canonical_task_ids():
+    tasks = _load_yaml(TASKS_PATH)["tasks"]
+    for profile_path in MODELS_DIR.glob("*/profile.yaml"):
+        profile = _load_yaml(profile_path)
+        assert set(profile) == PROFILE_KEYS, profile_path
+        assert profile["schema_version"] == 1, profile_path
+        assert isinstance(profile["tasks"], list) and profile["tasks"], profile_path
+        assert len(profile["tasks"]) == len(set(profile["tasks"])), profile_path
+        assert set(profile["tasks"]).issubset(tasks), profile_path
+
+        media_types = {
+            tasks[task_id]["media_type"]
+            for task_id in profile["tasks"]
+            if tasks[task_id]["media_type"] != "cross_media"
+        }
+        assert len(media_types) == 1, profile_path
+
+
+def test_seedance_reference_and_edit_are_distinct_agent_tasks():
+    profile = _load_yaml(MODELS_DIR / "doubao-seedance-2-5" / "profile.yaml")
+    assert {"reference_to_video", "video_edit", "video_extend"}.issubset(profile["tasks"])
+    assert "multi_modal_reference" not in profile["tasks"]
+
+
+@pytest.mark.asyncio
+async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_model_profiles(task_id="video_edit")
+    assert catalog["catalog_version"] == 1
+    assert set(catalog) == {"catalog_version", "task_catalog", "models"}
+    assert set(catalog["task_catalog"]) == {"video_edit"}
+    assert all("video_edit" in model["tasks"] for model in catalog["models"])
+    assert catalog["models"] == sorted(catalog["models"], key=lambda model: model["model_id"])
+
+    for model in catalog["models"]:
+        assert set(model) == {
+            "model_id",
+            "display_name",
+            "task_type",
+            "tasks",
+            "cost_tier",
+            "speed_tier",
+            "is_async",
+        }
+        assert "adapter_id" not in model
+        assert "capabilities" not in model
+        assert "multi_modal_reference" not in model["tasks"]
+
+
+@pytest.mark.asyncio
+async def test_profile_catalog_rejects_unknown_canonical_task():
+    from cfgpu_mcp.service import model as model_service
+
+    with pytest.raises(ValueError, match="unknown canonical task_id"):
+        await model_service.list_model_profiles(task_id="r2v")

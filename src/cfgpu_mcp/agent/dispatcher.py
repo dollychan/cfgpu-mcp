@@ -33,6 +33,8 @@ async def dispatch_tool(name: str, inputs: dict[str, Any]) -> Any:
                 return await task_service.wait_for_task(**inputs)
             case "list_models":
                 return await model_service.list_models(**inputs)
+            case "list_model_profiles":
+                return await model_service.list_model_profiles(**inputs)
             case "get_model_card":
                 return await model_service.get_model_card(**inputs)
             case _:

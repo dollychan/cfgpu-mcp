@@ -9,7 +9,7 @@ from cfgpu_mcp.agent.openai_tools import get_openai_tools, openai_dispatch_tool
 
 def test_no_filter_returns_all_tools():
     tools = get_openai_tools()
-    assert len(tools) == 8
+    assert len(tools) == 9
     assert "understand_vision" in {t["function"]["name"] for t in tools}
 
 
@@ -84,7 +84,7 @@ def test_task_types_video_excludes_generate_image():
 
 def test_task_type_filter_keeps_generic_tools():
     names = [t["function"]["name"] for t in get_openai_tools(task_types=["image"])]
-    for generic in ("task_status", "task_wait", "list_models", "get_model_card"):
+    for generic in ("task_status", "task_wait", "list_models", "list_model_profiles", "get_model_card"):
         assert generic in names
 
 
