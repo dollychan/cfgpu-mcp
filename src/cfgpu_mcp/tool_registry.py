@@ -918,16 +918,57 @@ class ListModelsInput(BaseModel):
     )
 
 
-class ListModelProfilesInput(BaseModel):
-    """List agent-facing model profiles with canonical tasks and prompt guidance only."""
+MediaType = Literal["image", "video", "audio", "understand"]
+CapabilityMatch = Literal["all", "any"]
 
-    task_type: Optional[Literal["image", "video", "audio", "understand"]] = Field(
+# Keep this closed enum in sync with capabilities/media_tasks.yaml. The matching
+# contract test deliberately fails if a new canonical task is not admitted to
+# every agent-facing schema.
+CanonicalTaskId = Literal[
+    "text_to_video",
+    "image_to_video",
+    "first_last_frame",
+    "reference_to_video",
+    "video_edit",
+    "video_extend",
+    "synced_audio_output",
+    "audio_driven_video",
+    "web_grounded_generation",
+    "text_to_image",
+    "image_to_image",
+    "multi_image_fusion",
+    "multi_image_group",
+    "region_edit",
+    "text_to_speech",
+    "expressive_speech",
+    "pronunciation_control",
+    "image_understanding",
+    "image_reasoning",
+    "video_understanding",
+    "long_video_understanding",
+    "long_document_understanding",
+    "region_understanding",
+    "tool_calling",
+    "visual_agent",
+    "long_context",
+]
+
+
+class ListModelProfilesInput(BaseModel):
+    """Find models by canonical capabilities and return agent-facing profiles only."""
+
+    media_type: Optional[MediaType] = Field(
         default=None,
         description="Filter by media task type, None returns the complete profile catalog",
     )
-    task_id: Optional[str] = Field(
+    required_tasks: Optional[list[CanonicalTaskId]] = Field(
         default=None,
-        description="Filter by one canonical task ID returned in task_catalog, such as 'video_edit'",
+        min_length=1,
+        description="Canonical capabilities the model must support, such as ['video_edit']",
+    )
+    match: CapabilityMatch = Field(
+        default="all",
+        description="'all' requires every capability; 'any' returns models supporting at least one",
     )
 
 

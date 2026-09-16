@@ -108,8 +108,9 @@ def _load_profile(adapter_id: str, task_catalog: dict[str, dict[str, str]]) -> l
 
 
 async def list_model_profiles(
-    task_type: str | None = None,
-    task_id: str | None = None,
+    media_type: str | None = None,
+    required_tasks: list[str] | None = None,
+    match: str = "all",
 ) -> dict[str, Any]:
     """List the agent-facing model catalog with canonical tasks only.
 
@@ -118,17 +119,21 @@ async def list_model_profiles(
     never reads model cards and never returns adapter capability names, payload fields,
     or parameter constraints.
     """
-    if task_type is not None and task_type not in _TASK_TYPES:
-        raise ValueError(f"unknown task_type {task_type!r}; expected one of {sorted(_TASK_TYPES)}")
+    if media_type is not None and media_type not in _TASK_TYPES:
+        raise ValueError(f"unknown media_type {media_type!r}; expected one of {sorted(_TASK_TYPES)}")
+    if match not in {"all", "any"}:
+        raise ValueError("match must be 'all' or 'any'")
 
     catalog_version, task_catalog = _load_task_catalog()
-    if task_id is not None and task_id not in task_catalog:
-        raise ValueError(f"unknown canonical task_id {task_id!r}")
+    requested_tasks = set(required_tasks or [])
+    unknown = requested_tasks - set(task_catalog)
+    if unknown:
+        raise ValueError(f"unknown canonical task IDs: {sorted(unknown)}")
 
     from cfgpu_mcp.config import get_registry
 
     models: list[dict[str, Any]] = []
-    for adapter in sorted(get_registry().list_all(task_type=task_type), key=lambda item: item.model_name):
+    for adapter in sorted(get_registry().list_all(task_type=media_type), key=lambda item: item.model_name):
         tasks = _load_profile(adapter.adapter_id, task_catalog)
         declared_media_types = {
             task_catalog[profile_task]["media_type"]
@@ -139,7 +144,12 @@ async def list_model_profiles(
             raise ValueError(
                 f"model profile for {adapter.adapter_id!r} does not match its task_type {adapter.task_type!r}"
             )
-        if task_id is not None and task_id not in tasks:
+        supported_tasks = set(tasks)
+        if requested_tasks and (
+            not requested_tasks.issubset(supported_tasks)
+            if match == "all"
+            else not requested_tasks & supported_tasks
+        ):
             continue
         models.append(
             {
@@ -154,8 +164,8 @@ async def list_model_profiles(
         )
 
     visible_task_ids = (
-        {task_id}
-        if task_id is not None
+        requested_tasks
+        if requested_tasks
         else {profile_task for model in models for profile_task in model["tasks"]}
     )
     return {

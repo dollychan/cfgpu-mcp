@@ -110,7 +110,7 @@ names, or parameter ranges.  In particular, `reference_to_video` and
 `video_edit` are distinct tasks even when a provider transports both through a
 reference-video field.
 
-`list_model_profiles()` returns this catalog and is the only model-selection
+`list_model_profiles(media_type?, required_tasks?, match=all)` returns this catalog and is the only model-selection
 tool an agent should receive. Profiles are selection metadata; `adapter.yaml`,
 `tool_param_constraints.json`, and adapter validation remain the authoritative
 control-plane definitions of actual parameters and legal values.  The profile

@@ -6,6 +6,7 @@ from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import model as model_service
+from cfgpu_mcp.tool_registry import CanonicalTaskId, CapabilityMatch, MediaType
 
 
 def register(mcp: FastMCP) -> None:
@@ -19,12 +20,13 @@ def register(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def list_model_profiles(
-        task_type: Optional[str] = None,
-        task_id: Optional[str] = None,
+        media_type: Optional[MediaType] = None,
+        required_tasks: Optional[list[CanonicalTaskId]] = None,
+        match: CapabilityMatch = "all",
     ) -> dict:
-        """List agent-facing model profiles with canonical tasks and prompt guidance only."""
+        """Find models by canonical capabilities; use match='all' for every required task."""
         try:
-            return await model_service.list_model_profiles(task_type, task_id)
+            return await model_service.list_model_profiles(media_type, required_tasks, match)
         except Exception as e:
             return tool_error_dict(e)
 

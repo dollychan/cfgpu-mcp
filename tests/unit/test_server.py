@@ -86,6 +86,18 @@ def test_hallucinated_model_id_is_rejected_by_enum():
     assert "qwen-3-vl-plus" not in string_branch["enum"]
 
 
+def test_profile_catalog_uses_distinct_closed_filter_enums():
+    tool = next(tool for tool in server.mcp._tool_manager.list_tools() if tool.name == "list_model_profiles")
+    props = tool.parameters["properties"]
+    media_type = next(branch for branch in props["media_type"]["anyOf"] if "enum" in branch)
+    task_items = props["required_tasks"]["anyOf"][0]["items"]
+
+    assert media_type["enum"] == ["image", "video", "audio", "understand"]
+    assert "video_edit" in task_items["enum"]
+    assert "video_edit" not in media_type["enum"]
+    assert props["match"]["default"] == "all"
+
+
 # ── ③ disabled_tools (config.yaml trims the exposed MCP surface) ─────────────
 
 

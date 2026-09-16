@@ -1,6 +1,7 @@
 """Keep agent-facing task profiles complete, canonical, and free of adapter aliases."""
 
 from pathlib import Path
+from typing import get_args
 
 import pytest
 import yaml
@@ -28,6 +29,12 @@ def test_media_task_dictionary_has_stable_descriptions():
         assert task_id.replace("_", "").isalnum(), task_id
         assert task["media_type"] in {"video", "image", "audio", "understand", "cross_media"}
         assert all(isinstance(task[field], str) and task[field] for field in ("name", "description", "prompt_guidance"))
+
+
+def test_profile_filter_enum_matches_the_canonical_task_dictionary():
+    from cfgpu_mcp.tool_registry import CanonicalTaskId
+
+    assert set(get_args(CanonicalTaskId)) == set(_load_yaml(TASKS_PATH)["tasks"])
 
 
 def test_every_adapter_has_a_canonical_task_profile():
@@ -69,7 +76,7 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     registry.load()
     monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
 
-    catalog = await model_service.list_model_profiles(task_id="video_edit")
+    catalog = await model_service.list_model_profiles(required_tasks=["video_edit"])
     assert catalog["catalog_version"] == 1
     assert set(catalog) == {"catalog_version", "task_catalog", "models"}
     assert set(catalog["task_catalog"]) == {"video_edit"}
@@ -95,5 +102,23 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
 async def test_profile_catalog_rejects_unknown_canonical_task():
     from cfgpu_mcp.service import model as model_service
 
-    with pytest.raises(ValueError, match="unknown canonical task_id"):
-        await model_service.list_model_profiles(task_id="r2v")
+    with pytest.raises(ValueError, match="unknown canonical task IDs"):
+        await model_service.list_model_profiles(required_tasks=["r2v"])
+
+
+@pytest.mark.asyncio
+async def test_profile_catalog_supports_all_and_any_capability_queries(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    required = ["reference_to_video", "video_edit"]
+    all_match = await model_service.list_model_profiles(required_tasks=required)
+    any_match = await model_service.list_model_profiles(required_tasks=required, match="any")
+
+    assert all(set(required).issubset(model["tasks"]) for model in all_match["models"])
+    assert len(any_match["models"]) > len(all_match["models"])
+    assert all(set(required) & set(model["tasks"]) for model in any_match["models"])
