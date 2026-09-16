@@ -67,6 +67,12 @@ def test_seedance_reference_and_edit_are_distinct_agent_tasks():
     assert "multi_modal_reference" not in profile["tasks"]
 
 
+@pytest.mark.parametrize("adapter_id", ["cfgpu-minimax-h3", "cfdream-minimax-h3-r2v"])
+def test_minimax_h3_reference_video_supports_video_edit(adapter_id: str):
+    profile = _load_yaml(MODELS_DIR / adapter_id / "profile.yaml")
+    assert {"reference_to_video", "video_edit"}.issubset(profile["tasks"])
+
+
 @pytest.mark.asyncio
 async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     from cfgpu_mcp.adapters.registry import AdapterRegistry

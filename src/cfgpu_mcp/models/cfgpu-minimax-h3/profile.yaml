@@ -4,4 +4,5 @@ tasks:
   - image_to_video
   - first_last_frame
   - reference_to_video
+  - video_edit
   - synced_audio_output

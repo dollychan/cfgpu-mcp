@@ -1,3 +1,4 @@
 schema_version: 1
 tasks:
   - reference_to_video
+  - video_edit
