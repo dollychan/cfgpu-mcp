@@ -305,8 +305,33 @@ async def list_voice_profiles(
         ).casefold()
         return text_query in searchable
 
-    voices = [entry for entry in grouped.values() if matches(entry)]
-    voices.sort(key=lambda entry: (entry["language"], entry["display_name"], entry["voice_id"]))
+    # Do not let one catalog with a shorter lexical language label (for example
+    # ``中文`` versus ``中文 (普通话)``) fill every first page.  Users asking for a
+    # language expect to see choices from every compatible audio family; round-robin
+    # canonical compatibility groups while preserving deterministic order within each.
+    voice_groups: dict[tuple[str, ...], list[dict[str, Any]]] = {}
+    for entry in grouped.values():
+        if not matches(entry):
+            continue
+        signature = tuple(model["model_id"] for model in entry["models"])
+        voice_groups.setdefault(signature, []).append(entry)
+    for entries in voice_groups.values():
+        entries.sort(key=lambda entry: (entry["language"], entry["display_name"], entry["voice_id"]))
+
+    voices: list[dict[str, Any]] = []
+    group_indices = {signature: 0 for signature in voice_groups}
+    while True:
+        added = False
+        for signature in sorted(voice_groups):
+            index = group_indices[signature]
+            entries = voice_groups[signature]
+            if index >= len(entries):
+                continue
+            voices.append(entries[index])
+            group_indices[signature] += 1
+            added = True
+        if not added:
+            break
     page = voices[cursor : cursor + limit]
     next_cursor = cursor + limit if cursor + limit < len(voices) else None
     return {

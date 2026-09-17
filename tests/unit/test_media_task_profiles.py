@@ -146,6 +146,15 @@ async def test_voice_catalog_is_paginated_and_has_only_agent_facing_selection_da
     assert len(catalog["voices"]) == 2
     assert catalog["total"] > len(catalog["voices"])
     assert catalog["next_cursor"] == 2
+    assert {
+        model["model_id"]
+        for voice in catalog["voices"]
+        for model in voice["models"]
+    } == {
+        "MiniMax/speech-2.8-hd",
+        "MiniMax/speech-2.8-turbo",
+        "seed-tts-2.0",
+    }
     for voice in catalog["voices"]:
         assert set(voice) == {"voice_id", "display_name", "language", "tags", "models"}
         assert voice["voice_id"]
