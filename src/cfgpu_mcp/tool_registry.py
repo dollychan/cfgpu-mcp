@@ -972,6 +972,26 @@ class ListModelProfilesInput(BaseModel):
     )
 
 
+class ListVoiceProfilesInput(BaseModel):
+    """Find selectable system voices without reading model cards or guessing voice IDs."""
+
+    model_ids: Optional[list[str]] = Field(
+        default=None,
+        min_length=1,
+        description="Optional public audio model_ids to restrict compatible voices",
+    )
+    language: Optional[str] = Field(
+        default=None,
+        description="Language or dialect substring, such as '中文', 'English', or '粤语'",
+    )
+    query: Optional[str] = Field(
+        default=None,
+        description="Keyword matched against voice display name, handle, language, or user-facing tags",
+    )
+    limit: int = Field(default=20, ge=1, le=100, description="Maximum voices per page (1-100)")
+    cursor: int = Field(default=0, ge=0, description="Offset returned as next_cursor by the previous page")
+
+
 class GetModelCardInput(BaseModel):
     """Get detailed model information, parameters, and usage examples."""
 
@@ -1300,6 +1320,7 @@ _REGISTRY: list[tuple[str, type[BaseModel]]] = [
     ("task_wait",       TaskWaitInput),
     ("list_models",     ListModelsInput),
     ("list_model_profiles", ListModelProfilesInput),
+    ("list_voice_profiles", ListVoiceProfilesInput),
     ("get_model_card",  GetModelCardInput),
 ]
 

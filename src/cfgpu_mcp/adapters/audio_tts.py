@@ -72,8 +72,9 @@ def _voice_ids_from_card(model_dir: str) -> frozenset[str]:
 
     The cards are already shipped runtime data (``get_model_card`` reads the same
     files).  Keeping one authoritative list avoids copying hundreds of ids into
-    Python. Voice ids are stripped of surrounding whitespace while meaningful
-    characters such as full-width punctuation and letter casing are preserved.
+    Python.  Voice ids are opaque and preserved byte-for-byte inside their code
+    spans: a trailing space, full-width punctuation, and letter casing can all be
+    meaningful to an upstream provider.
     """
     card = Path(__file__).resolve().parent.parent / "models" / model_dir / "card.md"
     text = card.read_text(encoding="utf-8")
@@ -88,8 +89,8 @@ def _voice_ids_from_card(model_dir: str) -> frozenset[str]:
             continue
         matches = re.findall(r"`([^`]+)`", line)
         if matches:
-            voice = matches[0].strip()
-            if voice:
+            voice = matches[0]
+            if voice.strip():
                 voices.add(voice)
     if not voices:
         raise RuntimeError(f"voice catalog table is empty in {card}")
@@ -164,8 +165,10 @@ def _extract_inline_audio(resp: dict) -> dict | None:
 _MINIMAX_VOICE_REMEDY = (
     "该 voice 不在此模型的音色表中。两个语音模型族的音色互不通用："
     "形如 xxx_uranus_bigtts 或 saturn_xxx 的是 seed-tts 的 speaker，MiniMax 一律不接受。"
-    "音色 id 会去除首尾空格；全角括号、不规则大小写等其他字符仍须准确照抄。"
+    "音色 id 的首尾空格、全角括号、不规则大小写等字符都须准确照抄，不得自行规范化。"
     "不需要特定音色时省略 voice 即可，默认为 male-qn-qingse。"
+    "需要选择音色时，调用 list_voice_profiles(model_ids=[当前 model_id])，"
+    "按语言或风格关键词查询后逐字使用返回的 voice_id。"
 )
 
 _MINIMAX_EMOTION_REMEDY = (
@@ -175,17 +178,17 @@ _MINIMAX_EMOTION_REMEDY = (
 )
 
 # status_msg 里出现的字段名 → 该字段的专用建议；先按字段匹配，命中即用。
-# 第三项是「是否保留 get_model_card 提示」。
+# 第三项仅控制通用 card hint；agent-facing recovery must never need a card.
 _MINIMAX_FIELD_REMEDIES: tuple[tuple[str, str, bool], ...] = (
-    ("emotion", _MINIMAX_EMOTION_REMEDY, True),
-    ("voice", _MINIMAX_VOICE_REMEDY, True),
+    ("emotion", _MINIMAX_EMOTION_REMEDY, False),
+    ("voice", _MINIMAX_VOICE_REMEDY, False),
 )
 
 # 字段名匹配不到时按 status_code 兜底。2013 未点名字段时不给泛化建议——
 # 编一句「请检查参数」既没有信息量，又会挤掉更有用的 card 提示。
 _MINIMAX_CODE_REMEDIES: dict[str, tuple[str, bool]] = {
-    "2013": ("", True),
-    "2054": (_MINIMAX_VOICE_REMEDY, True),
+    "2013": ("", False),
+    "2054": (_MINIMAX_VOICE_REMEDY, False),
 }
 
 # 调用者可自行修正的 code —— 归为 invalid_params 而不是 task_failed。后者读作

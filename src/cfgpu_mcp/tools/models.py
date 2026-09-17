@@ -31,6 +31,20 @@ def register(mcp: FastMCP) -> None:
             return tool_error_dict(e)
 
     @mcp.tool()
+    async def list_voice_profiles(
+        model_ids: Optional[list[str]] = None,
+        language: Optional[str] = None,
+        query: Optional[str] = None,
+        limit: int = 20,
+        cursor: int = 0,
+    ) -> dict:
+        """Find selectable system voices by language, style keyword, or compatible audio model."""
+        try:
+            return await model_service.list_voice_profiles(model_ids, language, query, limit, cursor)
+        except Exception as e:
+            return tool_error_dict(e)
+
+    @mcp.tool()
     async def get_model_card(model_name: str) -> str:
         """Get detailed model information, parameters, and usage examples."""
         try:

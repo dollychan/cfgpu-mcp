@@ -128,3 +128,77 @@ async def test_profile_catalog_supports_all_and_any_capability_queries(monkeypat
     assert all(set(required).issubset(model["tasks"]) for model in all_match["models"])
     assert len(any_match["models"]) > len(all_match["models"])
     assert all(set(required) & set(model["tasks"]) for model in any_match["models"])
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_is_paginated_and_has_only_agent_facing_selection_data(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_voice_profiles(language="中文", limit=2)
+
+    assert set(catalog) == {"catalog_version", "voices", "total", "next_cursor"}
+    assert catalog["catalog_version"] == 1
+    assert len(catalog["voices"]) == 2
+    assert catalog["total"] > len(catalog["voices"])
+    assert catalog["next_cursor"] == 2
+    for voice in catalog["voices"]:
+        assert set(voice) == {"voice_id", "display_name", "language", "tags", "models"}
+        assert voice["voice_id"]
+        assert "中文" in voice["language"]
+        assert voice["models"]
+        for model in voice["models"]:
+            assert set(model) == {"model_id", "display_name", "cost_tier", "speed_tier"}
+            assert "adapter_id" not in model
+            assert "is_async" not in model
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_aggregates_shared_voices_and_filters_by_keyword(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_voice_profiles(query="青涩青年", limit=10)
+    voice = next(item for item in catalog["voices"] if item["voice_id"] == "male-qn-qingse")
+
+    assert voice["display_name"] == "青涩青年音色"
+    assert {model["model_id"] for model in voice["models"]} == {
+        "MiniMax/speech-2.8-hd",
+        "MiniMax/speech-2.8-turbo",
+    }
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_preserves_byte_exact_handles(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_voice_profiles(query="ProfessionalHost", limit=10)
+    assert "Cantonese_ProfessionalHost（F)" in {voice["voice_id"] for voice in catalog["voices"]}
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_rejects_unknown_model_and_invalid_paging(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    with pytest.raises(ValueError, match="unknown audio model_ids"):
+        await model_service.list_voice_profiles(model_ids=["invented-voice-model"])
+    with pytest.raises(ValueError, match="limit must be between"):
+        await model_service.list_voice_profiles(limit=0)

@@ -9,6 +9,16 @@ import yaml
 _MODELS_DIR = Path(__file__).parent.parent / "models"
 _TASKS_PATH = Path(__file__).parent.parent / "capabilities" / "media_tasks.yaml"
 _TASK_TYPES = frozenset({"image", "video", "audio", "understand"})
+_VOICE_CATALOG_VERSION = 1
+
+# A voice may be shared by multiple public models.  MiniMax Turbo inherits the HD
+# voice list, but has no copy of that table in its own card; keep that provider
+# inheritance inside MCP rather than forcing an agent to learn it.
+_VOICE_CATALOG_SOURCE_BY_ADAPTER = {
+    "seed-tts-2-0": "seed-tts-2-0",
+    "minimax-speech-2-8-hd": "minimax-speech-2-8-hd",
+    "minimax-speech-2-8-turbo": "minimax-speech-2-8-hd",
+}
 
 
 def _split_sections(markdown: str) -> dict[str, str]:
@@ -174,6 +184,136 @@ async def list_model_profiles(
             for canonical_task in sorted(visible_task_ids)
         },
         "models": models,
+    }
+
+
+def _voice_table_rows(source_adapter_id: str) -> list[dict[str, Any]]:
+    """Load a compact agent-facing voice inventory from MCP-owned card data.
+
+    Cards remain the detailed operational source.  This parser publishes only
+    stable selection fields (handle, display name, language, and user-facing tags),
+    so agents never need to read card prose, provider parameter mappings, or limits.
+    """
+    card_path = _MODELS_DIR / source_adapter_id / "card.md"
+    text = card_path.read_text(encoding="utf-8")
+    marker = "## 系统音色列表"
+    if marker not in text:
+        raise ValueError(f"voice catalog section missing from {card_path}")
+    section = text.split(marker, 1)[1].split("\n## ", 1)[0]
+    entries: list[dict[str, Any]] = []
+    is_seed_tts = source_adapter_id == "seed-tts-2-0"
+
+    for line in section.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if not cells or set("".join(cells)) <= {":", "-"}:
+            continue
+        if is_seed_tts:
+            # 场景 | 名称 | `speaker` | 语种/方言 | 标签
+            if len(cells) != 5:
+                continue
+            scene, display_name, voice_cell, language, tag_cell = cells
+            tags = [scene]
+            tags.extend(tag.strip() for tag in tag_cell.split("/") if tag.strip())
+        else:
+            # 序号 | 语言 | `voice_id` | 音色名称
+            if len(cells) != 4 or not cells[0].isdigit():
+                continue
+            _, language, voice_cell, display_name = cells
+            tags = []
+
+        match = re.fullmatch(r"`(.+)`", voice_cell)
+        if not match:
+            continue
+        # Voice handles are opaque provider identifiers.  In particular, a trailing
+        # space inside a code span is meaningful for some MiniMax voices; trim only
+        # the table cell outside the backticks, never the captured handle itself.
+        voice_id = match.group(1)
+        if not voice_id.strip() or not display_name:
+            continue
+        entries.append(
+            {
+                "voice_id": voice_id,
+                "display_name": display_name,
+                "language": language,
+                "tags": tags,
+            }
+        )
+    if not entries:
+        raise ValueError(f"voice catalog table is empty or invalid in {card_path}")
+    return entries
+
+
+async def list_voice_profiles(
+    model_ids: list[str] | None = None,
+    language: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+    cursor: int = 0,
+) -> dict[str, Any]:
+    """List selectable system voices without exposing model-card implementation data.
+
+    Voice handles are intentionally returned verbatim: they are canonical values for
+    ``generate_audio(voice=...)``, not identifiers an agent may derive or normalize.
+    """
+    if not 1 <= limit <= 100:
+        raise ValueError("limit must be between 1 and 100")
+    if cursor < 0:
+        raise ValueError("cursor must be >= 0")
+
+    from cfgpu_mcp.config import get_registry
+
+    audio_adapters = sorted(get_registry().list_all(task_type="audio"), key=lambda item: item.model_name)
+    by_model_id = {adapter.model_name: adapter for adapter in audio_adapters}
+    requested_model_ids = set(model_ids or by_model_id)
+    unknown_models = requested_model_ids - set(by_model_id)
+    if unknown_models:
+        raise ValueError(f"unknown audio model_ids: {sorted(unknown_models)}")
+
+    grouped: dict[str, dict[str, Any]] = {}
+    for adapter in audio_adapters:
+        if adapter.model_name not in requested_model_ids:
+            continue
+        source_adapter_id = _VOICE_CATALOG_SOURCE_BY_ADAPTER.get(adapter.adapter_id)
+        if source_adapter_id is None:
+            continue
+        for entry in _voice_table_rows(source_adapter_id):
+            voice = grouped.setdefault(
+                entry["voice_id"],
+                {**entry, "models": []},
+            )
+            voice["models"].append(
+                {
+                    "model_id": adapter.model_name,
+                    "display_name": adapter.display_name,
+                    "cost_tier": adapter.cost_tier,
+                    "speed_tier": adapter.speed_tier,
+                }
+            )
+
+    language_query = language.casefold().strip() if language else ""
+    text_query = query.casefold().strip() if query else ""
+
+    def matches(entry: dict[str, Any]) -> bool:
+        if language_query and language_query not in entry["language"].casefold():
+            return False
+        if not text_query:
+            return True
+        searchable = " ".join(
+            [entry["voice_id"], entry["display_name"], entry["language"], *entry["tags"]]
+        ).casefold()
+        return text_query in searchable
+
+    voices = [entry for entry in grouped.values() if matches(entry)]
+    voices.sort(key=lambda entry: (entry["language"], entry["display_name"], entry["voice_id"]))
+    page = voices[cursor : cursor + limit]
+    next_cursor = cursor + limit if cursor + limit < len(voices) else None
+    return {
+        "catalog_version": _VOICE_CATALOG_VERSION,
+        "voices": page,
+        "total": len(voices),
+        "next_cursor": next_cursor,
     }
 
 
