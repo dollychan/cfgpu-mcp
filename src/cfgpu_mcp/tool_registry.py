@@ -462,8 +462,9 @@ class GenerateImageInput(BaseModel):
     resolution: Literal["1K", "1.5K", "2K", "3K", "4K"] = Field(
         default="2K",
         description="Output resolution tier. The tiers a model actually offers differ "
-        "per family and asking for one outside it is rejected rather than quietly "
-        "downgraded (doubao-seedream-5-0-pro: 1K/1.5K/2K; 5-0-lite and 4.5: 2K/3K/4K; "
+        "per family. A billed call with an unsupported tier is rejected; validate_only "
+        "instead reports a nearest supported tier at or below it in corrected_args "
+        "(doubao-seedream-5-0-pro: 1K/1.5K/2K; 5-0-lite and 4.5: 2K/3K/4K; "
         "4.0: 1K/2K/3K/4K). 1.5K exists only on doubao-seedream-5-0-pro, where it looks "
         "better than 1K at a documented-equal price — but cfgpu sends exact pixels, "
         "not the tier name, so 1.5K may bill at the higher band; use 1K if the rate "

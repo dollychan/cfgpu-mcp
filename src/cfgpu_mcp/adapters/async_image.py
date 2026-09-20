@@ -61,7 +61,12 @@ class _AsyncImageBase(ModelAdapter):
     ) -> dict[str, Any]:
         assert isinstance(req, GenerateImageInput)
         corrected: dict[str, Any] = {}
-        if req.resolution == "3K":
+        # This API family accepts the discrete 1K / 2K / 4K tiers.  Keep the
+        # correction at or below the caller's requested tier: validation must
+        # never turn an unsupported request into a more expensive generation.
+        if req.resolution == "1.5K":
+            corrected["resolution"] = "1K"
+        elif req.resolution == "3K":
             corrected["resolution"] = "2K"
         allowed_ratios = (
             {"1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"}

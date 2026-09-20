@@ -437,6 +437,23 @@ async def test_validate_only_corrects_an_unsupported_resolution():
 
 
 @pytest.mark.asyncio
+async def test_validate_only_corrects_cf_image_2_intermediate_resolution_downward():
+    """The approval path must carry the tier that the billed API actually accepts."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await image_service.generate_image(
+            prompt="去除字幕",
+            model="cf-image-2",
+            resolution="1.5K",
+            validate_only=True,
+        )
+
+    assert result["validated"] is True
+    assert result["corrected_args"] == {"resolution": "1K"}
+    assert result["payload"]["resolution"] == "1K"
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "frames",
     [
@@ -544,6 +561,7 @@ async def test_validate_only_runs_build_payload():
         # published ratios are present now, so there is nothing to correct.
         ("doubao-seedream-5-0-lite", "4K", "21:9", {}),
         ("doubao-seedream-5-0-lite", "3K", "3:2", {}),
+        ("cf-image-2", "1.5K", "9:16", {"resolution": "1K"}),
         ("cf-image-2", "3K", "21:9", {"resolution": "2K", "aspect_ratio": "1:1"}),
         ("cf2", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
         ("cf-pro", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
