@@ -1,0 +1,11 @@
+schema_version: 1
+tasks:
+  - image_understanding
+  - image_reasoning
+  - video_understanding
+  - long_video_understanding
+  - long_document_understanding
+  - region_understanding
+  - tool_calling
+  - visual_agent
+  - long_context

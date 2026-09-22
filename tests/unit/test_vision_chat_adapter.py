@@ -129,6 +129,7 @@ def test_reuses_class_with_own_model_id():
     ("adapter_id", "cfgpu_model_id", "model_name"),
     [
         ("qwen-3-7-flash", "qwen3.7-flash", "qwen3.7-flash"),
+        ("qwen-3-7-plus", "qwen3.7-plus", "qwen3.7-plus"),
         ("qwen-3-8-max", "qwen3.8-max", "qwen3.8-max"),
     ],
 )

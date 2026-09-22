@@ -84,7 +84,7 @@ async def test_profile_catalog_lists_all_qwen_vision_models(monkeypatch):
 
     catalog = await model_service.list_model_profiles(media_type="understand")
     model_ids = {model["model_id"] for model in catalog["models"]}
-    assert {"qwen3.6-plus", "qwen3.7-flash", "qwen3.8-max"} <= model_ids
+    assert {"qwen3.6-plus", "qwen3.7-flash", "qwen3.7-plus", "qwen3.8-max"} <= model_ids
 
 
 @pytest.mark.asyncio

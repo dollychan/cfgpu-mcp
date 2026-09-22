@@ -36,7 +36,7 @@
 | 视频 | `grok-imagine-video` | Grok Imagine Video（xAI Aurora，文生/图生短视频，同步出音频；公开 id `cf-imagine-video`） |
 | 视频 | `grok-imagine-video-1-5` | Grok Imagine Video 1.5（同家族，画质更高、单价更贵；公开 id `cf-imagine-video-1.5`） |
 | 语音 | `seed-tts-2-0` / `minimax-speech-2-8-hd` / `minimax-speech-2-8-turbo` | 豆包语音合成 2.0 / MiniMax 语音 2.8 |
-| 视觉理解 | `qwen-3-6-plus` / `qwen-3-7-flash` / `qwen-3-8-max` | Qwen3.6-Plus / Qwen3.7-Flash / Qwen3.8-Max（图像/视频理解与推理） |
+| 视觉理解 | `qwen-3-6-plus` / `qwen-3-7-flash` / `qwen-3-7-plus` / `qwen-3-8-max` | Qwen3.6-Plus / Qwen3.7-Flash / Qwen3.7-Plus / Qwen3.8-Max（图像/视频理解与推理） |
 
 > 运行 `cfgpu models list` 查看当前实际加载的模型。
 
