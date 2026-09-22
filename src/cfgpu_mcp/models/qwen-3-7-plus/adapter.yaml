@@ -6,3 +6,4 @@ adapter_id: qwen-3-7-plus
 display_name: "Qwen3.7-Plus"
 cfgpu_model_id: qwen3.7-plus
 model_name: qwen3.7-plus
+analysis_depth_default_for: [balanced]

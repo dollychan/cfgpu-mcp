@@ -72,6 +72,11 @@ class PollConfig:
 #: typo in every adapter.yaml that named it.
 _QUALITY_TIERS = frozenset({"fast", "balanced", "best"})
 
+#: ``UnderstandVisionInput.analysis_depth`` has a separate vocabulary from media
+#: generation's quality tier. Keeping its defaults separate prevents an adapter's
+#: generation ``default_for`` declaration from affecting vision routing.
+_ANALYSIS_DEPTHS = frozenset({"fast", "balanced", "thorough"})
+
 #: The fleet video-resolution vocabulary, ordered by output size. Read by
 #: ``validation_corrections`` to pick the nearest supported tier *at or below* the
 #: requested one, so a fallback never silently upgrades a caller into a pricier tier.
@@ -134,6 +139,9 @@ class ModelAdapter(ABC):
     #: so it is a preference and not a pin — a model that cannot serve the request
     #: is gone before this is read, and the next-best candidate takes over.
     default_for: frozenset[str]
+    #: Analysis depths for which this vision model is the declared automatic default.
+    #: Only read for ``UnderstandVisionInput``; media tasks use ``default_for`` above.
+    analysis_depth_default_for: frozenset[str]
     max_duration_seconds: int    # video only: longest explicit duration accepted
     default_duration_seconds: int
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
@@ -204,6 +212,16 @@ class ModelAdapter(ABC):
                 f"{sorted(unknown)} (valid: {sorted(_QUALITY_TIERS)})"
             )
         instance.default_for = frozenset(default_for)
+        analysis_depth_default_for = config.get("analysis_depth_default_for") or []
+        if isinstance(analysis_depth_default_for, str):
+            analysis_depth_default_for = [analysis_depth_default_for]
+        unknown = set(analysis_depth_default_for) - _ANALYSIS_DEPTHS
+        if unknown:
+            raise ValueError(
+                f"{instance.adapter_id}: analysis_depth_default_for has unknown depths "
+                f"{sorted(unknown)} (valid: {sorted(_ANALYSIS_DEPTHS)})"
+            )
+        instance.analysis_depth_default_for = frozenset(analysis_depth_default_for)
         # GenerateVideoInput's own validator allows the widest range any model in
         # the fleet accepts (4–30, for Doubao Seedance 2.5). Every narrower model
         # declares its real ceiling here so supports() can reject locally instead

@@ -6,3 +6,4 @@ adapter_id: qwen-3-8-max
 display_name: "Qwen3.8-Max"
 cfgpu_model_id: qwen3.8-max
 model_name: qwen3.8-max
+analysis_depth_default_for: [thorough]

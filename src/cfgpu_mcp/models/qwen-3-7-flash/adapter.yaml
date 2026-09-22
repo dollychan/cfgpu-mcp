@@ -6,3 +6,4 @@ adapter_id: qwen-3-7-flash
 display_name: "Qwen3.7-Flash"
 cfgpu_model_id: qwen3.7-flash
 model_name: qwen3.7-flash
+analysis_depth_default_for: [fast]

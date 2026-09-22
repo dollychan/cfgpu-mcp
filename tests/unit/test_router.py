@@ -479,12 +479,31 @@ def test_resolve_auto_selects_from_all():
     assert adapter.adapter_id == "doubao-seedance-2-0-fast"
 
 
-def test_understand_request_selects_understand_model():
+@pytest.mark.parametrize(("analysis_depth", "expected"), [
+    ("fast", "qwen-3-7-flash"),
+    ("balanced", "qwen-3-7-plus"),
+    ("thorough", "qwen-3-8-max"),
+])
+def test_understand_request_routes_by_analysis_depth(analysis_depth, expected):
     router = _router()
-    req = UnderstandVisionInput(prompt="描述这张图片", images=["https://x/a.jpg"])
+    req = UnderstandVisionInput(
+        prompt="描述这张图片", images=["https://x/a.jpg"], analysis_depth=analysis_depth
+    )
     adapter = router.select_model(req)
     assert adapter.task_type == "understand"
-    assert adapter.adapter_id == "qwen-3-6-plus"
+    assert adapter.adapter_id == expected
+
+
+def test_understand_explicit_model_overrides_analysis_depth():
+    """The depth is only an auto-routing preference, never a model override."""
+    router = _router()
+    req = UnderstandVisionInput(
+        prompt="描述这张图片",
+        images=["https://x/a.jpg"],
+        model="qwen3.6-plus",
+        analysis_depth="thorough",
+    )
+    assert router.resolve(req).adapter_id == "qwen-3-6-plus"
 
 
 def test_understand_request_never_selects_media_model():

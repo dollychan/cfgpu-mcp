@@ -54,6 +54,13 @@ def test_understand_model_enum_lists_only_model_names():
     assert array_branch["items"]["enum"] == expected_ids
 
 
+def test_understand_analysis_depth_schema_is_closed_and_defaults_to_balanced():
+    tool = next(t for t in server.mcp._tool_manager.list_tools() if t.name == "understand_vision")
+    prop = tool.parameters["properties"]["analysis_depth"]
+    assert prop["enum"] == ["fast", "balanced", "thorough"]
+    assert prop["default"] == "balanced"
+
+
 def test_model_enum_never_exposes_internal_ids():
     """Only the canonical model_name is advertised; the internal adapter_id /
     cfgpu_model_id (e.g. 'gpt-image-2' / 'gpt-image-2' vs model_name 'cf-image-2')

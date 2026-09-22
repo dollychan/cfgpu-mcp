@@ -786,6 +786,13 @@ class UnderstandVisionInput(BaseModel):
         "or 'auto' to choose from all vision-understanding models. Prefer 'auto' "
         "unless a specific model is required — an unknown id falls back to auto.",
     )
+    analysis_depth: Literal["fast", "balanced", "thorough"] = Field(
+        default="balanced",
+        description="Routing preference when model='auto'. 'fast' favors lower latency, "
+        "'balanced' is the default for ordinary visual analysis, and 'thorough' favors "
+        "the configured detailed-analysis default. Explicit model selection takes precedence; "
+        "media and capability requirements are always enforced.",
+    )
     images: Optional[list[str]] = media_field(
         slot="Images to analyze (image understanding / reasoning). Multiple images are "
         "compared/reasoned over jointly. Images ONLY — a video must NOT go here; route it "

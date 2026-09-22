@@ -27,7 +27,7 @@ _QUALITY_RANK_STEP = 11
 
 
 def selection_key(
-    score: int, adapter: "ModelAdapter", quality_tier: str
+    score: int, adapter: "ModelAdapter", routing_tier: str, *, declared_defaults: frozenset[str] | None = None
 ) -> tuple[int, int, int, str]:
     """Ordering for ``model="auto"``: declared default, then score, preference, name.
 
@@ -56,12 +56,12 @@ def selection_key(
     The trailing ``adapter_id`` keeps selection deterministic and independent of
     registry/filesystem iteration order.
 
-    ``quality_tier`` is required rather than defaulted: it now changes the *first*
-    key, and a caller that omitted it would get a silently wrong ordering that
-    still looks like a valid ranking.
+    ``routing_tier`` is either a generation ``quality_tier`` or a vision
+    ``analysis_depth``. ``declared_defaults`` lets the latter use its separate
+    adapter declaration; absent means the generation ``default_for`` declaration.
     """
     return (
-        0 if quality_tier in adapter.default_for else 1,
+        0 if routing_tier in (adapter.default_for if declared_defaults is None else declared_defaults) else 1,
         -score,
         -adapter.auto_priority,
         adapter.adapter_id,
@@ -201,10 +201,19 @@ class ModelRouter:
                 user_message="没有可用的模型支持当前请求，请检查参数或手动指定 model。",
                 original={},
             )
-        # A model declared the default for this quality tier wins outright; failing
-        # that, highest score. See selection_key for the full ordering.
-        quality_tier = getattr(req, "quality_tier", "balanced")
-        scored.sort(key=lambda x: selection_key(x[0], x[1], quality_tier))
+        # A declared default wins outright among compatible candidates. Vision uses
+        # its own analysis-depth declarations; generation keeps quality-tier defaults.
+        if isinstance(req, UnderstandVisionInput):
+            analysis_depth = req.analysis_depth
+            scored.sort(
+                key=lambda x: selection_key(
+                    x[0], x[1], analysis_depth,
+                    declared_defaults=x[1].analysis_depth_default_for,
+                )
+            )
+        else:
+            quality_tier = req.quality_tier
+            scored.sort(key=lambda x: selection_key(x[0], x[1], quality_tier))
         return scored[0][1]
 
     def _score(

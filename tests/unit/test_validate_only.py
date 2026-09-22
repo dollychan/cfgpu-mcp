@@ -920,8 +920,8 @@ async def test_vision_validate_only_reports_the_routed_model_and_the_real_payloa
     assert result["validated"] is True
     assert result["task_type"] == "understand"
     assert result["is_async"] is False
-    assert result["model_used"] == "qwen3.6-plus"
-    assert result["corrected_args"] == {"model": "qwen3.6-plus"}
+    assert result["model_used"] == "qwen3.7-plus"
+    assert result["corrected_args"] == {"model": "qwen3.7-plus"}
     assert "m_c079468f" in json.dumps(result["payload"], ensure_ascii=False)
 
 
@@ -945,7 +945,7 @@ async def test_vision_validate_only_rejects_what_the_billed_path_rejects():
         )
 
 
-# ── the description's reader is the model ─────────────────────────────────────
+# ── schema descriptions describe the API, not host orchestration ───────────────
 
 
 @pytest.mark.parametrize(
@@ -953,21 +953,11 @@ async def test_vision_validate_only_rejects_what_the_billed_path_rejects():
     [GenerateImageInput, GenerateVideoInput],
     ids=["image", "video"],
 )
-def test_the_description_states_ownership_instead_of_prescribing_the_approval_loop(input_model):
-    """Pins a *string*, deliberately — the string is the fix.
-
-    The description used to close with orchestration advice for the integrator ("validate
-    first, show the approval, then call again without this flag"). Its actual reader is the
-    model choosing arguments; one that believes it runs the approval loop follows that
-    advice, announces "I'll preflight this" to the user, and then receives a real, billed
-    generation, because a host that preflights owns this flag and overrides the model's
-    value. Ownership has to be stated where the model reads, or the takeover is a surprise.
-
-    Asserted as two halves so a rewrite of the wording is free but dropping either half is
-    not: the ownership claim, and the consequence that makes it actionable (it may bill).
-    """
+def test_the_description_describes_api_behavior_without_host_orchestration(input_model):
+    """The schema describes this API call, not an agent/host approval workflow."""
     description = input_model.model_fields["validate_only"].description
 
-    assert "belongs to the calling host" in description
-    assert "billed" in description.split("belongs to the calling host", 1)[1]
-    assert "show the approval" not in description, "the orchestration recipe belongs in CLIENT_GUIDE.md, not in a model-facing schema"
+    assert "without sending it" in description
+    assert "nothing is billed" in description
+    assert "calling host" not in description
+    assert "approval" not in description

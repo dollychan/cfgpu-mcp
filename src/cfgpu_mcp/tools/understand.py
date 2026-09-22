@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -14,6 +14,7 @@ def register(mcp: FastMCP) -> None:
     async def understand_vision(
         prompt: str,
         model: str | list[str] = "auto",
+        analysis_depth: Literal["fast", "balanced", "thorough"] = "balanced",
         images: Optional[list[str]] = None,
         video: Optional[str] = None,
         regions: Optional[list[RegionSpec]] = None,
@@ -30,6 +31,7 @@ def register(mcp: FastMCP) -> None:
             result = await vision_service.understand_vision(
                 prompt=prompt,
                 model=model,
+                analysis_depth=analysis_depth,
                 images=images,
                 video=video,
                 regions=regions,
