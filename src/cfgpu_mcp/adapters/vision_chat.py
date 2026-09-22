@@ -28,7 +28,7 @@ class QwenVisionAdapter(ModelAdapter):
     chain-of-thought under ``message.reasoning_content``, which we carry through on
     the assistant ``message`` object alongside ``content``.
 
-    Registered under ``qwen-3-6-plus``; sibling Qwen3.6 models reuse
+    Registered under ``qwen-3-6-plus``; sibling Qwen vision models reuse
     this class via the registry extends-chain with their own ``cfgpu_model_id``.
 
     Reads regions (``region_understand``) the same way the Seedream editor writes them:

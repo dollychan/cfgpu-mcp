@@ -1,0 +1,8 @@
+# Shares the Qwen OpenAI-compatible vision-chat request contract.  Keeping this
+# as an extension makes payload changes to the family parent apply consistently.
+extends: qwen-3-6-plus
+
+adapter_id: qwen-3-8-max
+display_name: "Qwen3.8-Max"
+cfgpu_model_id: qwen3.8-max
+model_name: qwen3.8-max

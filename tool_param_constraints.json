@@ -1041,7 +1041,7 @@
       "note": "Unified tool schema from UnderstandVisionInput. Vision-language: returns a TEXT answer (not media). Always synchronous — no task_id, no wait/timeout. prompt is required even when media is attached.",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "instruction/question about the supplied media (required)" },
-        "model": { "type": "enum", "options": ["auto", "qwen3.6-plus"], "default": "auto", "writable": "true" },
+        "model": { "type": "enum", "options": ["auto", "qwen3.6-plus", "qwen3.7-flash", "qwen3.8-max"], "default": "auto", "writable": "true" },
         "images": { "type": "url_array", "writable": "true", "note": "public image URLs; multiple images reasoned over jointly" },
         "video": { "type": "url", "writable": "true", "note": "a single public video URL (long video supported)" },
         "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas, and a typed-in coordinate is exactly the transcription this parameter exists to avoid. Only models with the region_understand capability accept it; passing it to another model is a hard error, never a silent whole-image answer" },
@@ -1066,6 +1066,60 @@
         "video": { "type": "url", "writable": "true", "note": "maps to messages[user].content[].video_url.url; single video, long video supported" },
         "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas, and a typed-in coordinate is exactly the transcription this parameter exists to avoid. Only models with the region_understand capability accept it; passing it to another model is a hard error, never a silent whole-image answer" },
         "image_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per image, same order and length as images; resolves [[handle]] placeholders in prompt so the caller never hard-codes an image ordinal. Never sent upstream" },
+        "system_prompt": { "type": "text", "writable": "true", "note": "maps to messages[system].content; null = 'You are a helpful assistant.'" },
+        "max_tokens": { "type": "integer", "writable": "true", "note": "maps to max_tokens; null = model default" },
+        "temperature": { "type": "number", "writable": "true", "note": "maps to temperature; null = model default" },
+        "return_metadata": { "type": "boolean", "default": true, "writable": "false", "note": "include token usage; choices[0].message.content (the answer) is always returned" },
+        "model_specific": {
+          "type": "object",
+          "note": "merged at the top level of the chat/completions request",
+          "fields": {
+            "top_p": { "type": "number", "note": "nucleus sampling" },
+            "tools": { "type": "array", "note": "tool/function-calling definitions" }
+          }
+        }
+      }
+    },
+    {
+      "adapterId": "qwen-3-7-flash",
+      "modelId": "qwen3.7-flash",
+      "modelName": "qwen3.7-flash",
+      "displayName": "Qwen3.7-Flash",
+      "note": "Vision-language understanding/reasoning over images & video. Uses the same synchronous OpenAI-compatible /model/v1/chat/completions payload structure as qwen3.6-plus; returns text, not media.",
+      "args": {
+        "prompt": { "type": "text", "writable": "true", "note": "maps to messages[user].content[].text (required)" },
+        "model": { "type": "string", "value": "qwen3.7-flash", "writable": "false" },
+        "images": { "type": "url_array", "writable": "true", "note": "maps to messages[user].content[].image_url.url; multiple images reasoned over jointly" },
+        "video": { "type": "url", "writable": "true", "note": "maps to messages[user].content[].video_url.url; single video" },
+        "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas." },
+        "image_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per image, same order and length as images; resolves [[handle]] placeholders in prompt. Never sent upstream" },
+        "system_prompt": { "type": "text", "writable": "true", "note": "maps to messages[system].content; null = 'You are a helpful assistant.'" },
+        "max_tokens": { "type": "integer", "writable": "true", "note": "maps to max_tokens; null = model default" },
+        "temperature": { "type": "number", "writable": "true", "note": "maps to temperature; null = model default" },
+        "return_metadata": { "type": "boolean", "default": true, "writable": "false", "note": "include token usage; choices[0].message.content (the answer) is always returned" },
+        "model_specific": {
+          "type": "object",
+          "note": "merged at the top level of the chat/completions request",
+          "fields": {
+            "top_p": { "type": "number", "note": "nucleus sampling" },
+            "tools": { "type": "array", "note": "tool/function-calling definitions" }
+          }
+        }
+      }
+    },
+    {
+      "adapterId": "qwen-3-8-max",
+      "modelId": "qwen3.8-max",
+      "modelName": "qwen3.8-max",
+      "displayName": "Qwen3.8-Max",
+      "note": "Vision-language understanding/reasoning over images & video. Uses the same synchronous OpenAI-compatible /model/v1/chat/completions payload structure as qwen3.6-plus; returns text, not media.",
+      "args": {
+        "prompt": { "type": "text", "writable": "true", "note": "maps to messages[user].content[].text (required)" },
+        "model": { "type": "string", "value": "qwen3.8-max", "writable": "false" },
+        "images": { "type": "url_array", "writable": "true", "note": "maps to messages[user].content[].image_url.url; multiple images reasoned over jointly" },
+        "video": { "type": "url", "writable": "true", "note": "maps to messages[user].content[].video_url.url; single video" },
+        "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas." },
+        "image_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per image, same order and length as images; resolves [[handle]] placeholders in prompt. Never sent upstream" },
         "system_prompt": { "type": "text", "writable": "true", "note": "maps to messages[system].content; null = 'You are a helpful assistant.'" },
         "max_tokens": { "type": "integer", "writable": "true", "note": "maps to max_tokens; null = model default" },
         "temperature": { "type": "number", "writable": "true", "note": "maps to temperature; null = model default" },

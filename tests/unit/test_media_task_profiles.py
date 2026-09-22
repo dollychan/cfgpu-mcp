@@ -74,6 +74,20 @@ def test_minimax_h3_reference_video_supports_video_edit(adapter_id: str):
 
 
 @pytest.mark.asyncio
+async def test_profile_catalog_lists_all_qwen_vision_models(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_model_profiles(media_type="understand")
+    model_ids = {model["model_id"] for model in catalog["models"]}
+    assert {"qwen3.6-plus", "qwen3.7-flash", "qwen3.8-max"} <= model_ids
+
+
+@pytest.mark.asyncio
 async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     from cfgpu_mcp.adapters.registry import AdapterRegistry
     from cfgpu_mcp.service import model as model_service

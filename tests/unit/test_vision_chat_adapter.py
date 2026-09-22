@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+from cfgpu_mcp.config import load_registry
 from cfgpu_mcp.adapters.vision_chat import QwenVisionAdapter
 from cfgpu_mcp.tool_registry import UnderstandVisionInput
 
@@ -120,3 +123,28 @@ def test_reuses_class_with_own_model_id():
     adapter = _adapter(cfgpu_model_id="qwen3-vl-235b-a22b-thinking")
     payload = adapter.build_payload(UnderstandVisionInput(prompt="x"))
     assert payload["model"] == "qwen3-vl-235b-a22b-thinking"
+
+
+@pytest.mark.parametrize(
+    ("adapter_id", "cfgpu_model_id", "model_name"),
+    [
+        ("qwen-3-7-flash", "qwen3.7-flash", "qwen3.7-flash"),
+        ("qwen-3-8-max", "qwen3.8-max", "qwen3.8-max"),
+    ],
+)
+def test_qwen_variants_inherit_the_qwen_3_6_plus_payload(
+    adapter_id: str, cfgpu_model_id: str, model_name: str,
+):
+    registry = load_registry(disabled_models=[])
+    parent = registry.get("qwen3.6-plus")
+    variant = registry.get(model_name)
+    req = UnderstandVisionInput(prompt="描述图片", images=["https://example.com/a.jpg"])
+
+    assert isinstance(variant, QwenVisionAdapter)
+    assert variant.adapter_id == adapter_id
+    assert variant.cfgpu_model_id == cfgpu_model_id
+    assert variant.model_name == model_name
+    assert variant.build_payload(req) == {
+        **parent.build_payload(req),
+        "model": cfgpu_model_id,
+    }
