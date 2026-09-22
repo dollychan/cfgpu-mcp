@@ -9,7 +9,7 @@ import yaml
 _MODELS_DIR = Path(__file__).parent.parent / "models"
 _TASKS_PATH = Path(__file__).parent.parent / "capabilities" / "media_tasks.yaml"
 _TASK_TYPES = frozenset({"image", "video", "audio", "understand"})
-_VOICE_CATALOG_VERSION = 2
+_VOICE_CATALOG_VERSION = 3
 
 # A voice may be shared by multiple public models.  MiniMax Turbo inherits the HD
 # voice list, but has no copy of that table in its own card; keep that provider
@@ -287,8 +287,9 @@ async def list_voice_profiles(
 ) -> dict[str, Any]:
     """List compact selectable system voices without exposing model-card details.
 
-    Voice handles are intentionally returned verbatim: they are canonical values for
-    ``generate_audio(voice=...)``, not identifiers an agent may derive or normalize.
+    The ``voice`` value is intentionally returned verbatim: copy it directly into
+    ``generate_audio(voice=...)``. ``label`` is display-only and is never a valid
+    value for that parameter.
     A space-separated ``query`` requires every term to match; normalized selection
     tags make intent queries such as ``"男声 温柔"`` match ``"温润男声"``.
     """
@@ -317,8 +318,8 @@ async def list_voice_profiles(
             voice = grouped.setdefault(
                 entry["voice_id"],
                 {
-                    "voice_id": entry["voice_id"],
-                    "name": entry["display_name"],
+                    "voice": entry["voice_id"],
+                    "label": entry["display_name"],
                     "language": entry["language"],
                     "tags": _voice_selection_tags(entry),
                     "model_ids": [],
@@ -335,7 +336,7 @@ async def list_voice_profiles(
         if not text_query_terms:
             return True
         searchable = " ".join(
-            [entry["voice_id"], entry["name"], entry["language"], *entry["tags"]]
+            [entry["voice"], entry["label"], entry["language"], *entry["tags"]]
         ).casefold()
         return all(term in searchable for term in text_query_terms)
 
@@ -350,7 +351,7 @@ async def list_voice_profiles(
         signature = tuple(entry["model_ids"])
         voice_groups.setdefault(signature, []).append(entry)
     for entries in voice_groups.values():
-        entries.sort(key=lambda entry: (entry["language"], entry["name"], entry["voice_id"]))
+        entries.sort(key=lambda entry: (entry["language"], entry["label"], entry["voice"]))
 
     voices: list[dict[str, Any]] = []
     group_indices = {signature: 0 for signature in voice_groups}

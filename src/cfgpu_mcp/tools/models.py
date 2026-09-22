@@ -38,7 +38,7 @@ def register(mcp: FastMCP) -> None:
         limit: int = 20,
         cursor: int = 0,
     ) -> dict:
-        """Find compact selectable voices by language, intent keywords, or compatible audio model."""
+        """Find voices by language or intent; copy each result's voice into generate_audio.voice, never label."""
         try:
             return await model_service.list_voice_profiles(model_ids, language, query, limit, cursor)
         except Exception as e:

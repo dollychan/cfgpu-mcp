@@ -156,7 +156,7 @@ async def test_voice_catalog_is_paginated_and_has_only_agent_facing_selection_da
     catalog = await model_service.list_voice_profiles(language="中文", limit=2)
 
     assert set(catalog) == {"catalog_version", "voices", "total", "next_cursor"}
-    assert catalog["catalog_version"] == 2
+    assert catalog["catalog_version"] == 3
     assert len(catalog["voices"]) == 2
     assert catalog["total"] > len(catalog["voices"])
     assert catalog["next_cursor"] == 2
@@ -170,8 +170,9 @@ async def test_voice_catalog_is_paginated_and_has_only_agent_facing_selection_da
         "seed-tts-2.0",
     }
     for voice in catalog["voices"]:
-        assert set(voice) == {"voice_id", "name", "language", "tags", "model_ids"}
-        assert voice["voice_id"]
+        assert set(voice) == {"voice", "label", "language", "tags", "model_ids"}
+        assert voice["voice"]
+        assert voice["voice"] != voice["label"]
         assert "中文" in voice["language"]
         assert voice["model_ids"]
         assert isinstance(voice["tags"], list)
@@ -187,9 +188,9 @@ async def test_voice_catalog_aggregates_shared_voices_and_filters_by_keyword(mon
     monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
 
     catalog = await model_service.list_voice_profiles(query="青涩青年", limit=10)
-    voice = next(item for item in catalog["voices"] if item["voice_id"] == "male-qn-qingse")
+    voice = next(item for item in catalog["voices"] if item["voice"] == "male-qn-qingse")
 
-    assert voice["name"] == "青涩青年音色"
+    assert voice["label"] == "青涩青年音色"
     assert set(voice["model_ids"]) == {
         "MiniMax/speech-2.8-hd",
         "MiniMax/speech-2.8-turbo",
@@ -215,7 +216,28 @@ async def test_voice_catalog_matches_multi_term_intent_query_with_compact_tags(m
     assert catalog["voices"]
     assert all({"男声", "温柔"}.issubset(voice["tags"]) for voice in catalog["voices"])
     assert all("女声" not in voice["tags"] for voice in catalog["voices"])
-    assert "Chinese (Mandarin)_Gentleman" in {voice["voice_id"] for voice in catalog["voices"]}
+    assert "Chinese (Mandarin)_Gentleman" in {voice["voice"] for voice in catalog["voices"]}
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_makes_the_generate_audio_value_unambiguous(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_voice_profiles(
+        model_ids=["MiniMax/speech-2.8-hd"],
+        language="中文",
+        query="播报 男声",
+        limit=10,
+    )
+    announcer = next(voice for voice in catalog["voices"] if voice["label"] == "播报男声")
+
+    assert announcer["voice"] == "Chinese (Mandarin)_Male_Announcer"
+    assert announcer["voice"] != announcer["label"]
 
 
 @pytest.mark.asyncio
@@ -228,7 +250,7 @@ async def test_voice_catalog_preserves_byte_exact_handles(monkeypatch):
     monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
 
     catalog = await model_service.list_voice_profiles(query="ProfessionalHost", limit=10)
-    assert "Cantonese_ProfessionalHost（F)" in {voice["voice_id"] for voice in catalog["voices"]}
+    assert "Cantonese_ProfessionalHost（F)" in {voice["voice"] for voice in catalog["voices"]}
 
 
 @pytest.mark.asyncio

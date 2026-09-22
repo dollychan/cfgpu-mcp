@@ -954,7 +954,7 @@ class ListModelProfilesInput(BaseModel):
 
 
 class ListVoiceProfilesInput(BaseModel):
-    """Find compact selectable voices without reading model cards or guessing voice IDs."""
+    """Find voices; copy result.voice to generate_audio.voice, never its display label."""
 
     model_ids: Optional[list[str]] = Field(
         default=None,
@@ -969,7 +969,8 @@ class ListVoiceProfilesInput(BaseModel):
         default=None,
         description=(
             "Keyword intent matched against the voice name, handle, language, and compact tags; "
-            "separate terms with spaces to require each (for example, '男声 温柔')"
+            "separate terms with spaces to require each (for example, '男声 温柔'). "
+            "In each result, only 'voice' is valid for generate_audio.voice; 'label' is display-only"
         ),
     )
     limit: int = Field(default=20, ge=1, le=100, description="Maximum voices per page (1-100)")

@@ -168,7 +168,7 @@ _MINIMAX_VOICE_REMEDY = (
     "音色 id 的首尾空格、全角括号、不规则大小写等字符都须准确照抄，不得自行规范化。"
     "不需要特定音色时省略 voice 即可，默认为 male-qn-qingse。"
     "需要选择音色时，调用 list_voice_profiles(model_ids=[当前 model_id])，"
-    "按语言或风格关键词查询后逐字使用返回的 voice_id。"
+    "按语言或风格关键词查询后，只能逐字使用返回的 voice 字段；label 只是展示名称，不能传入。"
 )
 
 _MINIMAX_EMOTION_REMEDY = (
