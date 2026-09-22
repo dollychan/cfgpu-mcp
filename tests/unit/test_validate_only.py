@@ -131,8 +131,9 @@ async def test_validate_only_resolves_auto_to_a_concrete_model():
 
     assert result["model_used"] != "auto"
     assert result["task_type"] == "video"
-    # Enough to price the approval: whether it returns a handle, and the cost signal.
-    assert isinstance(result["is_async"], bool)
+    # The tiers are the pre-submission cost and latency signals. Upstream transport
+    # details such as adapter.is_async are not part of the MCP task contract.
+    assert "is_async" not in result
     assert isinstance(result["cost_tier"], int)
 
 
@@ -833,7 +834,6 @@ async def test_mcp_keeps_the_payload_out_of_the_llm_content():
         "validated": True,
         "model_used": "doubao-seedance-2-0",
         "task_type": "video",
-        "is_async": True,
         "cost_tier": 3,
         "speed_tier": 2,
         "corrected_args": {"model": "doubao-seedance-2-0"},
@@ -919,7 +919,7 @@ async def test_vision_validate_only_reports_the_routed_model_and_the_real_payloa
 
     assert result["validated"] is True
     assert result["task_type"] == "understand"
-    assert result["is_async"] is False
+    assert "is_async" not in result
     assert result["model_used"] == "qwen3.7-plus"
     assert result["corrected_args"] == {"model": "qwen3.7-plus"}
     assert "m_c079468f" in json.dumps(result["payload"], ensure_ascii=False)

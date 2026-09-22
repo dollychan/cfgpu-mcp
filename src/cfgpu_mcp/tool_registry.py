@@ -432,7 +432,7 @@ def validate_only_field() -> Any:
         description="When true, resolve the model, validate parameters, and build the "
         "upstream payload without sending it. No task is created, nothing is generated, "
         "and nothing is billed. Returns "
-        "`{validated: true, model_used, task_type, is_async, cost_tier, speed_tier, "
+        "`{validated: true, model_used, task_type, cost_tier, speed_tier, "
         "payload}` where `model_used` is the concrete model (so `model=\"auto\"` reports "
         "what routing picked) and `payload` is the exact request the real call would "
         "send. This does not preview the output or guarantee upstream success.",

@@ -543,10 +543,9 @@ def validate_request(
         # can weigh. `model_name` is the only public identifier (never adapter_id).
         "model_used": adapter.model_name,
         "task_type": adapter.task_type,
-        # Both carried because they change what approving this means: an async task
-        # returns a handle to poll rather than a result, and the tiers are the closest
-        # thing to a cost signal available before the call.
-        "is_async": adapter.is_async,
+        # ``adapter.is_async`` describes the upstream provider protocol, not the MCP
+        # task contract. Every MCP submission has a task handle, so surfacing that
+        # implementation detail would incorrectly tell an agent how to proceed.
         "cost_tier": adapter.cost_tier,
         "speed_tier": adapter.speed_tier,
         # What to change before submitting for real; empty when nothing needs changing.
