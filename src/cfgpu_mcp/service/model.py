@@ -9,7 +9,7 @@ import yaml
 _MODELS_DIR = Path(__file__).parent.parent / "models"
 _TASKS_PATH = Path(__file__).parent.parent / "capabilities" / "media_tasks.yaml"
 _TASK_TYPES = frozenset({"image", "video", "audio", "understand"})
-_VOICE_CATALOG_VERSION = 1
+_VOICE_CATALOG_VERSION = 2
 
 # A voice may be shared by multiple public models.  MiniMax Turbo inherits the HD
 # voice list, but has no copy of that table in its own card; keep that provider
@@ -19,6 +19,39 @@ _VOICE_CATALOG_SOURCE_BY_ADAPTER = {
     "minimax-speech-2-8-hd": "minimax-speech-2-8-hd",
     "minimax-speech-2-8-turbo": "minimax-speech-2-8-hd",
 }
+
+# Voice catalogs are provider-maintained lists rather than a controlled vocabulary.
+# Normalize only the small set of selection concepts that agents commonly express in
+# natural language. The published tags make those normalizations visible and the
+# same tags are used when matching a space-separated query.
+_VOICE_TAG_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("男声", ("男声", "男性", "男孩", "青年", "少年", "小哥", "先生", "公子", "男嗓")),
+    ("女声", ("female", "女声", "女性", "女孩", "少女", "学姐", "御姐", "妈妈", "女士", "女友")),
+    ("温柔", ("温柔", "温润", "温婉", "温暖", "柔美", "柔和", "gentle", "warm", "serene")),
+    ("知性", ("知性", "儒雅", "文雅", "渊博", "thoughtful", "level-headed")),
+)
+
+
+def _voice_selection_tags(entry: dict[str, Any]) -> list[str]:
+    """Return compact, user-facing tags inferred from public voice metadata."""
+    searchable = " ".join(
+        [entry["voice_id"], entry["display_name"], entry["language"], *entry["tags"]]
+    ).casefold()
+    inferred = [
+        tag
+        for tag, patterns in _VOICE_TAG_PATTERNS
+        if any(pattern in searchable for pattern in patterns)
+        # ``male`` occurs within ``female``. Match it only when it is not the
+        # suffix of that word, while retaining IDs such as ``zh_male_*``.
+        or (tag == "男声" and re.search(r"(?<!fe)male", searchable))
+    ]
+    # Preserve provider scene/availability labels after normalized tags without duplicates.
+    return list(dict.fromkeys([*inferred, *entry["tags"]]))
+
+
+def _query_terms(query: str) -> list[str]:
+    """Split an intent query while preserving ordinary no-space keyword searches."""
+    return [term for term in re.split(r"\s+", query.casefold().strip()) if term]
 
 
 def _split_sections(markdown: str) -> dict[str, str]:
@@ -252,10 +285,12 @@ async def list_voice_profiles(
     limit: int = 20,
     cursor: int = 0,
 ) -> dict[str, Any]:
-    """List selectable system voices without exposing model-card implementation data.
+    """List compact selectable system voices without exposing model-card details.
 
     Voice handles are intentionally returned verbatim: they are canonical values for
     ``generate_audio(voice=...)``, not identifiers an agent may derive or normalize.
+    A space-separated ``query`` requires every term to match; normalized selection
+    tags make intent queries such as ``"男声 温柔"`` match ``"温润男声"``.
     """
     if not 1 <= limit <= 100:
         raise ValueError("limit must be between 1 and 100")
@@ -281,29 +316,28 @@ async def list_voice_profiles(
         for entry in _voice_table_rows(source_adapter_id):
             voice = grouped.setdefault(
                 entry["voice_id"],
-                {**entry, "models": []},
-            )
-            voice["models"].append(
                 {
-                    "model_id": adapter.model_name,
-                    "display_name": adapter.display_name,
-                    "cost_tier": adapter.cost_tier,
-                    "speed_tier": adapter.speed_tier,
-                }
+                    "voice_id": entry["voice_id"],
+                    "name": entry["display_name"],
+                    "language": entry["language"],
+                    "tags": _voice_selection_tags(entry),
+                    "model_ids": [],
+                },
             )
+            voice["model_ids"].append(adapter.model_name)
 
     language_query = language.casefold().strip() if language else ""
-    text_query = query.casefold().strip() if query else ""
+    text_query_terms = _query_terms(query) if query else []
 
     def matches(entry: dict[str, Any]) -> bool:
         if language_query and language_query not in entry["language"].casefold():
             return False
-        if not text_query:
+        if not text_query_terms:
             return True
         searchable = " ".join(
-            [entry["voice_id"], entry["display_name"], entry["language"], *entry["tags"]]
+            [entry["voice_id"], entry["name"], entry["language"], *entry["tags"]]
         ).casefold()
-        return text_query in searchable
+        return all(term in searchable for term in text_query_terms)
 
     # Do not let one catalog with a shorter lexical language label (for example
     # ``中文`` versus ``中文 (普通话)``) fill every first page.  Users asking for a
@@ -313,10 +347,10 @@ async def list_voice_profiles(
     for entry in grouped.values():
         if not matches(entry):
             continue
-        signature = tuple(model["model_id"] for model in entry["models"])
+        signature = tuple(entry["model_ids"])
         voice_groups.setdefault(signature, []).append(entry)
     for entries in voice_groups.values():
-        entries.sort(key=lambda entry: (entry["language"], entry["display_name"], entry["voice_id"]))
+        entries.sort(key=lambda entry: (entry["language"], entry["name"], entry["voice_id"]))
 
     voices: list[dict[str, Any]] = []
     group_indices = {signature: 0 for signature in voice_groups}

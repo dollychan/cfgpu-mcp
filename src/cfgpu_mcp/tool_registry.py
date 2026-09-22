@@ -954,7 +954,7 @@ class ListModelProfilesInput(BaseModel):
 
 
 class ListVoiceProfilesInput(BaseModel):
-    """Find selectable system voices without reading model cards or guessing voice IDs."""
+    """Find compact selectable voices without reading model cards or guessing voice IDs."""
 
     model_ids: Optional[list[str]] = Field(
         default=None,
@@ -967,7 +967,10 @@ class ListVoiceProfilesInput(BaseModel):
     )
     query: Optional[str] = Field(
         default=None,
-        description="Keyword matched against voice display name, handle, language, or user-facing tags",
+        description=(
+            "Keyword intent matched against the voice name, handle, language, and compact tags; "
+            "separate terms with spaces to require each (for example, '男声 温柔')"
+        ),
     )
     limit: int = Field(default=20, ge=1, le=100, description="Maximum voices per page (1-100)")
     cursor: int = Field(default=0, ge=0, description="Offset returned as next_cursor by the previous page")

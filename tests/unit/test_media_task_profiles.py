@@ -156,28 +156,25 @@ async def test_voice_catalog_is_paginated_and_has_only_agent_facing_selection_da
     catalog = await model_service.list_voice_profiles(language="中文", limit=2)
 
     assert set(catalog) == {"catalog_version", "voices", "total", "next_cursor"}
-    assert catalog["catalog_version"] == 1
+    assert catalog["catalog_version"] == 2
     assert len(catalog["voices"]) == 2
     assert catalog["total"] > len(catalog["voices"])
     assert catalog["next_cursor"] == 2
     assert {
-        model["model_id"]
+        model_id
         for voice in catalog["voices"]
-        for model in voice["models"]
+        for model_id in voice["model_ids"]
     } == {
         "MiniMax/speech-2.8-hd",
         "MiniMax/speech-2.8-turbo",
         "seed-tts-2.0",
     }
     for voice in catalog["voices"]:
-        assert set(voice) == {"voice_id", "display_name", "language", "tags", "models"}
+        assert set(voice) == {"voice_id", "name", "language", "tags", "model_ids"}
         assert voice["voice_id"]
         assert "中文" in voice["language"]
-        assert voice["models"]
-        for model in voice["models"]:
-            assert set(model) == {"model_id", "display_name", "cost_tier", "speed_tier"}
-            assert "adapter_id" not in model
-            assert "is_async" not in model
+        assert voice["model_ids"]
+        assert isinstance(voice["tags"], list)
 
 
 @pytest.mark.asyncio
@@ -192,11 +189,33 @@ async def test_voice_catalog_aggregates_shared_voices_and_filters_by_keyword(mon
     catalog = await model_service.list_voice_profiles(query="青涩青年", limit=10)
     voice = next(item for item in catalog["voices"] if item["voice_id"] == "male-qn-qingse")
 
-    assert voice["display_name"] == "青涩青年音色"
-    assert {model["model_id"] for model in voice["models"]} == {
+    assert voice["name"] == "青涩青年音色"
+    assert set(voice["model_ids"]) == {
         "MiniMax/speech-2.8-hd",
         "MiniMax/speech-2.8-turbo",
     }
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_matches_multi_term_intent_query_with_compact_tags(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_voice_profiles(
+        model_ids=["MiniMax/speech-2.8-hd", "seed-tts-2.0"],
+        language="中文",
+        query="男声 温柔",
+        limit=30,
+    )
+
+    assert catalog["voices"]
+    assert all({"男声", "温柔"}.issubset(voice["tags"]) for voice in catalog["voices"])
+    assert all("女声" not in voice["tags"] for voice in catalog["voices"])
+    assert "Chinese (Mandarin)_Gentleman" in {voice["voice_id"] for voice in catalog["voices"]}
 
 
 @pytest.mark.asyncio
