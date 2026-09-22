@@ -46,7 +46,7 @@ MEDIA_ANNOTATION_KEY = "x-cfgpu-media"
 # right call for an LLM to make, and hosts that need it can still pass it.
 _WIRE_FORMS: dict[str, str] = {
     "https_url": "a publicly reachable https:// URL",
-    "asset_url": "an `asset://<ASSET_ID>` handle (Seedance / WAN video models only)",
+    "asset_url": "an `asset://<ASSET_ID>` handle (supported by eligible video models only)",
     # A region is not a file — but it *is* a reference into one, and it is subject to
     # exactly the two problems the annotation exists to solve: a host with its own
     # annotation layer must know which parameter to re-describe (it hands the model a
@@ -176,8 +176,8 @@ class RegionSpec(BaseModel):
         default=None,
         description="`[width, height]` in pixels of the **original** image this region "
         "was drawn on (not the size of the canvas it was displayed at). Pass it whenever "
-        "you have it: models whose region field takes absolute pixels (e.g. "
-        "`wan2.7-image`) **require** it and reject the call without it, since a size can "
+        "you have it: models whose region field takes absolute pixels **require** it and "
+        "reject the call without it, since a size can "
         "never be guessed — a wrong one silently edits a different rectangle. Models "
         "that carry coordinates in the prompt do not need it, so omitting it narrows "
         "which model can serve the request rather than failing outright.",
@@ -429,20 +429,13 @@ def validate_only_field() -> Any:
     """Declare the preflight switch (kept in one place so the four copies can't drift)."""
     return Field(
         default=False,
-        description="Preflight only: resolve the model, validate every parameter against "
-        "it, and build the real upstream payload — then return **without sending it**. "
-        "No task is created, nothing is generated, nothing is billed. Returns "
+        description="When true, resolve the model, validate parameters, and build the "
+        "upstream payload without sending it. No task is created, nothing is generated, "
+        "and nothing is billed. Returns "
         "`{validated: true, model_used, task_type, is_async, cost_tier, speed_tier, "
         "payload}` where `model_used` is the concrete model (so `model=\"auto\"` reports "
         "what routing picked) and `payload` is the exact request the real call would "
-        "send. On any problem it raises the identical error the real call would, so a "
-        "pass here means the parameters are accepted. **This flag belongs to the calling "
-        "host, not to the model writing the arguments.** A host that preflights on your "
-        "behalf assigns it itself and ignores whatever you put here, so a call you send "
-        "with `validate_only=true` may well execute for real and be billed — leave it "
-        "unset and never describe a call as \"just a validation\" unless you are the host "
-        "running your own approval loop. Not a preview of the *output* — it says the "
-        "request is well-formed, not that generation will succeed.",
+        "send. This does not preview the output or guarantee upstream success.",
     )
 
 
@@ -454,23 +447,16 @@ class GenerateImageInput(BaseModel):
     prompt: str = Field(description="Text description of the image to generate")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_model_profiles (e.g. 'doubao-seedream-5-0-lite'), "
+        description="A single currently available model_id from list_model_profiles, "
         "a list of model_ids to restrict automatic selection to those candidates "
-        "(e.g. ['doubao-seedream-5-0-lite', 'cf-pro']), or 'auto' to choose from all models",
+        "or 'auto' to choose from all available models",
     )
     aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
     resolution: Literal["1K", "1.5K", "2K", "3K", "4K"] = Field(
         default="2K",
-        description="Output resolution tier. The tiers a model actually offers differ "
-        "per family. A billed call with an unsupported tier is rejected; validate_only "
-        "instead reports a nearest supported tier at or below it in corrected_args "
-        "(doubao-seedream-5-0-pro: 1K/1.5K/2K; 5-0-lite and 4.5: 2K/3K/4K; "
-        "4.0: 1K/2K/3K/4K). 1.5K exists only on doubao-seedream-5-0-pro, where it looks "
-        "better than 1K at a documented-equal price — but cfgpu sends exact pixels, "
-        "not the tier name, so 1.5K may bill at the higher band; use 1K if the rate "
-        "matters more than the exact aspect ratio. With model='auto' the tier "
-        "steers which model is picked; with an explicit model, validate_only reports "
-        "the nearest supported tier in corrected_args.",
+        description="Output resolution tier. Each model supports a subset of these "
+        "tiers; an unsupported explicit value is rejected. When model='auto', a chosen "
+        "tier limits selection to compatible models.",
     )
     reference_images: Optional[list[str]] = media_field(
         slot="Reference images that guide the generation. Also the images that `regions` "
@@ -509,9 +495,8 @@ class GenerateImageInput(BaseModel):
         "images it contains, so asking for 4 may return 1, 2, 3, or 4 — fewer is a normal "
         "outcome, not a failure, and no setting forces an exact number. Do not promise the "
         "user a specific count before the result comes back. Only models with the "
-        "`multi_image_group` capability accept n>1 (the doubao-seedream-* line except "
-        "5-0-pro, which is single-image); models without that capability silently ignore "
-        "n and generate one image. On group models the input reference images plus the "
+        "`multi_image_group` capability can produce more than one image; other models "
+        "generate one image. On group models the input reference images plus the "
         "generated images must total at most 15.",
     )
 
@@ -527,8 +512,7 @@ class GenerateImageInput(BaseModel):
     watermark: bool = Field(
         default=False,
         description="Add an 'AI generated' watermark. Defaults to false and is sent "
-        "explicitly by models whose upstream API supports it. Not supported by "
-        "gpt-image-2 / nano-banana models (ignored there).",
+        "explicitly when supported by the selected model; otherwise it is ignored.",
     )
     wait: bool = Field(
         default=True,
@@ -577,13 +561,13 @@ class GenerateVideoInput(BaseModel):
     prompt: str = Field(
         default="",
         description="Text description of the video. Required for text-to-video; optional "
-        "for Seedance image/reference-driven tasks, including Seedance 2.5 audio-only input.",
+        "for model-supported image, reference, or audio-driven workflows.",
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_model_profiles (e.g. 'wan-video'), "
+        description="A single currently available model_id from list_model_profiles, "
         "a list of model_ids to restrict automatic selection to those candidates "
-        "(e.g. ['wan-video', 'wan-video-fast']), or 'auto' to choose from all models",
+        "or 'auto' to choose from all available models",
     )
     # All five slots accept `asset://<ASSET_ID>`: the Seedance / WAN request schema takes a
     # 素材 ID on `image_url.url`, `video_url.url` and `audio_url.url` alike (see
@@ -626,11 +610,8 @@ class GenerateVideoInput(BaseModel):
     duration_seconds: Optional[int] = Field(
         default=None,
         description="Video duration in seconds. None uses the selected model's default "
-        "(-1 smart duration for Doubao Seedance 2.5; 5 seconds for existing models). "
-        "Explicit ranges: 4–30 (Doubao Seedance 2.5), 4–15 (WAN 2.0, "
-        "WAN 2.0 Fast, the Doubao Seedance 2.0 family, HappyHorse) or 4–12 (Doubao Seedance "
-        "1.5 Pro). Use -1 for a model-chosen 'smart' duration (supported by WAN 2.0 and the "
-        "Doubao Seedance family).",
+        "and explicit values must be 4–30 or -1. Whether a value is supported depends "
+        "on the selected model; -1 requests a model-chosen duration where supported.",
     )
 
     @field_validator("duration_seconds")
@@ -642,9 +623,7 @@ class GenerateVideoInput(BaseModel):
         if v is not None and v != -1 and not (4 <= v <= 30):
             raise ValueError(
                 f"duration_seconds={v} is out of range. Use 4–30 seconds, or -1 for a "
-                f"model-chosen 'smart' duration (WAN 2.0 / Doubao Seedance). Note only "
-                f"Doubao Seedance 2.5 goes beyond 15 seconds; WAN 2.0 and Seedance 2.0 cap "
-                f"at 15, and Doubao Seedance 1.5 Pro at 12."
+                f"model-chosen duration where supported by the selected model."
             )
         return v
     aspect_ratio: Literal["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"] = Field(
@@ -656,15 +635,9 @@ class GenerateVideoInput(BaseModel):
         description="Video resolution. None (the default) uses the selected model's own "
         "default tier, so an omitted resolution never rules a model out of automatic "
         "selection — pass a value only when you actually need that tier. The tiers are a "
-        "fleet-wide vocabulary and each model offers a subset: Doubao Seedance 2.0 "
-        "supports 480p/720p/1080p/4k; Doubao Seedance 2.5 supports 480p/720p/1080p; "
-        "Doubao Seedance 2.0 fast and 2.0 mini support 480p/720p only. 1080p is also "
-        "supported by WAN 2.0, Doubao Seedance 1.5 Pro, and HappyHorse (HappyHorse's own "
-        "default is 1080p). WAN 2.0 Fast does NOT support 1080p for text-to-video (only "
-        "480p/720p; 1080p works only with an image/video input). HappyHorse does not "
-        "support 480p (minimum 720p). 768p and 2k belong to MiniMax H3 alone; it also "
-        "offers 480p and defaults to 768p. No other model accepts 768p or 2k. MCP "
-        "validates the chosen model's supported set before execution.",
+        "fleet-wide vocabulary and each model offers a subset. An unsupported explicit "
+        "tier is rejected; with model='auto', a chosen tier limits selection to "
+        "compatible models.",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
@@ -676,7 +649,7 @@ class GenerateVideoInput(BaseModel):
     prompt_extend: bool = Field(
         default=True,
         description="Use an LLM to rewrite and expand the prompt before generation. "
-        "Used by WAN 2.6/2.7; disabling it reduces latency and preserves the original prompt.",
+        "When supported, disabling it reduces latency and preserves the original prompt.",
     )
     wait: bool = Field(
         default=True,
@@ -717,15 +690,14 @@ class GenerateAudioInput(BaseModel):
     text: str = Field(description="Text to synthesize into speech")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_model_profiles (e.g. 'seed-tts-2.0'), "
+        description="A single currently available model_id from list_model_profiles, "
         "a list of model_ids to restrict automatic selection to those candidates "
-        "(e.g. ['MiniMax/speech-2.8-hd', 'MiniMax/speech-2.8-turbo']), or 'auto' to choose from all voice models",
+        "or 'auto' to choose from all available voice models",
     )
     voice: Optional[str] = Field(
         default=None,
-        description="Voice/speaker id. seed-tts-2-0 uses speaker ids like "
-        "'zh_female_xiaohe_uranus_bigtts'; MiniMax uses voice ids like 'male-qn-qingse'. "
-        "None falls back to each model's own default.",
+        description="Voice/speaker id supported by the selected model. None uses that "
+        "model's default voice.",
     )
     audio_format: Literal["mp3", "wav", "pcm", "flac"] = Field(
         default="mp3", description="Output audio container/format"
@@ -736,11 +708,11 @@ class GenerateAudioInput(BaseModel):
     )
     bitrate: Optional[int] = Field(
         default=None,
-        description="Output bitrate in bps (MiniMax only, e.g. 128000). None uses the model's default.",
+        description="Output bitrate in bps, when supported by the selected model. None uses its default.",
     )
-    speed: float = Field(default=1.0, description="Speech speed multiplier (MiniMax only)")
-    volume: float = Field(default=1.0, description="Speech volume multiplier (MiniMax only)")
-    pitch: int = Field(default=0, description="Speech pitch offset (MiniMax only)")
+    speed: float = Field(default=1.0, description="Speech speed multiplier, when supported by the selected model")
+    volume: float = Field(default=1.0, description="Speech volume multiplier, when supported by the selected model")
+    pitch: int = Field(default=0, description="Speech pitch offset, when supported by the selected model")
     emotion: Optional[
         Literal[
             "happy",
@@ -755,8 +727,9 @@ class GenerateAudioInput(BaseModel):
         ]
     ] = Field(
         default=None,
-        description="MiniMax emotion control: happy, sad, angry, fearful, disgusted, "
-        "surprised, calm, fluent, or whisper. None lets the model infer emotion from text.",
+        description="Emotion control, when supported by the selected model: happy, sad, "
+        "angry, fearful, disgusted, surprised, calm, fluent, or whisper. None lets the "
+        "model infer emotion from text.",
     )
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
     wait: bool = Field(
@@ -808,7 +781,7 @@ class UnderstandVisionInput(BaseModel):
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_model_profiles (e.g. 'qwen3.6-plus'), "
+        description="A single currently available model_id from list_model_profiles, "
         "a list of model_ids to restrict automatic selection to those candidates, "
         "or 'auto' to choose from all vision-understanding models. Prefer 'auto' "
         "unless a specific model is required — an unknown id falls back to auto.",

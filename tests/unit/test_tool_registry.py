@@ -1,5 +1,5 @@
 import pytest
-from cfgpu_mcp.tool_registry import get_anthropic_tools, _REGISTRY
+from cfgpu_mcp.tool_registry import _REGISTRY, get_anthropic_tools, get_field_descriptions
 
 
 def test_no_filter_returns_all_tools():
@@ -56,6 +56,19 @@ def test_task_types_and_tools_intersection():
 def test_each_tool_has_nonempty_description():
     for tool in get_anthropic_tools():
         assert tool["description"]
+
+
+def test_parameter_descriptions_do_not_name_concrete_models():
+    """The model enum is dynamic; static schema prose must stay valid when disabled."""
+    from cfgpu_mcp.config import load_registry
+
+    model_names = {adapter.model_name for adapter in load_registry(disabled_models=[]).list_all()}
+    descriptions = (
+        description
+        for tool_name, _ in _REGISTRY
+        for description in get_field_descriptions(tool_name).values()
+    )
+    assert all(not any(model_name in description for model_name in model_names) for description in descriptions)
 
 
 def test_each_tool_has_valid_input_schema():
