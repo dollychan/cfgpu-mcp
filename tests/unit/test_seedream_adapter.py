@@ -183,15 +183,13 @@ def test_2k_21x9_maps_to_correct_size():
 
 # --- doubao-seedream-5-0-pro (single-image, 1K/2K) ---
 
-def test_pro_n_greater_than_one_is_ignored():
-    adapter = _make_pro_adapter()
+@pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
+def test_pro_and_flash_reject_group_generation(factory):
+    adapter = factory()
     req = GenerateImageInput(prompt="x", n=4)
     ok, reason = adapter.supports(req)
-    assert ok
-    assert reason == ""
-    payload = adapter.build_payload(req)
-    assert "sequential_image_generation" not in payload
-    assert "sequential_image_generation_options" not in payload
+    assert not ok
+    assert "n must be 1" in reason
 
 
 def test_pro_1k_maps_to_pixels():
@@ -268,6 +266,50 @@ def test_layer_decomposition_accepts_empty_prompt_and_keeps_layer_metadata():
     result = adapter.parse_response({"data": items})
     assert result.urls == ["https://cdn/base.jpeg", "https://cdn/layer.png"]
     assert result.image_items == items
+
+
+@pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
+@pytest.mark.parametrize(
+    "resolution, model_specific, expected_size",
+    [
+        ("2K", {"layer_decomposition": True}, "2K"),
+        ("1K", {"layer_decomposition": True}, "1K"),
+        ("2K", {"layer_decomposition": True, "size": "auto"}, "auto"),
+    ],
+)
+def test_layer_decomposition_sends_only_supported_size_presets(
+    factory, resolution, model_specific, expected_size
+):
+    payload = factory().build_payload(GenerateImageInput(
+        prompt="", resolution=resolution,
+        reference_images=["https://example.com/source.png"],
+        model_specific=model_specific,
+    ))
+    assert payload["size"] == expected_size
+
+
+@pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
+@pytest.mark.parametrize(
+    "model_specific, expected",
+    [
+        ({"layer_decomposition": True, "size": "2048x2048"}, "explicit WIDTHxHEIGHT"),
+        ({"layer_decomposition": True, "size": "3K"}, "only supports"),
+        ({"size": "512x512"}, "921600-4624220 pixels"),
+        ({"size": "100x10000"}, "width/height ratio"),
+        ({"size": "auto"}, "must be a supported preset"),
+    ],
+)
+def test_pro_and_flash_strictly_validate_upstream_size(factory, model_specific, expected):
+    ok, reason = factory().supports(GenerateImageInput(prompt="x", model_specific=model_specific))
+    assert not ok
+    assert expected in reason
+
+
+def test_pro_allows_documented_explicit_size_for_normal_generation():
+    payload = _make_pro_adapter().build_payload(GenerateImageInput(
+        prompt="x", model_specific={"size": "2048x1024"}
+    ))
+    assert payload["size"] == "2048x1024"
 
 
 def test_transparent_background_requires_one_input_and_png_output():
@@ -463,10 +505,10 @@ def test_group_generation_is_gated_on_the_capability_not_on_the_model_id():
     assert "sequential_image_generation_options" not in payload
 
 
-def test_single_image_seedream_ignores_n():
+def test_single_image_seedream_rejects_n_greater_than_one():
     ok, reason = _make_pro_adapter().supports(GenerateImageInput(prompt="x", n=4))
-    assert ok
-    assert reason == ""
+    assert not ok
+    assert "n must be 1" in reason
 
 
 @pytest.mark.parametrize(

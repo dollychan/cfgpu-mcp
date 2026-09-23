@@ -148,12 +148,17 @@ async def test_layer_decomposition_search_returns_an_executable_call_template(mo
     assert contract["call_template"] == {
         "prompt": "",
         "n": 1,
-        "model_specific": {"layer_decomposition": True},
+        "model_specific": {"layer_decomposition": True, "size": "auto"},
     }
     assert contract["requirements"]["reference_images"] == {
         "required": True,
         "min_items": 1,
         "max_items": 1,
+    }
+    assert contract["size"] == {
+        "default": "auto",
+        "accepted": ["auto", "1K", "1.5K", "2K"],
+        "explicit_dimensions_supported": False,
     }
     assert contract["result"]["image_items"]["layer_limit"] == 16
 

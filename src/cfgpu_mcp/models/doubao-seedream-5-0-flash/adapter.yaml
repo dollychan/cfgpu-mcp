@@ -16,8 +16,9 @@ speed_tier: 5
 # (notably n>1, where a group-capable model is preferred).
 auto_priority: 0
 
-# Flash has the same 1K / 1.5K / 2K output range as Pro.  The shared adapter maps the
-# unified resolution + aspect_ratio into documented exact pixel pairs.
+# Flash has the same 1K / 1.5K / 2K output range as Pro. The shared adapter maps the
+# unified resolution + aspect_ratio into documented exact pixel pairs for image
+# generation, while layer decomposition sends only a tier preset or `auto`.
 capabilities:
   - text_to_image
   - image_to_image

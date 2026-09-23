@@ -530,7 +530,10 @@ class GenerateImageInput(BaseModel):
     model_specific: Optional[dict] = Field(
         default=None,
         description="Model-specific parameters passed directly to API, e.g. {'tools': [{'type': 'web_search'}]}. "
-        "Merged last, so it overrides typed fields like watermark.",
+        "Merged last, so it overrides typed fields like watermark. For Seedream 5.0 "
+        "Pro/Flash, this is a strict schema: ordinary image generation may set "
+        "size to a documented WIDTHxHEIGHT value (for example '2048x1024'), while "
+        "layer_decomposition=true accepts only size='auto', '1K', '1.5K', or '2K'.",
     )
     request_id: Optional[str] = Field(
         default=None,

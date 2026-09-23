@@ -167,10 +167,28 @@ async def test_layer_decomposition_preflight_accepts_the_executable_template(mod
     client.post.assert_not_called()
     assert result["validated"] is True
     assert result["payload"]["layer_decomposition"] is True
+    assert result["payload"]["size"] == "2K"
     # The tiers are the pre-submission cost and latency signals. Upstream transport
     # details such as adapter.is_async are not part of the MCP task contract.
     assert "is_async" not in result
     assert isinstance(result["cost_tier"], int)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash"])
+async def test_layer_decomposition_preflight_rejects_explicit_pixel_size(model):
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c, pytest.raises(CFGPUError, match="explicit WIDTHxHEIGHT") as exc:
+        await image_service.generate_image(
+            prompt="",
+            model=model,
+            reference_images=["https://example.com/source.png"],
+            model_specific={"layer_decomposition": True, "size": "2048x2048"},
+            validate_only=True,
+        )
+    client.post.assert_not_called()
+    assert exc.value.error_type == "invalid_params"
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -19,8 +20,10 @@ if TYPE_CHECKING:
 #
 # The API takes `size` two ways and they cannot be mixed: an exact `WxH` pixel pair, or
 # a tier name ("2K") whose geometry the model then infers from the prompt. Our unified
-# schema always has an explicit `aspect_ratio`, and only pixels honour it, so every
-# family/tier here emits pixels — the tier name is never sent.
+# schema always has an explicit `aspect_ratio`, and only pixels honour it, so image
+# generation emits pixels. Seedream 5.0 Pro / Flash layer decomposition is the
+# documented exception: it rejects explicit `WIDTHxHEIGHT` and accepts only a preset
+# or `auto`.
 #
 # The tables are per-family, not shared. That is not redundancy: Seedream 5.0 Pro and
 # the Lite/4.x line publish *different* pixel values for the same tier and ratio (2K
@@ -131,6 +134,10 @@ class _Seedream5ModelSpecific(BaseModel):
     output_format: Literal["png", "jpeg"] | None = None
     background: Literal["opaque", "transparent"] | None = None
     layer_decomposition: bool | None = None
+    # `resolution` is the portable MCP control. `size` is deliberately retained as a
+    # strictly checked escape hatch for the upstream-only `auto` mode and explicit
+    # pixel dimensions documented by Seedream 5.0.
+    size: str | None = None
     optimize_prompt_options: _PromptOptimizeOptions | None = None
 
 
@@ -138,6 +145,14 @@ _STRICT_SEEDREAM_5_ADAPTERS = frozenset({
     "doubao-seedream-5-0-pro",
     "doubao-seedream-5-0-flash",
 })
+
+_SEEDREAM_5_SIZE_PRESETS = frozenset({"1K", "1.5K", "2K"})
+_SEEDREAM_5_LAYER_SIZES = _SEEDREAM_5_SIZE_PRESETS | {"auto"}
+_SEEDREAM_5_EXPLICIT_SIZE = re.compile(r"^([1-9][0-9]*)x([1-9][0-9]*)$")
+_SEEDREAM_5_MIN_PIXELS = 1280 * 720
+_SEEDREAM_5_MAX_PIXELS = int(2048 * 2048 * 1.1025)
+_SEEDREAM_5_MIN_RATIO = 1 / 16
+_SEEDREAM_5_MAX_RATIO = 16
 
 
 @register_python_adapter
@@ -191,6 +206,34 @@ class SeedreamAdapter(ModelAdapter):
                 "doubao-seedream-5-0-flash only supports "
                 "model_specific.optimize_prompt_options.mode='standard'"
             )
+        if parsed.size is not None:
+            if parsed.layer_decomposition:
+                if parsed.size not in _SEEDREAM_5_LAYER_SIZES:
+                    return (
+                        f"{self.adapter_id} layer_decomposition only supports "
+                        "model_specific.size='auto', '1K', '1.5K', or '2K'; "
+                        "explicit WIDTHxHEIGHT is not supported"
+                    )
+            elif parsed.size not in _SEEDREAM_5_SIZE_PRESETS:
+                match = _SEEDREAM_5_EXPLICIT_SIZE.fullmatch(parsed.size)
+                if match is None:
+                    return (
+                        f"{self.adapter_id} model_specific.size must be a supported "
+                        "preset ('1K', '1.5K', '2K') or WIDTHxHEIGHT"
+                    )
+                width, height = (int(value) for value in match.groups())
+                pixels = width * height
+                ratio = width / height
+                if not (_SEEDREAM_5_MIN_PIXELS <= pixels <= _SEEDREAM_5_MAX_PIXELS):
+                    return (
+                        f"{self.adapter_id} explicit model_specific.size must contain "
+                        f"{_SEEDREAM_5_MIN_PIXELS}-{_SEEDREAM_5_MAX_PIXELS} pixels"
+                    )
+                if not (_SEEDREAM_5_MIN_RATIO <= ratio <= _SEEDREAM_5_MAX_RATIO):
+                    return (
+                        f"{self.adapter_id} explicit model_specific.size must have a "
+                        "width/height ratio between 1/16 and 16"
+                    )
         return None
 
     def validation_corrections(
@@ -262,6 +305,12 @@ class SeedreamAdapter(ModelAdapter):
             if req.n != 1:
                 return False, "layer_decomposition cannot be combined with n > 1"
 
+        if family == "pro" and req.n != 1:
+            return False, (
+                f"{self.adapter_id} only generates one image per request; "
+                "n must be 1 because sequential_image_generation is unsupported"
+            )
+
         # Whether a source URL actually has an alpha channel cannot be established
         # locally; enforce the deterministic portions and let upstream inspect it.
         if (req.model_specific or {}).get("background") == "transparent":
@@ -323,10 +372,18 @@ class SeedreamAdapter(ModelAdapter):
                 prompt, req.regions, req.image_refs, include_names=False
             )
 
+        layer_decomposition = (req.model_specific or {}).get("layer_decomposition") is True
         payload: dict = {
             "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
             "prompt": prompt,
-            "size": self._resolve_size(req.resolution, req.aspect_ratio),
+            # Pro / Flash layer decomposition rejects explicit `WIDTHxHEIGHT`; its
+            # API instead accepts one of the preset tiers. A caller can select the
+            # documented default with model_specific.size='auto'.
+            "size": (
+                req.resolution
+                if layer_decomposition and self.adapter_id in _STRICT_SEEDREAM_5_ADAPTERS
+                else self._resolve_size(req.resolution, req.aspect_ratio)
+            ),
             "response_format": "url",
             "watermark": req.watermark,
         }
