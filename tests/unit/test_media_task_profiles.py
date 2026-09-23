@@ -127,6 +127,38 @@ async def test_profile_catalog_rejects_unknown_canonical_task():
 
 
 @pytest.mark.asyncio
+async def test_layer_decomposition_search_returns_an_executable_call_template(monkeypatch):
+    """Discovery must provide the API switch and arity, not just a task label."""
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_model_profiles(
+        required_tasks=["layer_decomposition"]
+    )
+    flash = next(
+        model
+        for model in catalog["models"]
+        if model["model_id"] == "doubao-seedream-5-0-flash"
+    )
+    contract = flash["task_parameters"]["layer_decomposition"]
+    assert contract["call_template"] == {
+        "prompt": "",
+        "n": 1,
+        "model_specific": {"layer_decomposition": True},
+    }
+    assert contract["requirements"]["reference_images"] == {
+        "required": True,
+        "min_items": 1,
+        "max_items": 1,
+    }
+    assert contract["result"]["image_items"]["layer_limit"] == 16
+
+
+@pytest.mark.asyncio
 async def test_profile_catalog_supports_all_and_any_capability_queries(monkeypatch):
     from cfgpu_mcp.adapters.registry import AdapterRegistry
     from cfgpu_mcp.service import model as model_service

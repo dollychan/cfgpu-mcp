@@ -131,6 +131,42 @@ async def test_validate_only_resolves_auto_to_a_concrete_model():
 
     assert result["model_used"] != "auto"
     assert result["task_type"] == "video"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash"])
+async def test_layer_decomposition_preflight_validates_the_strict_schema(model):
+    """A type error must fail before the request reaches a billed endpoint."""
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c, pytest.raises(CFGPUError, match="layer_decomposition") as exc:
+        await image_service.generate_image(
+            prompt="",
+            model=model,
+            reference_images=["https://example.com/source.png"],
+            model_specific={"layer_decomposition": "true"},
+            validate_only=True,
+        )
+    client.post.assert_not_called()
+    assert exc.value.error_type == "invalid_params"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash"])
+async def test_layer_decomposition_preflight_accepts_the_executable_template(model):
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c:
+        result = await image_service.generate_image(
+            prompt="",
+            model=model,
+            reference_images=["https://example.com/source.png"],
+            model_specific={"layer_decomposition": True},
+            validate_only=True,
+        )
+    client.post.assert_not_called()
+    assert result["validated"] is True
+    assert result["payload"]["layer_decomposition"] is True
     # The tiers are the pre-submission cost and latency signals. Upstream transport
     # details such as adapter.is_async are not part of the MCP task contract.
     assert "is_async" not in result

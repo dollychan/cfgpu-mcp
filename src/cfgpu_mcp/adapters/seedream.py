@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
+
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from cfgpu_mcp.adapters.base import (
     ModelAdapter,
@@ -107,6 +109,37 @@ _GROUP_CAPABILITY = "multi_image_group"
 _GROUP_TOTAL_CAP = 15
 
 
+class _PromptOptimizeOptions(BaseModel):
+    """The only nested object accepted by Pro / Flash's model_specific schema."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    mode: Literal["standard", "fast"]
+
+
+class _Seedream5ModelSpecific(BaseModel):
+    """Strict upstream controls shared by Seedream 5.0 Pro and Flash.
+
+    ``model_specific`` is intentionally free-form for the older Seedream variants.
+    Pro / Flash have a documented, closed control surface, so silently accepting an
+    unknown key there turns a preflight into false reassurance about a billed call.
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    response_format: Literal["url", "b64_json"] | None = None
+    output_format: Literal["png", "jpeg"] | None = None
+    background: Literal["opaque", "transparent"] | None = None
+    layer_decomposition: bool | None = None
+    optimize_prompt_options: _PromptOptimizeOptions | None = None
+
+
+_STRICT_SEEDREAM_5_ADAPTERS = frozenset({
+    "doubao-seedream-5-0-pro",
+    "doubao-seedream-5-0-flash",
+})
+
+
 @register_python_adapter
 class SeedreamAdapter(ModelAdapter):
     """Python Adapter for Doubao Seedream (synchronous image models).
@@ -136,6 +169,29 @@ class SeedreamAdapter(ModelAdapter):
         # Same-tier square is the only safe fallback: dropping to another tier would
         # change the price band without saying so.
         return table.get((resolution, aspect_ratio)) or table.get((resolution, "1:1"), "2048x2048")
+
+    def _model_specific_error(self, req: "GenerateImageInput") -> str | None:
+        """Return a stable, preflight-safe error for Seedream 5.0 private controls."""
+        if self.adapter_id not in _STRICT_SEEDREAM_5_ADAPTERS:
+            return None
+        try:
+            parsed = _Seedream5ModelSpecific.model_validate(req.model_specific or {})
+        except ValidationError as exc:
+            details = "; ".join(
+                f"model_specific.{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+                for error in exc.errors()
+            )
+            return f"{self.adapter_id} has invalid model-specific parameters: {details}"
+        if (
+            self.adapter_id == "doubao-seedream-5-0-flash"
+            and parsed.optimize_prompt_options is not None
+            and parsed.optimize_prompt_options.mode != "standard"
+        ):
+            return (
+                "doubao-seedream-5-0-flash only supports "
+                "model_specific.optimize_prompt_options.mode='standard'"
+            )
+        return None
 
     def validation_corrections(
         self, req: "GenerateImageInput | GenerateVideoInput"
@@ -167,7 +223,10 @@ class SeedreamAdapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateImageInput)
-        layer_decomposition = bool((req.model_specific or {}).get("layer_decomposition"))
+        model_specific_error = self._model_specific_error(req)
+        if model_specific_error:
+            return False, model_specific_error
+        layer_decomposition = (req.model_specific or {}).get("layer_decomposition") is True
         if not req.prompt.strip() and not layer_decomposition:
             return False, f"{self.adapter_id} requires a non-empty prompt"
 
@@ -236,6 +295,13 @@ class SeedreamAdapter(ModelAdapter):
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)
+
+        # TaskManager always calls supports() first, but build_payload is intentionally
+        # safe for direct callers too.  Otherwise a unit test or future integration
+        # could bypass the preflight schema and forward a typo to a billed endpoint.
+        model_specific_error = self._model_specific_error(req)
+        if model_specific_error:
+            raise ValueError(model_specific_error)
 
         # supports() is the gate, but build_payload is also reachable directly (tests,
         # and any future caller). A region that reached a model without the capability

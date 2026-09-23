@@ -8,6 +8,7 @@ import yaml
 
 _MODELS_DIR = Path(__file__).parent.parent / "models"
 _TASKS_PATH = Path(__file__).parent.parent / "capabilities" / "media_tasks.yaml"
+_TASK_PARAMETERS_PATH = Path(__file__).parent.parent / "capabilities" / "task_parameters.yaml"
 _TASK_TYPES = frozenset({"image", "video", "audio", "understand"})
 _VOICE_CATALOG_VERSION = 3
 
@@ -150,6 +151,33 @@ def _load_profile(adapter_id: str, task_catalog: dict[str, dict[str, str]]) -> l
     return tasks
 
 
+def _load_task_parameter_contracts(
+    task_catalog: dict[str, dict[str, str]],
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Load executable task templates keyed by public model ID and canonical task.
+
+    A profile answers *which* model can perform a task. This adjacent contract answers
+    *how to invoke it*, so an agent does not infer a billed request from card prose.
+    """
+    raw = yaml.safe_load(_TASK_PARAMETERS_PATH.read_text())
+    if not isinstance(raw, dict) or raw.get("schema_version") != 1:
+        raise ValueError("task_parameters.yaml must declare schema_version: 1")
+    models = raw.get("models")
+    if not isinstance(models, dict):
+        raise ValueError("task_parameters.yaml must contain a models mapping")
+    for model_id, contracts in models.items():
+        if not isinstance(model_id, str) or not isinstance(contracts, dict):
+            raise ValueError("task_parameters.yaml contains an invalid model entry")
+        unknown = set(contracts) - set(task_catalog)
+        if unknown:
+            raise ValueError(
+                f"task_parameters.yaml model {model_id!r} references unknown tasks: {sorted(unknown)}"
+            )
+        if any(not isinstance(contract, dict) for contract in contracts.values()):
+            raise ValueError(f"task_parameters.yaml model {model_id!r} has an invalid task contract")
+    return models
+
+
 async def list_model_profiles(
     media_type: str | None = None,
     required_tasks: list[str] | None = None,
@@ -158,9 +186,10 @@ async def list_model_profiles(
     """List the agent-facing model catalog with canonical tasks only.
 
     This is intentionally separate from ``list_models``: the latter remains an
-    operations/debugging API and contains adapter capabilities.  The profile catalog
-    never reads model cards and never returns adapter capability names, payload fields,
-    or parameter constraints.
+    operations/debugging API and contains adapter capabilities. When callers request
+    canonical tasks, matching models additionally expose compact ``task_parameters``
+    templates, preventing agents from guessing model-specific API switches from card
+    prose.
     """
     if media_type is not None and media_type not in _TASK_TYPES:
         raise ValueError(f"unknown media_type {media_type!r}; expected one of {sorted(_TASK_TYPES)}")
@@ -168,6 +197,7 @@ async def list_model_profiles(
         raise ValueError("match must be 'all' or 'any'")
 
     catalog_version, task_catalog = _load_task_catalog()
+    parameter_contracts = _load_task_parameter_contracts(task_catalog)
     requested_tasks = set(required_tasks or [])
     unknown = requested_tasks - set(task_catalog)
     if unknown:
@@ -194,16 +224,23 @@ async def list_model_profiles(
             else not requested_tasks & supported_tasks
         ):
             continue
-        models.append(
-            {
-                "model_id": adapter.model_name,
-                "display_name": adapter.display_name,
-                "task_type": adapter.task_type,
-                "tasks": tasks,
-                "cost_tier": adapter.cost_tier,
-                "speed_tier": adapter.speed_tier,
+        model = {
+            "model_id": adapter.model_name,
+            "display_name": adapter.display_name,
+            "task_type": adapter.task_type,
+            "tasks": tasks,
+            "cost_tier": adapter.cost_tier,
+            "speed_tier": adapter.speed_tier,
+        }
+        if requested_tasks:
+            contracts = parameter_contracts.get(adapter.model_name, {})
+            matched_contracts = {
+                task_id: contracts[task_id]
+                for task_id in sorted(requested_tasks & set(contracts))
             }
-        )
+            if matched_contracts:
+                model["task_parameters"] = matched_contracts
+        models.append(model)
 
     visible_task_ids = (
         requested_tasks

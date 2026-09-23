@@ -951,7 +951,11 @@ class ListModelProfilesInput(BaseModel):
     required_tasks: Optional[list[CanonicalTaskId]] = Field(
         default=None,
         min_length=1,
-        description="Canonical capabilities the model must support, such as ['video_edit']",
+        description="Canonical capabilities the model must support, such as ['video_edit']. "
+        "When set, matching models may include task_parameters: copy its call_template "
+        "into the generation call, then add concrete media URLs and an optional creative "
+        "prompt. This is required for feature modes such as layer_decomposition, whose "
+        "API switch cannot be inferred from the task name.",
     )
     match: CapabilityMatch = Field(
         default="all",

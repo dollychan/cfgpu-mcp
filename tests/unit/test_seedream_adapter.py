@@ -282,6 +282,37 @@ def test_transparent_background_requires_one_input_and_png_output():
     assert "requires PNG" in adapter.supports(invalid)[1]
 
 
+@pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
+@pytest.mark.parametrize(
+    "model_specific, message",
+    [
+        ({"layer_decomposition": "true"}, "layer_decomposition: Input should be a valid boolean"),
+        ({"layer_decomposition": True, "unknown": 1}, "unknown: Extra inputs are not permitted"),
+        ({"background": "blue"}, "background: Input should be 'opaque' or 'transparent'"),
+    ],
+)
+def test_pro_and_flash_reject_invalid_model_specific_schema(factory, model_specific, message):
+    ok, reason = factory().supports(GenerateImageInput(prompt="x", model_specific=model_specific))
+    assert not ok
+    assert message in reason
+
+
+def test_flash_rejects_pro_only_fast_prompt_optimization():
+    ok, reason = _make_flash_adapter().supports(GenerateImageInput(
+        prompt="x",
+        model_specific={"optimize_prompt_options": {"mode": "fast"}},
+    ))
+    assert not ok
+    assert "only supports" in reason
+
+
+def test_build_payload_rechecks_pro_and_flash_model_specific_schema():
+    with pytest.raises(ValueError, match="layer_decomposition"):
+        _make_pro_adapter().build_payload(GenerateImageInput(
+            prompt="x", model_specific={"layer_decomposition": "true"}
+        ))
+
+
 # --- per-family size tables -------------------------------------------------
 #
 # Pro and the Lite/4.x line publish *different* pixel values for the same tier and

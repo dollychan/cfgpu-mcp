@@ -1,0 +1,47 @@
+schema_version: 1
+
+# Executable, agent-facing tool argument templates. A template carries values shared
+# by every call; the agent adds the concrete image URL and optional creative prompt.
+models:
+  doubao-seedream-5-0-pro:
+    layer_decomposition:
+      call_template:
+        prompt: ""
+        n: 1
+        model_specific:
+          layer_decomposition: true
+      requirements:
+        reference_images:
+          required: true
+          min_items: 1
+          max_items: 1
+        prompt:
+          required: true
+          allow_empty: true
+      supported_resolution: ["1K", "1.5K", "2K"]
+      result:
+        image_items:
+          description: "Base image followed by independently editable transparent layers."
+          fields: ["url", "z_index", "bounding_box", "name", "description"]
+          layer_limit: 16
+  doubao-seedream-5-0-flash:
+    layer_decomposition:
+      call_template:
+        prompt: ""
+        n: 1
+        model_specific:
+          layer_decomposition: true
+      requirements:
+        reference_images:
+          required: true
+          min_items: 1
+          max_items: 1
+        prompt:
+          required: true
+          allow_empty: true
+      supported_resolution: ["1K", "1.5K", "2K"]
+      result:
+        image_items:
+          description: "Base image followed by independently editable transparent layers."
+          fields: ["url", "z_index", "bounding_box", "name", "description"]
+          layer_limit: 16
