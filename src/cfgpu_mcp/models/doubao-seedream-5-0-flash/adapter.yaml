@@ -1,0 +1,27 @@
+extends: doubao-seedream-5-0-pro
+card_base: ~
+
+adapter_id: doubao-seedream-5-0-flash
+display_name: "Doubao Seedream 5.0 flash"
+cfgpu_model_id: doubao-seedream-5-0-flash-260915
+model_name: doubao-seedream-5-0-flash
+
+# A fast, economical synchronous variant with the same single-image creation and
+# editing surface as 5.0 Pro.  It deliberately inherits the Pro capability set,
+# including region_edit, and therefore does not accept group generation or web search.
+cost_tier: 1
+speed_tier: 5
+# Pro's auto_priority is its own routing declaration. Flash wins the fast tier from
+# its actual speed/cost score and must not inherit that tie-break into other requests
+# (notably n>1, where a group-capable model is preferred).
+auto_priority: 0
+
+# Flash has the same 1K / 1.5K / 2K output range as Pro.  The shared adapter maps the
+# unified resolution + aspect_ratio into documented exact pixel pairs.
+capabilities:
+  - text_to_image
+  - image_to_image
+  - multi_image_fusion
+  - region_edit
+  - layer_decomposition
+  - transparent_background

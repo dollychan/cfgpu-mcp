@@ -174,7 +174,7 @@ files are deliberately not model cards and do not change the current
 
 `MiniMax-H3` 就是这么来的：它诚实的 speed 3 / cost 1（480P 输出 0.1 元/秒、默认 768P 输出 0.2、2K 输出 0.5）在 balanced 档记 2 分，与 `doubao-seedance-2-0-fast` / `cf-imagine-video` / `wan-video-fast` **打平而非胜出**，平局再落到 `auto_priority`，那里 `doubao-seedance-2-0-fast` 已经声明了 2。也就是说启发式无论如何都不会自己落到这里，于是路由决定写成路由决定。**反过来说，`cost_tier` 也不是这条路由的机关**：它只是当前价格声明，输入视频与图片另按相同分辨率档位计费。
 
-`gpt-image-2` 是第二例（2026-09-09），理由不同：它在 balanced 档记 1 分，与整个 Seedream 家族**四路打平**，平局本来是 `auto_priority` 能解的。解不了的是中文 —— `_score` 给每个 `doubao-seedream` 加 2 分，于是中文 prompt 下 5.0 Pro 记 3 分、直接在**分数**这一关就赢了，`auto_priority` 作为第三关键字根本轮不到开口。一个英文成立、中文翻盘的默认不是默认。同样只声明 `balanced`：`fast` 留给 `doubao-seedream-5-0-pro`（同一个平局，但调用方点名要快时不该给这个模型），`best` 本就由 `quality_rank: 3` 落在这里，是另一个字段的另一次声明，两者互不代表。
+`gpt-image-2` 是第二例（2026-09-09），理由不同：它在 balanced 档记 1 分，与整个 Seedream 家族的旧成员打平，平局本来是 `auto_priority` 能解的。解不了的是中文 —— `_score` 给每个 `doubao-seedream` 加 2 分，于是中文 prompt 下 5.0 Pro 记 3 分、直接在**分数**这一关就赢了，`auto_priority` 作为第三关键字根本轮不到开口。一个英文成立、中文翻盘的默认不是默认。同样只声明 `balanced`：`fast` 现在由速度 5、成本 1 的 `doubao-seedream-5-0-flash` 自然胜出；`best` 本就由 `quality_rank: 3` 落在这里，是另一个字段的另一次声明，两者互不代表。
 
 **它有一处已知的、接受了的退化：`n > 1`。** 组图的 +3 加分在**分数**里，而 `default_for` 是分数**之上**的一关，所以 balanced 档的组图请求照样落到 `gpt-image-2` —— 它没有 `multi_image_group`，`GptImage2Adapter.build_payload` 从不发送 `n`，调用方会**静默地**拿到一张图。这不是漏洞而是声明默认的标价：允许运营决定压过启发式正是把它写下来的全部意义，而 `n` 在全队的策略本就是「无能力的模型静默忽略」，下游没有任何信号能捕获这次错配。需要真组图的调用方显式点名 Seedream。`test_declared_default_outranks_the_group_bonus_and_n_degrades` 把这次退化钉成**记录在案的决定**而不是意外。`reference_images` 是同一条路的轻症：`gpt-image-2` 有 `image_to_image` 且 `_finalize_payload` 确实把参考图发上去了，缺的只是 `multi_image_fusion`，属于「由一个非专精的模型来做」而不是「被丢掉」。
 
@@ -728,6 +728,9 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── doubao-seedream-5-0-pro/
 │   │   ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~（单图、1K/2K，不支持组图/联网搜索）
+│   │   └── card.md
+│   ├── doubao-seedream-5-0-flash/
+│   │   ├── adapter.yaml        extends: doubao-seedream-5-0-pro（同步单图、1K/1.5K/2K、低成本高速）
 │   │   └── card.md
 │   ├── doubao-seedream-4-5/
 │   │   ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~

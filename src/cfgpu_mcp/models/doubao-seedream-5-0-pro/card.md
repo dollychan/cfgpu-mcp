@@ -9,7 +9,7 @@ Seedream 5.0 Pro 是字节跳动发布的最新图像创作模型，将图像创
 | 任务类型 | image |
 | CFGPU 模型 ID | `doubao-seedream-5-0-pro` |
 | 同步/异步 | 同步（`is_async: false`，POST 响应即返回结果） |
-| 能力标签 | text_to_image, image_to_image, multi_image_fusion, region_edit |
+| 能力标签 | text_to_image, image_to_image, multi_image_fusion, region_edit, layer_decomposition, transparent_background |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -28,6 +28,8 @@ Seedream 5.0 Pro 是字节跳动发布的最新图像创作模型，将图像创
 | **image_to_image** | 单张参考图 + 文本生成图像 |
 | **multi_image_fusion** | 多张参考图片（2–10）+ 文本提示词生成单张图片 |
 | **region_edit** | 按用户圈的区域做局部编辑；坐标随 prompt 内嵌，见下方「区域编辑」 |
+| **layer_decomposition** | 将一张输入图拆分为 1 张底图和最多 16 个带透明通道的独立图层 |
+| **transparent_background** | 基于一张带透明通道的输入图继续编辑，并输出透明 PNG |
 
 ### 不支持的能力
 
@@ -36,6 +38,13 @@ Seedream 5.0 Pro 是字节跳动发布的最新图像创作模型，将图像创
 - ❌ **流式输出**（不支持 `stream: true`）
 
 > 如需组图、联网搜索或流式输出，请使用 `doubao-seedream-5-0-lite`。
+
+### 图层拆分与透明背景
+
+两项能力通过 `model_specific` 透传：
+
+- 图层拆分：`{"layer_decomposition": true}`，必须传入 1 张 `reference_images`；prompt 可为空。响应的 `image_items` 会保留各项的 `z_index`、`bounding_box`、名称和描述，便于按层重组。
+- 透明背景：`{"background": "transparent", "output_format": "png"}`，仅适用于 1 张带透明通道的输入图；设置 JPEG 输出会被拒绝。
 
 ## 参数说明
 

@@ -675,9 +675,9 @@
       "note": "Unified tool schema from GenerateImageInput. Model not yet fixed; ranges are the union enum/limits of the unified schema, not a specific model. Once a model is chosen, switch to that model's entry for the real per-model ranges.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
-        "model": { "type": "enum", "options": ["auto", "doubao-seedream-5-0-pro", "doubao-seedream-5-0-lite", "doubao-seedream-4-0", "doubao-seedream-4-5", "wan2.7-image", "cf-image-2", "cf2", "cf-pro", "cf-pro-official", "cf-pro-premium"], "default": "auto", "writable": "true" },
+        "model": { "type": "enum", "options": ["auto", "doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash", "doubao-seedream-5-0-lite", "doubao-seedream-4-0", "doubao-seedream-4-5", "wan2.7-image", "cf-image-2", "cf2", "cf-pro", "cf-pro-official", "cf-pro-premium"], "default": "auto", "writable": "true" },
         "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true" },
-        "resolution": { "type": "enum", "options": ["1K", "1.5K", "2K", "3K", "4K"], "default": "2K", "writable": "true", "note": "union of every image model's tiers; per family: pro 1K/1.5K/2K, 5-0-lite and 4.5 2K/3K/4K, 4.0 1K/2K/3K/4K. An unsupported tier is rejected, not silently downgraded" },
+        "resolution": { "type": "enum", "options": ["1K", "1.5K", "2K", "3K", "4K"], "default": "2K", "writable": "true", "note": "union of every image model's tiers; Seedream 5.0 Pro / Flash each support 1K/1.5K/2K, 5-0-lite and 4.5 support 2K/3K/4K, and 4.0 supports 1K/2K/3K/4K. An unsupported tier is rejected, not silently downgraded" },
         "reference_images": { "type": "url_array", "writable": "true" },
         "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas, and a typed-in coordinate is exactly the transcription this parameter exists to avoid. Only models with the region_edit capability accept it; passing it to another model is a hard error, never a silent whole-image edit" },
         "image_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per image, same order and length as reference_images; resolves [[handle]] placeholders in prompt so the caller never hard-codes an image ordinal. Never sent upstream" },
@@ -771,9 +771,44 @@
         "model_specific": {
           "type": "object",
           "fields": {
-            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" }
+            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
+            "output_format": { "type": "enum", "options": ["png", "jpeg"], "default": "jpeg" },
+            "background": { "type": "enum", "options": ["opaque", "transparent"], "default": "opaque", "note": "transparent requires exactly one transparent PNG input image; jpeg output is rejected" },
+            "layer_decomposition": { "type": "boolean", "default": false, "note": "requires exactly one reference_images item and no n>1; prompt may be empty. Returns a base image plus up to 16 transparent PNG layers, with z_index and bounding_box in image_items" },
+            "optimize_prompt_options.mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" }
           },
-          "note": "pro does NOT support stream, tools (web_search), or optimize_prompt_options"
+          "note": "pro does NOT support stream or tools (web_search); model-specific fields are passed through at the payload top level"
+        }
+      }
+    },
+    {
+      "adapterId": "doubao-seedream-5-0-flash",
+      "modelId": "doubao-seedream-5-0-flash-260915",
+      "modelName": "doubao-seedream-5-0-flash",
+      "displayName": "Doubao Seedream 5.0 flash",
+      "note": "Synchronous 5.0 image-creation and editing model. It has the same text/image/multi-image, positional-editing, layer-decomposition and transparent-background features as Pro, optimized for lower latency and cost.",
+      "args": {
+        "prompt": { "type": "text", "writable": "true", "note": "required except when model_specific.layer_decomposition=true" },
+        "model": { "type": "string", "value": "doubao-seedream-5-0-flash", "writable": "false" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"], "default": "1:1", "writable": "true", "note": "combined with resolution and emitted as an exact Seedream 5.0 pixel pair" },
+        "resolution": { "type": "enum", "options": ["1K", "1.5K", "2K"], "default": "2K", "writable": "true", "note": "Flash supports the same 1K / 1.5K / 2K output range as Pro; 2K output costs 0.12 CNY per image" },
+        "reference_images": { "type": "url_array", "maxItems": 10, "writable": "true", "note": "one image for image-to-image or layer decomposition; 2-10 for multi-image fusion" },
+        "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions; rendered into prompt bbox coordinates for precise editing" },
+        "image_refs": { "type": "string_array", "writable": "false", "note": "handles used to position regions in the prompt; never sent upstream" },
+        "n": { "type": "integer", "min": 1, "max": 1, "default": 1, "writable": "true", "note": "single-image model; group generation is unsupported" },
+        "watermark": { "type": "boolean", "default": false, "writable": "true" },
+        "wait": { "type": "boolean", "default": true, "writable": "false" },
+        "timeout": { "type": "integer", "writable": "false" },
+        "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
+        "model_specific": {
+          "type": "object",
+          "fields": {
+            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
+            "output_format": { "type": "enum", "options": ["png", "jpeg"], "default": "jpeg" },
+            "background": { "type": "enum", "options": ["opaque", "transparent"], "default": "opaque", "note": "transparent requires one transparent PNG input image and PNG output" },
+            "layer_decomposition": { "type": "boolean", "default": false, "note": "requires one reference_images item and no n>1; splits it into one base image and up to 16 transparent PNG layers. The response's image_items retains each layer's z_index and bounding_box" },
+            "optimize_prompt_options.mode": { "type": "enum", "options": ["standard"], "default": "standard", "note": "Flash supports standard prompt optimization only" }
+          }
         }
       }
     },

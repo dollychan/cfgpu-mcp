@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 #   Pro        [921600, 4624220]     → 1K / 1.5K / 2K   (3K and 4K exceed the ceiling)
 #   Lite, 4.5  [3686400, 16777216]   → 2K / 3K / 4K     (1K is under the floor)
 #   4.0        [921600, 16777216]    → 1K / 2K / 3K / 4K
+#   Flash      [921600, 4624220]     → 1K / 1.5K / 2K (same output range as Pro)
 
 _RATIOS = ("1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9")
 
@@ -111,7 +112,8 @@ class SeedreamAdapter(ModelAdapter):
     """Python Adapter for Doubao Seedream (synchronous image models).
 
     Base for doubao-seedream-5-0-lite; also reused (via the `extends` chain) by the
-    4.0/4.5 variants and doubao-seedream-5-0-pro. The families differ in three ways that
+    4.0/4.5 variants, doubao-seedream-5-0-pro, and doubao-seedream-5-0-flash. The
+    families differ in three ways that
     matter here — supported resolution tiers, the pixel table behind each tier, and
     whether 组图 (n>1) exists at all — so nearly every method branches on ``_family``.
     """
@@ -120,7 +122,10 @@ class SeedreamAdapter(ModelAdapter):
 
     @property
     def _family(self) -> str:
-        if self.adapter_id == "doubao-seedream-5-0-pro":
+        if self.adapter_id in {
+            "doubao-seedream-5-0-pro",
+            "doubao-seedream-5-0-flash",
+        }:
             return "pro"
         if self.adapter_id == "doubao-seedream-4-0":
             return "4-0"
@@ -162,7 +167,8 @@ class SeedreamAdapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateImageInput)
-        if not req.prompt.strip():
+        layer_decomposition = bool((req.model_specific or {}).get("layer_decomposition"))
+        if not req.prompt.strip() and not layer_decomposition:
             return False, f"{self.adapter_id} requires a non-empty prompt"
 
         family = self._family
@@ -185,6 +191,30 @@ class SeedreamAdapter(ModelAdapter):
         reference_count = len(req.reference_images or [])
         if reference_count > max_refs:
             return False, f"{self.adapter_id} accepts at most {max_refs} reference_images"
+
+        if layer_decomposition:
+            if "layer_decomposition" not in self.capabilities:
+                return False, f"{self.adapter_id} does not support layer_decomposition"
+            if reference_count != 1:
+                return False, (
+                    f"{self.adapter_id} layer_decomposition requires exactly one "
+                    "reference_images item"
+                )
+            if req.n != 1:
+                return False, "layer_decomposition cannot be combined with n > 1"
+
+        # Whether a source URL actually has an alpha channel cannot be established
+        # locally; enforce the deterministic portions and let upstream inspect it.
+        if (req.model_specific or {}).get("background") == "transparent":
+            if "transparent_background" not in self.capabilities:
+                return False, f"{self.adapter_id} does not support transparent backgrounds"
+            if reference_count != 1:
+                return False, (
+                    f"{self.adapter_id} transparent background requires exactly one "
+                    "reference_images item"
+                )
+            if (req.model_specific or {}).get("output_format") == "jpeg":
+                return False, "transparent background requires PNG output, not jpeg"
 
         does_groups = _GROUP_CAPABILITY in self.capabilities
         if does_groups and reference_count + req.n > _GROUP_TOTAL_CAP:
@@ -283,4 +313,5 @@ class SeedreamAdapter(ModelAdapter):
             seed=None,
             usage=resp.get("usage"),
             partial_errors=partial_errors or None,
+            image_items=data if any("z_index" in item for item in data) else None,
         )

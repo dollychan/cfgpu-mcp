@@ -162,6 +162,15 @@ def test_seedream_5_0_pro_extends_resolves_seedream_adapter():
     assert "multi_image_fusion" in pro.capabilities
 
 
+def test_seedream_5_0_flash_reuses_the_sync_seedream_adapter():
+    registry = _load()
+    flash = registry.get("doubao-seedream-5-0-flash")
+    assert isinstance(flash, SeedreamAdapter)
+    assert flash.cfgpu_model_id == "doubao-seedream-5-0-flash-260915"
+    assert flash.is_async is False
+    assert "region_edit" in flash.capabilities
+
+
 @pytest.mark.parametrize(
     "adapter_id, cfgpu_model_id",
     [

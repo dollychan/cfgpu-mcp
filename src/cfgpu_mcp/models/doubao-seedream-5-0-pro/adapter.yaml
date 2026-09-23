@@ -14,6 +14,8 @@ capabilities:
   - image_to_image
   - multi_image_fusion
   - region_edit
+  - layer_decomposition
+  - transparent_background
 
 # No documented ceiling on how many regions one image may carry, so none is enforced
 # locally. Left absent rather than guessed: an invented cap would reject calls the model

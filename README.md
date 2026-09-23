@@ -20,6 +20,7 @@
 | 图像 | `doubao-seedream-4-0` | Doubao Seedream 4.0 |
 | 图像 | `doubao-seedream-4-5` | Doubao Seedream 4.5 |
 | 图像 | `doubao-seedream-5-0-lite` | Doubao Seedream 5.0 lite |
+| 图像 | `doubao-seedream-5-0-flash` | Doubao Seedream 5.0 flash（2K，高速低成本） |
 | 图像 | `gpt-image-2` | GPT Image 2 |
 | 图像 | `nano-banana-2` | Nano Banana 2 |
 | 图像 | `nano-banana-pro` | Nano Banana Pro |

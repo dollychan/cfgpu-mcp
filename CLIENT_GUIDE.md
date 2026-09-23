@@ -666,7 +666,7 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `multi_image_group` 能力的模型：`doubao-seedream-*`（自动设置
 > `sequential_image_generation=auto` + `max_images=n`）与 `wan2.7-image`（自动设置
 > `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。**例外：
-> `doubao-seedream-5-0-pro` 为单图模型，不支持组图，`n>1` 会报错**；`gpt-image-2`、
+> `doubao-seedream-5-0-pro` 与 `doubao-seedream-5-0-flash` 为单图模型，不支持组图，`n>1` 会报错**；`gpt-image-2`、
 > `nano-banana-*` 传 `n>1` 也会被拒绝。
 > 两家的 `n` 都是**上限而不是张数**：出几张由模型决定，少于 `n` 是正常结果，结果回来之前
 > 不要向用户承诺具体张数。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
@@ -704,8 +704,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
-> `fast` 是 `doubao-seedream-5-0-pro`，它被参数排除时（3K/4K、组图 `n>1`、联网搜索这三项
-> 它没有）退到 `doubao-seedream-5-0-lite`；`best` 被排除时退到 `cf-pro`。
+> `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；
+> `best` 被排除时退到 `cf-pro`。
 > 中文 prompt 仍偏向 Seedream 家族，但那是**分数**上的偏向，压不过 `balanced` 的声明默认，
 > 只在声明默认出局后才决定次序。
 > **`balanced` + `n>1` 请注意**：`cf-image-2` 不支持组图，`n` 会被静默忽略、只回一张图。
@@ -732,8 +732,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > （GPT Image 2）只有 1K/2K/4K 三档，传 `3K` 会被上游拒绝；它的 `aspect_ratio` 也没有 `21:9`。
 > 分辨率直接影响计价（`cf-image-2` 三档分别为 0.105 / 0.16 / 0.21 元每张），需要哪档就显式传哪档。
 
-> **Seedream 系列与 `wan2.7-image` 是例外：档位在本地校验，且始终以精确像素上行。** 各家族支持的档位不同
-> （`doubao-seedream-5-0-pro`：1K/1.5K/2K；`5-0-lite` 与 `4.5`：2K/3K/4K；`4.0`：1K/2K/3K/4K），
+> **Seedream 系列与 `wan2.7-image` 是例外：档位在本地校验。** Seedream 5.0 Flash 按上游示例原样上行
+> `size: "2K"`；其余 Seedream 与 `wan2.7-image` 上行精确像素。各家族支持的档位不同
+> （`doubao-seedream-5-0-pro` 与 `5-0-flash`：1K/1.5K/2K；`5-0-lite` 与 `4.5`：2K/3K/4K；`4.0`：1K/2K/3K/4K），
 > 超出的档位由 `supports()` 直接拒绝而不是静默降档——`validate_only` 会在 `corrected_args`
 > 里给出最接近的可用档位，`model="auto"` 则会绕开不支持该档的模型。adapter 把
 > （`resolution`, `aspect_ratio`）查成一个精确的 `宽x高` 送上游，因此 `aspect_ratio` 在

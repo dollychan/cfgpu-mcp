@@ -118,9 +118,8 @@ def test_auto_image_defaults_differ_per_quality_tier():
 
     "balanced" is gpt-image-2's by ``default_for`` — an operator decision that
     outranks the score outright, in whichever language the prompt is written.
-    "fast" has no declaration and still falls to 5.0 Pro on ``auto_priority``: every
-    Seedream shares speed_tier 3 / cost_tier 2, so the family ties on score and the
-    adapter_id tie-break would otherwise hand it to the oldest member (4.0).
+    Flash has the fastest declared speed tier and the lowest cost tier, so it is the
+    natural winner for ``fast`` while retaining the Pro editing feature set at 2K.
     "best" is gpt-image-2's again, by ``quality_rank`` — a different field reaching
     the same model, which is why the balanced assertion above proves nothing about
     rank (see test_best_tier_prefers_declared_quality_rank_over_price).
@@ -128,7 +127,7 @@ def test_auto_image_defaults_differ_per_quality_tier():
     router = _router()
     expected = {
         "balanced": "gpt-image-2",             # default_for
-        "fast": "doubao-seedream-5-0-pro",     # auto_priority
+        "fast": "doubao-seedream-5-0-flash",   # speed 5, cost 1
         "best": "gpt-image-2",                 # quality_rank
     }
     for tier, adapter_id in expected.items():

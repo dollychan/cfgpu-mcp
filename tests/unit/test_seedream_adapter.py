@@ -30,9 +30,25 @@ def _make_pro_adapter() -> SeedreamAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion"},
+        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"},
         "cost_tier": 2,
         "speed_tier": 3,
+    }
+    return SeedreamAdapter.from_config(config)
+
+
+def _make_flash_adapter() -> SeedreamAdapter:
+    config = {
+        "adapter_id": "doubao-seedream-5-0-flash",
+        "display_name": "Doubao Seedream 5.0 flash",
+        "cfgpu_model_id": "doubao-seedream-5-0-flash-260915",
+        "task_type": "image",
+        "endpoint": "/v1/images/generations",
+        "is_async": False,
+        "poll_endpoint": None,
+        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"},
+        "cost_tier": 1,
+        "speed_tier": 5,
     }
     return SeedreamAdapter.from_config(config)
 
@@ -208,6 +224,62 @@ def test_pro_cfgpu_model_id_in_model_field():
     payload = adapter.build_payload(req)
     assert payload["model"] == "doubao-seedream-5-0-pro"
     assert str(payload).count("doubao-seedream-5-0-pro") == 1
+
+
+def test_flash_uses_pro_geometry_and_is_synchronous():
+    """Flash supports the same 1K / 1.5K / 2K range as Pro."""
+    adapter = _make_flash_adapter()
+    req = GenerateImageInput(prompt="x", resolution="1.5K", aspect_ratio="16:9", watermark=False)
+    assert adapter.supports(req) == (True, "")
+    payload = adapter.build_payload(req)
+    assert payload == {
+        "model": "doubao-seedream-5-0-flash-260915",
+        "prompt": "x",
+        "size": "2048x1152",
+        "response_format": "url",
+        "watermark": False,
+    }
+
+
+def test_flash_rejects_unsupported_resolution():
+    ok, reason = _make_flash_adapter().supports(
+        GenerateImageInput(prompt="x", resolution="3K")
+    )
+    assert not ok
+    assert "supported: 1K, 1.5K, 2K" in reason
+
+
+def test_layer_decomposition_accepts_empty_prompt_and_keeps_layer_metadata():
+    adapter = _make_flash_adapter()
+    req = GenerateImageInput(
+        prompt="",
+        reference_images=["https://example.com/source.png"],
+        model_specific={"layer_decomposition": True},
+    )
+    assert adapter.supports(req) == (True, "")
+    items = [
+        {"url": "https://cdn/base.jpeg", "z_index": 0},
+        {
+            "url": "https://cdn/layer.png",
+            "z_index": 1,
+            "bounding_box": {"normalized": [1, 2, 3, 4]},
+        },
+    ]
+    result = adapter.parse_response({"data": items})
+    assert result.urls == ["https://cdn/base.jpeg", "https://cdn/layer.png"]
+    assert result.image_items == items
+
+
+def test_transparent_background_requires_one_input_and_png_output():
+    adapter = _make_flash_adapter()
+    req = GenerateImageInput(
+        prompt="edit",
+        reference_images=["https://example.com/layer.png"],
+        model_specific={"background": "transparent", "output_format": "png"},
+    )
+    assert adapter.supports(req) == (True, "")
+    invalid = req.model_copy(update={"model_specific": {"background": "transparent", "output_format": "jpeg"}})
+    assert "requires PNG" in adapter.supports(invalid)[1]
 
 
 # --- per-family size tables -------------------------------------------------

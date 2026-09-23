@@ -444,7 +444,11 @@ def validate_only_field() -> Any:
 class GenerateImageInput(BaseModel):
     """Generate image from text prompt using CFGPU models."""
 
-    prompt: str = Field(description="Text description of the image to generate")
+    prompt: str = Field(
+        description="Text description of the image to generate. Required by the tool; "
+        "pass an empty string for documented image-analysis modes such as Seedream 5.0 "
+        "layer decomposition, which works from one input image.",
+    )
     model: str | list[str] = Field(
         default="auto",
         description="A single currently available model_id from list_model_profiles, "
@@ -920,6 +924,8 @@ CanonicalTaskId = Literal[
     "multi_image_fusion",
     "multi_image_group",
     "region_edit",
+    "layer_decomposition",
+    "transparent_background",
     "text_to_speech",
     "expressive_speech",
     "pronunciation_control",
@@ -1016,6 +1022,9 @@ class NormalizedResult:
     # belongs to the model: a moderation rejection means rewrite the prompt, an upstream
     # 500 means generation stopped there and a retry is worth making.
     partial_errors: list[dict[str, Any]] | None = None
+    # A layer-decomposition response needs more than an unordered URL list: z_index and
+    # bounding_box are required to reconstruct the transparent layers over the base.
+    image_items: list[dict[str, Any]] | None = None
 
     def to_dict(self, return_metadata: bool = False) -> dict[str, Any]:
         # Vision-understanding results carry a chat message rather than media urls —
@@ -1038,6 +1047,8 @@ class NormalizedResult:
             base["inline_media"] = self.inline_media
         if self.partial_errors:  # why the artifact list is shorter than requested
             base["partial_errors"] = self.partial_errors
+        if self.image_items:
+            base["image_items"] = self.image_items
         if return_metadata:
             base.update({
                 "task_id": self.task_id,

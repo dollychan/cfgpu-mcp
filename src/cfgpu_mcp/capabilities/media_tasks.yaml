@@ -74,6 +74,16 @@ tasks:
     name: Region edit
     description: Edit a selected region of a supplied image while preserving the rest.
     prompt_guidance: Identify the selected area, the requested replacement, and the surrounding context to preserve.
+  layer_decomposition:
+    media_type: image
+    name: Layer decomposition
+    description: Split one source image into a base image and independently editable transparent layers.
+    prompt_guidance: Provide one source image and optionally name the elements or regions to separate.
+  transparent_background:
+    media_type: image
+    name: Transparent-background edit
+    description: Edit one transparent source image while preserving its alpha channel in PNG output.
+    prompt_guidance: Provide one transparent PNG source image and describe the edit to make.
 
   text_to_speech:
     media_type: audio
