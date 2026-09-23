@@ -13,32 +13,6 @@
 - **三种部署模式**：MCP stdio server、Anthropic/OpenAI/LangGraph SDK 工具、独立 CLI，共享同一服务层。
 - **可扩展**：新增模型只需添加 `adapter.yaml` + `card.md`，必要时挂一个 Python adapter。
 
-## 媒体链接下载
-
-`download_media(url)` 是本项目内的独立 MCP 工具。用户提供视频/音频网页或直链，完成文件写入当前线程 `user-data/outputs/`；Consumer 复用素材登记逻辑返回 `material_id`，Agent 使用已有 `present_files` 交付。工具提示词维护在 `tools/download_media.py`，请求头复用 MCP 自带 `Context`。
-
-### 部署
-
-1. 每台 Consumer 主机在实际运行 cfgpu-mcp 的环境安装 `uv sync --frozen --extra media --extra http --extra postgres`，已有独立环境通过 `UV_PROJECT_ENVIRONMENT` 指定。系统安装 FFmpeg/ffprobe；YouTube 的 JS 挑战解析还需要 Deno。本地当前实际运行环境为 WSL `/home/syf93/.venvs/cfgpu-mcp`。
-2. MCP `config.yaml` 设置共享线程存储根目录：
-
-   ```yaml
-   media_download:
-     home_dir: ../runtime/deerflow-home
-     timeout: 600
-     max_parallel: 2
-   ```
-
-   相对目录以配置文件所在目录为锚，必须与同机 Consumer 的 `DEER_FLOW_HOME` 指向相同存储。成品路径为 `threads/{thread_id}/user-data/outputs/<filename>`，返回 `/mnt/user-data/outputs/<filename>`。
-3. Consumer 的 `extensions_config.json` 顶层 `mcpInterceptors` 数组追加 `deerflow.mcp.media_download:build_media_download_interceptor`，保留已有项。
-4. Consumer 和本机 MCP 的现有环境文件设置相同的随机 `CFGPU_DOWNLOAD_CONTEXT_SECRET`（至少 32 个随机字节），重启两项服务。它用于签名 runtime 线程身份和 URL，不交给模型；下载要求 HTTP 请求携带该上下文。
-
-### 范围与维护
-
-支持点播、完成的直播回放和明确的播放列表，自动选择最佳可用音视频；视频 URL 带播放列表参数时只下载该视频。站点登录、地区及提取支持仍受 yt-dlp 和源站限制。可选配置 `cookies_file`（只读 Netscape cookies）、`ffmpeg_location`、`deno_path`；关闭工具沿用 `disabled_tools: [download_media]`。
-
-下载受当前调用管理，默认超时 600 秒（含排队）、每进程并发 2 个；调整超时需同时保证 Agent 的 MCP 超时更大。取消/超时结束进程组并清理本次 workspace 临时文件，缺失分片不会作为成品发布。服务重启中断在途下载；systemd 使用 `KillMode=control-group`。每次调用独立，输出文件名唯一；部分条目失败返回 `partial_errors`，已有素材应优先复用。
-
 ## 支持的模型
 
 | 类型 | adapter_id | 名称 |

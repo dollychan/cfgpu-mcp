@@ -2,7 +2,7 @@
 
 All non-secret configuration lives in ``config.yaml`` — it is the single source,
 so each field has exactly one place to be set. The only values read from the
-environment are the secrets ``CFGPU_API_TOKEN`` / ``CFGPU_DOWNLOAD_CONTEXT_SECRET`` and ``CFGPU_CONFIG`` /
+environment are the secret ``CFGPU_API_TOKEN`` and ``CFGPU_CONFIG`` /
 ``CFGPU_DOTENV`` (which point at the config and .env files themselves). The DB
 URL can still come from the environment via the ``$VAR`` form on ``task_db.url``.
 
@@ -32,16 +32,6 @@ class HttpSettings:
     host: str = "0.0.0.0"
     port: int = 8080
     stateless: bool = True
-
-
-@dataclass
-class MediaDownloadSettings:
-    home_dir: str | None = None
-    timeout: float = 600.0
-    max_parallel: int = 2
-    cookies_file: str | None = None
-    ffmpeg_location: str | None = None
-    deno_path: str | None = None
 
 
 #: The built-in provider — the CFGPU API itself. Models that declare no
@@ -77,7 +67,6 @@ class ProviderSettings:
 class Settings:
     transport: str = "stdio"  # "stdio" | "streamable-http"
     http: HttpSettings = field(default_factory=HttpSettings)
-    media_download: MediaDownloadSettings = field(default_factory=MediaDownloadSettings)
     base_url: str = _DEFAULT_BASE_URL
     http_timeout: float = 120.0
     connect_timeout: float = 10.0
@@ -229,18 +218,6 @@ def load_settings() -> Settings:
         _reject_enabled_models(data)
         s.disabled_models = _parse_name_list(data.get("disabled_models"), "disabled_models")
         s.disabled_tools = _parse_name_list(data.get("disabled_tools"), "disabled_tools")
-
-        download = data.get("media_download") or {}
-        s.media_download = MediaDownloadSettings(**download)
-        if not 0 < s.media_download.timeout < float("inf") or s.media_download.max_parallel < 1:
-            raise ValueError("media_download.timeout and max_parallel must be positive")
-        for key in ("home_dir", "cookies_file", "ffmpeg_location", "deno_path"):
-            value = getattr(s.media_download, key)
-            if value:
-                location = Path(_expand_env(value)).expanduser()
-                if not location.is_absolute():
-                    location = path.resolve().parent / location
-                setattr(s.media_download, key, str(location.resolve()))
 
     # The cfgpu provider is synthesized from the top-level cfgpu_api settings
     # rather than declared under `providers:`. Those fields predate providers and
