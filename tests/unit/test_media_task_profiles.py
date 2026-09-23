@@ -160,7 +160,10 @@ async def test_layer_decomposition_search_returns_an_executable_call_template(mo
         "accepted": ["auto", "1K", "1.5K", "2K"],
         "explicit_dimensions_supported": False,
     }
-    assert contract["result"]["image_items"]["layer_limit"] == 16
+    assert contract["result"]["urls"] == {
+        "description": "Ordered output URLs: base image first, followed by independently editable transparent layers.",
+        "layer_limit": 16,
+    }
 
 
 @pytest.mark.asyncio

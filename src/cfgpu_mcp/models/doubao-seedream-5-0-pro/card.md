@@ -43,7 +43,7 @@ Seedream 5.0 Pro 是字节跳动发布的最新图像创作模型，将图像创
 
 两项能力通过 `model_specific` 透传：
 
-- 图层拆分：`{"layer_decomposition": true}`，必须传入 1 张 `reference_images`；prompt 可为空。响应的 `image_items` 会保留各项的 `z_index`、`bounding_box`、名称和描述，便于按层重组。
+- 图层拆分：`{"layer_decomposition": true}`，必须传入 1 张 `reference_images`；prompt 可为空。结果仅返回按顺序排列的 `urls`：第一个为底图，后续为透明图层。
 - 透明背景：`{"background": "transparent", "output_format": "png"}`，仅适用于 1 张带透明通道的输入图；设置 JPEG 输出会被拒绝。
 
 ## 参数说明

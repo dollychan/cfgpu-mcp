@@ -24,7 +24,7 @@ Doubao Seedream 5.0 flash 是面向高频、规模化图片生产与快速交互
 - 文生图、单图生图、多图融合与图片编辑。
 - 精准区域编辑：统一 `regions` / `image_refs` 参数会像 5.0 Pro 一样转换为 prompt 中的 `<bbox>` 坐标。
 - 支持 PNG / JPEG 输出；通过 `model_specific={"output_format": "png"}` 指定。
-- 图层拆分：`model_specific={"layer_decomposition": true}`；必须传入一张参考图，prompt 可省略。返回的 `image_items` 保留 `z_index`、`bounding_box`、名称与描述等图层元数据。
+- 图层拆分：`model_specific={"layer_decomposition": true}`；必须传入一张参考图，prompt 可省略。结果仅返回按顺序排列的 `urls`：第一个为底图，后续为透明图层。
 - 透明背景：`model_specific={"background": "transparent", "output_format": "png"}`；仅单张带透明通道的输入图可用。
 - 支持原生多语种文字生成（俄语、阿拉伯语、泰语、韩语、日语等 14 种语言）。
 - 单图模型：不支持组图生成、联网搜索或流式输出；传入 `n > 1` 时只生成一张图。

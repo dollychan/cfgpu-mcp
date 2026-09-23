@@ -1029,9 +1029,6 @@ class NormalizedResult:
     # belongs to the model: a moderation rejection means rewrite the prompt, an upstream
     # 500 means generation stopped there and a retry is worth making.
     partial_errors: list[dict[str, Any]] | None = None
-    # A layer-decomposition response needs more than an unordered URL list: z_index and
-    # bounding_box are required to reconstruct the transparent layers over the base.
-    image_items: list[dict[str, Any]] | None = None
 
     def to_dict(self, return_metadata: bool = False) -> dict[str, Any]:
         # Vision-understanding results carry a chat message rather than media urls —
@@ -1054,8 +1051,6 @@ class NormalizedResult:
             base["inline_media"] = self.inline_media
         if self.partial_errors:  # why the artifact list is shorter than requested
             base["partial_errors"] = self.partial_errors
-        if self.image_items:
-            base["image_items"] = self.image_items
         if return_metadata:
             base.update({
                 "task_id": self.task_id,
@@ -1171,6 +1166,40 @@ def annotate_artifact(result: Any) -> Any:
     return result
 
 
+def normalize_image_items_urls(result: dict[str, Any]) -> dict[str, Any]:
+    """Use legacy layer ``image_items`` as a URL fallback, then hide it.
+
+    Seedream layer decomposition now exposes only the compact, ordered ``urls`` list.
+    Older task rows (and a few upstream response variants) may instead carry an empty
+    ``urls`` plus detailed ``image_items``. Preserve the artifact in that case by
+    extracting its URLs in z-order; regardless of whether the fallback was needed,
+    remove the verbose implementation metadata before it reaches an agent.
+    """
+    items = result.get("image_items")
+    if not result.get("urls") and isinstance(items, list):
+        indexed_items = [
+            (index, item)
+            for index, item in enumerate(items)
+            if isinstance(item, dict)
+        ]
+        indexed_items.sort(
+            key=lambda pair: (
+                pair[1]["z_index"]
+                if isinstance(pair[1].get("z_index"), int)
+                else pair[0]
+            )
+        )
+        urls = [
+            item["url"]
+            for _, item in indexed_items
+            if isinstance(item.get("url"), str) and item["url"]
+        ]
+        if urls:
+            result["urls"] = urls
+    result.pop("image_items", None)
+    return result
+
+
 def lean_result(result: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     """Build the ``return_metadata=False`` result: the artifact, without the metadata.
 
@@ -1183,6 +1212,7 @@ def lean_result(result: dict[str, Any], payload: dict[str, Any]) -> dict[str, An
     surfaced regardless, matching ``NormalizedResult.to_dict``'s split of artifact vs.
     metadata. Shared by all three generate services so the shape cannot drift per tool.
     """
+    result = normalize_image_items_urls(result)
     lean: dict[str, Any] = {
         "urls": result.get("urls", []),
         "expires_at": result.get("expires_at"),
@@ -1250,6 +1280,8 @@ def stamp_echo(
     the handle along with the rest of the metadata, and adding one back here would make
     ``row_id`` a way to defeat that from a different file.
     """
+    if isinstance(result, dict):
+        normalize_image_items_urls(result)
     if not isinstance(result, dict):
         return result
     if request_id:

@@ -175,6 +175,33 @@ async def test_get_status_result_includes_real_api_payload():
     await db.close()
 
 
+@pytest.mark.asyncio
+async def test_get_status_uses_legacy_image_items_when_urls_are_empty():
+    """Old layer rows remain downloadable after image_items leaves the tool contract."""
+    db = await aiosqlite.connect(":memory:")
+    db.row_factory = aiosqlite.Row
+    await db.execute(_CREATE_TABLE)
+    await db.commit()
+    await db_ops.insert_task(db, "task-1", "doubao-seedream-5-0-flash", "pending", {"prompt": "x"})
+    await db_ops.update_task(db, "task-1", "succeeded", result={
+        "urls": [],
+        "image_items": [
+            {"z_index": 1, "url": "https://cdn/layer.png"},
+            {"z_index": 0, "url": "https://cdn/base.jpeg"},
+        ],
+    })
+
+    client = MagicMock()
+    client.get = AsyncMock()
+    p_db, p_client, p_reg = _patch_config(db, client, _adapter(is_async=False))
+    with p_db, p_client, p_reg:
+        result = await task_service.get_status("task-1")
+
+    assert result["urls"] == ["https://cdn/base.jpeg", "https://cdn/layer.png"]
+    assert "image_items" not in result
+    await db.close()
+
+
 # ── request_id correlation echo ────────────────────────────────────────────────
 
 from cfgpu_mcp.task_manager import _CAPTION_KEY, _LABEL_KEY, _REQUEST_ID_KEY

@@ -5,7 +5,7 @@ from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.task_manager import _CAPTION_KEY, _LABEL_KEY, _REQUEST_ID_KEY, _last_error_dict
-from cfgpu_mcp.tool_registry import pending_result, stamp_echo
+from cfgpu_mcp.tool_registry import normalize_image_items_urls, pending_result, stamp_echo
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +56,10 @@ def _present(task: Any, last_error: dict[str, Any] | None = None) -> dict[str, A
     request_id = task.payload.get(_REQUEST_ID_KEY)
     caption = task.payload.get(_CAPTION_KEY)
     label = task.payload.get(_LABEL_KEY)
-    result = task.result or {}
+    result = normalize_image_items_urls(task.result or {})
     if task.status == "succeeded" and (result.get("urls") or result.get("inline_media")):
         return stamp_echo(
-            {**task.result, "payload": task.public_payload()},
+            {**result, "payload": task.public_payload()},
             request_id=request_id, caption=caption, label=label, row_id=task.id,
         )
     return stamp_echo(
@@ -100,8 +100,9 @@ def _raise_if_failed(task: Any) -> None:
     ``create()`` and ``poll()`` already convert it at write time — but a row predating
     those guards is exactly the kind of thing that turns into an infinite poll loop.
     """
+    result = normalize_image_items_urls(task.result or {})
     if task.status == "succeeded" and not (
-        (task.result or {}).get("urls") or (task.result or {}).get("inline_media")
+        result.get("urls") or result.get("inline_media")
     ):
         task = _AsFailed(task, "Task reported success but returned no artifact URLs or inline media")
     if task.status == "failed":

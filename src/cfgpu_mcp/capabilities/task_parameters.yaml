@@ -25,9 +25,8 @@ models:
         accepted: ["auto", "1K", "1.5K", "2K"]
         explicit_dimensions_supported: false
       result:
-        image_items:
-          description: "Base image followed by independently editable transparent layers."
-          fields: ["url", "z_index", "bounding_box", "name", "description"]
+        urls:
+          description: "Ordered output URLs: base image first, followed by independently editable transparent layers."
           layer_limit: 16
   doubao-seedream-5-0-flash:
     layer_decomposition:
@@ -51,7 +50,6 @@ models:
         accepted: ["auto", "1K", "1.5K", "2K"]
         explicit_dimensions_supported: false
       result:
-        image_items:
-          description: "Base image followed by independently editable transparent layers."
-          fields: ["url", "z_index", "bounding_box", "name", "description"]
+        urls:
+          description: "Ordered output URLs: base image first, followed by independently editable transparent layers."
           layer_limit: 16

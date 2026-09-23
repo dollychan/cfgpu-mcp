@@ -411,6 +411,22 @@ class SeedreamAdapter(ModelAdapter):
         # Synchronous: response contains results directly
         data = resp.get("data") or []
         urls = [item["url"] for item in data if "url" in item]
+        # A few compatible response envelopes carry layer entries separately. The
+        # public result stays compact, but must not discard those artifacts merely
+        # because their top-level data list is empty.
+        if not urls and isinstance(resp.get("image_items"), list):
+            image_items = [
+                item for item in resp["image_items"] if isinstance(item, dict)
+            ]
+            image_items.sort(
+                key=lambda item: item["z_index"]
+                if isinstance(item.get("z_index"), int)
+                else 0
+            )
+            urls = [
+                item["url"] for item in image_items
+                if isinstance(item.get("url"), str) and item["url"]
+            ]
         # In a 组图 response each slot may carry its own error instead of a url, and the
         # request as a whole still returns HTTP 200. Reporting only the urls would hand
         # back two images for a request that asked for four with nothing saying why —
@@ -436,5 +452,4 @@ class SeedreamAdapter(ModelAdapter):
             seed=None,
             usage=resp.get("usage"),
             partial_errors=partial_errors or None,
-            image_items=data if any("z_index" in item for item in data) else None,
         )

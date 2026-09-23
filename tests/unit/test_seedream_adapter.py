@@ -247,7 +247,7 @@ def test_flash_rejects_unsupported_resolution():
     assert "supported: 1K, 1.5K, 2K" in reason
 
 
-def test_layer_decomposition_accepts_empty_prompt_and_keeps_layer_metadata():
+def test_layer_decomposition_returns_ordered_urls_without_layer_metadata():
     adapter = _make_flash_adapter()
     req = GenerateImageInput(
         prompt="",
@@ -265,7 +265,19 @@ def test_layer_decomposition_accepts_empty_prompt_and_keeps_layer_metadata():
     ]
     result = adapter.parse_response({"data": items})
     assert result.urls == ["https://cdn/base.jpeg", "https://cdn/layer.png"]
-    assert result.image_items == items
+    assert not hasattr(result, "image_items")
+    assert "image_items" not in result.to_dict(return_metadata=True)
+
+
+def test_layer_decomposition_falls_back_to_upstream_image_items_urls():
+    result = _make_flash_adapter().parse_response({
+        "data": [],
+        "image_items": [
+            {"z_index": 1, "url": "https://cdn/layer.png"},
+            {"z_index": 0, "url": "https://cdn/base.jpeg"},
+        ],
+    })
+    assert result.urls == ["https://cdn/base.jpeg", "https://cdn/layer.png"]
 
 
 @pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
