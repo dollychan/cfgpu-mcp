@@ -12,6 +12,17 @@
 
 transport: stdio              # stdio | streamable-http
 
+# Optional download_media tool: install [media] and FFmpeg/ffprobe on this MCP host.
+# Relative paths are based on this config file's directory. Set the same
+# CFGPU_DOWNLOAD_CONTEXT_SECRET in the MCP and Consumer environments.
+media_download:
+  home_dir: null              # same thread storage as Consumer DEER_FLOW_HOME
+  timeout: 600                # includes waiting for a download slot
+  max_parallel: 2             # per MCP process
+  cookies_file: null          # optional operator-managed Netscape cookie file
+  ffmpeg_location: null       # null uses PATH; otherwise the binary directory
+  deno_path: null             # null uses PATH; needed for full YouTube support
+
 http:                          # only used when transport=streamable-http
   host: 0.0.0.0
   port: 8080

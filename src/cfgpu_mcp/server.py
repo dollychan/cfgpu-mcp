@@ -7,7 +7,7 @@ from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp import config
 from cfgpu_mcp.tool_registry import apply_media_annotations, apply_model_enum, get_field_descriptions
-from cfgpu_mcp.tools import generate, models, tasks, understand
+from cfgpu_mcp.tools import download_media, generate, models, tasks, understand
 
 
 @asynccontextmanager
@@ -34,6 +34,7 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
 mcp = FastMCP("cfdream", lifespan=_lifespan)
 
 generate.register(mcp)
+download_media.register(mcp)
 understand.register(mcp)
 tasks.register(mcp)
 models.register(mcp)
