@@ -378,7 +378,7 @@ def _make_4_0_adapter() -> SeedreamAdapter:
     config = {
         "adapter_id": "doubao-seedream-4-0",
         "display_name": "Doubao Seedream 4.0",
-        "cfgpu_model_id": "doubao-seedream-4-0-250828",
+        "cfgpu_model_id": "doubao-seedream-4-0-20260415",
         "task_type": "image",
         "endpoint": "/v1/images/generations",
         "is_async": False,

@@ -7,7 +7,7 @@ Seedream 4.0 是基于领先架构的 SOTA 级多模态图像创作模型，其�
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | image |
-| CFGPU 模型 ID | `doubao-seedream-4-0-250828` |
+| CFGPU 模型 ID | `doubao-seedream-4-0-20260415` |
 | 能力标签 | text_to_image, image_to_image, multi_image_fusion, multi_image_group, web_search |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
@@ -36,7 +36,7 @@ Seedream 4.0 是基于领先架构的 SOTA 级多模态图像创作模型，其�
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | prompt | string | ✓ | - | 图像描述，支持中英文，建议不超过300汉字或600英文单词 |
-| model | string | ✓ | - | 模型 ID：`doubao-seedream-4-0-250828` |
+| model | string | ✓ | - | 模型 ID：`doubao-seedream-4-0-20260415` |
 
 ### 尺寸参数
 
@@ -166,7 +166,7 @@ url 列表。全部失败则由 TaskManager 的「成功但无产物」不变量
 
 ```json
 {
-  "model": "doubao-seedream-4-0-250828",
+  "model": "doubao-seedream-4-0-20260415",
   "prompt": "一只可爱的猫咪在阳光下打盹，毛茸茸的，温馨氛围",
   "size": "2048x2048",
   "response_format": "url",
@@ -178,7 +178,7 @@ url 列表。全部失败则由 TaskManager 的「成功但无产物」不变量
 
 ```json
 {
-  "model": "doubao-seedream-4-0-250828",
+  "model": "doubao-seedream-4-0-20260415",
   "prompt": "将这张图片转换为油画风格",
   "image": "https://example.com/cat.jpg",
   "size": "2K",
@@ -191,7 +191,7 @@ url 列表。全部失败则由 TaskManager 的「成功但无产物」不变量
 
 ```json
 {
-  "model": "doubao-seedream-4-0-250828",
+  "model": "doubao-seedream-4-0-20260415",
   "prompt": "融合这些图片的风格，创作一幅山水画",
   "image": [
     "https://example.com/ref1.jpg",
@@ -208,7 +208,7 @@ url 列表。全部失败则由 TaskManager 的「成功但无产物」不变量
 
 ```json
 {
-  "model": "doubao-seedream-4-0-250828",
+  "model": "doubao-seedream-4-0-20260415",
   "prompt": "生成一组四季主题图片",
   "size": "2K",
   "sequential_image_generation": "auto",
@@ -222,7 +222,7 @@ url 列表。全部失败则由 TaskManager 的「成功但无产物」不变量
 
 ```json
 {
-  "model": "doubao-seedream-4-0-250828",
+  "model": "doubao-seedream-4-0-20260415",
   "prompt": "制作一张上海未来5日的天气预报图",
   "size": "2048x2048",
   "tools": [{"type": "web_search"}],
