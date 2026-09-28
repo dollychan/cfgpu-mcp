@@ -304,7 +304,8 @@ Its `size` table is **computed, not transcribed**: unlike Seedream this family p
 
 1. Create `src/cfgpu_mcp/models/<adapter-id>/adapter.yaml` (use `extends:` if similar to an existing model)
 2. Create `src/cfgpu_mcp/models/<adapter-id>/card.md`
-3. If the model needs custom `build_payload` / `parse_response` logic, create `src/cfgpu_mcp/adapters/<name>.py` with `@register_python_adapter` and import it in `adapters/__init__.py`; otherwise `GenericAdapter` is used automatically
+3. For a TTS model with system voices, map its vendor in `scripts/migrate_voice_catalogs.py` and regenerate `voices.yaml` from the `model_audio_voices` export (schema in `voice_catalog.py`; generated, never hand-edited; a variant inherits its `extends` parent's) — `list_voice_profiles` and the adapter's local voice check both read it
+4. If the model needs custom `build_payload` / `parse_response` logic, create `src/cfgpu_mcp/adapters/<name>.py` with `@register_python_adapter` and import it in `adapters/__init__.py`; otherwise `GenericAdapter` is used automatically
 
 ### Key files
 

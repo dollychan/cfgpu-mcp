@@ -799,7 +799,7 @@ def test_wan_i2v_ignores_aspect_ratio_because_api_has_no_ratio_parameter(model):
     [
         ("seed-tts-2.0", "zh_female_xiaohe_uranus_bigtts"),
         ("MiniMax/speech-2.8-hd", "male-qn-qingse"),
-        ("MiniMax/speech-2.8-turbo", "Santa_Claus"),
+        ("MiniMax/speech-2.8-turbo", "Spanish_SantaClaus"),
     ],
 )
 @pytest.mark.asyncio
@@ -874,7 +874,7 @@ async def test_audio_validate_only_silently_drops_emotion_for_seed_tts():
     [
         ("seed-tts-2.0", "male-qn-qingse"),
         ("MiniMax/speech-2.8-hd", "zh_female_xiaohe_uranus_bigtts"),
-        ("MiniMax/speech-2.8-turbo", "Santa_Claus_typo"),
+        ("MiniMax/speech-2.8-turbo", "Spanish_SantaClaus_typo"),
     ],
 )
 @pytest.mark.asyncio
@@ -896,13 +896,13 @@ async def test_audio_validate_only_strips_voice_surrounding_whitespace():
         result = await audio_service.generate_audio(
             text="hello",
             model="MiniMax/speech-2.8-turbo",
-            voice=" Santa_Claus ",
+            voice=" Spanish_SantaClaus ",
             validate_only=True,
         )
 
     assert result["validated"] is True
-    assert result["corrected_args"] == {"voice": "Santa_Claus"}
-    assert result["payload"]["input"]["voice_setting"]["voice_id"] == "Santa_Claus"
+    assert result["corrected_args"] == {"voice": "Spanish_SantaClaus"}
+    assert result["payload"]["input"]["voice_setting"]["voice_id"] == "Spanish_SantaClaus"
 
 
 @pytest.mark.parametrize(

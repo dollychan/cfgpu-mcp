@@ -659,6 +659,16 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `seed-tts-2-0` 为异步（提交后轮询 `/voice/tasks/{task_id}`，产物是音频 URL），MiniMax 两款为同步（POST 直接返回结果）。
 > **MiniMax 不返回 URL**：音频以十六进制字符串内联在 `output.data.audio`，服务端解码后放进 `inline_media`（见 §返回值格式），`urls` 为空数组。
 > `--speed/--volume/--pitch/--emotion` 仅 MiniMax 生效，seed-tts 会忽略；音频链接 24 小时内有效。
+
+**选音色：`list_voice_profiles`。** 返回每个音色的 `voice`（原样填进 `generate_audio.voice`）、`label`（仅展示，不能当 voice 传）、`languages`（语言代码，如 `zh` / `yue` / `en-US` / `pt-BR`）、`gender`（`male` / `female` / `neutral` / `unknown`）、`age`（`child` / `young` / `middle_aged` / `senior`）、`tags`（风格特质与适用场景）、`model_ids`（哪些模型接受它），有的还带 `description`（音色描述）和 `accent`（语言代码表达不了的口音），模型默认音色另带 `default: true`。音色数据来自平台的 `model_audio_voices` 导出。筛选参数：
+
+- `language` —— 任意常见写法或代码：`中文`、`English`、`英文`、`粤语`、`ja`。按子标签前缀匹配，`English` 同时覆盖美式/英式英语；粤语是独立的 `yue`，查 `中文` 不会返回粤语音色。写法不认识会直接报错并列出可用语言。
+- `gender` —— `male` / `female` / `neutral`（非人声）。性别尚未核对的音色（`unknown`）照常列出，但不会被任何性别筛选返回。
+- `age` —— `child` / `young`（青年）/ `middle_aged` / `senior`。
+- `query` —— 空格分隔、每个词都须命中音色名、id、标签、描述、口音或语言名（所以 `磁性`、`沙哑` 这类音色特质也能搜到）；`男声` / `女声` / `male` / `female` 这类词按性别筛选处理，而不是子串匹配（否则 `male` 会命中所有 `*_female_*`）。
+- `model_ids` —— 只看某些模型的音色；点名一个没有音色表的模型会报错，而不是返回空列表。
+
+`catalog_version: 4` 起单条音色的 `language`（字符串）改为 `languages`（代码数组），并新增 `gender`；`5` 起新增 `age`、`description`、`accent`。
 > `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
 

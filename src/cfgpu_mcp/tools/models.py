@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -34,13 +34,23 @@ def register(mcp: FastMCP) -> None:
     async def list_voice_profiles(
         model_ids: Optional[list[str]] = None,
         language: Optional[str] = None,
+        gender: Optional[Literal["male", "female", "neutral"]] = None,
+        age: Optional[Literal["child", "young", "middle_aged", "senior"]] = None,
         query: Optional[str] = None,
         limit: int = 20,
         cursor: int = 0,
     ) -> dict:
-        """Find voices by language or intent; copy each result's voice into generate_audio.voice, never label."""
+        """Find voices by language, gender, age, or intent; copy each result's voice into generate_audio.voice, never label."""
         try:
-            return await model_service.list_voice_profiles(model_ids, language, query, limit, cursor)
+            return await model_service.list_voice_profiles(
+                model_ids=model_ids,
+                language=language,
+                gender=gender,
+                age=age,
+                query=query,
+                limit=limit,
+                cursor=cursor,
+            )
         except Exception as e:
             return tool_error_dict(e)
 

@@ -6,48 +6,32 @@ from typing import Any
 
 import yaml
 
+from cfgpu_mcp.voice_catalog import (
+    AGE_GROUPS,
+    FILTERABLE_GENDERS,
+    VoiceEntry,
+    catalog_for_adapter,
+    language_matches,
+    load_language_vocabulary,
+)
+
 _MODELS_DIR = Path(__file__).parent.parent / "models"
 _TASKS_PATH = Path(__file__).parent.parent / "capabilities" / "media_tasks.yaml"
 _TASK_PARAMETERS_PATH = Path(__file__).parent.parent / "capabilities" / "task_parameters.yaml"
 _TASK_TYPES = frozenset({"image", "video", "audio", "understand"})
-_VOICE_CATALOG_VERSION = 3
+# 4: voices come from models/*/voices.yaml; `language` became `languages` (codes) and
+# `gender` became an explicit field instead of a tag inferred from provider wording.
+# 5: catalogs are generated from the model_audio_voices export; rows gained `age`,
+# `description` and `accent`.
+_VOICE_CATALOG_VERSION = 5
 
-# A voice may be shared by multiple public models.  MiniMax Turbo inherits the HD
-# voice list, but has no copy of that table in its own card; keep that provider
-# inheritance inside MCP rather than forcing an agent to learn it.
-_VOICE_CATALOG_SOURCE_BY_ADAPTER = {
-    "seed-tts-2-0": "seed-tts-2-0",
-    "minimax-speech-2-8-hd": "minimax-speech-2-8-hd",
-    "minimax-speech-2-8-turbo": "minimax-speech-2-8-hd",
+# Query terms that are a gender, not a keyword. Matched as whole terms only, and turned
+# into the same filter as ``gender`` — a substring match would let "male" hit every
+# ``zh_female_*`` id, which is how the old catalog answered "male" with female voices.
+_GENDER_QUERY_TERMS = {
+    "男声": "male", "男": "male", "male": "male", "man": "male",
+    "女声": "female", "女": "female", "female": "female", "woman": "female",
 }
-
-# Voice catalogs are provider-maintained lists rather than a controlled vocabulary.
-# Normalize only the small set of selection concepts that agents commonly express in
-# natural language. The published tags make those normalizations visible and the
-# same tags are used when matching a space-separated query.
-_VOICE_TAG_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("男声", ("男声", "男性", "男孩", "青年", "少年", "小哥", "先生", "公子", "男嗓")),
-    ("女声", ("female", "女声", "女性", "女孩", "少女", "学姐", "御姐", "妈妈", "女士", "女友")),
-    ("温柔", ("温柔", "温润", "温婉", "温暖", "柔美", "柔和", "gentle", "warm", "serene")),
-    ("知性", ("知性", "儒雅", "文雅", "渊博", "thoughtful", "level-headed")),
-)
-
-
-def _voice_selection_tags(entry: dict[str, Any]) -> list[str]:
-    """Return compact, user-facing tags inferred from public voice metadata."""
-    searchable = " ".join(
-        [entry["voice_id"], entry["display_name"], entry["language"], *entry["tags"]]
-    ).casefold()
-    inferred = [
-        tag
-        for tag, patterns in _VOICE_TAG_PATTERNS
-        if any(pattern in searchable for pattern in patterns)
-        # ``male`` occurs within ``female``. Match it only when it is not the
-        # suffix of that word, while retaining IDs such as ``zh_male_*``.
-        or (tag == "男声" and re.search(r"(?<!fe)male", searchable))
-    ]
-    # Preserve provider scene/availability labels after normalized tags without duplicates.
-    return list(dict.fromkeys([*inferred, *entry["tags"]]))
 
 
 def _query_terms(query: str) -> list[str]:
@@ -257,83 +241,54 @@ async def list_model_profiles(
     }
 
 
-def _voice_table_rows(source_adapter_id: str) -> list[dict[str, Any]]:
-    """Load a compact agent-facing voice inventory from MCP-owned card data.
-
-    Cards remain the detailed operational source.  This parser publishes only
-    stable selection fields (handle, display name, language, and user-facing tags),
-    so agents never need to read card prose, provider parameter mappings, or limits.
-    """
-    card_path = _MODELS_DIR / source_adapter_id / "card.md"
-    text = card_path.read_text(encoding="utf-8")
-    marker = "## 系统音色列表"
-    if marker not in text:
-        raise ValueError(f"voice catalog section missing from {card_path}")
-    section = text.split(marker, 1)[1].split("\n## ", 1)[0]
-    entries: list[dict[str, Any]] = []
-    is_seed_tts = source_adapter_id == "seed-tts-2-0"
-
-    for line in section.splitlines():
-        if not line.lstrip().startswith("|"):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if not cells or set("".join(cells)) <= {":", "-"}:
-            continue
-        if is_seed_tts:
-            # 场景 | 名称 | `speaker` | 语种/方言 | 标签
-            if len(cells) != 5:
-                continue
-            scene, display_name, voice_cell, language, tag_cell = cells
-            tags = [scene]
-            tags.extend(tag.strip() for tag in tag_cell.split("/") if tag.strip())
-        else:
-            # 序号 | 语言 | `voice_id` | 音色名称
-            if len(cells) != 4 or not cells[0].isdigit():
-                continue
-            _, language, voice_cell, display_name = cells
-            tags = []
-
-        match = re.fullmatch(r"`(.+)`", voice_cell)
-        if not match:
-            continue
-        # Voice handles are opaque provider identifiers.  In particular, a trailing
-        # space inside a code span is meaningful for some MiniMax voices; trim only
-        # the table cell outside the backticks, never the captured handle itself.
-        voice_id = match.group(1)
-        if not voice_id.strip() or not display_name:
-            continue
-        entries.append(
-            {
-                "voice_id": voice_id,
-                "display_name": display_name,
-                "language": language,
-                "tags": tags,
-            }
-        )
-    if not entries:
-        raise ValueError(f"voice catalog table is empty or invalid in {card_path}")
-    return entries
-
-
 async def list_voice_profiles(
     model_ids: list[str] | None = None,
     language: str | None = None,
     query: str | None = None,
     limit: int = 20,
     cursor: int = 0,
+    gender: str | None = None,
+    age: str | None = None,
 ) -> dict[str, Any]:
-    """List compact selectable system voices without exposing model-card details.
+    """List compact selectable system voices from each model's ``voices.yaml``.
 
     The ``voice`` value is intentionally returned verbatim: copy it directly into
     ``generate_audio(voice=...)``. ``label`` is display-only and is never a valid
     value for that parameter.
-    A space-separated ``query`` requires every term to match; normalized selection
-    tags make intent queries such as ``"男声 温柔"`` match ``"温润男声"``.
+
+    ``language``, ``gender`` and ``age`` are exact filters over declared fields:
+    ``language`` accepts any spelling in ``capabilities/voice_languages.yaml`` and matches
+    by subtag prefix (``English`` → ``en`` covers ``en-US``); a voice whose gender is
+    ``unknown`` never satisfies a gender filter. ``query`` is space-separated terms that
+    must all match the handle, label, tags, description, accent, or language names; a term
+    that is a gender word (``男声`` / ``female``) acts as the gender filter instead.
     """
     if not 1 <= limit <= 100:
         raise ValueError("limit must be between 1 and 100")
     if cursor < 0:
         raise ValueError("cursor must be >= 0")
+    if gender is not None and gender not in FILTERABLE_GENDERS:
+        raise ValueError(f"gender must be one of {list(FILTERABLE_GENDERS)}")
+    if age is not None and age not in AGE_GROUPS:
+        raise ValueError(f"age must be one of {list(AGE_GROUPS)}")
+
+    vocabulary = load_language_vocabulary()
+    language_code: str | None = None
+    if language:
+        language_code = vocabulary.resolve(language)
+        if language_code is None:
+            known = ", ".join(entry.name for entry in vocabulary.languages.values())
+            raise ValueError(f"unknown language {language!r}; use a name or code such as: {known}")
+
+    text_terms: list[str] = []
+    for term in _query_terms(query) if query else []:
+        term_gender = _GENDER_QUERY_TERMS.get(term)
+        if term_gender is None:
+            text_terms.append(term)
+        elif gender not in (None, term_gender):
+            raise ValueError(f"query term {term!r} contradicts gender={gender!r}")
+        else:
+            gender = term_gender
 
     from cfgpu_mcp.config import get_registry
 
@@ -344,66 +299,86 @@ async def list_voice_profiles(
     if unknown_models:
         raise ValueError(f"unknown audio model_ids: {sorted(unknown_models)}")
 
+    # One row per voice handle, listing every model that accepts it (MiniMax HD and
+    # Turbo share one catalog through ``extends``).
     grouped: dict[str, dict[str, Any]] = {}
+    without_catalog: list[str] = []
     for adapter in audio_adapters:
         if adapter.model_name not in requested_model_ids:
             continue
-        source_adapter_id = _VOICE_CATALOG_SOURCE_BY_ADAPTER.get(adapter.adapter_id)
-        if source_adapter_id is None:
+        catalog = catalog_for_adapter(adapter.adapter_id)
+        if catalog is None:
+            without_catalog.append(adapter.model_name)
             continue
-        for entry in _voice_table_rows(source_adapter_id):
-            voice = grouped.setdefault(
-                entry["voice_id"],
-                {
-                    "voice": entry["voice_id"],
-                    "label": entry["display_name"],
-                    "language": entry["language"],
-                    "tags": _voice_selection_tags(entry),
-                    "model_ids": [],
-                },
-            )
-            voice["model_ids"].append(adapter.model_name)
+        for entry in catalog.voices:
+            row = grouped.setdefault(entry.voice, {"entry": entry, "model_ids": []})
+            row["model_ids"].append(adapter.model_name)
+    if model_ids and without_catalog:
+        # Named explicitly, an empty answer would read as "no voice matched".
+        raise ValueError(
+            f"audio model_ids without a system voice catalog: {without_catalog}; "
+            "omit voice when calling generate_audio with them"
+        )
 
-    language_query = language.casefold().strip() if language else ""
-    text_query_terms = _query_terms(query) if query else []
+    def language_spellings(codes: list[str]) -> list[str]:
+        return [
+            spelling
+            for code in codes
+            for spelling in (vocabulary.languages[code].name, *vocabulary.languages[code].aliases)
+        ]
 
-    def matches(entry: dict[str, Any]) -> bool:
-        if language_query and language_query not in entry["language"].casefold():
+    def matches(entry: VoiceEntry) -> bool:
+        if language_code and not language_matches(entry.languages, language_code):
             return False
-        if not text_query_terms:
+        if gender and entry.gender != gender:
+            return False
+        if age and entry.age != age:
+            return False
+        if not text_terms:
             return True
         searchable = " ".join(
-            [entry["voice"], entry["label"], entry["language"], *entry["tags"]]
+            [
+                entry.voice,
+                entry.label,
+                *entry.tags,
+                entry.description or "",
+                entry.accent or "",
+                *language_spellings(entry.languages),
+            ]
         ).casefold()
-        return all(term in searchable for term in text_query_terms)
+        return all(term in searchable for term in text_terms)
 
-    # Do not let one catalog with a shorter lexical language label (for example
-    # ``中文`` versus ``中文 (普通话)``) fill every first page.  Users asking for a
-    # language expect to see choices from every compatible audio family; round-robin
-    # canonical compatibility groups while preserving deterministic order within each.
+    # Round-robin across compatibility groups so one large catalog (MiniMax lists 327
+    # voices) cannot fill every first page; each group keeps its catalog's own order.
     voice_groups: dict[tuple[str, ...], list[dict[str, Any]]] = {}
-    for entry in grouped.values():
+    for row in grouped.values():
+        entry: VoiceEntry = row["entry"]
         if not matches(entry):
             continue
-        signature = tuple(entry["model_ids"])
-        voice_groups.setdefault(signature, []).append(entry)
-    for entries in voice_groups.values():
-        entries.sort(key=lambda entry: (entry["language"], entry["label"], entry["voice"]))
+        voice = {
+            "voice": entry.voice,
+            "label": entry.label,
+            "languages": entry.languages,
+            "gender": entry.gender,
+            "age": entry.age,
+            "tags": entry.tags,
+            "model_ids": row["model_ids"],
+        }
+        # Present only when the catalog has them, so rows stay compact.
+        if entry.accent:
+            voice["accent"] = entry.accent
+        if entry.description:
+            voice["description"] = entry.description
+        if entry.default:
+            voice["default"] = True
+        voice_groups.setdefault(tuple(row["model_ids"]), []).append(voice)
 
     voices: list[dict[str, Any]] = []
-    group_indices = {signature: 0 for signature in voice_groups}
-    while True:
-        added = False
+    for position in range(max((len(group) for group in voice_groups.values()), default=0)):
         for signature in sorted(voice_groups):
-            index = group_indices[signature]
-            entries = voice_groups[signature]
-            if index >= len(entries):
-                continue
-            voices.append(entries[index])
-            group_indices[signature] += 1
-            added = True
-        if not added:
-            break
+            group = voice_groups[signature]
+            if position < len(group):
+                voices.append(group[position])
     page = voices[cursor : cursor + limit]
     next_cursor = cursor + limit if cursor + limit < len(voices) else None
     return {

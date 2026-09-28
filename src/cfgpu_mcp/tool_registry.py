@@ -703,8 +703,8 @@ class GenerateAudioInput(BaseModel):
     )
     voice: Optional[str] = Field(
         default=None,
-        description="Voice/speaker id supported by the selected model. None uses that "
-        "model's default voice.",
+        description="Voice/speaker id supported by the selected model, copied verbatim from "
+        "the `voice` field of list_voice_profiles. None uses that model's default voice.",
     )
     audio_format: Literal["mp3", "wav", "pcm", "flac"] = Field(
         default="mp3", description="Output audio container/format"
@@ -976,13 +976,27 @@ class ListVoiceProfilesInput(BaseModel):
     )
     language: Optional[str] = Field(
         default=None,
-        description="Language or dialect substring, such as '中文', 'English', or '粤语'",
+        description="Language or dialect in any common spelling or code, such as '中文', "
+        "'English', '英文', '粤语', or 'ja'. 'English' also covers American and British "
+        "English voices. An unrecognised spelling is rejected with the accepted list",
+    )
+    gender: Optional[Literal["male", "female", "neutral"]] = Field(
+        default=None,
+        description="Voice gender; 'neutral' is for non-human voices. Voices whose gender "
+        "has not been catalogued are left out when this is set",
+    )
+    age: Optional[Literal["child", "young", "middle_aged", "senior"]] = Field(
+        default=None,
+        description="Apparent age of the voice: 'child', 'young' (young adult), "
+        "'middle_aged', or 'senior'",
     )
     query: Optional[str] = Field(
         default=None,
         description=(
-            "Keyword intent matched against the voice name, handle, language, and compact tags; "
-            "separate terms with spaces to require each (for example, '男声 温柔'). "
+            "Keyword intent matched against the voice name, handle, tags, description, "
+            "accent, and language; "
+            "separate terms with spaces to require each (for example, '温柔 知性'). "
+            "A term that names a gender, such as '男声' or 'female', filters like `gender`. "
             "In each result, only 'voice' is valid for generate_audio.voice; 'label' is display-only"
         ),
     )

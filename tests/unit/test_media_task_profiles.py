@@ -184,125 +184,229 @@ async def test_profile_catalog_supports_all_and_any_capability_queries(monkeypat
     assert all(set(required) & set(model["tasks"]) for model in any_match["models"])
 
 
-@pytest.mark.asyncio
-async def test_voice_catalog_is_paginated_and_has_only_agent_facing_selection_data(monkeypatch):
+@pytest.fixture
+def _full_registry(monkeypatch):
     from cfgpu_mcp.adapters.registry import AdapterRegistry
-    from cfgpu_mcp.service import model as model_service
 
     registry = AdapterRegistry(MODELS_DIR)
     registry.load()
     monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
 
+
+_VOICE_ROW_KEYS = {"voice", "label", "languages", "gender", "age", "tags", "model_ids"}
+_VOICE_ROW_OPTIONAL = {"default", "accent", "description"}
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_is_paginated_and_has_only_agent_facing_selection_data(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
     catalog = await model_service.list_voice_profiles(language="中文", limit=2)
 
     assert set(catalog) == {"catalog_version", "voices", "total", "next_cursor"}
-    assert catalog["catalog_version"] == 3
+    assert catalog["catalog_version"] == 5
     assert len(catalog["voices"]) == 2
     assert catalog["total"] > len(catalog["voices"])
     assert catalog["next_cursor"] == 2
-    assert {
-        model_id
-        for voice in catalog["voices"]
-        for model_id in voice["model_ids"]
-    } == {
+    # Round-robin: the first page draws from both provider families.
+    assert {m for voice in catalog["voices"] for m in voice["model_ids"]} == {
         "MiniMax/speech-2.8-hd",
         "MiniMax/speech-2.8-turbo",
         "seed-tts-2.0",
     }
     for voice in catalog["voices"]:
-        assert set(voice) == {"voice", "label", "language", "tags", "model_ids"}
-        assert voice["voice"]
+        assert _VOICE_ROW_KEYS <= set(voice) <= _VOICE_ROW_KEYS | _VOICE_ROW_OPTIONAL
         assert voice["voice"] != voice["label"]
-        assert "中文" in voice["language"]
-        assert voice["model_ids"]
-        assert isinstance(voice["tags"], list)
+        assert any(code == "zh" or code.startswith("zh-") for code in voice["languages"])
 
 
 @pytest.mark.asyncio
-async def test_voice_catalog_aggregates_shared_voices_and_filters_by_keyword(monkeypatch):
-    from cfgpu_mcp.adapters.registry import AdapterRegistry
+async def test_hd_and_turbo_share_one_catalog(_full_registry):
     from cfgpu_mcp.service import model as model_service
 
-    registry = AdapterRegistry(MODELS_DIR)
-    registry.load()
-    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
-
-    catalog = await model_service.list_voice_profiles(query="青涩青年", limit=10)
-    voice = next(item for item in catalog["voices"] if item["voice"] == "male-qn-qingse")
-
-    assert voice["label"] == "青涩青年音色"
-    assert set(voice["model_ids"]) == {
-        "MiniMax/speech-2.8-hd",
-        "MiniMax/speech-2.8-turbo",
-    }
+    catalog = await model_service.list_voice_profiles(query="沉稳高管")
+    voice = next(v for v in catalog["voices"] if v["voice"] == "Chinese (Mandarin)_Reliable_Executive")
+    assert voice["model_ids"] == ["MiniMax/speech-2.8-hd", "MiniMax/speech-2.8-turbo"]
+    assert voice["label"] == "沉稳高管"
+    assert voice["gender"] == "male"
+    assert "磁性" in voice["tags"]
 
 
 @pytest.mark.asyncio
-async def test_voice_catalog_matches_multi_term_intent_query_with_compact_tags(monkeypatch):
-    from cfgpu_mcp.adapters.registry import AdapterRegistry
+async def test_query_matches_the_description_not_only_the_name(_full_registry):
+    """'磁性' is in this voice's description and traits; nothing in its name says so."""
     from cfgpu_mcp.service import model as model_service
 
-    registry = AdapterRegistry(MODELS_DIR)
-    registry.load()
-    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+    catalog = await model_service.list_voice_profiles(query="磁性 男声", limit=100)
+    assert "Chinese (Mandarin)_Reliable_Executive" in {v["voice"] for v in catalog["voices"]}
+    assert all(v["gender"] == "male" for v in catalog["voices"])
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_makes_the_generate_audio_value_unambiguous(_full_registry):
+    from cfgpu_mcp.service import model as model_service
 
     catalog = await model_service.list_voice_profiles(
-        model_ids=["MiniMax/speech-2.8-hd", "seed-tts-2.0"],
-        language="中文",
-        query="男声 温柔",
-        limit=30,
-    )
-
-    assert catalog["voices"]
-    assert all({"男声", "温柔"}.issubset(voice["tags"]) for voice in catalog["voices"])
-    assert all("女声" not in voice["tags"] for voice in catalog["voices"])
-    assert "Chinese (Mandarin)_Gentleman" in {voice["voice"] for voice in catalog["voices"]}
-
-
-@pytest.mark.asyncio
-async def test_voice_catalog_makes_the_generate_audio_value_unambiguous(monkeypatch):
-    from cfgpu_mcp.adapters.registry import AdapterRegistry
-    from cfgpu_mcp.service import model as model_service
-
-    registry = AdapterRegistry(MODELS_DIR)
-    registry.load()
-    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
-
-    catalog = await model_service.list_voice_profiles(
-        model_ids=["MiniMax/speech-2.8-hd"],
-        language="中文",
-        query="播报 男声",
-        limit=10,
+        model_ids=["MiniMax/speech-2.8-hd"], language="中文", query="播报 男声", limit=10
     )
     announcer = next(voice for voice in catalog["voices"] if voice["label"] == "播报男声")
-
     assert announcer["voice"] == "Chinese (Mandarin)_Male_Announcer"
-    assert announcer["voice"] != announcer["label"]
 
 
 @pytest.mark.asyncio
-async def test_voice_catalog_preserves_byte_exact_handles(monkeypatch):
-    from cfgpu_mcp.adapters.registry import AdapterRegistry
+async def test_voice_catalog_preserves_byte_exact_handles(_full_registry):
     from cfgpu_mcp.service import model as model_service
-
-    registry = AdapterRegistry(MODELS_DIR)
-    registry.load()
-    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
 
     catalog = await model_service.list_voice_profiles(query="ProfessionalHost", limit=10)
     assert "Cantonese_ProfessionalHost（F)" in {voice["voice"] for voice in catalog["voices"]}
 
 
 @pytest.mark.asyncio
-async def test_voice_catalog_rejects_unknown_model_and_invalid_paging(monkeypatch):
-    from cfgpu_mcp.adapters.registry import AdapterRegistry
+async def test_voice_catalog_rejects_unknown_model_and_invalid_paging(_full_registry):
     from cfgpu_mcp.service import model as model_service
-
-    registry = AdapterRegistry(MODELS_DIR)
-    registry.load()
-    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
 
     with pytest.raises(ValueError, match="unknown audio model_ids"):
         await model_service.list_voice_profiles(model_ids=["invented-voice-model"])
     with pytest.raises(ValueError, match="limit must be between"):
         await model_service.list_voice_profiles(limit=0)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("spelling", ["English", "英文", "英语", "en"])
+async def test_every_spelling_of_english_finds_both_providers(_full_registry, spelling):
+    """The export says 英语 (MiniMax) and 英文 (volcengine); callers say English."""
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_voice_profiles(language=spelling, limit=100)
+    model_ids = {m for voice in catalog["voices"] for m in voice["model_ids"]}
+    assert {"seed-tts-2.0", "MiniMax/speech-2.8-hd"} <= model_ids
+    assert all(
+        any(code == "en" or code.startswith("en-") for code in voice["languages"])
+        for voice in catalog["voices"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_regional_variants_narrow_but_the_base_language_covers_them(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
+    british = await model_service.list_voice_profiles(language="英式英语", limit=100)
+    assert british["voices"]
+    assert all("en-GB" in voice["languages"] for voice in british["voices"])
+
+    brazilian = await model_service.list_voice_profiles(language="巴西葡萄牙语", limit=100)
+    portuguese = await model_service.list_voice_profiles(language="葡萄牙语", limit=100)
+    assert 0 < brazilian["total"] < portuguese["total"]
+
+
+@pytest.mark.asyncio
+async def test_gender_filter_finds_english_named_voices(_full_registry):
+    """Japanese female voices are named Lady/Queen/Woman — no `female` in the id."""
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_voice_profiles(language="日文", gender="female", limit=100)
+    voices = {voice["voice"] for voice in catalog["voices"]}
+    assert {"Japanese_KindLady", "Japanese_ColdQueen", "Japanese_DependableWoman"} <= voices
+    assert all(voice["gender"] == "female" for voice in catalog["voices"])
+
+
+@pytest.mark.asyncio
+async def test_age_filter(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
+    children = await model_service.list_voice_profiles(age="child", limit=100)
+    assert children["voices"]
+    assert all(voice["age"] == "child" for voice in children["voices"])
+    with pytest.raises(ValueError, match="age must be one of"):
+        await model_service.list_voice_profiles(age="toddler")
+
+
+@pytest.mark.asyncio
+async def test_the_word_male_does_not_match_female_voices(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_voice_profiles(query="male", limit=100)
+    assert catalog["voices"]
+    assert all(voice["gender"] == "male" for voice in catalog["voices"])
+
+
+@pytest.mark.asyncio
+async def test_unknown_gender_is_listed_but_never_gender_filtered(_full_registry, monkeypatch):
+    """No exported voice is `unknown` today; the schema still allows it, so pin the rule."""
+    from cfgpu_mcp.service import model as model_service
+    from cfgpu_mcp.voice_catalog import VoiceCatalog
+
+    catalog = VoiceCatalog.model_validate({
+        "schema_version": 1,
+        "voices": [{"voice": "mystery", "label": "Mystery", "languages": ["en"], "gender": "unknown"}],
+    })
+    monkeypatch.setattr(model_service, "catalog_for_adapter", lambda adapter_id: catalog)
+
+    listed = await model_service.list_voice_profiles(query="mystery")
+    assert [voice["gender"] for voice in listed["voices"]] == ["unknown"]
+    for gender in ("male", "female", "neutral"):
+        assert (await model_service.list_voice_profiles(query="mystery", gender=gender))["voices"] == []
+
+
+@pytest.mark.asyncio
+async def test_cantonese_is_not_returned_for_mandarin(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
+    everything, cursor = [], 0
+    while cursor is not None:
+        page = await model_service.list_voice_profiles(language="中文", limit=100, cursor=cursor)
+        everything += page["voices"]
+        cursor = page["next_cursor"]
+    assert len(everything) == page["total"]
+    assert all("yue" not in voice["languages"] for voice in everything)
+
+    cantonese = await model_service.list_voice_profiles(language="粤语", limit=100)
+    assert "Cantonese_GentleLady" in {voice["voice"] for voice in cantonese["voices"]}
+
+
+@pytest.mark.asyncio
+async def test_seed_tts_default_is_marked(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_voice_profiles(query="zh_female_xiaohe_uranus_bigtts")
+    assert catalog["voices"][0]["default"] is True
+
+
+@pytest.mark.asyncio
+async def test_bad_language_and_contradictory_gender_are_rejected(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
+    with pytest.raises(ValueError, match="unknown language"):
+        await model_service.list_voice_profiles(language="克林贡语")
+    with pytest.raises(ValueError, match="contradicts"):
+        await model_service.list_voice_profiles(query="女声", gender="male")
+    with pytest.raises(ValueError, match="gender must be one of"):
+        await model_service.list_voice_profiles(gender="unknown")
+
+
+def test_tts_validation_accepts_the_listed_voices_plus_the_adapter_default():
+    """list_voice_profiles and the adapter's local voice check read one catalog; the
+    default is added because the adapter sends it whenever voice is omitted."""
+    from cfgpu_mcp.adapters.audio_tts import (
+        _MINIMAX_DEFAULT_VOICE,
+        _MINIMAX_SYSTEM_VOICES,
+        _SEED_DEFAULT_VOICE,
+        _SEED_SYSTEM_VOICES,
+    )
+    from cfgpu_mcp.voice_catalog import catalog_for_adapter
+
+    for adapter_id, accepted, default in (
+        ("seed-tts-2-0", _SEED_SYSTEM_VOICES, _SEED_DEFAULT_VOICE),
+        ("minimax-speech-2-8-hd", _MINIMAX_SYSTEM_VOICES, _MINIMAX_DEFAULT_VOICE),
+        ("minimax-speech-2-8-turbo", _MINIMAX_SYSTEM_VOICES, _MINIMAX_DEFAULT_VOICE),
+    ):
+        assert {v.voice for v in catalog_for_adapter(adapter_id).voices} | {default} == accepted
+
+
+@pytest.mark.parametrize("adapter_id", ["seed-tts-2-0", "minimax-speech-2-8-hd"])
+def test_cards_point_to_the_catalog_instead_of_listing_voices(adapter_id):
+    """A voice table in the card would be a second, drifting copy of voices.yaml."""
+    card = (MODELS_DIR / adapter_id / "card.md").read_text(encoding="utf-8")
+    section = card.split("## 系统音色列表", 1)[1].split("\n## ", 1)[0]
+    assert "list_voice_profiles" in section
+    assert "|" not in section

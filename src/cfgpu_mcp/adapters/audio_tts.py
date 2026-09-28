@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import base64
 import difflib
-import re
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import GenerateAudioInput, NormalizedResult
+from cfgpu_mcp.voice_catalog import catalog_for_adapter
 
 if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
@@ -67,38 +66,26 @@ _AUDIO_MIME_BY_FORMAT = {
 }
 
 
-def _voice_ids_from_card(model_dir: str) -> frozenset[str]:
-    """Load the exact system voice ids from a model card's voice table.
+def _system_voice_ids(adapter_id: str, default_voice: str) -> frozenset[str]:
+    """The voice ids this model accepts: its ``voices.yaml`` plus its own default.
 
-    The cards are already shipped runtime data (``get_model_card`` reads the same
-    files).  Keeping one authoritative list avoids copying hundreds of ids into
-    Python.  Voice ids are opaque and preserved byte-for-byte inside their code
-    spans: a trailing space, full-width punctuation, and letter casing can all be
-    meaningful to an upstream provider.
+    The catalog is the one ``list_voice_profiles`` serves, so a voice that tool offers is
+    always one this validation accepts. The default is added because the adapter already
+    sends it whenever ``voice`` is omitted — rejecting it when named explicitly would make
+    the same request fail or succeed depending on spelling — and the catalog export need
+    not list it (MiniMax's ``male-qn-qingse`` is absent). Ids are opaque and kept
+    byte-for-byte: a trailing space, full-width punctuation, and casing can all matter.
     """
-    card = Path(__file__).resolve().parent.parent / "models" / model_dir / "card.md"
-    text = card.read_text(encoding="utf-8")
-    marker = "## 系统音色列表"
-    if marker not in text:
-        raise RuntimeError(f"voice catalog section missing from {card}")
-    section = text.split(marker, 1)[1]
-    section = section.split("\n## ", 1)[0]
-    voices: set[str] = set()
-    for line in section.splitlines():
-        if not line.lstrip().startswith("|"):
-            continue
-        matches = re.findall(r"`([^`]+)`", line)
-        if matches:
-            voice = matches[0]
-            if voice.strip():
-                voices.add(voice)
-    if not voices:
-        raise RuntimeError(f"voice catalog table is empty in {card}")
-    return frozenset(voices)
+    catalog = catalog_for_adapter(adapter_id)
+    if catalog is None:
+        raise RuntimeError(f"no voices.yaml for {adapter_id}")
+    return frozenset({entry.voice for entry in catalog.voices} | {default_voice})
 
 
-_SEED_SYSTEM_VOICES = _voice_ids_from_card("seed-tts-2-0")
-_MINIMAX_SYSTEM_VOICES = _voice_ids_from_card("minimax-speech-2-8-hd")
+_SEED_DEFAULT_VOICE = "zh_female_xiaohe_uranus_bigtts"
+_MINIMAX_DEFAULT_VOICE = "male-qn-qingse"
+_SEED_SYSTEM_VOICES = _system_voice_ids("seed-tts-2-0", _SEED_DEFAULT_VOICE)
+_MINIMAX_SYSTEM_VOICES = _system_voice_ids("minimax-speech-2-8-hd", _MINIMAX_DEFAULT_VOICE)
 _MINIMAX_EMOTIONS = frozenset(
     {"happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent", "whisper"}
 )
@@ -164,7 +151,7 @@ def _extract_inline_audio(resp: dict) -> dict | None:
 
 _MINIMAX_VOICE_REMEDY = (
     "该 voice 不在此模型的音色表中。两个语音模型族的音色互不通用："
-    "形如 xxx_uranus_bigtts 或 saturn_xxx 的是 seed-tts 的 speaker，MiniMax 一律不接受。"
+    "含 uranus 的（形如 xxx_uranus_bigtts、ICL_uranus_xxx_tob）是 seed-tts 的 speaker，MiniMax 一律不接受。"
     "音色 id 的首尾空格、全角括号、不规则大小写等字符都须准确照抄，不得自行规范化。"
     "不需要特定音色时省略 voice 即可，默认为 male-qn-qingse。"
     "需要选择音色时，调用 list_voice_profiles(model_ids=[当前 model_id])，"
@@ -216,7 +203,7 @@ class SeedTTSAdapter(ModelAdapter):
 
     adapter_id = "seed-tts-2-0"
 
-    _DEFAULT_VOICE = "zh_female_xiaohe_uranus_bigtts"
+    _DEFAULT_VOICE = _SEED_DEFAULT_VOICE
     _DEFAULT_SAMPLE_RATE = 24000
 
     def validation_corrections(self, req: "GenerateAudioInput") -> dict[str, Any]:
@@ -324,7 +311,7 @@ class MiniMaxSpeechAdapter(ModelAdapter):
 
     adapter_id = "minimax-speech-2-8-hd"
 
-    _DEFAULT_VOICE = "male-qn-qingse"
+    _DEFAULT_VOICE = _MINIMAX_DEFAULT_VOICE
     _DEFAULT_SAMPLE_RATE = 32000
     _DEFAULT_BITRATE = 128000
 
