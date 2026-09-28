@@ -5,7 +5,7 @@ from cfgpu_mcp.tool_registry import _REGISTRY, get_anthropic_tools, get_field_de
 def test_no_filter_returns_all_tools():
     tools = get_anthropic_tools()
     names = {t["name"] for t in tools}
-    assert len(tools) == 9
+    assert len(tools) == 10
     assert "understand_vision" in names
 
 
@@ -38,6 +38,7 @@ def test_task_type_filter_keeps_generic_tools():
     assert "task_wait" in names
     assert "list_models" in names
     assert "list_model_profiles" in names
+    assert "list_voice_profiles" in names
     assert "get_model_card" in names
 
 

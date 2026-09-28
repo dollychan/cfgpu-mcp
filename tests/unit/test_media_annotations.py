@@ -42,6 +42,7 @@ _EXPECTED_SLOTS: dict[str, dict[str, str]] = {
     "task_wait": {},
     "list_models": {},
     "list_model_profiles": {},
+    "list_voice_profiles": {},
     "get_model_card": {},
 }
 
