@@ -306,6 +306,45 @@ def _has_body_error(resp: dict) -> bool:
     return isinstance(err, str) and bool(err.strip())
 
 
+def task_failed_error(
+    task: Any,
+    adapter: "ModelAdapter | None" = None,
+    *,
+    model_id: str | None = None,
+    request_id: str | None = None,
+) -> CFGPUError:
+    """The error raised for a task that failed upstream — one builder for every site.
+
+    ``task_status``, ``task_wait``, ``generate_*(wait=True)`` and a replayed
+    request_id all report the same failed row, so they must report it identically;
+    building it in one place is what keeps the adapter's reclassification
+    (``translate_task_failure``) from reaching only some of them. ``adapter`` is looked
+    up from the row when the caller does not hold it.
+    """
+    message = task.error or "Task failed without error message"
+    if adapter is None:
+        from cfgpu_mcp.config import get_registry
+
+        try:
+            adapter = get_registry().get(task.adapter_id)
+        except Exception:  # an unloadable/disabled model must not mask the failure
+            adapter = None
+    error_type, card_hint = "task_failed", None
+    translated = adapter.translate_task_failure(message) if adapter is not None else None
+    # Only a well-formed triple is honoured: a translation hook that returns something
+    # else must not turn a real failure report into a crash of the reporting path.
+    if isinstance(translated, tuple) and len(translated) == 3:
+        error_type, message, card_hint = translated
+    return CFGPUError(
+        error_type=error_type,  # type: ignore[arg-type]
+        user_message=message,
+        original={"task_id": task.id},
+        model_id=model_id,
+        request_id=request_id,
+        card_hint=card_hint,
+    )
+
+
 def _extract_error_message(resp: dict) -> str | None:
     """Best-effort failure reason from a poll response, tolerant of shape.
 
@@ -331,6 +370,12 @@ def _extract_error_message(resp: dict) -> str | None:
         if isinstance(err, dict):
             msg = err.get("message") or err.get("msg")
             if msg:
+                # Keep a symbolic code (Ark's ``InvalidParameter.TaskTypeConstraint``)
+                # for the same reason _dashscope_output_reason does: it is often the only
+                # part that says *why*, and it is what translate_task_failure keys on.
+                code = err.get("code")
+                if isinstance(code, str) and code.strip() and code.strip() not in str(msg):
+                    return f"{code.strip()}: {msg}"
                 return str(msg)
         elif isinstance(err, str) and err.strip():
             return err.strip()
@@ -660,12 +705,7 @@ class TaskManager:
         )
         task = Task(row)
         if task.status == "failed":
-            raise CFGPUError(
-                error_type="task_failed",
-                user_message=task.error or "Task failed without error message",
-                original={"task_id": task_id},
-                request_id=task.payload.get(_REQUEST_ID_KEY),
-            )
+            raise task_failed_error(task, request_id=task.payload.get(_REQUEST_ID_KEY))
         return task
 
     async def _dispatch(
@@ -1015,11 +1055,7 @@ class TaskManager:
             interval = min(interval * backoff, max_interval)
 
         if task.status == "failed":
-            raise CFGPUError(
-                error_type="task_failed",
-                user_message=task.error or "Task failed without error message",
-                original={"task_id": task.id},
-            )
+            raise task_failed_error(task, adapter)
         return WaitOutcome(task)
 
     # ── Query ────────────────────────────────────────────────────────────────

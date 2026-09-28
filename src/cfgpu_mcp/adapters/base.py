@@ -317,6 +317,18 @@ class ModelAdapter(ABC):
                 )
         return True, ""
 
+    def translate_task_failure(self, error: str) -> tuple[str, str, bool | None] | None:
+        """Reclassify an asynchronous task failure the caller can fix.
+
+        ``error`` is the stored reason (upstream code + message, as ``poll`` recorded
+        it). Return ``(error_type, user_message, card_hint)`` to replace the default
+        ``task_failed`` — which reads as "generation failed" and invites a retry that
+        can never succeed when the cause is the request itself — or ``None`` to keep
+        it. The upstream wording must stay first in ``user_message`` so a report
+        remains joinable with the provider's own logs; the stored row is not rewritten.
+        """
+        return None
+
     def validation_corrections(
         self,
         req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput",

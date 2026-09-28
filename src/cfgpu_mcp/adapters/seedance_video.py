@@ -8,6 +8,38 @@ from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import GenerateImageInput
 
+# Seedance 2.5 classifies a multimodal-reference request into one of three
+# sub-tasks, and two of them constrain ratio / duration. See
+# ``SeedanceVideoAdapter._omni_reference_task_type`` for why only ``reference``
+# is ever derived and ``edit`` / ``extend`` must be declared.
+_OMNI_REFERENCE_TASK_KEY = "omni_reference_task_type"
+_OMNI_REFERENCE_TASK_TYPES = ("auto", "reference", "edit", "extend")
+
+# Seedance 2.5's two asynchronous task-type failures. Both are caused by the request,
+# so a retry of the same call can never succeed — yet as ``task_failed`` they read as
+# "generation failed" and invite exactly that. Each remedy names the parameter change,
+# and they differ because the causes do: Constraint is the model's own classification
+# meeting incompatible parameters (under ``auto``); Mismatch is a declared sub-task the
+# prompt contradicts. The card documents the constraint table, so its hint is kept.
+_TASK_TYPE_IDENTIFIED = "identified your task as"
+
+_TASK_TYPE_REMEDIES = {
+    "InvalidParameter.TaskTypeConstraint": (
+        "模型根据提示词把本次任务判定为视频编辑或视频延长，而当前参数与该任务类型不兼容。"
+        "要编辑：aspect_ratio 设为 \"adaptive\"，duration_seconds 设为 -1 或不传，且被编辑的参考视频时长须在 4–30 秒；"
+        "要延长：aspect_ratio 设为 \"adaptive\"。"
+        "若本意只是把视频当作参考：指定一个具体的 aspect_ratio（如 \"16:9\"），任务会被声明为参考生视频，"
+        "或去掉提示词里“删除/替换/改成/延长/续写”这类编辑、延长措辞。"
+    ),
+    "InvalidParameter.TaskTypeMismatch": (
+        "声明的任务类型（omni_reference_task_type）与模型从提示词判定的类型不一致。"
+        "指定了具体 aspect_ratio 时任务会被声明为参考生视频：若本意是编辑/延长，"
+        "把 aspect_ratio 改为 \"adaptive\"（编辑另需 duration_seconds=-1），并在提示词中写明意图；"
+        "若本意是参考生视频，去掉提示词里“删除/替换/改成/延长/续写”这类编辑、延长措辞。"
+        "若在 model_specific 中显式声明了 edit/extend，请确认提示词包含对应关键词，或移除该声明。"
+    ),
+}
+
 
 @register_python_adapter
 class SeedanceVideoAdapter(ModelAdapter):
@@ -38,6 +70,20 @@ class SeedanceVideoAdapter(ModelAdapter):
             and req.aspect_ratio != "adaptive"
         ):
             corrected["aspect_ratio"] = "adaptive"
+        # A declared edit / extend fixes the output geometry to the source video, so
+        # the same fallback applies — only when the declaration is otherwise valid,
+        # since correcting toward a request supports() rejects anyway helps nobody.
+        declared = self._declared_omni_task_type(req)
+        if (
+            self.adapter_id == "doubao-seedance-2-5"
+            and declared in ("edit", "extend")
+            and self._is_omni_reference(req)
+            and req.reference_videos
+        ):
+            if req.aspect_ratio != "adaptive":
+                corrected["aspect_ratio"] = "adaptive"
+            if declared == "edit" and req.duration_seconds not in (None, -1):
+                corrected["duration_seconds"] = -1
         is_t2v = not (
             req.first_frame
             or req.last_frame
@@ -110,9 +156,102 @@ class SeedanceVideoAdapter(ModelAdapter):
             "generate_audio": req.with_audio,
             "watermark": req.watermark,
         }
+        task_type = self._omni_reference_task_type(req)
+        if task_type is not None:
+            payload[_OMNI_REFERENCE_TASK_KEY] = task_type
+        # An explicit model_specific value overrides the derived one; supports()
+        # has already checked it against these same final arguments.
         if req.model_specific:
             payload.update(req.model_specific)
         return payload
+
+    def translate_task_failure(self, error: str) -> tuple[str, str, bool | None] | None:
+        for code, remedy in _TASK_TYPE_REMEDIES.items():
+            if code in error:
+                return "invalid_params", f"{error} {remedy}", None
+        # The CFGPU relay has been seen to drop the code and pass only Ark's prose
+        # ("... Seedance identified your task as video editing based on your prompt.
+        # ... Issues: [0] duration must be -1."), so the constraint is also recognised
+        # by that sentence. Codes are checked first: a Mismatch may well use the same
+        # phrase, and its code is the more specific signal.
+        if _TASK_TYPE_IDENTIFIED in error:
+            return (
+                "invalid_params",
+                f"{error} {_TASK_TYPE_REMEDIES['InvalidParameter.TaskTypeConstraint']}",
+                None,
+            )
+        return None
+
+    def _is_omni_reference(self, req: GenerateVideoInput) -> bool:
+        return not (req.first_frame or req.last_frame) and bool(
+            req.reference_images or req.reference_videos or req.reference_audios
+        )
+
+    @staticmethod
+    def _declared_omni_task_type(req: GenerateVideoInput) -> Any:
+        return (req.model_specific or {}).get(_OMNI_REFERENCE_TASK_KEY)
+
+    def _omni_reference_task_type(self, req: GenerateVideoInput) -> str | None:
+        """Seedance 2.5's sub-task declaration, derived from the final arguments.
+
+        Derived here, in ``build_payload``, so it is recomputed from whatever is
+        actually submitted: a preflight's value is only what the arguments implied
+        *then*, and a human editing ratio or duration on the approval card changes it.
+
+        ratio / duration can prove ``reference`` but never ``edit`` or ``extend``.
+        Both of those need a reference video and ``ratio=adaptive`` (edit also
+        ``duration=-1``) — so a request without a video, or with a concrete ratio,
+        is compatible with ``reference`` alone and declaring it costs nothing. The
+        converse fails: ``adaptive`` / ``-1`` are also this model's defaults and are
+        just as valid for ``reference``, so mapping them to ``edit`` would declare
+        every ordinary reference call an edit and fail it with TaskTypeMismatch.
+        Edit / extend intent lives in the prompt; those cases get ``auto`` and the
+        model classifies, unless the caller declares via ``model_specific``.
+
+        Text-to-video and first/last-frame are not omni-reference tasks, so the
+        field — defined only for that task — is not sent at all.
+        """
+        if self.adapter_id != "doubao-seedance-2-5" or not self._is_omni_reference(req):
+            return None
+        if not req.reference_videos or req.aspect_ratio != "adaptive":
+            return "reference"
+        return "auto"
+
+    def _check_declared_omni_task_type(self, req: GenerateVideoInput) -> str | None:
+        """Reject a ``model_specific`` declaration the final arguments contradict.
+
+        Checked against the arguments actually submitted, so a value frozen from an
+        earlier preflight (whose ratio a human has since changed) fails locally with
+        a reason rather than asynchronously upstream.
+        """
+        declared = self._declared_omni_task_type(req)
+        if declared is None or self.adapter_id != "doubao-seedance-2-5":
+            return None
+        if declared not in _OMNI_REFERENCE_TASK_TYPES:
+            return (
+                f"{_OMNI_REFERENCE_TASK_KEY}={declared!r} is not valid; use one of "
+                f"{', '.join(_OMNI_REFERENCE_TASK_TYPES)}"
+            )
+        if not self._is_omni_reference(req):
+            return (
+                f"{_OMNI_REFERENCE_TASK_KEY} only applies to multimodal reference "
+                "tasks (reference_images / reference_videos / reference_audios); "
+                "remove it for text-to-video and first/last-frame generation"
+            )
+        if declared in ("edit", "extend"):
+            if not req.reference_videos:
+                return f"{_OMNI_REFERENCE_TASK_KEY}={declared} requires at least one reference_video"
+            if req.aspect_ratio != "adaptive":
+                return (
+                    f"{_OMNI_REFERENCE_TASK_KEY}={declared} requires aspect_ratio=adaptive; "
+                    "the output ratio follows the source video"
+                )
+        if declared == "edit" and self.resolve_duration_seconds(req) != -1:
+            return (
+                f"{_OMNI_REFERENCE_TASK_KEY}=edit requires duration_seconds=-1; "
+                "the output duration follows the source video"
+            )
+        return None
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         content = resp.get("content") or {}
@@ -149,6 +288,9 @@ class SeedanceVideoAdapter(ModelAdapter):
                 "first-frame and first/last-frame video generation; the output "
                 "ratio follows the first frame"
             )
+        declared_reason = self._check_declared_omni_task_type(req)
+        if declared_reason:
+            return False, declared_reason
         # Validate the requested scene type against the model's declared
         # capabilities. The CFGPU API derives task_type server-side from the
         # content array shape (e.g. a reference_video → r2v); a model that lacks

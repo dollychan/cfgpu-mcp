@@ -73,6 +73,7 @@
 | `resolution` | 顶层 `resolution` | 480p / 720p / 1080p，默认 720p |
 | `with_audio` | 顶层 `generate_audio` | 是否生成有声视频 |
 | `watermark` | 顶层 `watermark` | 是否添加水印 |
+| —（自动推导） | 顶层 `omni_reference_task_type` | 仅全模态参考任务发送；按最终参数推导为 `reference` / `auto`，可用 `model_specific` 显式声明 `edit` / `extend`，见下文 |
 
 ### 视频编辑任务的 duration 限制
 
@@ -80,7 +81,22 @@
 - 待编辑源视频时长必须在 `[4, 30]` 秒内，否则上游会报错。
 - 当前统一输入用同一个 `reference_videos` 字段承载“参考生视频”和“视频编辑”，任务由上游按内容与意图判定；本地无法仅凭 URL 可靠读取源视频时长。
 
-同理，视频编辑/延长任务的输出比例跟随源视频，仅支持 `ratio=adaptive`；但它和普通参考视频共用 `reference_videos`，且没有显式任务类型字段，本地无法仅凭请求结构可靠区分。`validate_only` 会可靠修正可识别的首帧/首尾帧任务；编辑/延长场景请调用方传入 `aspect_ratio="adaptive"`。
+### 全模态子任务（`omni_reference_task_type`）
+
+全模态参考任务按提示词意图分为三类子任务，约束各不相同：
+
+| 子任务 | `aspect_ratio` | `duration_seconds` | 参考视频 | 提示词关键词 |
+|--------|---------------|--------------------|---------|-------------|
+| 参考生视频 | 任意 | 任意 | 可选 | — |
+| 视频延长 | 必须 `adaptive` | 4–30 或 `-1` | 至少 1 个 | 向前/向后延长、延续、续写 |
+| 视频编辑 | 必须 `adaptive` | 必须 `-1` | 至少 1 个（4–30 秒） | 编辑视频、增加/加上、删除/去掉、修改/替换/改成 |
+
+MCP 在提交时按最终参数自动填写该字段：无参考视频或 `aspect_ratio` 非 `adaptive` → `reference`；其余 → `auto`（由模型判定）；文生视频、首帧/首尾帧不发。
+
+- **做编辑/延长时**：保持 `aspect_ratio="adaptive"`（编辑还需 `duration_seconds=-1` 或不传），提示词里写明对应关键词。
+- **只想把视频当参考**：指定具体宽高比（如 `16:9`）即可，会自动声明为 `reference`，模型不会误判为编辑/延长。
+- **显式声明**：`model_specific={"omni_reference_task_type": "edit" | "extend" | "reference" | "auto"}`，会覆盖自动推导；与上表冲突时在发请求前报错。
+- 在 `auto` 下被判为编辑/延长但参数不满足时，上游会**异步**报 `InvalidParameter.TaskTypeConstraint`；声明的类型与提示词意图不一致时报 `InvalidParameter.TaskTypeMismatch`。这两种错误会以 `invalid_params` 返回并附具体改法；原样重试不会成功，按上表调整参数或改写提示词后重新提交。
 
 ## Prompt 建议（30 秒长叙事）
 

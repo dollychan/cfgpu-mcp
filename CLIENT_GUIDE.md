@@ -677,6 +677,26 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 分辨率同理是逐模型的：`doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` **只支持 480p/720p**，
 > 传 `1080p` 会在发请求前被拒绝（需要 1080p 用 `doubao-seedance-2-0` / `wan-2-0`）。
 
+> **Seedance 2.5 的 `omni_reference_task_type` 由服务端推导，调用方通常无需关心。** 2.5 把全模态参考
+> 任务（带 `reference_images` / `reference_videos` / `reference_audios`）细分为参考生视频、视频编辑、
+> 视频延长：编辑要求 `aspect_ratio="adaptive"` + `duration_seconds=-1`，延长要求 `aspect_ratio="adaptive"`，
+> 两者都要至少一个参考视频。服务端在**正式提交时按最终参数**决定 payload 里发什么：无参考视频或 ratio
+> 非 `adaptive` → `reference`；其余 → `auto`（模型按提示词判定）；文生视频、首帧/首尾帧不发。
+>
+> - **HITL 卡片**：`validate_only` 返回的 `payload.omni_reference_task_type` 只是按当前参数的预览，
+>   **不在 `corrected_args` 里，不要回填**。用户在卡片上改了 ratio/duration，直接用改后的参数提交即可，
+>   服务端会重新推导。
+> - **想明确做编辑/延长**：传 `model_specific={"omni_reference_task_type": "edit"}`（或 `"extend"`），
+>   并按上面的约束设置 ratio/duration。`validate_only` 会在 `corrected_args` 里给出需要改的值；
+>   与最终参数冲突的声明会在发请求前以 `invalid_params` 拒绝。**不要把 preview 里的推导值抄进
+>   `model_specific`** —— 那会把它冻结住，用户随后修改 ratio 时提交就会失败。
+> - 默认参数（`aspect_ratio="adaptive"`、`duration_seconds` 不传 = `-1`）与三种子任务都兼容，是
+>   不确定意图时最稳的写法。
+> - **异步失败**：任务创建后，上游仍可能判定子任务与参数/意图不符，报 `InvalidParameter.TaskTypeConstraint`
+>   或 `InvalidParameter.TaskTypeMismatch`。这两种会以 `error_type: "invalid_params"`（`retryable: false`）
+>   返回，`message` 先给上游原文，再给具体改法。**不要原样重试**，按提示改 ratio/duration 或改写提示词后
+>   用新的 `request_id` 重新提交。
+
 > **视频 `resolution` 的默认值是「不传」（2026-09-07 起）。** 统一枚举现在是
 > `480p / 720p / 768p / 1080p / 2k / 4k`，schema 默认值是 `None` —— 不传时各模型用**自己**的默认档
 > （除 `MiniMax-H3` 为 `768p` 外都是 `720p`）。这不是省事，是因为 `resolution` 会参与 `supports()`

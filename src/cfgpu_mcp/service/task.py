@@ -4,7 +4,13 @@ import logging
 from typing import Any
 
 from cfgpu_mcp.errors import CFGPUError
-from cfgpu_mcp.task_manager import _CAPTION_KEY, _LABEL_KEY, _REQUEST_ID_KEY, _last_error_dict
+from cfgpu_mcp.task_manager import (
+    _CAPTION_KEY,
+    _LABEL_KEY,
+    _REQUEST_ID_KEY,
+    _last_error_dict,
+    task_failed_error,
+)
 from cfgpu_mcp.tool_registry import normalize_image_items_urls, pending_result, stamp_echo
 
 logger = logging.getLogger(__name__)
@@ -110,14 +116,15 @@ def _raise_if_failed(task: Any) -> None:
         # Expose the agent-facing model_id (model_name), not the internal
         # adapter_id stored on the task row.
         model_id: str | None = None
+        adapter = None
         try:
-            model_id = get_registry().get(task.adapter_id).model_name
+            adapter = get_registry().get(task.adapter_id)
+            model_id = adapter.model_name
         except KeyError:
             pass
-        raise CFGPUError(
-            error_type="task_failed",
-            user_message=task.error or "Task failed without error message",
-            original={"task_id": task.id},
+        raise task_failed_error(
+            task,
+            adapter,
             model_id=model_id,
             request_id=task.payload.get(_REQUEST_ID_KEY),
         )

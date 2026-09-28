@@ -560,6 +560,76 @@ async def test_seedance_validate_only_preserves_supported_explicit_ratios(model,
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "media,ratio,expected",
+    [
+        ({"reference_videos": ["m_video"]}, "16:9", "reference"),
+        ({"reference_videos": ["m_video"]}, "adaptive", "auto"),
+        ({"reference_images": ["m_image"]}, "adaptive", "reference"),
+    ],
+    ids=["video-concrete-ratio", "video-adaptive", "image-only"],
+)
+async def test_seedance_2_5_preflight_derives_task_type_without_correcting_ratio(
+    media, ratio, expected
+):
+    """The derivation reads the ratio, so the preflight must never rewrite it — and the
+    derived value is shown in the payload, never pinned in corrected_args: it is not a
+    tool argument, and a human who edits the ratio on the card changes it."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="x",
+            model="doubao-seedance-2-5",
+            aspect_ratio=ratio,
+            validate_only=True,
+            **media,
+        )
+
+    assert result["corrected_args"] == {}
+    assert result["payload"]["ratio"] == ratio
+    assert result["payload"]["omni_reference_task_type"] == expected
+
+
+_STALE_EDIT = dict(
+    prompt="删掉 @视频1 的背景音乐",
+    model="doubao-seedance-2-5",
+    reference_videos=["m_video"],
+    aspect_ratio="16:9",
+    duration_seconds=-1,
+    model_specific={"omni_reference_task_type": "edit"},
+)
+
+
+@pytest.mark.asyncio
+async def test_seedance_2_5_preflight_corrects_ratio_for_a_declared_edit():
+    """A declared edit fixes the geometry to the source video — the same fallback the
+    frame-driven scenes get, reported in corrected_args rather than silently applied."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(**_STALE_EDIT, validate_only=True)
+
+    assert result["corrected_args"] == {"aspect_ratio": "adaptive"}
+    assert result["payload"]["ratio"] == "adaptive"
+    assert result["payload"]["omni_reference_task_type"] == "edit"
+
+
+@pytest.mark.asyncio
+async def test_seedance_2_5_billed_call_rejects_a_contradicted_declared_task_type():
+    """A host that froze the preview's ``edit`` into model_specific, after the human
+    changed the ratio on the card, fails locally before the POST — not asynchronously
+    upstream after the task was created."""
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c:
+        with pytest.raises(CFGPUError) as exc:
+            await video_service.generate_video(**_STALE_EDIT)
+
+    assert exc.value.error_type == "invalid_params"
+    assert "requires aspect_ratio=adaptive" in exc.value.user_message
+    client.post.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_validate_only_runs_build_payload():
     """Why the short-circuit sits *after* build_payload rather than after the router.
 

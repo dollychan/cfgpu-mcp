@@ -232,7 +232,8 @@ def test_nested_task_error_message_is_preserved(adapter):
         }
     }
     assert adapter.extract_status(response) == "failed"
-    assert _extract_error_message(response) == "Generation failed after retries"
+    # The symbolic code rides in front, as on the DashScope path; the message is intact.
+    assert _extract_error_message(response) == "GENERATION_FAILED: Generation failed after retries"
 
 
 @pytest.mark.parametrize("kwargs,needle", [

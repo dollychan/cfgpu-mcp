@@ -613,3 +613,129 @@ def test_seedance_accepts_smart_duration():
     adapter = SeedanceVideoAdapter.from_config(config)
     ok, _ = adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=-1))
     assert ok is True
+
+
+# ── Seedance 2.5 omni_reference_task_type ─────────────────────────────────────
+
+_IMG = "https://example.com/r.jpg"
+_VID = "https://example.com/r.mp4"
+_AUD = "https://example.com/r.mp3"
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        ({"prompt": "x"}, None),
+        ({"prompt": "x", "first_frame": _IMG}, None),
+        ({"prompt": "x", "first_frame": _IMG, "last_frame": _IMG}, None),
+        ({"prompt": "x", "reference_images": [_IMG]}, "reference"),
+        ({"prompt": "x", "reference_images": [_IMG], "aspect_ratio": "adaptive"}, "reference"),
+        ({"reference_audios": [_AUD]}, "reference"),
+        ({"prompt": "x", "reference_videos": [_VID], "aspect_ratio": "16:9"}, "reference"),
+        ({"prompt": "x", "reference_videos": [_VID], "aspect_ratio": "16:9", "duration_seconds": -1}, "reference"),
+        ({"prompt": "x", "reference_videos": [_VID], "duration_seconds": 10}, "auto"),
+        ({"prompt": "x", "reference_videos": [_VID]}, "auto"),
+        ({"prompt": "x", "reference_videos": [_VID], "duration_seconds": -1}, "auto"),
+    ],
+    ids=[
+        "t2v", "first-frame", "first-last-frame",
+        "image-only", "image-only-adaptive", "audio-only",
+        "video-concrete-ratio", "video-concrete-ratio-auto-duration",
+        "video-adaptive-concrete-duration", "video-defaults", "video-adaptive-minus-1",
+    ],
+)
+def test_seedance_2_5_derives_omni_reference_task_type(args, expected):
+    payload = _make_2_5_adapter().build_payload(GenerateVideoInput(**args))
+    assert payload.get("omni_reference_task_type") == expected
+    if expected is None:
+        assert "omni_reference_task_type" not in payload
+
+
+def test_seedance_2_5_task_type_follows_the_final_arguments():
+    # The approval card shows the preflight's derivation; a human then changes the
+    # ratio. The submitted payload must reflect the edited arguments, not the preview.
+    adapter = _make_2_5_adapter()
+    previewed = GenerateVideoInput(prompt="x", reference_videos=[_VID], aspect_ratio="16:9")
+    assert adapter.build_payload(previewed)["omni_reference_task_type"] == "reference"
+
+    edited = previewed.model_copy(update={"aspect_ratio": "adaptive"})
+    assert adapter.build_payload(edited)["omni_reference_task_type"] == "auto"
+
+
+def test_earlier_seedance_versions_never_send_omni_reference_task_type():
+    req = GenerateVideoInput(prompt="x", reference_videos=[_VID], aspect_ratio="16:9")
+    assert "omni_reference_task_type" not in _make_seedance_2_0_adapter().build_payload(req)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        {"reference_videos": [_VID], "model_specific": {"omni_reference_task_type": "edit"}},
+        {"reference_videos": [_VID], "duration_seconds": 10,
+         "model_specific": {"omni_reference_task_type": "extend"}},
+        {"reference_videos": [_VID], "aspect_ratio": "16:9", "duration_seconds": 12,
+         "model_specific": {"omni_reference_task_type": "reference"}},
+        {"reference_videos": [_VID], "aspect_ratio": "16:9",
+         "model_specific": {"omni_reference_task_type": "auto"}},
+    ],
+    ids=["edit", "extend", "reference", "auto"],
+)
+def test_seedance_2_5_accepts_a_consistent_declared_task_type(args):
+    adapter = _make_2_5_adapter()
+    req = GenerateVideoInput(prompt="x", **args)
+    assert adapter.supports(req) == (True, "")
+    assert adapter.build_payload(req)["omni_reference_task_type"] == (
+        args["model_specific"]["omni_reference_task_type"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("args", "fragment"),
+    [
+        ({"reference_videos": [_VID], "aspect_ratio": "16:9",
+          "model_specific": {"omni_reference_task_type": "edit"}}, "requires aspect_ratio=adaptive"),
+        ({"reference_videos": [_VID], "duration_seconds": 10,
+          "model_specific": {"omni_reference_task_type": "edit"}}, "requires duration_seconds=-1"),
+        ({"reference_videos": [_VID], "aspect_ratio": "9:16",
+          "model_specific": {"omni_reference_task_type": "extend"}}, "requires aspect_ratio=adaptive"),
+        ({"reference_images": [_IMG],
+          "model_specific": {"omni_reference_task_type": "extend"}}, "requires at least one reference_video"),
+        ({"model_specific": {"omni_reference_task_type": "auto"}}, "only applies to multimodal reference"),
+        ({"first_frame": _IMG, "aspect_ratio": "adaptive",
+          "model_specific": {"omni_reference_task_type": "reference"}}, "only applies to multimodal reference"),
+        ({"reference_videos": [_VID],
+          "model_specific": {"omni_reference_task_type": "r2v"}}, "is not valid"),
+    ],
+    ids=[
+        "edit-concrete-ratio", "edit-concrete-duration", "extend-concrete-ratio",
+        "extend-without-video", "t2v", "first-frame", "unknown-value",
+    ],
+)
+def test_seedance_2_5_rejects_a_declared_task_type_the_arguments_contradict(args, fragment):
+    ok, reason = _make_2_5_adapter().supports(GenerateVideoInput(prompt="x", **args))
+    assert ok is False
+    assert fragment in reason
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        ({"aspect_ratio": "16:9", "duration_seconds": 10,
+          "model_specific": {"omni_reference_task_type": "edit"}},
+         {"aspect_ratio": "adaptive", "duration_seconds": -1}),
+        ({"aspect_ratio": "16:9", "duration_seconds": 10,
+          "model_specific": {"omni_reference_task_type": "extend"}},
+         {"aspect_ratio": "adaptive"}),
+        ({"aspect_ratio": "16:9", "duration_seconds": 10}, {}),
+        ({"aspect_ratio": "16:9", "model_specific": {"omni_reference_task_type": "reference"}}, {}),
+    ],
+    ids=["declared-edit", "declared-extend", "derived", "declared-reference"],
+)
+def test_seedance_2_5_corrections_touch_ratio_only_for_a_declared_edit_or_extend(args, expected):
+    # A derived task type is never a reason to rewrite the caller's ratio: the ratio is
+    # what the derivation reads. Only an explicit edit/extend fixes the geometry.
+    adapter = _make_2_5_adapter()
+    req = GenerateVideoInput(prompt="x", reference_videos=[_VID], **args)
+    corrections = adapter.validation_corrections(req)
+    assert corrections == expected
+    assert adapter.supports(req.model_copy(update=corrections))[0] is True
