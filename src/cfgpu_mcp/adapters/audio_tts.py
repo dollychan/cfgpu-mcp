@@ -91,6 +91,28 @@ _MINIMAX_EMOTIONS = frozenset(
 )
 
 
+def _voice_correction(voice: str | None, default_voice: str) -> dict[str, str]:
+    """The ``voice`` a preflight reports in ``corrected_args``.
+
+    An omitted voice is pinned to the default the adapter will actually send. Leaving
+    ``voice`` out delegates the choice, exactly like ``model="auto"``: the voice is still
+    concrete — it is in ``payload`` — but ``payload`` rides structuredContent, so an
+    approval card built from the caller's own arguments has no voice row, and a person
+    approves speech in a voice nobody chose (MiniMax's default is not even in the
+    catalog ``list_voice_profiles`` serves). Pinning names it on the card, and merging
+    ``corrected_args`` makes the billed call use the voice that was approved.
+
+    Unlike an omitted video ``resolution`` — a quality tier, left unpinned — a voice is
+    the thing the listener hears, so the delegated choice is worth surfacing. A supplied
+    voice is only ever stripped of surrounding whitespace, never replaced.
+    """
+    if voice is None:
+        return {"voice": default_voice}
+    if voice != voice.strip():
+        return {"voice": voice.strip()}
+    return {}
+
+
 def _invalid_voice_reason(model_name: str, voice: str, voices: frozenset[str]) -> str:
     nearby = difflib.get_close_matches(voice, voices, n=3, cutoff=0.65)
     suggestion = f" Closest system voices: {', '.join(repr(v) for v in nearby)}." if nearby else ""
@@ -210,8 +232,7 @@ class SeedTTSAdapter(ModelAdapter):
         corrected: dict[str, Any] = {}
         if req.audio_format == "pcm":
             corrected["audio_format"] = "mp3"
-        if req.voice is not None and req.voice != req.voice.strip():
-            corrected["voice"] = req.voice.strip()
+        corrected.update(_voice_correction(req.voice, self._DEFAULT_VOICE))
         if req.emotion is not None:
             corrected["emotion"] = None
         return corrected
@@ -319,8 +340,7 @@ class MiniMaxSpeechAdapter(ModelAdapter):
         corrected: dict[str, Any] = {}
         if req.audio_format == "pcm":
             corrected["audio_format"] = "mp3"
-        if req.voice is not None and req.voice != req.voice.strip():
-            corrected["voice"] = req.voice.strip()
+        corrected.update(_voice_correction(req.voice, self._DEFAULT_VOICE))
         return corrected
 
     def supports(self, req: "GenerateAudioInput") -> tuple[bool, str]:

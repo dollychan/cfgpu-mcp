@@ -727,6 +727,12 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 这一行显示出来，并按 `{**原参数, **corrected_args}` 原样回传：否则卡片上根本没有音频这一
 > 行，人批准的是一条自带配乐的片子。这是**钉住**而不是纠正，值没有被改过。
 
+> **`generate_audio` 不传 `voice` 时，`corrected_args` 会给出实际使用的默认音色**
+> （seed-tts 为 `zh_female_xiaohe_uranus_bigtts`，MiniMax HD / Turbo 为 `male-qn-qingse`；
+> `model="auto"` 时是路由到的那个模型自己的默认音色，与 `model` 一起给出）。审批卡请把它显示
+> 出来，并按 `{**原参数, **corrected_args}` 原样回传，正式调用用的就是被批准的那个声音。
+> 显式传入的 `voice` 不会被替换，只会去掉首尾空格。
+
 > `corrected_args` 里给出**不高于请求值的最近一档**（`768p` → `720p`，`2k` → `1080p`，
 > `doubao-seedance-2-0-fast` 这种没有 1080p 的则 `2k` → `720p`），直接
 > `{**原参数, **corrected_args}` 覆盖后重发即可。反过来，向 `MiniMax-H3` 传它没有的档

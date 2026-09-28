@@ -935,8 +935,69 @@ async def test_audio_pcm_falls_back_and_reports_the_effective_format():
             validate_only=True,
         )
 
-    assert result["corrected_args"] == {"audio_format": "mp3"}
+    assert result["corrected_args"] == {"audio_format": "mp3", "voice": "male-qn-qingse"}
     assert result["payload"]["input"]["audio_setting"]["format"] == "mp3"
+
+
+def _sent_voice(payload: dict) -> str:
+    return payload.get("req_params", {}).get("speaker") or payload["input"]["voice_setting"]["voice_id"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "model,default_voice",
+    [
+        ("seed-tts-2.0", "zh_female_xiaohe_uranus_bigtts"),
+        ("MiniMax/speech-2.8-hd", "male-qn-qingse"),
+        ("MiniMax/speech-2.8-turbo", "male-qn-qingse"),
+    ],
+)
+async def test_audio_omitted_voice_is_pinned_to_the_default_actually_sent(model, default_voice):
+    """Omitting voice delegates the choice, like model="auto": the approval card must
+    name the voice the listener will hear, and payload never reaches the model."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(text="hello", model=model, validate_only=True)
+
+    assert result["corrected_args"] == {"voice": default_voice}
+    assert _sent_voice(result["payload"]) == default_voice
+
+
+@pytest.mark.asyncio
+async def test_audio_auto_pins_the_routed_models_own_default_voice():
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(text="hello", model="auto", validate_only=True)
+
+    pinned = result["corrected_args"]
+    assert pinned["model"] == result["model_used"]
+    assert pinned["voice"] == _sent_voice(result["payload"])
+
+
+@pytest.mark.asyncio
+async def test_audio_explicit_voice_is_never_rewritten():
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(
+            text="hello", model="seed-tts-2.0", voice="zh_male_m191_uranus_bigtts", validate_only=True
+        )
+
+    assert "voice" not in result["corrected_args"]
+
+
+@pytest.mark.asyncio
+async def test_audio_merging_corrected_args_reproduces_the_approved_request():
+    """{**args, **corrected_args} must validate to the same payload with nothing left to pin."""
+    args = {"text": "hello", "model": "auto"}
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        first = await audio_service.generate_audio(**args, validate_only=True)
+        second = await audio_service.generate_audio(
+            **{**args, **first["corrected_args"]}, validate_only=True
+        )
+
+    assert second["corrected_args"] == {}
+    assert second["payload"] == first["payload"]
 
 
 # ── The MCP layer ────────────────────────────────────────────────────────────
