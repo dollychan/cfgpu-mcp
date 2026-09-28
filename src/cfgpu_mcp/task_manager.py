@@ -55,7 +55,7 @@ MAX_CONSECUTIVE_POLL_FAILURES = 5
 #: block: a model whose real latency approaches this still belongs behind
 #: ``force_async: true``, because a blocked call holds a run slot, checkpoints nothing,
 #: and takes the whole super-step down with it if the process dies mid-wait.
-MAX_WAIT_SECONDS = 3000
+MAX_WAIT_SECONDS = 3600
 
 #: Resolves the client for a given adapter's upstream — see ``config.client_for``.
 ClientResolver = Callable[["ModelAdapter"], CFGPUClient]
