@@ -150,7 +150,8 @@ Always surface `message` to the user. Check `retryable` before retrying. When `a
 | `rate_limit` | ✅ | too many requests (HTTP 429) | Back off and retry after a short delay. |
 | `model_unavailable` | ✅* | model temporarily down, **or** retired/no-access endpoint | Try another model, or `model="auto"`. *Dead/retired endpoints come back `retryable:false` — switch models, don't retry. |
 | `task_failed` | ❌ | upstream rendering failed | Read `message`; adjust inputs and resubmit as a **new** task. |
-| `timeout` | see → | an HTTP call to the upstream timed out (**not** the wait — a wait that runs out returns the non-terminal envelope, not an error) | Read `phase`. `connect` → the upstream never received it, safe to retry. `request` on a poll → retry. `request` on a submit → comes with `outcome_unknown: true` and `retryable: false`: the job may already have been accepted and billed under a `task_id` nobody will ever see. **Do not blindly resend** — tell the user to check the upstream side. |
+| `timeout` | see → | an HTTP call to the upstream timed out (**not** the wait — a wait that runs out returns the non-terminal envelope, not an error) | Read `phase`. `connect` → the upstream never received it, safe to retry. `request` on a poll → retry. `request` on a submit → arrives as `submission_lost` (next row). |
+| `submission_lost` | ✅ | a submit's response was lost (request-phase timeout, transport error, upstream 5xx), or it came back without a usable task id | The result cannot be recovered — `task_status` returns this same error and never changes, so don't poll it. Send the request again. For `understand_vision` that timed out, lower `analysis_depth`, shorten the video or narrow the question first. |
 | `unknown` | ✅ | unclassified upstream error | Retry once; if it persists, surface `message`. |
 
 ### Domain / scenario errors (surface inside `message`)
@@ -177,8 +178,8 @@ If you call a tool with an out-of-range value the schema rejects, you get a vali
 `{ "error": true, "message": "..." }` with no `error_type` is a non-cfgpu exception (network, DB, bug). Surface `message`; retry once for transient network errors.
 
 `outcome_unknown: true` is the one result that can answer neither "it happened" nor "it
-didn't" — only ever on a submit whose response was lost. Never resend on your own
-judgement; say so and let the user decide.
+didn't". It now appears only if the task row itself could not be written; a lost submit
+response reports `submission_lost` instead, which is retryable.
 
 ## Quick recipes
 

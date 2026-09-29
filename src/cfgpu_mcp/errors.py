@@ -10,17 +10,18 @@ ErrorType = Literal[
     "invalid_params",
     "model_unavailable",
     "task_failed",
-    # The upstream accepted (and therefore likely billed) the submission, but the handle
-    # needed to collect its result did not survive. Deliberately not "task_failed": the
-    # task did not fail, and it is deliberately not retryable — resending is precisely
-    # the move that turns one charge into two.
+    # A submission whose result can no longer be collected: its response was lost, or
+    # came back without the handle needed to poll. Deliberately not "task_failed": the
+    # task did not fail. Retryable, because nothing on this side can ever produce this
+    # request's result again, so resending is the caller's only route to one — warning
+    # about a possible upstream charge would only stall a caller that has no other move.
     "submission_lost",
     "auth",
     "timeout",
     "unknown",
 ]
 
-_RETRYABLE: set[ErrorType] = {"rate_limit", "model_unavailable", "unknown"}
+_RETRYABLE: set[ErrorType] = {"rate_limit", "model_unavailable", "unknown", "submission_lost"}
 
 _CARD_HINT_TYPES: set[ErrorType] = {"invalid_params", "model_unavailable", "content_blocked"}
 
@@ -105,9 +106,9 @@ class CFGPUError(Exception):
         # ``TaskManager.create`` POSTed *before* writing the task row: no task_id came
         # back and no row existed, so the question had no answer anywhere. Rows are now
         # written before the POST (see request-id-durability.md I1), so that case has a
-        # row — one sitting in ``dispatching``, which says "may have been sent" far more
-        # precisely than a boolean can — and ``TaskManager._record_submit_failure``
-        # clears the flag as it hands back the id to query.
+        # row, and ``TaskManager._record_submit_failure`` converges it to
+        # ``submission_lost`` — a type that says "may have been billed, unrecoverable"
+        # far more precisely than a boolean can — and clears the flag.
         #
         # What is left for it is the residual hole: the row write itself failing. Do not
         # widen it back out. Every other error answers "did this take effect?"

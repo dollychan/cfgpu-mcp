@@ -102,6 +102,15 @@ _ECHO_PAYLOAD_KEYS = (_REQUEST_ID_KEY, _CAPTION_KEY, _LABEL_KEY)
 # formula on this side would drift from the one that actually schedules the work.
 _ETA_KEY = "_eta"
 
+# The error_type a failed row must be *reported* with, when it is not the default
+# ``task_failed``. The ``error`` column holds prose only, so without this a
+# ``submission_lost`` raised live would come back from ``task_status`` / a replayed
+# request_id as ``task_failed`` — a class that reads as "generation failed" and invites
+# the one move (resending) that turns one charge into two. Written by this module's
+# terminal-at-submit paths only; ``task_failed_error`` honours it ahead of any adapter
+# translation, since those translate *upstream* verdicts and there was none.
+_FAILURE_TYPE_KEY = "_error_type"
+
 
 def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
     """Return a copy of ``payload`` augmented with the reserved internal keys.
@@ -154,16 +163,30 @@ _REFUSAL_ERROR_TYPES = frozenset({
 })
 
 
+def _submission_lost_remedy(adapter: "ModelAdapter") -> str:
+    """The next step after a submission whose answer never came back.
+
+    It must be one the caller can execute. ``task_status`` is not: the answer travelled
+    in the lost response and nothing will ever write it to the row. So the only route to
+    a result is to send the request again, and the message says exactly that — without
+    a billing caveat, which gives the caller nothing to act on and only makes it stall.
+    """
+    if adapter.task_type == "understand":
+        return (
+            "这次请求的回答没能取回，task_status 也查不到，请直接重新调用 understand_vision。"
+            "如果是耗时过长导致的，可以降低 analysis_depth、缩短视频或收窄问题后再调用。"
+        )
+    return "这次请求的结果没能取回，task_status 也查不到，请直接重新发起。"
+
+
 def _upstream_refused(e: CFGPUError) -> bool:
     """Whether this submit failure proves nothing was started upstream.
 
-    The asymmetry is deliberate. Marking a refused submission ``failed`` is safe and
-    useful — it tells a later ``task_status`` "this cost you nothing, fix the argument
-    and go again". Marking an *indeterminate* one failed is the expensive mistake: a
-    request-phase POST timeout, a transport error, an upstream 5xx all leave a job that
-    may be running and billing, and a row that says "failed, safe to retry" is how one
-    generation gets paid for twice. Those stay ``dispatching``, which is this design's
-    word for "cannot prove it wasn't sent".
+    A refused submission keeps the upstream's own error type, which tells the caller
+    what to fix. An *indeterminate* one (request-phase POST timeout, transport error,
+    upstream 5xx) becomes ``submission_lost``: whatever the upstream did, the result
+    travelled in the lost response and cannot be collected, so the next step is simply
+    to send it again. See ``_record_submit_failure``.
     """
     if e.outcome_unknown:
         return False
@@ -330,7 +353,13 @@ def task_failed_error(
         except Exception:  # an unloadable/disabled model must not mask the failure
             adapter = None
     error_type, card_hint = "task_failed", None
-    translated = adapter.translate_task_failure(message) if adapter is not None else None
+    payload = getattr(task, "payload", None)
+    stored_type = payload.get(_FAILURE_TYPE_KEY) if isinstance(payload, dict) else None
+    translated = None
+    if isinstance(stored_type, str) and stored_type:
+        error_type = stored_type
+    elif adapter is not None:
+        translated = adapter.translate_task_failure(message)
     # Only a well-formed triple is honoured: a translation hook that returns something
     # else must not turn a real failure report into a crash of the reporting path.
     if isinstance(translated, tuple) and len(translated) == 3:
@@ -450,7 +479,7 @@ class Task:
         """
         return {
             k: v for k, v in self.payload.items()
-            if k not in (_ASPECT_RATIO_KEY, *_ECHO_PAYLOAD_KEYS)
+            if k not in (_ASPECT_RATIO_KEY, _FAILURE_TYPE_KEY, *_ECHO_PAYLOAD_KEYS)
         }
 
 
@@ -725,33 +754,54 @@ class TaskManager:
         try:
             resp = await self._client_for(adapter).post(adapter.endpoint, payload)
         except CFGPUError as e:
-            await self._record_submit_failure(task_id, e)
+            await self._record_submit_failure(task_id, adapter, stored_payload, e)
             raise
         if not adapter.is_async:
             return await self._finish_sync(task_id, adapter, req, stored_payload, resp)
         return await self._finish_async(task_id, adapter, stored_payload, resp)
 
-    async def _record_submit_failure(self, task_id: str, e: CFGPUError) -> None:
+    async def _record_submit_failure(
+        self,
+        task_id: str,
+        adapter: "ModelAdapter",
+        stored_payload: dict,
+        e: CFGPUError,
+    ) -> None:
         """Write onto the row what this failure actually proves, and make the error say so.
 
-        ``outcome_unknown`` is cleared here rather than at the raise site because it
-        meant one specific thing — "the upstream may have billed and there is nothing on
-        this side to reconcile against". The second half of that sentence stopped being
-        true the moment the row was written first, and an error still carrying the flag
-        would send a caller looking for a remedy that no longer matches its situation.
-        What replaces it is a next step that can actually be executed: the id to query,
-        which is the caller's own request_id.
+        Both branches are **terminal**, because by the time this runs the POST is over:
+        whatever this submission was going to tell us — a sync model's whole result, an
+        async model's upstream task id — travelled in that one response, and nothing
+        will ever deliver it a second time. What the two branches differ in is what the
+        failure proves about *billing*.
+
+        A refusal (4xx, moderation, connect-phase timeout) proves nothing started, so
+        the row is a plain ``failed`` and resending is safe.
+
+        Anything indeterminate (request-phase POST timeout, transport error, upstream
+        5xx) used to stay ``dispatching`` with a message pointing at ``task_status`` —
+        but ``task_status`` does not re-poll a row with no upstream id, and nothing else
+        ever wrote to it again, so that pointer was a dead end that read as "still in
+        flight, keep polling" forever. It is now ``failed`` with
+        ``error_type="submission_lost"`` stored on the row, so the live error and every
+        later read (``task_status``, ``task_wait``, a replayed request_id) say the same
+        thing: the result is gone, send the request again.
+
+        ``outcome_unknown`` is cleared because its second half ("nothing on this side to
+        reconcile against") is false: the row exists and says exactly this.
         """
         e.original.setdefault("task_id", task_id)
         if _upstream_refused(e):
             await self._repo.update_task(task_id, "failed", error=e.user_message)
             return
-        await self._repo.update_task(task_id, DISPATCHING, error=e.user_message)
-        if e.outcome_unknown:
-            e.outcome_unknown = False
-            e.user_message += (
-                f'用 task_status("{task_id}") 查这次提交的最终状态，不要直接重发同一个任务。'
-            )
+        e.error_type = "submission_lost"
+        e.retryable = True
+        e.outcome_unknown = False
+        e.user_message += _submission_lost_remedy(adapter)
+        await self._repo.update_task(
+            task_id, "failed", error=e.user_message,
+            payload={**stored_payload, _FAILURE_TYPE_KEY: "submission_lost"},
+        )
 
     async def _finish_sync(
         self,
@@ -812,11 +862,14 @@ class TaskManager:
             # nothing at all — the caller was told the submission failed while the job
             # ran on upstream, unreachable and unaccounted for.
             message = (
-                "提交已被上游接受（可能已计费），但没能从响应中解析出上游 task_id，"
-                "这次生成的结果无法取回。请不要直接重发同一个任务，先到上游侧确认。"
+                "没能从上游响应中解析出 task_id，这次请求的结果无法取回，"
+                "task_status 也查不到，请直接重新发起。"
                 f"响应原文（截断）：{_truncate_json(resp)}"
             )
-            await self._repo.update_task(task_id, "failed", error=message)
+            await self._repo.update_task(
+                task_id, "failed", error=message,
+                payload={**stored_payload, _FAILURE_TYPE_KEY: "submission_lost"},
+            )
             raise CFGPUError(
                 error_type="submission_lost",
                 user_message=message,

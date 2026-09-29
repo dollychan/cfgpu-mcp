@@ -433,7 +433,7 @@ submitting ──► dispatching ──┬─[is_async=false]─► succeeded / 
 | 状态 | 对调用方意味着什么 |
 |---|---|
 | `submitting` | 行已落、POST 确定未发出。上游没有计费，**重发是安全的** |
-| `dispatching` | POST 已派发或其响应已丢失。上游**可能已计费**，不要直接重发，先 `task_status` |
+| `dispatching` | POST 已派发、响应还在路上。上游**可能已计费**，不要直接重发，继续 `task_status`。响应一旦确定丢失（超时、传输错误、5xx），行立刻收敛为 `failed` + `submission_lost`（可重试），不会一直停在这里 |
 
 代价是同步路径多一次本地 UPDATE，被一次 10–60s 的上游调用完全淹没。
 
@@ -591,7 +591,9 @@ CFGPUError.from_http_response(status, body)
 
 因此新增 `CFGPUError.outcome_unknown`，`to_tool_result_dict()` 只在为真时输出；`phase`（`connect` / `request`）也从 `original` 抬进了结果顶层——判断要不要重发的依据不该靠读散文。测试：`test_submit_timeout_is_not_retryable_and_says_the_outcome_is_unknown` / `test_poll_timeout_stays_retryable` / `test_connect_phase_timeout_is_retryable_even_on_a_submit`。
 
-**这条已经收窄。** 行现在先于 POST 落库，所以「没有可对账的东西」不再成立：`TaskManager._record_submit_failure` 在提交路径上接住这类错误，按它**证明了什么**分流——上游明确拒收的（4xx / connect 阶段超时 / 内容审核）把行收敛成 `failed`，因为那既没执行也没计费，说成「可能已计费」是把可重试的事说死了；证明不了的（request 阶段超时、传输层错误、上游 5xx）把行留在 `dispatching`，清掉 `outcome_unknown`，并在文案末尾补上真能执行的下一步：`task_status("<request_id>")`。`CFGPUClient` 那一层仍然照旧置位——它只看得见传输事实，看不见有没有落库；两层的分工就是这条收窄的实现方式。`outcome_unknown` 剩下的适用面只有「落库本身失败」。
+**这条已经收窄。** 行现在先于 POST 落库，所以「没有可对账的东西」不再成立：`TaskManager._record_submit_failure` 在提交路径上接住这类错误，按它**证明了什么**分流——上游明确拒收的（4xx / connect 阶段超时 / 内容审核）把行收敛成 `failed`，因为那既没执行也没计费，说成「可能已计费」是把可重试的事说死了；证明不了的（request 阶段超时、传输层错误、上游 5xx）把行收敛成 `failed`，`error_type` 改成 `submission_lost`（**可重试**），清掉 `outcome_unknown`，并在文案末尾补上下一步：结果没能取回、`task_status` 也查不到，请直接重新发起（`understand` 额外提示降低 `analysis_depth`、缩短视频或收窄问题）。
+
+**为什么不再留在 `dispatching` 并指向 `task_status`（2026-09-29）。** 这次 POST 在本进程里已经结束，而它要带回的东西——同步模型的整个结果、异步模型的上游 task_id——只在那一个响应里，之后没有任何路径会再写这一行。`get_status` 对没有上游 id 的行不 re-poll，`wait()` 只重读行，于是 `task_status` 永远返回 `status: "dispatching"`，按结果契约读就是「还在跑，继续轮询」——一条死路（生产上 `understand_vision` 调 qwen3.8-max 分析视频 180s 超时后撞上）。当初不写 `failed` 是怕它被读成「可以安全重发」，但这个顾虑对调用方没有可执行的意义：这次请求的结果无论如何都拿不回来了，重发是拿到结果的唯一途径，提示「可能已计费」只会让 agent 卡住。所以 `submission_lost` 是 `retryable: true`，文案也不提计费。`error_type` 存在行 payload 的保留键 `_error_type` 里（`public_payload()` 剥掉），`task_failed_error` 优先用它，因此 `task_status` / `task_wait` / 重放同一 `request_id` 报出的都是同一个 `submission_lost`，而不是被读回成 `task_failed`。超时文案本身也只写事实和 agent 能做的一步：该调的配置项（`http_timeout` / `connect_timeout` 的完整路径）只进服务端 WARNING 日志和 `original["setting"]`，因为 agent 改不了 config.yaml。`CFGPUClient` 那一层仍然照旧置位——它只看得见传输事实，看不见有没有落库；两层的分工就是这条收窄的实现方式。`outcome_unknown` 剩下的适用面只有「落库本身失败」。
 
 ### 失效 / 无权限端点：快速失败（非重试）
 

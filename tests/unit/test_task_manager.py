@@ -256,11 +256,11 @@ async def test_async_create_raises_when_no_task_id():
     req = GenerateVideoInput(prompt="x")
     with pytest.raises(CFGPUError) as exc_info:
         await tm.create(adapter, req)
-    # Not "unknown": the POST succeeded, so this generation is running and billed —
-    # only the handle to collect it was lost. That is a distinct outcome and a
-    # non-retryable one, because resending is what turns one charge into two.
+    # Not "unknown": only the handle to collect the result was lost. That is a
+    # distinct outcome, and a retryable one — nothing here can ever produce this
+    # request's result, so resending is the caller's only route to one.
     assert exc_info.value.error_type == "submission_lost"
-    assert exc_info.value.retryable is False
+    assert exc_info.value.retryable is True
     # The raw response rides the message: `original` is not surfaced by the tool
     # layer, so without it the caller cannot tell WHICH shape came back.
     assert '{"unexpected": "shape"}' in exc_info.value.user_message

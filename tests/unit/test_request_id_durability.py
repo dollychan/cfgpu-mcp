@@ -306,7 +306,7 @@ async def test_async_missing_upstream_id_marks_row_failed():
         await tm.create(adapter, GenerateVideoInput(prompt="x", request_id="req-lost"))
 
     assert exc.value.error_type == "submission_lost"
-    assert exc.value.retryable is False          # D8: resending risks a second charge
+    assert exc.value.retryable is True           # the result is unrecoverable: resend
     row = await repo.get_task("req-lost")
     assert row["status"] == "failed" and row["error"]
     assert exc.value.to_tool_result_dict()["task_id"] == "req-lost"
@@ -333,31 +333,87 @@ async def test_refused_submission_converges_to_failed():
     await db.close()
 
 
-async def test_indeterminate_post_stays_dispatching_and_names_the_next_step():
-    """D8 + D9. A POST whose answer never came back is the case that used to be
-    unrecoverable: `outcome_unknown` said "may have billed, nothing to reconcile".
+def _request_phase_timeout() -> CFGPUError:
+    """What CFGPUClient raises when a submit POST outlives http_timeout."""
+    return CFGPUError(
+        error_type="timeout", user_message="请求超时",
+        original={"phase": "request", "method": "POST"},
+        retryable=False, outcome_unknown=True,
+    )
 
-    There *is* something to reconcile now, so the flag comes off and the message names
-    the call that reconciles it. The row stays non-terminal on purpose — `dispatching`
-    is a claim about what can be proved, and nothing here proves anything.
+
+async def test_indeterminate_post_is_terminal_submission_lost():
+    """The POST is over and its answer is gone: a sync model's result and an async
+    model's upstream id both travelled in that one response. Nothing will ever write
+    this row again, so leaving it `dispatching` made `task_status` a dead end that read
+    as "still in flight" forever (production, 2026-09-29, understand_vision at 180s).
+
+    Terminal and retryable: the result can never be collected, so resending is the
+    only route to one. The message must not point at `task_status`, which cannot
+    answer, and carries no billing caveat — it gives the caller nothing to act on.
     """
     tm, db, repo = await _make_tm()
     adapter = _sync_adapter()
-    tm._client_for(None).post = AsyncMock(
-        side_effect=CFGPUError(
-            error_type="timeout", user_message="请求超时",
-            original={"phase": "request", "method": "POST"},
-            retryable=False, outcome_unknown=True,
-        )
-    )
+    tm._client_for(None).post = AsyncMock(side_effect=_request_phase_timeout())
 
     with pytest.raises(CFGPUError) as exc:
         await tm.create(adapter, GenerateImageInput(prompt="x", request_id="req-indet"))
 
-    assert (await repo.get_task("req-indet"))["status"] == "dispatching"
+    row = await repo.get_task("req-indet")
+    assert row["status"] == "failed"
+    assert exc.value.error_type == "submission_lost"
+    assert exc.value.retryable is True
     assert exc.value.outcome_unknown is False
-    assert "req-indet" in exc.value.user_message
-    assert "task_status" in exc.value.user_message
+    assert "task_status(" not in exc.value.user_message
+    assert "请直接重新发起" in exc.value.user_message
+    assert "计费" not in exc.value.user_message
+    assert exc.value.to_tool_result_dict()["phase"] == "request"
+    await db.close()
+
+
+async def test_lost_understand_answer_says_calling_again_is_the_only_way():
+    """An understanding call's only copy of the answer was in the lost response, and
+    calling again is the only way to get one."""
+    tm, db, repo = await _make_tm()
+    adapter = _sync_adapter()
+    adapter.task_type = "understand"
+    tm._client_for(None).post = AsyncMock(side_effect=_request_phase_timeout())
+
+    with pytest.raises(CFGPUError) as exc:
+        await tm.create(adapter, GenerateImageInput(prompt="x", request_id="req-vl"))
+
+    assert exc.value.error_type == "submission_lost"
+    assert "重新调用 understand_vision" in exc.value.user_message
+    assert "task_status(" not in exc.value.user_message
+    await db.close()
+
+
+async def test_lost_submission_reads_back_as_submission_lost():
+    """Every later read of the row — task_status, task_wait, a replayed request_id —
+    goes through `task_failed_error`. Reading it back as `task_failed` would present a
+    possibly-billed submission as an ordinary failed generation."""
+    from cfgpu_mcp.task_manager import task_failed_error
+
+    tm, db, repo = await _make_tm()
+    adapter = _sync_adapter()
+    tm._client_for(None).post = AsyncMock(side_effect=_request_phase_timeout())
+    with pytest.raises(CFGPUError) as live:
+        await tm.create(adapter, GenerateImageInput(prompt="x", request_id="req-read"))
+
+    task = await tm.status("req-read")
+    later = task_failed_error(task, adapter)
+    assert later.error_type == "submission_lost"
+    assert later.retryable is True
+    assert later.user_message == live.value.user_message
+    adapter.translate_task_failure.assert_not_called()
+    assert "_error_type" not in task.public_payload()
+
+    # The replay arm: same request_id, no second POST, same verdict.
+    tm._client_for(None).post.reset_mock()
+    with pytest.raises(CFGPUError) as replay:
+        await tm.create(adapter, GenerateImageInput(prompt="x", request_id="req-read"))
+    tm._client_for(None).post.assert_not_called()
+    assert replay.value.error_type == "submission_lost"
     await db.close()
 
 

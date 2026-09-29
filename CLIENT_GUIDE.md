@@ -1033,7 +1033,7 @@ done
 | `status` | 含义 | 你该怎么做 |
 |---|---|---|
 | `submitting` | 请求确定还没发给上游 | 没有计费，**用相同参数重发是安全的** |
-| `dispatching` | 请求可能已发出、回应丢了 | **可能已经计费。不要重发**，继续用同一个 id 查，或提示用户核实 |
+| `dispatching` | 请求已发出、回应还在路上（另一个实例在处理，或调用方断开后本服务仍在等） | **可能已经计费。不要重发**，继续用同一个 id 查。回应一旦确定丢失，这个 id 会变成 `error_type: "submission_lost"`（可重试）的错误，不会一直停在这里 |
 
 两者都是未终态，形状与 `pending` / `running` 完全一致（`{<句柄>, status, elapsed_seconds}`），所以按未终态处理的客户端不需要改代码——只有想要「该不该重发」这个答案时才需要读它们。
 
@@ -1096,9 +1096,13 @@ The request failed because the output video may be related to copyright restrict
 >
 > **`timeout` 分两种，顶层 `phase` 说明是哪一种，别改错配置项。** `phase: "request"` 是连上了但上游没在 `http_timeout` 内答完；`phase: "connect"` 是 DNS / TCP / TLS 没在 `connect_timeout` 内完成，**上游根本没收到请求** —— 这几乎总是部署机器到该上游的网络不通（内网环境、出口策略、DNS），把 `http_timeout` 调大不会有任何作用。两种都带 `original.elapsed`（实测耗时，不是配置值），拿它和两个配置值一比即可确认。
 >
-> **`outcome_unknown: true` 曾是唯一一种「不知道成没成」的结果。它现在基本不会再出现在提交路径上**：任务行先于 POST 落库，所以「既没拿到 task_id 也没落库」不再成立。提交请求（POST）的 `phase: "request"` 超时现在得到的是——`retryable: false`（重发有重复计费风险，这一点没变）、`request_id`（你自己传的那个值，行主键）、以及一句明确的下一步：**先 `task_status("<request_id>")` 查这次提交的最终状态，不要直接重发**。查到 `dispatching` 就是「可能已计费」，查到 `succeeded` 就直接拿产物。相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
+> **该调哪个配置项不写在 `message` 里。** `message` 的读者是 agent，它改不了服务端的 config.yaml，写进去只会挤掉它真能做的那一步（重试）。配置项的完整路径（按 provider 区分，如 `cfgpu_api.http_timeout` / `providers.<name>.connect_timeout`）在服务端日志的 WARNING 里，Mode B 直接调 service 层的集成方也可从 `CFGPUError.original["setting"]` 读到。
 >
-> 换句话说：**这一类失败从「无法确认」变成了「去查这个 id」。** 前提仍是你在提交时带了 `request_id`。
+> **`outcome_unknown: true` 曾是唯一一种「不知道成没成」的结果。它现在基本不会再出现在提交路径上**：任务行先于 POST 落库，所以「既没拿到 task_id 也没落库」不再成立。提交请求（POST）的 `phase: "request"` 超时、传输层错误、上游 5xx 现在统一得到 `error_type: "submission_lost"`、`retryable: true`（`phase` 仍在顶层）。含义是：**这次请求的结果无法取回，直接重发**。这一次 POST 的回应是结果（同步模型）或上游 task_id（异步模型）唯一的载体，回应丢了就没有第二条路，所以**不要用 `task_status` 去等它**——它查到的是同一个 `submission_lost`，不会再变。`understand_vision` 的文案额外提示：耗时过长导致的，可降低 `analysis_depth`、缩短视频或收窄问题后再调用。
+>
+> 相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
+>
+> 这类失败要少发生，根本办法是让 `http_timeout` 覆盖模型的真实耗时（`cfgpu_api.http_timeout` 或 `providers.<name>.http_timeout`）。
 
 **Mode B service 层直接调用**：service 函数抛出 `CFGPUError`，需自行捕获：
 
