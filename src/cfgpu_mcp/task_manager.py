@@ -7,6 +7,7 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, NamedTuple
 
+from cfgpu_mcp.adapters.regions import resolve_image_refs
 from cfgpu_mcp.client.cfgpu_client import CFGPUClient
 from cfgpu_mcp.client.repository import TaskRepository
 from cfgpu_mcp.errors import CFGPUError
@@ -609,7 +610,9 @@ def validate_request(
             original={"model": req.model},
             model_id=adapter.model_name,
         )
-    payload = adapter.build_payload(effective_req)
+    # The same placeholder resolution create() applies, so the preflight's payload is
+    # the prompt that would really be sent — and an unresolved [[...]] fails here, free.
+    payload = adapter.build_payload(resolve_image_refs(effective_req))
     return {
         "validated": True,
         # The concrete model, so `model="auto"` reports what routing actually picked —
@@ -678,7 +681,9 @@ class TaskManager:
         existing row is returned and no second POST is sent, which is what keeps a
         replayed tool call from being billed twice. See request-id-durability.md.
         """
-        payload = adapter.build_payload(req)
+        # Placeholders resolve before the row is written: an unresolved one raises here,
+        # with nothing inserted and nothing sent.
+        payload = adapter.build_payload(resolve_image_refs(req))
         request_id = getattr(req, "request_id", None)
         task_id = request_id or str(uuid.uuid4())
         stored_payload = _stash_internal(payload, req, aspect_ratio=adapter.is_async)

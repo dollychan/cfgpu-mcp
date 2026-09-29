@@ -324,6 +324,24 @@ async def main():
 asyncio.run(main())
 ```
 
+### 在 prompt 里按名字引用图片（`image_refs`）
+
+`generate_image` / `understand_vision` 接受 `image_refs`：与图片列表（`reference_images` /
+`images`）等长、同序，每张图一个调用方自己的句柄。prompt 里写 `[[<句柄>]]`，服务端在发送前
+替换成模型认识的序号（`图1`、`图2`……），对所有模型都成立，不依赖是否传了 `regions`：
+
+```python
+await image_svc.generate_image(
+    prompt="以 [[own]] 的服饰为准，舞姿参照 [[pose]]",   # 上游收到：以 图1 的服饰为准，舞姿参照 图2
+    reference_images=["https://.../a.png", "https://.../b.png"],
+    image_refs=["own", "pose"],
+)
+```
+
+对不上任何句柄或标记名的 `[[...]]` 会以 `invalid_params` 拒绝（错误信息列出可用占位符），
+请求不发送、不计费；`validate_only=True` 预检时同样会报。宿主若有自己的素材 id（如 `m_31b5b08b`），
+直接把它当句柄传进 `image_refs` 即可，不必自己换算序号——素材列表一重排，写死的序号就会悄悄指错图。
+
 ### 轮询异步任务
 
 ```python

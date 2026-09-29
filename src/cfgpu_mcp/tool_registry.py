@@ -297,7 +297,9 @@ def image_refs_field(image_slot: str) -> Any:
         f"image' yourself: ordinals shift whenever the image list is rebuilt, and a "
         f"sentence that hard-codes one then points at the wrong picture without any "
         f"error. Handles are also the qualified half of a `[[<handle>#<label>]]` region "
-        f"placeholder. Passed through untouched — never fetched, never sent upstream.",
+        f"placeholder. A `[[...]]` that matches no handle or label is refused before "
+        f"anything is sent, since it would otherwise reach the model as literal text. "
+        f"Passed through untouched — never fetched, never sent upstream.",
     )
 
 

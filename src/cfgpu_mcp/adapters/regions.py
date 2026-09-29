@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import models_with_capability
 from cfgpu_mcp.errors import CFGPUError
@@ -191,6 +191,69 @@ def regions_missing_size(regions: list["RegionSpec"]) -> list[int]:
     return sorted({r.image_index for r in regions if r.image_size is None})
 
 
+def _unresolved(token: str, refs: list[str], regions: list["RegionSpec"]) -> CFGPUError:
+    """A ``[[...]]`` that names nothing in this call — refused rather than sent verbatim.
+
+    The message lists every placeholder that *would* resolve, so the fix is a lookup,
+    not a guess. With no ``image_refs`` at all it says so: the likeliest cause is a
+    handle written into the prompt without the list that gives it a meaning.
+    """
+    valid = [f"[[{ref}]]" for ref in refs if ref]
+    labels: dict[str, int] = {}
+    for r in regions:
+        if r.label:
+            labels[r.label] = labels.get(r.label, 0) + 1
+    for r in regions:
+        if not r.label:
+            continue
+        if labels[r.label] == 1:
+            valid.append(f"[[{r.label}]]")
+        elif r.image_index < len(refs) and refs[r.image_index]:
+            valid.append(f"[[{refs[r.image_index]}#{r.label}]]")
+    valid = list(dict.fromkeys(valid))
+    if valid:
+        hint = f"本次可用的占位符：{', '.join(valid)}。"
+    else:
+        hint = (
+            "本次请求没有 image_refs，也没有带名字的 regions，因此没有任何占位符可解析；"
+            "要按名字指代整张图，请传 image_refs（与图片列表等长、同序）。"
+        )
+    return CFGPUError(
+        error_type="invalid_params",
+        user_message=(
+            f"prompt 里的占位符 [[{token}]] 不对应任何图片句柄或标记名。{hint}"
+            f"未解析的 [[...]] 会被当作字面文字发给模型，本次请求未发送。"
+        ),
+        original={"placeholder": token, "candidates": valid},
+        # Same reason as _ambiguous: the message already lists the exact alternatives.
+        card_hint=False,
+    )
+
+
+def resolve_image_refs(req: Any) -> Any:
+    """Resolve whole-image ``[[<handle>]]`` placeholders for a request carrying no regions.
+
+    ``image_refs`` promises, on every image-bearing tool and for every model, that
+    ``[[<handle>]]`` becomes that image's ordinal. Region rendering used to be the only
+    code keeping that promise, so it held only when ``regions`` was also passed *and* the
+    model was one of the three that read regions — everywhere else the handle went
+    upstream verbatim. ``TaskManager`` calls this before every ``build_payload``, the
+    preflight included, so no adapter has to remember to.
+
+    A request *with* regions is returned untouched: ``supports()`` has already confined
+    it to a region-capable adapter, whose ``build_payload`` renders handles and regions
+    in one pass — it must, because a token that is both a handle and a label can only
+    be caught as ambiguous with both in view. Returns ``req`` itself when nothing
+    changes, and a copy with the rendered prompt otherwise; raises for a placeholder
+    that resolves to nothing.
+    """
+    if getattr(req, "regions", None) or "image_refs" not in type(req).model_fields:
+        return req
+    prompt = req.prompt
+    rendered = render_prompt(prompt, None, req.image_refs, include_names=False)
+    return req if rendered == prompt else req.model_copy(update={"prompt": rendered})
+
+
 def _ambiguous(token: str, candidates: list[str], *, kind: str) -> CFGPUError:
     return CFGPUError(
         error_type="invalid_params",
@@ -225,9 +288,13 @@ def render_prompt(
     image restarts at 标记1). So a bare ``[[标记1]]`` with two images in play is a
     genuine ambiguity, and it **fails closed**. Picking the first would edit the wrong
     image: an outcome that produces a picture, costs money, and looks reasonable — the
-    worst failure mode available. An unmatched placeholder, by contrast, is left alone
-    and its region falls through to the suffix: the caller may simply not be using
-    placeholders, and being wrong about that costs precision, not correctness.
+    worst failure mode available. An unmatched placeholder **fails closed too**. It used
+    to be left alone on the theory that the caller might not be using placeholders, but
+    ``[[...]]`` never occurs in prose (see ``_PLACEHOLDER``), so a leftover one is always
+    a handle or label that did not resolve — and left alone it reaches the model as
+    literal text: a request that names an image the model cannot see, billed anyway.
+    Regions a caller simply did not mention are a different case and still fall through
+    to the suffix.
 
     ``structured=True`` is for a model with its own ``bbox_list`` field. Placeholders
     resolve to neutral wording instead of coordinates, and there is **no trailing
@@ -276,11 +343,12 @@ def render_prompt(
         if "#" in token:
             ref, _, label = token.partition("#")
             idx = ref_index.get(ref)
-            if idx is None:
-                return match.group(0)  # unknown handle → leave it, region falls to suffix
-            hits = [i for i in by_label.get(label, []) if regions[i].image_index == idx]
+            hits = (
+                [] if idx is None
+                else [i for i in by_label.get(label, []) if regions[i].image_index == idx]
+            )
             if len(hits) != 1:
-                return match.group(0)
+                raise _unresolved(token, refs, regions)
             used.add(hits[0])
             return render_one(hits[0])
 
@@ -301,7 +369,7 @@ def render_prompt(
             return render_one(hits[0])
         if is_ref:
             return _ordinal(ref_index[token])
-        return match.group(0)
+        raise _unresolved(token, refs, regions)
 
     rendered = _PLACEHOLDER.sub(substitute, prompt)
 

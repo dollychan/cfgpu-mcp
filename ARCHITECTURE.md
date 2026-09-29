@@ -259,7 +259,8 @@ service/image.py::generate_image()
     ▼
 TaskManager.create(adapter, req)
     │
-    ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式
+    ├─ resolve_image_refs(req)         [[句柄]] → 图N（无 regions 时，所有模型）；未解析的 [[...]] 直接报错
+    ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式（有 regions 时由区域 adapter 一并渲染）
     │
     ├─ insert_task(request_id or uuid4, "submitting")   ← ★ 行先落，POST 后发
     │      └─ 主键冲突 = 重复投递 → 直接返回既有行，不再 POST（不二次计费）
@@ -278,6 +279,20 @@ TaskManager.wait(task, adapter, req)
     ▼
 service 返回 dict → 访问层格式化 → 用户
 ```
+
+**prompt 占位符在 `build_payload` 之前统一解析。** `image_refs` 的字段说明对所有模型承诺
+`[[<句柄>]]` 会被渲染成该图的序号，但过去只有区域渲染（`render_prompt`）在兑现，而它只在
+三个读区域的 adapter 里、且仅当同时传了 `regions` 时才运行——其余情况句柄原样上行，模型看到
+的是字面 `[[own]]`，照常出图、照常计费（曾在 cf-image-2 上发生）。现在 `TaskManager` 的两个
+入口（`create()` 与 `validate_request()`）都先调 `regions.resolve_image_refs(req)`，没有
+adapter 需要自己记得。带 `regions` 的请求原样放行：`supports()` 已把它限定在区域 adapter，
+那里句柄与标记必须一次性渲染，因为「既是句柄又是标记名」的歧义只有两者同时可见才能发现。
+
+未解析的 `[[...]]` **fail closed**（`invalid_params`，列出本次可用的占位符）。`[[...]]` 不会
+出现在正常行文里，剩下的必然是写错的句柄/标记；原样发出只会得到一张看似合理、已计费的错图。
+在 `create()` 里它发生在写行之前，所以既不落行也不 POST；`validate_only` 同样能免费拦下。
+测试：`tests/unit/test_regions.py`（`test_every_image_model_resolves_handles_without_regions`
+逐个模型断言 payload 中不再含 `[[`）。
 
 ### 单例资源（`config.py`）
 
