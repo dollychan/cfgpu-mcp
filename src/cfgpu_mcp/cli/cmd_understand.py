@@ -6,7 +6,9 @@ import sys
 
 import click
 
+from cfgpu_mcp.cli.choices import schema_choice
 from cfgpu_mcp.cli.output import print_error, print_result, run_with_progress
+from cfgpu_mcp.tool_registry import UnderstandVisionInput
 
 
 def _parse_model_specific(value: str | None) -> dict | None:
@@ -36,7 +38,7 @@ def _run(coro) -> dict:
 @click.argument("prompt")
 @click.option("--model", "-m", default="auto", show_default=True,
               help="model_name (see `cfgpu models list`), or 'auto'")
-@click.option("--analysis-depth", type=click.Choice(["fast", "balanced", "thorough"]),
+@click.option("--analysis-depth", type=schema_choice(UnderstandVisionInput, "analysis_depth"),
               default="balanced", show_default=True,
               help="Auto-routing preference for visual analysis")
 @click.option("--image", "-i", "images", multiple=True, metavar="URL",

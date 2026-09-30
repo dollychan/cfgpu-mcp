@@ -6,7 +6,9 @@ import sys
 
 import click
 
+from cfgpu_mcp.cli.choices import schema_choice
 from cfgpu_mcp.cli.output import print_error, print_result, run_with_progress
+from cfgpu_mcp.tool_registry import GenerateAudioInput, GenerateImageInput, GenerateVideoInput
 
 
 def _parse_model_specific(value: str | None) -> dict | None:
@@ -42,17 +44,17 @@ def generate() -> None:
 @click.option("--model", "-m", default="auto", show_default=True,
               help="model_name (see `cfgpu models list`), or 'auto'")
 @click.option("--aspect-ratio", "-a",
-              type=click.Choice(["1:1", "16:9", "9:16", "4:3", "3:4"]),
+              type=schema_choice(GenerateImageInput, "aspect_ratio"),
               default="1:1", show_default=True)
 @click.option("--resolution", "-r",
-              type=click.Choice(["2K", "3K", "4K"]),
+              type=schema_choice(GenerateImageInput, "resolution"),
               default="2K", show_default=True)
 @click.option("--reference-images", multiple=True, metavar="URL",
               help="Reference image URL (repeat for multiple)")
 @click.option("-n", "n", type=int, default=1, show_default=True,
               help="Number of group images to generate (1-15; doubao-seedream-* only)")
 @click.option("--quality-tier", "-q",
-              type=click.Choice(["fast", "balanced", "best"]),
+              type=schema_choice(GenerateImageInput, "quality_tier"),
               default="balanced", show_default=True)
 @click.option("--watermark/--no-watermark", default=False,
               help="Add/remove watermark (default: no watermark)")
@@ -120,19 +122,19 @@ def image_cmd(
 @click.option("--duration", "-d", "duration_seconds", type=int, default=5,
               show_default=True, help="Duration in seconds (4-30, per-model maximum; -1 = model-chosen, Seedance family only)")
 @click.option("--aspect-ratio", "-a",
-              type=click.Choice(["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"]),
+              type=schema_choice(GenerateVideoInput, "aspect_ratio"),
               default="adaptive", show_default=True)
 # The full fleet vocabulary, and no default: an omitted -r means "the model's own
 # tier", which is what lets `cfgpu generate video "..."` reach a model whose set
 # excludes 720p (MiniMax H3 offers 480p/768p/2k). 4k had been missing outright, so
 # Doubao Seedance 2.0's top tier was unaskable from the CLI.
 @click.option("--resolution", "-r",
-              type=click.Choice(["480p", "720p", "768p", "1080p", "2k", "4k"]),
+              type=schema_choice(GenerateVideoInput, "resolution"),
               default=None, help="Output resolution [default: the model's own tier]")
 @click.option("--no-audio", is_flag=True,
               help="Disable audio generation")
 @click.option("--quality-tier", "-q",
-              type=click.Choice(["fast", "balanced", "best"]),
+              type=schema_choice(GenerateVideoInput, "quality_tier"),
               default="balanced", show_default=True)
 @click.option("--watermark/--no-watermark", default=False,
               help="Add/remove watermark (default: no watermark)")
@@ -195,7 +197,7 @@ def video_cmd(
 @click.option("--voice", default=None, metavar="VOICE_ID",
               help="Voice/speaker id (default: model's own default)")
 @click.option("--format", "audio_format",
-              type=click.Choice(["mp3", "wav", "pcm", "flac"]),
+              type=schema_choice(GenerateAudioInput, "audio_format"),
               default="mp3", show_default=True)
 @click.option("--sample-rate", type=int, default=None,
               help="Output sample rate in Hz (default: model's default)")
@@ -210,7 +212,7 @@ def video_cmd(
 @click.option("--emotion", default=None, metavar="EMOTION",
               help="Emotion hint, e.g. happy/sad/angry (MiniMax only)")
 @click.option("--quality-tier", "-q",
-              type=click.Choice(["fast", "balanced", "best"]),
+              type=schema_choice(GenerateAudioInput, "quality_tier"),
               default="balanced", show_default=True)
 @click.option("--no-wait", is_flag=True,
               help="Return task_id immediately without waiting for completion")

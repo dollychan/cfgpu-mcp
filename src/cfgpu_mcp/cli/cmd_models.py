@@ -5,7 +5,9 @@ import sys
 
 import click
 
+from cfgpu_mcp.cli.choices import schema_choice
 from cfgpu_mcp.cli.output import print_error, print_json, print_models
+from cfgpu_mcp.tool_registry import ListModelsInput
 
 
 def _run(coro):
@@ -25,7 +27,7 @@ def models() -> None:
 
 
 @models.command("list")
-@click.option("--task-type", type=click.Choice(["image", "video"]),
+@click.option("--task-type", type=schema_choice(ListModelsInput, "task_type"),
               default=None, help="Filter by task type")
 @click.option("--json", "json_mode", is_flag=True, help="Output raw JSON")
 def list_cmd(task_type: str | None, json_mode: bool) -> None:

@@ -321,13 +321,11 @@ def test_quality_tier_vocabulary_matches_the_schema():
     the other way. A tier added to the schema but not here would be refused as a
     typo by every adapter.yaml that tried to declare it.
     """
-    import typing
-
     from cfgpu_mcp.adapters.base import _QUALITY_TIERS
 
     for model in (GenerateImageInput, GenerateVideoInput):
-        annotation = model.model_fields["quality_tier"].annotation
-        assert set(typing.get_args(annotation)) == _QUALITY_TIERS, model.__name__
+        enum = model.model_json_schema()["properties"]["quality_tier"]["enum"]
+        assert set(enum) == _QUALITY_TIERS, model.__name__
 
 
 def test_default_for_is_undeclared_by_default():

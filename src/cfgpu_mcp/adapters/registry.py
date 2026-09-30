@@ -21,6 +21,10 @@ def _name_set(names: list[str] | None) -> set[str] | None:
     return {n.strip() for n in names if n and n.strip()}
 
 
+
+def _fold_name(name: str) -> str:
+    return name.strip().casefold()
+
 class AdapterRegistry:
     def __init__(
         self,
@@ -42,6 +46,10 @@ class AdapterRegistry:
         self._by_cfgpu_model_id: dict[str, ModelAdapter] = {}
         self._by_model_name:     dict[str, ModelAdapter] = {}
         self._by_display_name:   dict[str, ModelAdapter] = {}
+        # Case- and space-insensitive fallback for all four names. A folded key that two
+        # different adapters share maps to None, so a collision can never resolve to the
+        # wrong model — it just falls back to exact matching.
+        self._by_folded:         dict[str, ModelAdapter | None] = {}
 
     # ── Loading ─────────────────────────────────────────────────────────────
 
@@ -148,6 +156,12 @@ class AdapterRegistry:
         self._by_cfgpu_model_id[adapter.cfgpu_model_id] = adapter
         self._by_model_name[adapter.model_name] = adapter
         self._by_display_name[adapter.display_name] = adapter
+        for name in {adapter.model_name, adapter.adapter_id, adapter.cfgpu_model_id, adapter.display_name}:
+            key = _fold_name(name)
+            if key in self._by_folded and self._by_folded[key] is not adapter:
+                self._by_folded[key] = None
+            else:
+                self._by_folded[key] = adapter
 
     # ── Lookup ───────────────────────────────────────────────────────────────
 
@@ -160,6 +174,9 @@ class AdapterRegistry:
             or self._by_adapter_id.get(key)
             or self._by_cfgpu_model_id.get(key)
             or self._by_display_name.get(key)
+            # `minimax-h3` / ` MiniMax-H3 ` name one model unambiguously; refusing them
+            # costs the caller a round trip to learn a spelling.
+            or (self._by_folded.get(_fold_name(key)) if isinstance(key, str) else None)
         )
         if adapter is None:
             available = list(self._by_model_name.keys())

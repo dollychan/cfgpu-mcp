@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import vision as vision_service
-from cfgpu_mcp.tool_registry import RegionSpec, reshape_vision_result, split_structured
+from cfgpu_mcp.tool_registry import AnalysisDepth, RegionSpec, reshape_vision_result, split_structured
 
 
 def register(mcp: FastMCP) -> None:
@@ -14,7 +14,7 @@ def register(mcp: FastMCP) -> None:
     async def understand_vision(
         prompt: str,
         model: str | list[str] = "auto",
-        analysis_depth: Literal["fast", "balanced", "thorough"] = "balanced",
+        analysis_depth: AnalysisDepth = "balanced",
         images: Optional[list[str]] = None,
         video: Optional[str] = None,
         regions: Optional[list[RegionSpec]] = None,

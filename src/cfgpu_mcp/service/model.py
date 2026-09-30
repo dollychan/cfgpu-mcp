@@ -84,8 +84,10 @@ def _merge_cards(base_md: str, variant_md: str) -> str:
 
 async def list_models(task_type: str | None = None) -> list[dict[str, Any]]:
     from cfgpu_mcp.config import get_registry
+    from cfgpu_mcp.tool_registry import fold_choice
+
     registry = get_registry()
-    adapters = registry.list_all(task_type=task_type)
+    adapters = registry.list_all(task_type=fold_choice(task_type, _TASK_TYPES))
     return [
         {
             "model_id":       a.model_name,
@@ -175,6 +177,11 @@ async def list_model_profiles(
     templates, preventing agents from guessing model-specific API switches from card
     prose.
     """
+    from cfgpu_mcp.tool_registry import fold_choice
+
+    # Mode B / CLI reach here without the schema, so fold spelling here too.
+    media_type = fold_choice(media_type, _TASK_TYPES)
+    match = fold_choice(match, ("all", "any"))
     if media_type is not None and media_type not in _TASK_TYPES:
         raise ValueError(f"unknown media_type {media_type!r}; expected one of {sorted(_TASK_TYPES)}")
     if match not in {"all", "any"}:
@@ -267,6 +274,11 @@ async def list_voice_profiles(
         raise ValueError("limit must be between 1 and 100")
     if cursor < 0:
         raise ValueError("cursor must be >= 0")
+    from cfgpu_mcp.tool_registry import fold_choice
+
+    # Mode B / CLI reach here without the schema, so fold spelling here too.
+    gender = fold_choice(gender, FILTERABLE_GENDERS)
+    age = fold_choice(age, AGE_GROUPS)
     if gender is not None and gender not in FILTERABLE_GENDERS:
         raise ValueError(f"gender must be one of {list(FILTERABLE_GENDERS)}")
     if age is not None and age not in AGE_GROUPS:
@@ -292,9 +304,15 @@ async def list_voice_profiles(
 
     from cfgpu_mcp.config import get_registry
 
-    audio_adapters = sorted(get_registry().list_all(task_type="audio"), key=lambda item: item.model_name)
+    registry = get_registry()
+    audio_adapters = sorted(registry.list_all(task_type="audio"), key=lambda item: item.model_name)
     by_model_id = {adapter.model_name: adapter for adapter in audio_adapters}
-    requested_model_ids = set(model_ids or by_model_id)
+    requested_model_ids: set[str] = set()
+    for model_id in model_ids or by_model_id:
+        try:
+            requested_model_ids.add(registry.get(model_id).model_name)
+        except KeyError:
+            requested_model_ids.add(model_id)  # reported as unknown just below
     unknown_models = requested_model_ids - set(by_model_id)
     if unknown_models:
         raise ValueError(f"unknown audio model_ids: {sorted(unknown_models)}")

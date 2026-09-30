@@ -158,13 +158,19 @@ class ModelRouter:
         candidates: list["ModelAdapter"] = self._registry.list_all(task_type=task_type)
 
         if allowed:
-            allowed_set = set(allowed)
-            known = (
-                {a.model_name for a in candidates}
-                | {a.adapter_id for a in candidates}
-                | {a.cfgpu_model_id for a in candidates}
-            )
-            unknown = allowed_set - known
+            # Resolved through the registry, so a candidate list accepts exactly the
+            # spellings a single `model=` does (including case/space variants).
+            chosen: set[int] = set()
+            unknown: set[str] = set()
+            for name in allowed:
+                try:
+                    adapter = self._registry.get(name)
+                except KeyError:
+                    adapter = None
+                if adapter is None or adapter not in candidates:
+                    unknown.add(name)
+                else:
+                    chosen.add(id(adapter))
             if unknown:
                 raise CFGPUError(
                     error_type="invalid_params",
@@ -174,13 +180,7 @@ class ModelRouter:
                     ),
                     original={"model": allowed},
                 )
-            candidates = [
-                a
-                for a in candidates
-                if a.model_name in allowed_set
-                or a.adapter_id in allowed_set
-                or a.cfgpu_model_id in allowed_set
-            ]
+            candidates = [a for a in candidates if id(a) in chosen]
 
         scored: list[tuple[int, "ModelAdapter"]] = []
         for adapter in candidates:

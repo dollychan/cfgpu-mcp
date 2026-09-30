@@ -20,7 +20,6 @@ field over.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import get_args
 
 import pytest
 
@@ -49,9 +48,10 @@ def _video_adapters(registry: AdapterRegistry):
 
 
 def _fleet_enum() -> set[str]:
-    # Optional[Literal[...]] — get_args yields (Literal[...], NoneType).
-    annotation = GenerateVideoInput.model_fields["resolution"].annotation
-    return set(get_args(get_args(annotation)[0]))
+    # Read the published schema — the enum callers actually see — rather than the
+    # annotation, which wraps the Literal in a spelling-folding Annotated.
+    prop = GenerateVideoInput.model_json_schema()["properties"]["resolution"]
+    return {v for branch in prop["anyOf"] for v in branch.get("enum", [])}
 
 
 # ── the enum and the ordering table ──────────────────────────────────────────

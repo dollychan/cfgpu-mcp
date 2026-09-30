@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import model as model_service
-from cfgpu_mcp.tool_registry import CanonicalTaskId, CapabilityMatch, MediaType
+from cfgpu_mcp.tool_registry import CanonicalTaskId, CapabilityMatch, MediaType, VoiceAge, VoiceGender
 
 
 def register(mcp: FastMCP) -> None:
@@ -34,8 +34,8 @@ def register(mcp: FastMCP) -> None:
     async def list_voice_profiles(
         model_ids: Optional[list[str]] = None,
         language: Optional[str] = None,
-        gender: Optional[Literal["male", "female", "neutral"]] = None,
-        age: Optional[Literal["child", "young", "middle_aged", "senior"]] = None,
+        gender: Optional[VoiceGender] = None,
+        age: Optional[VoiceAge] = None,
         query: Optional[str] = None,
         limit: int = 20,
         cursor: int = 0,

@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal, Optional
 
 from mcp.types import CallToolResult, TextContent
-from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, field_validator, model_validator
 
 
 # ── Media (material) slot annotations ───────────────────────────────────────
@@ -386,16 +386,24 @@ def label_field() -> Any:
     )
 
 
-# ── Tier spelling ───────────────────────────────────────────────────────────
+# ── Enum spelling ───────────────────────────────────────────────────────────
 #
-# Resolution tiers are case-sensitive Literals with two opposite conventions — image
-# tiers are upper-case (``2K``), video tiers lower-case (``480p``), and a model's own card
-# may spell a tier either way (MiniMax H3's is ``480P``). A caller that copies the card's
-# spelling carries no ambiguity, only the wrong case, so rejecting it costs a round trip
-# (or, behind a host's preflight, a failed approval card) to learn nothing. Fold to the
-# canonical member instead; anything that matches no member still fails as before.
+# Every closed vocabulary below is a case-sensitive Literal, and callers reach them by
+# copying from somewhere with its own conventions: image tiers are upper-case (``2K``)
+# and video tiers lower-case (``480p``), while a model card may spell a tier either way
+# (MiniMax H3's says ``480P``); a Chinese prompt writes ratios with a full-width colon
+# (``16：9``). Such a value carries no ambiguity, only the wrong spelling, so rejecting it
+# costs a round trip (or, behind a host's preflight, a failed approval card) to learn
+# nothing. ``Folded`` maps it to the canonical member before validation; anything that
+# matches no member still fails exactly as before, and the published enum is unchanged.
+# Only for vocabularies where folding cannot merge two members — voice ids are
+# deliberately not folded (some legitimately differ only by case or a trailing space).
 
-def _fold_tier(value: Any, choices: tuple[str, ...]) -> Any:
+def fold_choice(value: Any, choices: "tuple[str, ...] | frozenset[str]") -> Any:
+    """``value`` spelled as its matching member of ``choices``, else ``value`` unchanged.
+
+    Public for the service layer, whose Mode B / CLI callers bypass these schemas.
+    """
     if not isinstance(value, str):
         return value
     folded = value.strip().casefold()
@@ -404,8 +412,32 @@ def _fold_tier(value: Any, choices: tuple[str, ...]) -> Any:
             return choice
     return value
 
+
+#: Separators written for "width:height" that mean nothing else in this position.
+_RATIO_SEPARATORS = str.maketrans({"：": ":", "/": ":", "x": ":", "X": ":", "×": ":", "*": ":"})
+
+
+def _fold_ratio(value: Any, choices: tuple[str, ...]) -> Any:
+    if isinstance(value, str):
+        compact = "".join(value.split()).translate(_RATIO_SEPARATORS)
+        if compact.count(":") == 1:
+            value = compact
+    return fold_choice(value, choices)
+
+
+def Folded(*choices: str, ratio: bool = False) -> Any:
+    """``Literal[choices]`` that first folds case, surrounding space (and, for ``ratio``,
+    the separator) onto the canonical member."""
+    fold = _fold_ratio if ratio else fold_choice
+    return Annotated[Literal[choices], BeforeValidator(lambda v: fold(v, choices))]
+
+
 _IMAGE_RESOLUTIONS = ("1K", "1.5K", "2K", "3K", "4K")
 _VIDEO_RESOLUTIONS = ("480p", "720p", "768p", "1080p", "2k", "4k")
+QualityTier = Folded("fast", "balanced", "best")
+AnalysisDepth = Folded("fast", "balanced", "thorough")
+VoiceGender = Folded("male", "female", "neutral")
+VoiceAge = Folded("child", "young", "middle_aged", "senior")
 
 
 # ── Validate-only (preflight) ───────────────────────────────────────────────
@@ -479,8 +511,8 @@ class GenerateImageInput(BaseModel):
         "a list of model_ids to restrict automatic selection to those candidates "
         "or 'auto' to choose from all available models",
     )
-    aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
-    resolution: Literal[_IMAGE_RESOLUTIONS] = Field(
+    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", ratio=True) = Field(default="1:1")
+    resolution: Folded(*_IMAGE_RESOLUTIONS) = Field(
         default="2K",
         description="Output resolution tier. Each model supports a subset of these "
         "tiers; an unsupported explicit value is rejected. When model='auto', a chosen "
@@ -536,12 +568,7 @@ class GenerateImageInput(BaseModel):
                 f"n={v} is out of range. Image group size must be between 1 and 15."
             )
         return v
-
-    @field_validator("resolution", mode="before")
-    @classmethod
-    def _fold_resolution(cls, v: Any) -> Any:
-        return _fold_tier(v, _IMAGE_RESOLUTIONS)
-    quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    quality_tier: QualityTier = Field(default="balanced")
     watermark: bool = Field(
         default=False,
         description="Add an 'AI generated' watermark. Defaults to false and is sent "
@@ -663,16 +690,11 @@ class GenerateVideoInput(BaseModel):
                 f"model-chosen duration where supported by the selected model."
             )
         return v
-
-    @field_validator("resolution", mode="before")
-    @classmethod
-    def _fold_resolution(cls, v: Any) -> Any:
-        return _fold_tier(v, _VIDEO_RESOLUTIONS)
-    aspect_ratio: Literal["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"] = Field(
+    aspect_ratio: Folded("16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive", ratio=True) = Field(
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",
     )
-    resolution: Optional[Literal[_VIDEO_RESOLUTIONS]] = Field(
+    resolution: Optional[Folded(*_VIDEO_RESOLUTIONS)] = Field(
         default=None,
         description="Video resolution. None (the default) uses the selected model's own "
         "default tier, so an omitted resolution never rules a model out of automatic "
@@ -682,7 +704,7 @@ class GenerateVideoInput(BaseModel):
         "compatible models.",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
-    quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    quality_tier: QualityTier = Field(default="balanced")
     watermark: bool = Field(
         default=False,
         description="Add a watermark. Defaults to false and is sent explicitly by models "
@@ -741,7 +763,7 @@ class GenerateAudioInput(BaseModel):
         description="Voice/speaker id supported by the selected model, copied verbatim from "
         "the `voice` field of list_voice_profiles. None uses that model's default voice.",
     )
-    audio_format: Literal["mp3", "wav", "pcm", "flac"] = Field(
+    audio_format: Folded("mp3", "wav", "pcm", "flac") = Field(
         default="mp3", description="Output audio container/format"
     )
     sample_rate: Optional[int] = Field(
@@ -756,7 +778,7 @@ class GenerateAudioInput(BaseModel):
     volume: float = Field(default=1.0, description="Speech volume multiplier, when supported by the selected model")
     pitch: int = Field(default=0, description="Speech pitch offset, when supported by the selected model")
     emotion: Optional[
-        Literal[
+        Folded(
             "happy",
             "sad",
             "angry",
@@ -766,14 +788,14 @@ class GenerateAudioInput(BaseModel):
             "calm",
             "fluent",
             "whisper",
-        ]
+        )
     ] = Field(
         default=None,
         description="Emotion control, when supported by the selected model: happy, sad, "
         "angry, fearful, disgusted, surprised, calm, fluent, or whisper. None lets the "
         "model infer emotion from text.",
     )
-    quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    quality_tier: QualityTier = Field(default="balanced")
     wait: bool = Field(
         default=True,
         description="Leave unset. The call waits for the task and returns the finished "
@@ -828,7 +850,7 @@ class UnderstandVisionInput(BaseModel):
         "or 'auto' to choose from all vision-understanding models. Prefer 'auto' "
         "unless a specific model is required — an unknown id falls back to auto.",
     )
-    analysis_depth: Literal["fast", "balanced", "thorough"] = Field(
+    analysis_depth: AnalysisDepth = Field(
         default="balanced",
         description="Routing preference when model='auto'. 'fast' favors lower latency, "
         "'balanced' is the default for ordinary visual analysis, and 'thorough' favors "
@@ -935,14 +957,14 @@ class TaskWaitInput(BaseModel):
 class ListModelsInput(BaseModel):
     """List available CFGPU models with their capabilities and identifiers."""
 
-    task_type: Optional[Literal["image", "video", "audio", "understand"]] = Field(
+    task_type: Optional[Folded("image", "video", "audio", "understand")] = Field(
         default=None,
         description="Filter by task type, None returns all models",
     )
 
 
-MediaType = Literal["image", "video", "audio", "understand"]
-CapabilityMatch = Literal["all", "any"]
+MediaType = Folded("image", "video", "audio", "understand")
+CapabilityMatch = Folded("all", "any")
 
 # Keep this closed enum in sync with capabilities/media_tasks.yaml. The matching
 # contract test deliberately fails if a new canonical task is not admitted to
@@ -1015,12 +1037,12 @@ class ListVoiceProfilesInput(BaseModel):
         "'English', '英文', '粤语', or 'ja'. 'English' also covers American and British "
         "English voices. An unrecognised spelling is rejected with the accepted list",
     )
-    gender: Optional[Literal["male", "female", "neutral"]] = Field(
+    gender: Optional[VoiceGender] = Field(
         default=None,
         description="Voice gender; 'neutral' is for non-human voices. Voices whose gender "
         "has not been catalogued are left out when this is set",
     )
-    age: Optional[Literal["child", "young", "middle_aged", "senior"]] = Field(
+    age: Optional[VoiceAge] = Field(
         default=None,
         description="Apparent age of the voice: 'child', 'young' (young adult), "
         "'middle_aged', or 'senior'",
