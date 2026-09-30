@@ -693,9 +693,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。支持 `n>1` 的是带
 > `multi_image_group` 能力的模型：`doubao-seedream-*`（自动设置
 > `sequential_image_generation=auto` + `max_images=n`）与 `wan2.7-image`（自动设置
-> `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。**例外：
-> `doubao-seedream-5-0-pro` 与 `doubao-seedream-5-0-flash` 为单图模型，不支持组图，`n>1` 会报错**；`gpt-image-2`、
-> `nano-banana-*` 传 `n>1` 也会被拒绝。
+> `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。**不支持组图的模型
+> （`doubao-seedream-5-0-pro`、`doubao-seedream-5-0-flash`、`gpt-image-2`、`nano-banana-*` 等）传 `n>1` 不报错，
+> `n` 被忽略、payload 里不带任何组图字段，只回一张图**（包括 `layer_decomposition` 分层拆解）。
 > 两家的 `n` 都是**上限而不是张数**：出几张由模型决定，少于 `n` 是正常结果，结果回来之前
 > 不要向用户承诺具体张数。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
 > HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，

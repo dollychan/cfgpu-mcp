@@ -184,12 +184,16 @@ def test_2k_21x9_maps_to_correct_size():
 # --- doubao-seedream-5-0-pro (single-image, 1K/2K) ---
 
 @pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
-def test_pro_and_flash_reject_group_generation(factory):
+def test_pro_and_flash_ignore_n_and_send_no_group_fields(factory):
+    """`n` is a ceiling; on a model without 组图 it is ignored, never refused."""
     adapter = factory()
     req = GenerateImageInput(prompt="x", n=4)
     ok, reason = adapter.supports(req)
-    assert not ok
-    assert "n must be 1" in reason
+    assert ok, reason
+    payload = adapter.build_payload(req)
+    assert "n" not in payload
+    assert "sequential_image_generation" not in payload
+    assert "sequential_image_generation_options" not in payload
 
 
 def test_pro_1k_maps_to_pixels():
@@ -517,10 +521,18 @@ def test_group_generation_is_gated_on_the_capability_not_on_the_model_id():
     assert "sequential_image_generation_options" not in payload
 
 
-def test_single_image_seedream_rejects_n_greater_than_one():
-    ok, reason = _make_pro_adapter().supports(GenerateImageInput(prompt="x", n=4))
-    assert not ok
-    assert "n must be 1" in reason
+def test_layer_decomposition_ignores_n_too():
+    """Every layer_decomposition model lacks 组图, so n>1 there is ignored like anywhere else."""
+    adapter = _make_pro_adapter()
+    req = GenerateImageInput(
+        prompt="",
+        n=4,
+        reference_images=["https://example.com/source.png"],
+        model_specific={"layer_decomposition": True},
+    )
+    ok, reason = adapter.supports(req)
+    assert ok, reason
+    assert "sequential_image_generation" not in adapter.build_payload(req)
 
 
 @pytest.mark.parametrize(

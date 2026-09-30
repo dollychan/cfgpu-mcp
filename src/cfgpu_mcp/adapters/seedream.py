@@ -302,14 +302,10 @@ class SeedreamAdapter(ModelAdapter):
                     f"{self.adapter_id} layer_decomposition requires exactly one "
                     "reference_images item"
                 )
-            if req.n != 1:
-                return False, "layer_decomposition cannot be combined with n > 1"
 
-        if family == "pro" and req.n != 1:
-            return False, (
-                f"{self.adapter_id} only generates one image per request; "
-                "n must be 1 because sequential_image_generation is unsupported"
-            )
+        # No refusal for n>1 on a model without 组图: `n` is a ceiling, and on such a
+        # model it is ignored — build_payload() sends no group field and one image comes
+        # back (the n schema description promises exactly that).
 
         # Whether a source URL actually has an alpha channel cannot be established
         # locally; enforce the deterministic portions and let upstream inspect it.
