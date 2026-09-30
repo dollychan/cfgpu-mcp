@@ -386,6 +386,28 @@ def label_field() -> Any:
     )
 
 
+# ── Tier spelling ───────────────────────────────────────────────────────────
+#
+# Resolution tiers are case-sensitive Literals with two opposite conventions — image
+# tiers are upper-case (``2K``), video tiers lower-case (``480p``), and a model's own card
+# may spell a tier either way (MiniMax H3's is ``480P``). A caller that copies the card's
+# spelling carries no ambiguity, only the wrong case, so rejecting it costs a round trip
+# (or, behind a host's preflight, a failed approval card) to learn nothing. Fold to the
+# canonical member instead; anything that matches no member still fails as before.
+
+def _fold_tier(value: Any, choices: tuple[str, ...]) -> Any:
+    if not isinstance(value, str):
+        return value
+    folded = value.strip().casefold()
+    for choice in choices:
+        if choice.casefold() == folded:
+            return choice
+    return value
+
+_IMAGE_RESOLUTIONS = ("1K", "1.5K", "2K", "3K", "4K")
+_VIDEO_RESOLUTIONS = ("480p", "720p", "768p", "1080p", "2k", "4k")
+
+
 # ── Validate-only (preflight) ───────────────────────────────────────────────
 #
 # A caller that gates generation behind human approval has an ordering problem this
@@ -458,7 +480,7 @@ class GenerateImageInput(BaseModel):
         "or 'auto' to choose from all available models",
     )
     aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
-    resolution: Literal["1K", "1.5K", "2K", "3K", "4K"] = Field(
+    resolution: Literal[_IMAGE_RESOLUTIONS] = Field(
         default="2K",
         description="Output resolution tier. Each model supports a subset of these "
         "tiers; an unsupported explicit value is rejected. When model='auto', a chosen "
@@ -514,6 +536,11 @@ class GenerateImageInput(BaseModel):
                 f"n={v} is out of range. Image group size must be between 1 and 15."
             )
         return v
+
+    @field_validator("resolution", mode="before")
+    @classmethod
+    def _fold_resolution(cls, v: Any) -> Any:
+        return _fold_tier(v, _IMAGE_RESOLUTIONS)
     quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
     watermark: bool = Field(
         default=False,
@@ -635,11 +662,16 @@ class GenerateVideoInput(BaseModel):
                 f"model-chosen duration where supported by the selected model."
             )
         return v
+
+    @field_validator("resolution", mode="before")
+    @classmethod
+    def _fold_resolution(cls, v: Any) -> Any:
+        return _fold_tier(v, _VIDEO_RESOLUTIONS)
     aspect_ratio: Literal["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"] = Field(
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",
     )
-    resolution: Optional[Literal["480p", "720p", "768p", "1080p", "2k", "4k"]] = Field(
+    resolution: Optional[Literal[_VIDEO_RESOLUTIONS]] = Field(
         default=None,
         description="Video resolution. None (the default) uses the selected model's own "
         "default tier, so an omitted resolution never rules a model out of automatic "

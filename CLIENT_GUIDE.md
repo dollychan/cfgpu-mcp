@@ -756,6 +756,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `{**原参数, **corrected_args}` 覆盖后重发即可。反过来，向 `MiniMax-H3` 传它没有的档
 > （720p/1080p）会回退到不高于请求值的最近一档（分别为 `480p` / `768p`）。**不传 `resolution` 时 `corrected_args` 里不会出现它**
 > —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
+>
+> **档位大小写无所谓（2026-09-30 起）。** `480P` / `2K`（视频）、`2k` / `1.5k`（图片）都会被折叠成规范拼写，
+> `validate_only` 与正式调用一致接受；只有不在枚举里的档位（如 `360p`）仍报参数错误。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
 > `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；

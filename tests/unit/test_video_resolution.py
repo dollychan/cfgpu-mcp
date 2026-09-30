@@ -199,3 +199,37 @@ def test_validate_only_reports_no_correction_for_an_omitted_resolution(registry)
         adapter = ModelRouter(registry).resolve(req, for_validation=True)
 
         assert "resolution" not in validate_request(adapter, req)["corrected_args"]
+
+
+# ── Tier spelling: case is folded, not rejected ─────────────────────────────
+
+
+@pytest.mark.parametrize("asked,canonical", [("480P", "480p"), ("2K", "2k"), (" 1080P ", "1080p"), ("4K", "4k")])
+def test_video_resolution_case_is_folded_to_the_canonical_tier(asked, canonical):
+    """MiniMax H3's own card spells ``480P``; a caller copying it must not be refused."""
+    assert GenerateVideoInput(prompt="x", resolution=asked).resolution == canonical
+
+
+@pytest.mark.parametrize("asked,canonical", [("2k", "2K"), ("1.5k", "1.5K"), ("4k", "4K")])
+def test_image_resolution_case_is_folded_to_the_canonical_tier(asked, canonical):
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+
+    assert GenerateImageInput(prompt="x", resolution=asked).resolution == canonical
+
+
+def test_an_unknown_tier_is_still_rejected():
+    with pytest.raises(ValueError):
+        GenerateVideoInput(prompt="x", resolution="360p")
+
+
+def test_upper_case_tier_passes_the_minimax_h3_preflight(registry):
+    """The production report: ``resolution="480P"`` failed validate_only at the schema."""
+    req = GenerateVideoInput(
+        prompt="x", model="MiniMax-H3", aspect_ratio="16:9", resolution="480P", duration_seconds=5
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    result = validate_request(adapter, req)
+
+    assert result["validated"] is True
+    assert result["payload"]["resolution"] == "480P"
