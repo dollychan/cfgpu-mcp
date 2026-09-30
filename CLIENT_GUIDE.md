@@ -760,6 +760,12 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > **档位大小写无所谓（2026-09-30 起）。** `480P` / `2K`（视频）、`2k` / `1.5k`（图片）都会被折叠成规范拼写，
 > `validate_only` 与正式调用一致接受；只有不在枚举里的档位（如 `360p`）仍报参数错误。
 
+> **首帧与参考素材不能同时给（MiniMax-H3 / Seedance / HappyHorse）。** 服务端不会替你把 `first_frame`
+> 改成 `reference_images` —— 首帧是视频原样的开场画面，参考图只提供主体、场景由 prompt 重新构图，两者生成的是不同的视频。
+> 报错里会给出两条具体改法，按 prompt 的意图选一条：图片是人物/主体 → 移入 `reference_images`、删 `first_frame`；
+> 图片要原样开场 → 保留 `first_frame`、删掉 `reference_*`（删 `reference_audios` 就没有对口型了）。
+> 当前模型走不了的那条会直接指名要换的模型（如 HappyHorse 的 `happyhorse-1.0-r2v` / `happyhorse-1.0-i2v`）。
+
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
 > `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；
 > `best` 被排除时退到 `cf-pro`。

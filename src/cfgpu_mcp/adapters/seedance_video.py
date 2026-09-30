@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.adapters.base import (
+    ModelAdapter,
+    _default_expires_at,
+    frames_vs_references_reason,
+    models_with_capability,
+    register_python_adapter,
+)
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -275,7 +281,23 @@ class SeedanceVideoAdapter(ModelAdapter):
         has_first_last = bool(req.first_frame or req.last_frame)
         has_refs = bool(req.reference_images or req.reference_videos or req.reference_audios)
         if has_first_last and has_refs:
-            return False, "first/last_frame and reference media are mutually exclusive"
+            # Seedance 1.5 Pro takes no reference media at all, so "move the picture
+            # into reference_images" is only a fix on another model there.
+            reference_model = None
+            if "multi_modal_reference" not in self.capabilities:
+                # One same-family example, read from the registry so it cannot name
+                # a disabled model; the full list is list_models' job, not an error's.
+                sibling = next(
+                    (m for m in models_with_capability("multi_modal_reference")
+                     if m.startswith("doubao-seedance")),
+                    None,
+                )
+                reference_model = "list_models 中带 multi_modal_reference 能力的模型" + (
+                    f"（如 model={sibling}）" if sibling else ""
+                )
+            return False, frames_vs_references_reason(
+                self.model_name, req, reference_model=reference_model
+            )
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
         if (

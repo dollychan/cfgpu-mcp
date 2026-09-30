@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.adapters.base import (
+    ModelAdapter,
+    _default_expires_at,
+    frames_vs_references_reason,
+    register_python_adapter,
+)
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -105,6 +110,16 @@ class HappyHorseVideoAdapter(ModelAdapter):
         assert isinstance(req, GenerateVideoInput)
         if not req.prompt.strip():
             return False, f"{self.adapter_id} requires a non-empty prompt"
+        # Checked before the per-scenario branches: each of those would otherwise
+        # report only half the conflict ("does not support reference_images"), and the
+        # fix for HappyHorse is a different model either way — one per scenario.
+        if req.first_frame and req.reference_images:
+            return False, frames_vs_references_reason(
+                self.model_name,
+                req,
+                reference_model="model=happyhorse-1.0-r2v",
+                frame_model="model=happyhorse-1.0-i2v",
+            )
         if self.adapter_id == "happyhorse-1-0-i2v":
             if not req.first_frame:
                 return False, f"{self.adapter_id} requires first_frame"
@@ -125,8 +140,6 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} minimum resolution is 720p"
         if self.resolve_duration_seconds(req) == -1:
             return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
-        if req.first_frame and req.reference_images:
-            return False, "first_frame and reference_images are mutually exclusive"
         if req.reference_images and len(req.reference_images) > 9:
             return False, f"{self.adapter_id} accepts at most 9 reference_images"
         return True, ""

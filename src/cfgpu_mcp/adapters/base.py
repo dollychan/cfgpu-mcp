@@ -47,6 +47,63 @@ def models_with_capability(capability: str) -> list[str]:
         return []
 
 
+def frames_vs_references_reason(
+    model_name: str,
+    req: Any,
+    *,
+    reference_model: str | None = None,
+    frame_model: str | None = None,
+) -> str:
+    """The refusal for first/last frames mixed with ``reference_*`` media, with both fixes.
+
+    The bare fact ("mutually exclusive") leaves the caller to guess, and the two ways out
+    produce different videos: a frame is the video's literal opening picture, a reference
+    only carries the subject into a newly composed shot. Which one was meant is in the
+    prompt, which only the caller can read — so both routes are spelled out, each with
+    the exact argument moves, and the choice stays with the caller. Converting one into
+    the other here would be a silent substitution: a plausible, billed, different video.
+
+    ``reference_model`` / ``frame_model`` describe the switch for that route when this
+    model cannot take it (HappyHorse ships each scenario as its own model), inserted after
+    "改用" verbatim — e.g. ``"model=happyhorse-1.0-r2v"``; ``None`` means this model takes
+    it. ``req`` is only read.
+    """
+    frames = [n for n in ("first_frame", "last_frame") if getattr(req, n, None)]
+    refs = [
+        n for n in ("reference_images", "reference_videos", "reference_audios")
+        if getattr(req, n, None)
+    ]
+    frame_list = " / ".join(frames)
+    ref_list = " / ".join(refs)
+
+    if reference_model is None:
+        keep_refs = f"，{'、'.join(n for n in refs if n != 'reference_images')} 保留" if any(
+            n != "reference_images" for n in refs
+        ) else ""
+        merge = "（与已有参考图合并）" if "reference_images" in refs else ""
+        route_ref = (
+            f"把 {frame_list} 的图移入 reference_images{merge}，"
+            f"删除 {frame_list}{keep_refs}"
+        )
+    else:
+        route_ref = (
+            f"改用 {reference_model}，把 {frame_list} 的图放入 reference_images，"
+            f"删除 {frame_list}"
+        )
+    if frame_model is None:
+        route_frame = f"保留 {frame_list}，删除 {ref_list}"
+    else:
+        route_frame = f"改用 {frame_model}，保留 {frame_list}，删除 {ref_list}"
+    lost = "（reference_audios 删除后不再驱动配音/对口型）" if "reference_audios" in refs else ""
+
+    return (
+        f"{model_name}: {frame_list} is mutually exclusive with {ref_list}. "
+        f"二者生成的是不同的视频，请按 prompt 的意图二选一："
+        f"① 图片用于确定主体/人物形象，场景与构图由 prompt 重新描述 → {route_ref}；"
+        f"② 图片需原样作为视频开场画面 → {route_frame}{lost}。"
+    )
+
+
 @dataclass
 class PollConfig:
     base_interval: float = 5.0

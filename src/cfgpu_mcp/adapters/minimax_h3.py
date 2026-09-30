@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.adapters.base import (
+    ModelAdapter,
+    _default_expires_at,
+    frames_vs_references_reason,
+    register_python_adapter,
+)
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -230,10 +235,7 @@ class MinimaxH3Adapter(ModelAdapter):
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
         if has_frames and has_references:
-            return False, (
-                "first_frame / last_frame are mutually exclusive with "
-                "reference_images / reference_videos / reference_audios"
-            )
+            return False, frames_vs_references_reason(self.model_name, req)
         for name, limit in _REFERENCE_LIMITS:
             values = getattr(req, name)
             if values and len(values) > limit:
