@@ -225,8 +225,6 @@ class MinimaxH3Adapter(ModelAdapter):
 
         if not req.prompt.strip():
             return False, f"{self.model_name} requires at least one non-empty text prompt"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.model_name} requires an explicit duration from 4 to 15 seconds"
 
         has_frames = bool(req.first_frame or req.last_frame)
         has_references = bool(

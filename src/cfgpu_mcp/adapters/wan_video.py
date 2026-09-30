@@ -144,8 +144,6 @@ class WanVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} does not support last_frame (first_frame only)"
         if req.reference_images or req.reference_videos or req.reference_audios:
             return False, f"{self.adapter_id} supports image-to-video only (no reference media)"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""
 
     def estimate_poll_timeout(self, req: "GenerateImageInput | GenerateVideoInput") -> int:
@@ -188,8 +186,6 @@ class WanVideoR2VAdapter(WanVideoAdapter):
             return False, f"{self.adapter_id} does not support reference_audios"
         if not (req.reference_videos or req.reference_images):
             return False, f"{self.adapter_id} requires at least one reference_video or reference_image"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""
 
 
@@ -215,8 +211,6 @@ class WanVideoT2VAdapter(WanVideoAdapter):
             return False, f"{self.adapter_id} is a text-to-video model (no first/last_frame)"
         if req.reference_images or req.reference_videos or req.reference_audios:
             return False, f"{self.adapter_id} is a text-to-video model (no reference media)"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""
 
 
@@ -252,8 +246,6 @@ class WanVideoEditAdapter(WanVideoAdapter):
             return False, f"{self.adapter_id} requires a source video (reference_videos)"
         if len(req.reference_videos) > 1:
             return False, f"{self.adapter_id} accepts a single source video"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""
 
 
@@ -278,8 +270,6 @@ class Wan26VideoT2VAdapter(WanVideoAdapter):
             return False, f"{self.adapter_id} is a text-to-video model (no first/last_frame)"
         if req.reference_images or req.reference_videos or req.reference_audios:
             return False, f"{self.adapter_id} is a text-to-video model (no reference media)"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""
 
 
@@ -313,8 +303,6 @@ class Wan26VideoI2VAdapter(WanVideoAdapter):
             return False, f"{self.adapter_id} accepts only a first_frame image and an optional reference_audios track"
         if req.reference_audios and len(req.reference_audios) > 1:
             return False, f"{self.adapter_id} accepts a single audio track (reference_audios)"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""
 
 
@@ -345,6 +333,4 @@ class Wan26VideoR2VAdapter(WanVideoAdapter):
             return False, f"{self.adapter_id} does not support reference_audios"
         if not (req.reference_videos or req.reference_images):
             return False, f"{self.adapter_id} requires at least one reference_video or reference_image"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""

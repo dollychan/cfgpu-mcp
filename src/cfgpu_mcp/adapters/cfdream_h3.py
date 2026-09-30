@@ -142,8 +142,6 @@ class CfdreamH3Adapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.model_name} requires an explicit duration (no -1 smart mode)"
         if req.reference_images or req.reference_videos or req.reference_audios:
             return False, (
                 f"{self.model_name} does not accept reference_images / reference_videos / "
@@ -174,8 +172,6 @@ class CfdreamH3RefAdapter(CfdreamH3Adapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.model_name} requires an explicit duration (no -1 smart mode)"
         if req.first_frame or req.last_frame:
             return False, (
                 f"{self.model_name} does not accept first_frame / last_frame — "

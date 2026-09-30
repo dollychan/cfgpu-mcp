@@ -646,8 +646,9 @@ class GenerateVideoInput(BaseModel):
     duration_seconds: Optional[int] = Field(
         default=None,
         description="Video duration in seconds. None uses the selected model's default "
-        "and explicit values must be 4–30 or -1. Whether a value is supported depends "
-        "on the selected model; -1 requests a model-chosen duration where supported.",
+        "and explicit values must be 4–30 or -1. Each model has its own maximum. -1 "
+        "lets the model choose the length and is accepted only by the Seedance family; "
+        "for every other model, write the number of seconds explicitly.",
     )
 
     @field_validator("duration_seconds")

@@ -118,7 +118,7 @@ def image_cmd(
 @click.option("--reference-audios", multiple=True, metavar="URL",
               help="Reference audio URL (repeat for multiple, max 3)")
 @click.option("--duration", "-d", "duration_seconds", type=int, default=5,
-              show_default=True, help="Duration in seconds (4-15; -1 = smart/auto, WAN 2.0 & Seedance only)")
+              show_default=True, help="Duration in seconds (4-30, per-model maximum; -1 = model-chosen, Seedance family only)")
 @click.option("--aspect-ratio", "-a",
               type=click.Choice(["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"]),
               default="adaptive", show_default=True)

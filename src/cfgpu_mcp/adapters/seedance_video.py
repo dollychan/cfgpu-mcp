@@ -60,6 +60,9 @@ class SeedanceVideoAdapter(ModelAdapter):
     """
 
     adapter_id = "wan-2-0"
+    # The Seedance request schema's own `duration: -1` — the only smart-duration value
+    # in the fleet (Seedance 2.5 even defaults to it).
+    accepts_smart_duration = True
 
     def validation_corrections(
         self, req: "GenerateImageInput | GenerateVideoInput"

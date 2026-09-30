@@ -138,8 +138,6 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} does not support reference_audios"
         if self.resolve_resolution(req) == "480p":
             return False, f"{self.adapter_id} minimum resolution is 720p"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         if req.reference_images and len(req.reference_images) > 9:
             return False, f"{self.adapter_id} accepts at most 9 reference_images"
         return True, ""
@@ -153,6 +151,9 @@ class HappyHorseVideoEditAdapter(HappyHorseVideoAdapter):
     """
 
     adapter_id = "happyhorse-1-0-video-edit"
+    # Output length follows the source video and no duration is sent, so -1 asks for
+    # nothing this model could refuse.
+    accepts_smart_duration = True
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)

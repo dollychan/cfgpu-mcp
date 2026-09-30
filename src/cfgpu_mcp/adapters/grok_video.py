@@ -170,6 +170,4 @@ class GrokVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} does not support reference_videos"
         if req.reference_audios:
             return False, f"{self.adapter_id} does not support reference_audios"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         return True, ""

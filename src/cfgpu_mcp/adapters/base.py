@@ -201,6 +201,14 @@ class ModelAdapter(ABC):
     analysis_depth_default_for: frozenset[str]
     max_duration_seconds: int    # video only: longest explicit duration accepted
     default_duration_seconds: int
+    #: Whether ``duration_seconds=-1`` ("the model picks the length") is accepted.
+    #:
+    #: A protocol fact, not a per-deployment setting, so it lives on the class: only the
+    #: Seedance request schema has a smart-duration value. Everywhere else ``-1`` is
+    #: refused by the one check in ``supports()`` below, whose message names this
+    #: model's real range — the caller must write the seconds out, because a length
+    #: this server picked would be a billed choice nobody made.
+    accepts_smart_duration: bool = False
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
     #: The tier used when the caller omits ``resolution`` (video only).
     #:
@@ -360,11 +368,19 @@ class ModelAdapter(ABC):
             ):
                 return False, "text-to-video requires a non-empty prompt"
             duration_seconds = self.resolve_duration_seconds(req)
-            if duration_seconds != -1 and duration_seconds > self.max_duration_seconds:
+            if duration_seconds == -1 and not self.accepts_smart_duration:
                 return False, (
-                    f"{self.adapter_id} supports explicit durations of "
-                    f"4–{self.max_duration_seconds} seconds "
-                    f"(or -1 for a model-chosen smart duration)"
+                    f"{self.model_name} requires an explicit duration: set duration_seconds "
+                    f"to 4–{self.max_duration_seconds} seconds (-1, a model-chosen duration, "
+                    f"is accepted only by the Seedance family)"
+                )
+            if duration_seconds != -1 and duration_seconds > self.max_duration_seconds:
+                # Offer -1 only where it is accepted: suggesting it to every model sent
+                # callers from one refusal straight into the next.
+                smart = " (or -1 for a model-chosen duration)" if self.accepts_smart_duration else ""
+                return False, (
+                    f"{self.model_name} supports explicit durations of "
+                    f"4–{self.max_duration_seconds} seconds{smart}"
                 )
             resolution = self.resolve_resolution(req)
             if self.resolutions is not None and resolution not in self.resolutions:

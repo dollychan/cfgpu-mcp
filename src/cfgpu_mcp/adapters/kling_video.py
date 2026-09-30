@@ -233,8 +233,6 @@ class KlingVideoAdapter(ModelAdapter):
             return False, f"{self.adapter_id} does not support reference_audios"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
         # Validate the requested scene against the model's declared capabilities so
         # model="auto" skips incapable models instead of failing post-submit.
         if req.first_frame and req.last_frame:

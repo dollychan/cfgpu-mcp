@@ -699,7 +699,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 两家的 `n` 都是**上限而不是张数**：出几张由模型决定，少于 `n` 是正常结果，结果回来之前
 > 不要向用户承诺具体张数。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
 > HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，
-> 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
+> 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示由模型自选时长，**仅 Seedance 系列（`doubao-seedance-*`、
+> `wan-video`、`wan-video-fast`）接受；其他模型必须写明秒数**，传 `-1` 会被拒绝，报错里给出该模型可用的秒数范围。
 > `duration_seconds` 的 schema 范围是 4–30，但 30 秒**只有 `doubao-seedance-2-5` 支持**；WAN 2.0 /
 > Seedance 2.0 系上限 15 秒，Seedance 1.5 Pro 上限 12 秒，超限由对应模型的 `supports()` 在发请求前拒绝。
 > 分辨率同理是逐模型的：`doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` **只支持 480p/720p**，
