@@ -223,6 +223,17 @@ class MinimaxH3Adapter(ModelAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
 
+        # CFGPU's MiniMax H3 route rejects a four-second 480P submission before it
+        # creates an upstream task ("480P 分辨率 duration 最小为 5"). Keep that
+        # known, tier-specific rule here so validate_only and a billed request agree,
+        # rather than creating a local failed row with no upstream_task_id. Do not
+        # generalize this to 768P / 2K without evidence that those tiers share it.
+        if (
+            self.resolve_resolution(req) == "480p"
+            and self.resolve_duration_seconds(req) < 5
+        ):
+            return False, "MiniMax-H3 在 480p 分辨率下 duration_seconds 最小为 5 秒"
+
         if not req.prompt.strip():
             return False, f"{self.model_name} requires at least one non-empty text prompt"
 

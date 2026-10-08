@@ -25,6 +25,7 @@ import pytest
 
 from cfgpu_mcp.adapters.base import _RESOLUTION_ORDER
 from cfgpu_mcp.adapters.registry import AdapterRegistry
+from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.router import ModelRouter
 from cfgpu_mcp.task_manager import validate_request
 from cfgpu_mcp.tool_registry import GenerateVideoInput
@@ -233,3 +234,16 @@ def test_upper_case_tier_passes_the_minimax_h3_preflight(registry):
 
     assert result["validated"] is True
     assert result["payload"]["resolution"] == "480P"
+
+
+def test_minimax_h3_480p_four_seconds_fails_preflight(registry):
+    """The request must fail before any task row or upstream POST is possible."""
+    req = GenerateVideoInput(
+        prompt="x", model="MiniMax-H3", aspect_ratio="16:9", resolution="480P", duration_seconds=4
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    with pytest.raises(CFGPUError, match="480p.*最小为 5 秒") as exc:
+        validate_request(adapter, req)
+
+    assert exc.value.error_type == "invalid_params"

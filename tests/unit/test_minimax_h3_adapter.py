@@ -111,6 +111,22 @@ def test_watermark_maps_to_aigc_watermark(adapter):
     assert payload["aigc_watermark"] is True
 
 
+def test_480p_four_seconds_is_rejected_before_submission(adapter):
+    """CFGPU rejects this combination without creating an upstream task."""
+    ok, reason = adapter.supports(_req(resolution="480p", duration_seconds=4))
+
+    assert not ok
+    assert "480p" in reason
+    assert "最小为 5 秒" in reason
+
+
+def test_four_seconds_is_not_locally_refused_on_other_minimax_tiers(adapter):
+    """Only the observed 480P constraint is enforced locally."""
+    for resolution in ("768p", "2k"):
+        ok, reason = adapter.supports(_req(resolution=resolution, duration_seconds=4))
+        assert ok, reason
+
+
 def test_reference_content_uses_minimax_roles(adapter):
     payload = adapter.build_payload(_req(
         aspect_ratio="adaptive",
