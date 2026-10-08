@@ -880,7 +880,7 @@
         "resolution": { "type": "enum", "options": ["1K", "2K", "4K"], "default": "2K", "writable": "true", "note": "The API receives 1K / 2K / 4K verbatim; the unified schema's 3K has no counterpart here and is rejected upstream" },
         "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }], "default": "balanced", "writable": "true", "note": "maps to the API's quality: fast -> low, balanced -> medium, best -> high; IS meaningful here, not just routing" },
         "reference_images": { "type": "url_array", "writable": "true", "note": "presence switches to image-edit mode" },
-        "n": { "type": "integer", "min": 1, "max": 10, "default": 1, "writable": "true", "note": "Exact number of images to generate in one request (1–10); passed to the upstream API as n." },
+        "n": { "type": "integer", "min": 1, "max": 10, "default": 1, "writable": "true", "note": "Maximum number of images to return in one request (1–10); passed to the upstream API as n. The model may return fewer images." },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },

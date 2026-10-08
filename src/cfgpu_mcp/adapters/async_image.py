@@ -106,8 +106,8 @@ class GptImage2Adapter(_AsyncImageBase):
                 # up verbatim. 3K has no counterpart and is rejected upstream.
                 "resolution": req.resolution,
                 "quality": _QUALITY_MAP.get(req.quality_tier, "medium"),
-                # GPT Image 2 accepts an exact output count (1–10), unlike the
-                # Seedream sequential-image APIs where n is only a ceiling.
+                # GPT Image 2 accepts an output-count ceiling (1–10); the API may
+                # return fewer images.
                 "n": req.n,
             },
             req,

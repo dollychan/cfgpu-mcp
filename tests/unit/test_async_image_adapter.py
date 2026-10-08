@@ -34,7 +34,7 @@ def _nano() -> NanoBananaAdapter:
     })
 
 
-def test_gpt_image_2_forwards_exact_image_count():
+def test_gpt_image_2_forwards_image_count_ceiling():
     req = GenerateImageInput(prompt="x", n=3)
     adapter = _gpt()
     ok, reason = adapter.supports(req)

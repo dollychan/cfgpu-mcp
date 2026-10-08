@@ -550,9 +550,9 @@ class GenerateImageInput(BaseModel):
     n: int = Field(
         default=1,
         description="How many images to generate. 1–15 globally; individual models can "
-        "have a lower limit. For `cf-image-2`, 1–10 is an **exact** output count. "
-        "Seedream and Wan image-set models treat it as a ceiling for a related group, "
-        "so they may return fewer images. Only models with the `multi_image_group` "
+        "have a lower limit. For `cf-image-2`, 1–10 is an output ceiling. Seedream "
+        "and Wan image-set models also treat it as a ceiling for a related group, so "
+        "they may return fewer images. Only models with the `multi_image_group` "
         "capability can produce more than one image. On Seedream group models the input "
         "reference images plus generated images must total at most 15.",
     )

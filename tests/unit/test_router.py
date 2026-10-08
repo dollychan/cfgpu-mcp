@@ -163,7 +163,7 @@ def test_declared_default_forwards_multi_image_request():
     """The balanced default accepts n=1–10 and forwards it upstream.
 
     GPT Image 2 has the same multi-image capability used by the router's n>1
-    preference. Its n is an exact count rather than Seedream's group-size ceiling.
+    preference. Its n is an output ceiling, like Seedream's group-size ceiling.
     """
     router = _router()
     req = GenerateImageInput(prompt="a cat", n=4)
