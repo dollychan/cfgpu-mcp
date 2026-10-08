@@ -11,6 +11,10 @@ poll_endpoint: /images/tasks/{task_id}
 capabilities:
   - text_to_image
   - image_to_image
+  - multi_image_group
+
+# GPT Image 2 returns the requested number of images, up to ten, in one call.
+max_images_per_request: 10
 
 cost_tier: 2
 speed_tier: 3
@@ -41,12 +45,6 @@ quality_rank: 3
 # `regions` edit — no region_edit capability) drops it before this key is read
 # and the runner-up takes over normally.
 #
-# Known cost, accepted 2026-09-09: `n > 1` degrades. The +3 组图 bonus lives in
-# the score, which this key outranks, and GptImage2Adapter.build_payload never
-# sends `n` — so a balanced group request returns one image, silently, the way
-# `n` is ignored on every model without multi_image_group. Callers who need a
-# real 组图 name a Seedream. Pinned by
-# test_declared_default_outranks_the_group_bonus_and_n_degrades.
 default_for: [balanced]
 
 poll_config:

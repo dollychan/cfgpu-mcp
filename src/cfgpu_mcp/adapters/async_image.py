@@ -85,7 +85,7 @@ class _AsyncImageBase(ModelAdapter):
 class GptImage2Adapter(_AsyncImageBase):
     """Adapter for GPT Image 2.
 
-    Payload: model + prompt + aspect_ratio + resolution + quality +
+    Payload: model + prompt + aspect_ratio + resolution + quality + n +
     reference_images (optional). ``quality_tier`` maps to the API's
     ``low`` / ``medium`` / ``high`` quality.
     Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9, 9:21,
@@ -106,6 +106,9 @@ class GptImage2Adapter(_AsyncImageBase):
                 # up verbatim. 3K has no counterpart and is rejected upstream.
                 "resolution": req.resolution,
                 "quality": _QUALITY_MAP.get(req.quality_tier, "medium"),
+                # GPT Image 2 accepts an exact output count (1–10), unlike the
+                # Seedream sequential-image APIs where n is only a ceiling.
+                "n": req.n,
             },
             req,
         )

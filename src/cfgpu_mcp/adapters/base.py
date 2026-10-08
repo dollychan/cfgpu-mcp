@@ -229,6 +229,9 @@ class ModelAdapter(ABC):
     max_reference_images: int | None  # video only: per-model reference material limits
     max_reference_videos: int | None
     max_reference_audios: int | None
+    #: Maximum number of images that can be requested in one generation call. ``None``
+    #: means the shared request-schema limit is the only local restriction.
+    max_images_per_request: int | None
     allow_audio_only_reference: bool
     poll_config: PollConfig | None
     extends: str | None          # parent adapter_id, or None
@@ -308,6 +311,7 @@ class ModelAdapter(ABC):
         instance.max_reference_images = config.get("max_reference_images")
         instance.max_reference_videos = config.get("max_reference_videos")
         instance.max_reference_audios = config.get("max_reference_audios")
+        instance.max_images_per_request = config.get("max_images_per_request")
         instance.allow_audio_only_reference = bool(
             config.get("allow_audio_only_reference", False)
         )
@@ -358,6 +362,14 @@ class ModelAdapter(ABC):
         ok, reason = check_regions(self, req)
         if not ok:
             return False, reason
+        if isinstance(req, GenerateImageInput) and (
+            self.max_images_per_request is not None
+            and req.n > self.max_images_per_request
+        ):
+            return False, (
+                f"{self.model_name} supports n values from 1 to "
+                f"{self.max_images_per_request} (got {req.n})"
+            )
         if isinstance(req, GenerateVideoInput):
             if not req.prompt.strip() and not (
                 req.first_frame

@@ -88,6 +88,15 @@ def test_image_aspect_ratio_constraints_match_the_schema_and_gpt_image_2(constra
         assert "aspect_ratio" not in adapter.validation_corrections(req)
 
 
+def test_gpt_image_2_n_constraint_matches_the_adapter(constraints, registry):
+    gpt = next(
+        entry for entry in constraints["generate_image"] if entry["modelName"] == "cf-image-2"
+    )
+    n = gpt["args"]["n"]
+    adapter = registry.get("cf-image-2")
+    assert (n["min"], n["max"], n["default"]) == (1, adapter.max_images_per_request, 1)
+
+
 @pytest.mark.parametrize("tool", _TOOLS)
 def test_entry_identifiers_match_the_adapter(constraints, registry, tool):
     """modelName goes on the wire, modelId is a DB key, adapterId is internal.

@@ -774,9 +774,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `best` 被排除时退到 `cf-pro`。
 > 中文 prompt 仍偏向 Seedream 家族，但那是**分数**上的偏向，压不过 `balanced` 的声明默认，
 > 只在声明默认出局后才决定次序。
-> **`balanced` + `n>1` 请注意**：`cf-image-2` 不支持组图，`n` 会被静默忽略、只回一张图。
-> 需要组图请显式传 `model="doubao-seedream-5-0-lite"`（或别的 Seedream），或改用
-> `quality_tier="fast"`。
+> **`cf-image-2` 的多图输出**：支持 `n=1`–`10`，并把它原样传给上游；`n` 是精确张数。
+> Seedream 的 `n` 则是组图张数上限，可能少于请求值，两者语义不同。
 > **视频**：`balanced` 是 `MiniMax-H3`，`fast` 是 `doubao-seedance-2-0-fast`，
 > `best` 是 `doubao-seedance-2-5`（30 秒单段直出、最多 50 个参考素材、多语种旁白）。
 > 三档各有各的落点：日常请求想要的模型，未必是点名要快时想要的那个。被参数排除时

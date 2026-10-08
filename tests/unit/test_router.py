@@ -159,33 +159,18 @@ def test_auto_image_falls_back_to_5_0_lite_when_pro_unsupported():
     assert ranked[0].adapter_id == "doubao-seedream-5-0-lite"
 
 
-def test_declared_default_outranks_the_group_bonus_and_n_degrades():
-    """``n > 1`` no longer routes around the model that ignores it. Deliberate.
+def test_declared_default_forwards_multi_image_request():
+    """The balanced default accepts n=1–10 and forwards it upstream.
 
-    The +3 group bonus lives in ``_score``, and ``default_for`` is the key *above*
-    the score, so gpt-image-2 wins a balanced group request despite lacking
-    ``multi_image_group`` — its build_payload never sends ``n`` and the caller gets
-    one image. That is the documented cost of declaring a default: the operator
-    decision is allowed to overrule the heuristic, which is the whole point of
-    writing it down, and there is no signal downstream that can catch the mismatch
-    (``n`` is a compatibility hint every model without the capability ignores in
-    silence). Pinned so the degradation stays a decision on record rather than a
-    surprise; a caller who needs a real 组图 names a Seedream explicitly.
-
-    The bonus itself is untouched and still orders everyone below the default.
+    GPT Image 2 has the same multi-image capability used by the router's n>1
+    preference. Its n is an exact count rather than Seedream's group-size ceiling.
     """
     router = _router()
     req = GenerateImageInput(prompt="a cat", n=4)
     adapter = router.select_model(req)
     assert adapter.adapter_id == "gpt-image-2"
-    assert "multi_image_group" not in adapter.capabilities
-
-    runners_up = sorted(
-        (a for a in router._registry.list_all(task_type="image")
-         if a.adapter_id != "gpt-image-2" and a.supports(req)[0]),
-        key=lambda a: selection_key(router._score(a, req), a, "balanced"),
-    )
-    assert "multi_image_group" in runners_up[0].capabilities
+    assert "multi_image_group" in adapter.capabilities
+    assert adapter.build_payload(req)["n"] == 4
 
 
 def test_video_defaults_differ_per_quality_tier():

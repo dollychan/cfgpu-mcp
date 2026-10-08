@@ -15,6 +15,7 @@ def _gpt() -> GptImage2Adapter:
         "capabilities": {"text_to_image", "image_to_image"},
         "cost_tier": 2,
         "speed_tier": 3,
+        "max_images_per_request": 10,
     })
 
 
@@ -33,13 +34,32 @@ def _nano() -> NanoBananaAdapter:
     })
 
 
-@pytest.mark.parametrize("adapter", [_gpt(), _nano()])
-def test_ignores_group_generation_parameter(adapter):
+def test_gpt_image_2_forwards_exact_image_count():
     req = GenerateImageInput(prompt="x", n=3)
+    adapter = _gpt()
     ok, reason = adapter.supports(req)
     assert ok is True
     assert reason == ""
     payload = adapter.build_payload(req)
+    assert payload["prompt"] == "x"
+    assert payload["n"] == 3
+
+
+@pytest.mark.parametrize("n", [1, 10])
+def test_gpt_image_2_accepts_documented_image_count_range(n):
+    ok, reason = _gpt().supports(GenerateImageInput(prompt="x", n=n))
+    assert ok is True
+    assert reason == ""
+
+
+def test_gpt_image_2_rejects_image_count_above_documented_range():
+    ok, reason = _gpt().supports(GenerateImageInput(prompt="x", n=11))
+    assert ok is False
+    assert "1 to 10" in reason
+
+
+def test_nano_banana_ignores_group_generation_parameter():
+    payload = _nano().build_payload(GenerateImageInput(prompt="x", n=3))
     assert payload["prompt"] == "x"
     assert "n" not in payload
     assert "sequential_image_generation" not in payload

@@ -549,15 +549,12 @@ class GenerateImageInput(BaseModel):
     image_refs: Optional[list[str]] = image_refs_field("reference_images")
     n: int = Field(
         default=1,
-        description="Upper bound on how many images to generate as one related group "
-        "(组图 / sequential image generation). 1–15. **This is a ceiling, not a count**: "
-        "the model decides for itself whether to return a group at all and how many "
-        "images it contains, so asking for 4 may return 1, 2, 3, or 4 — fewer is a normal "
-        "outcome, not a failure, and no setting forces an exact number. Do not promise the "
-        "user a specific count before the result comes back. Only models with the "
-        "`multi_image_group` capability can produce more than one image; other models "
-        "generate one image. On group models the input reference images plus the "
-        "generated images must total at most 15.",
+        description="How many images to generate. 1–15 globally; individual models can "
+        "have a lower limit. For `cf-image-2`, 1–10 is an **exact** output count. "
+        "Seedream and Wan image-set models treat it as a ceiling for a related group, "
+        "so they may return fewer images. Only models with the `multi_image_group` "
+        "capability can produce more than one image. On Seedream group models the input "
+        "reference images plus generated images must total at most 15.",
     )
 
     @field_validator("n")
