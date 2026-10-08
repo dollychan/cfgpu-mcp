@@ -69,7 +69,7 @@ class _AsyncImageBase(ModelAdapter):
         elif req.resolution == "3K":
             corrected["resolution"] = "2K"
         allowed_ratios = (
-            {"1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"}
+            {"1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3"}
             if self.adapter_id == "gpt-image-2"
             else {"1:1", "3:4", "4:3", "9:16", "16:9", "21:9"}
         )
@@ -88,8 +88,8 @@ class GptImage2Adapter(_AsyncImageBase):
     Payload: model + prompt + aspect_ratio + resolution + quality +
     reference_images (optional). ``quality_tier`` maps to the API's
     ``low`` / ``medium`` / ``high`` quality.
-    Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16 — the unified
-    schema also offers 21:9, which goes up verbatim and is rejected upstream.
+    Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9, 9:21,
+    3:1, 1:3.
     """
 
     adapter_id = "gpt-image-2"

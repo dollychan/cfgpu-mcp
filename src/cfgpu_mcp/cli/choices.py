@@ -1,7 +1,7 @@
 """``click.Choice`` values read from the tool schema, so the CLI cannot drift from it.
 
 Hand-copied lists had already fallen behind (image ``--resolution`` lacked 1K/1.5K,
-image ``--aspect-ratio`` lacked 3:2/2:3/21:9, ``models list --task-type`` lacked
+image ``--aspect-ratio`` lacked 3:2/2:3/21:9/9:21/3:1/1:3, ``models list --task-type`` lacked
 audio/understand), and click compares case-sensitively by default, so ``-r 480P``
 failed here while the MCP tools accept it.
 """

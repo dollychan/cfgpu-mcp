@@ -184,7 +184,8 @@ def test_cli_choices_mirror_the_schema_and_ignore_case():
     assert list(image_res.choices) == ["1K", "1.5K", "2K", "3K", "4K"]
     assert image_res.convert("1.5k", None, None) == "1.5K"
     assert choice(generate.commands["video"], "resolution").convert("480P", None, None) == "480p"
-    assert "21:9" in choice(generate.commands["image"], "aspect_ratio").choices
+    image_ratios = choice(generate.commands["image"], "aspect_ratio").choices
+    assert {"21:9", "9:21", "3:1", "1:3"} <= set(image_ratios)
     assert set(choice(models.commands["list"], "task_type").choices) == {
         "image", "video", "audio", "understand",
     }

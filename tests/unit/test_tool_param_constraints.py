@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from cfgpu_mcp.config import load_registry
+from cfgpu_mcp.tool_registry import GenerateImageInput
 
 CONSTRAINTS = Path(__file__).parent.parent.parent / "tool_param_constraints.json"
 
@@ -67,6 +68,24 @@ def test_auto_entry_enum_matches_the_registry(constraints, registry, tool, task_
     auto = next(e for e in constraints[tool] if e["modelName"] == "auto")
     options = set(auto["args"]["model"]["options"])
     assert options == live | {"auto"}
+
+
+def test_image_aspect_ratio_constraints_match_the_schema_and_gpt_image_2(constraints, registry):
+    """HITL must expose every schema ratio, while the concrete GPT entry only offers
+    ratios its preflight accepts without a corrective fallback.
+    """
+    image_entries = constraints["generate_image"]
+    auto = next(entry for entry in image_entries if entry["modelName"] == "auto")
+    schema_ratios = GenerateImageInput.model_json_schema()["properties"]["aspect_ratio"]["enum"]
+    assert auto["args"]["aspect_ratio"]["options"] == schema_ratios
+
+    gpt = next(entry for entry in image_entries if entry["modelName"] == "cf-image-2")
+    gpt_ratios = gpt["args"]["aspect_ratio"]["options"]
+    assert {"21:9", "9:21", "3:1", "1:3"} <= set(gpt_ratios)
+    adapter = registry.get("cf-image-2")
+    for aspect_ratio in gpt_ratios:
+        req = GenerateImageInput(prompt="x", model="cf-image-2", aspect_ratio=aspect_ratio)
+        assert "aspect_ratio" not in adapter.validation_corrections(req)
 
 
 @pytest.mark.parametrize("tool", _TOOLS)

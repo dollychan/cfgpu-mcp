@@ -511,7 +511,7 @@ class GenerateImageInput(BaseModel):
         "a list of model_ids to restrict automatic selection to those candidates "
         "or 'auto' to choose from all available models",
     )
-    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", ratio=True) = Field(default="1:1")
+    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", ratio=True) = Field(default="1:1")
     resolution: Folded(*_IMAGE_RESOLUTIONS) = Field(
         default="2K",
         description="Output resolution tier. Each model supports a subset of these "

@@ -94,8 +94,7 @@ def test_nano_banana_has_no_quality():
     assert "quality" not in payload
 
 
-def test_gpt_image_2_passes_aspect_ratio_through():
-    """21:9 is in the unified schema but not in GPT Image 2's set — no local guard,
-    the request goes up and upstream rejects it."""
-    payload = _gpt().build_payload(GenerateImageInput(prompt="x", aspect_ratio="21:9"))
-    assert payload["aspect_ratio"] == "21:9"
+@pytest.mark.parametrize("aspect_ratio", ["21:9", "9:21", "3:1", "1:3"])
+def test_gpt_image_2_passes_new_aspect_ratios_through(aspect_ratio):
+    payload = _gpt().build_payload(GenerateImageInput(prompt="x", aspect_ratio=aspect_ratio))
+    assert payload["aspect_ratio"] == aspect_ratio

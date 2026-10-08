@@ -26,7 +26,7 @@
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `prompt` | string | 必填 | 图片描述 | 
-| `aspect_ratio` | string | `1:1` | 1:1、3:2、2:3、4:3、3:4、16:9、9:16 |
+| `aspect_ratio` | string | `1:1` | 1:1、3:2、2:3、4:3、3:4、16:9、9:16、21:9、9:21、3:1、1:3 |
 | `resolution` | string | `1K` | 分辨率档位：`1K` / `2K` / `4K`，其他取值（含空串）上游报参数错误 |
 | `quality` | string | `medium` | 生成质量：`low` / `medium` / `high` |
 | `reference_images` | list[url] | 可选 | 参考图 URL 数组，传入后进入图片编辑模式 |
@@ -37,7 +37,7 @@
 | 统一 Schema | API 字段 | 说明 |
 |---|---|---|
 | `resolution` | `resolution` | `1K` / `2K` / `4K` 原样下发——API 三档都是字面量，空串会被判参数错误（`resolution 参数必须为 '1K'、'2K' 或 '4K'`）；`3K` 无对应档位，原样下发由上游拒绝 |
-| `aspect_ratio` | `aspect_ratio` | 原样下发。统一 Schema 多出的 `21:9` 不在本模型取值集内，不做本地拦截，由上游拒绝 |
+| `aspect_ratio` | `aspect_ratio` | 原样下发。支持 1:1、3:2、2:3、4:3、3:4、16:9、9:16、21:9、9:21、3:1、1:3 |
 | `quality_tier` | `quality` | `fast` → `low`、`balanced` → `medium`、`best` → `high`。**本模型的 `quality_tier` 不只是路由偏好，选定模型后仍然生效**（同可灵的 `quality_tier` → `mode`）；`model_specific={"quality": ...}` 最后合并，可覆盖该映射 |
 | `watermark` / `n>1` | — | 不支持：两者均静默忽略，其余参数照常发送；`n>1` 仍只生成单张图片 |
 

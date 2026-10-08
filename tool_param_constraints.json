@@ -676,7 +676,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "enum", "options": ["auto", "doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash", "doubao-seedream-5-0-lite", "doubao-seedream-4-0", "doubao-seedream-4-5", "wan2.7-image", "cf-image-2", "cf2", "cf-pro", "cf-pro-official", "cf-pro-premium"], "default": "auto", "writable": "true" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3"], "default": "1:1", "writable": "true" },
         "resolution": { "type": "enum", "options": ["1K", "1.5K", "2K", "3K", "4K"], "default": "2K", "writable": "true", "note": "union of every image model's tiers; Seedream 5.0 Pro / Flash each support 1K/1.5K/2K, 5-0-lite and 4.5 support 2K/3K/4K, and 4.0 supports 1K/2K/3K/4K. An unsupported tier is rejected, not silently downgraded" },
         "reference_images": { "type": "url_array", "writable": "true" },
         "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas, and a typed-in coordinate is exactly the transcription this parameter exists to avoid. Only models with the region_edit capability accept it; passing it to another model is a hard error, never a silent whole-image edit" },
@@ -876,8 +876,8 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-image-2", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"], "default": "1:1", "writable": "true" },
-        "resolution": { "type": "enum", "options": ["1K", "2K", "4K"], "default": "2K", "writable": "true", "note": "1K is sent as \"\" (the API's own default tier); the unified schema's 3K has no counterpart here and is rejected upstream" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3"], "default": "1:1", "writable": "true" },
+        "resolution": { "type": "enum", "options": ["1K", "2K", "4K"], "default": "2K", "writable": "true", "note": "The API receives 1K / 2K / 4K verbatim; the unified schema's 3K has no counterpart here and is rejected upstream" },
         "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }], "default": "balanced", "writable": "true", "note": "maps to the API's quality: fast -> low, balanced -> medium, best -> high; IS meaningful here, not just routing" },
         "reference_images": { "type": "url_array", "writable": "true", "note": "presence switches to image-edit mode" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },

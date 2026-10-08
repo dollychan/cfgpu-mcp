@@ -42,7 +42,7 @@
 
 ## 响应结构
 
-与 `gpt-image-2` 一致，详见 [gpt-image-2/card.md](../gpt-image-2/card.md)。
+响应结构与 `gpt-image-2` 一致，详见 [gpt-image-2/card.md](../gpt-image-2/card.md)。参数支持范围以本卡为准。
 
 
 ## 约束与限制
