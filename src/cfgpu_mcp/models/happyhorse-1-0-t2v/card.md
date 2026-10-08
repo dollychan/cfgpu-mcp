@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `happyhorse-1.0-t2v` |
-| 能力标签 | text_to_video, image_to_video, multi_modal_reference |
+| 能力标签 | text_to_video |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -15,10 +15,10 @@
 | 能力 | 说明 |
 |------|------|
 | **text_to_video** | 纯文本生成视频 |
-| **image_to_video** | 首帧图片 + 文本生成视频 |
-| **multi_modal_reference** | 多张参考图片 + 文本生成视频 |
+| **image_to_video** | 请改用 `happyhorse-1.0-i2v` |
+| **multi_modal_reference** | 请改用 `happyhorse-1.0-r2v` |
 
-**不支持：** last_frame（尾帧）、reference_videos（参考视频）、reference_audios（参考音频）、480p 分辨率。
+**不支持：** 首帧、参考图片、尾帧、参考视频、参考音频。图生与参考生分别使用独立模型；支持 480P / 720P / 1080P。
 
 ## 参数说明
 
@@ -27,18 +27,16 @@
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `prompt` | string | ✓ | 视频描述文本 |
-| `first_frame` | string | | 首帧图片 URL |
-| `reference_images` | list[str] | | 参考图片 URL 列表；与 `first_frame` 互斥 |
 
 ### 视频输出参数
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `resolution` | string | `1080P` | 分辨率：`720P` 或 `1080P`，均可经 unified schema `resolution`（`720p` / `1080p`）传入，adapter 自动大写 |
+| `resolution` | string | `1080P` | 分辨率：`480P`、`720P` 或 `1080P`，adapter 自动大写 |
 | `aspect_ratio` | string | `16:9` | 宽高比，见下方表格；`adaptive` 将被忽略，使用 API 默认值 |
 | `duration_seconds` | integer | 5 | 视频时长（秒） |
-| `watermark` | boolean | `true` | 是否添加水印（统一 schema 参数，直接传入） |
-| `model_specific.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |
+| `watermark` | boolean | `false` | 写入 `parameters.watermark`；上游仅在省略时默认 `true` |
+| `model_specific.parameters.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |
 
 **支持的宽高比：**
 
@@ -49,10 +47,9 @@
 | `1:1` | 正方形 |
 | `4:3` | 传统比例 |
 | `3:4` | 竖版 |
-| `4:5` | 竖版（via model_specific） |
-| `5:4` | 横版（via model_specific） |
+| `4:5` / `5:4` / `9:21` / `21:9` | 官方支持的扩展比例 |
 
-注意：unified schema 中的 `21:9` 和 `adaptive` 不在 HappyHorse 支持列表中。`adaptive` 会被忽略（API 默认 `16:9`）；`21:9` 会直接透传，API 可能返回参数错误。
+`adaptive` 会被忽略，使用 API 默认的 `16:9`。
 
 ## 价格
 
@@ -70,47 +67,6 @@
   "model": "happyhorse-1.0-t2v",
   "input": {
     "prompt": "一座由硬纸板和瓶盖搭建的微型城市，在夜晚焕发出生机。一列硬纸板火车缓缓驶过，小灯点缀其间，照亮前路。"
-  },
-  "parameters": {
-    "resolution": "720P",
-    "ratio": "16:9",
-    "duration": 5
-  }
-}
-```
-
-### 图生视频（首帧）
-
-```json
-{
-  "model": "happyhorse-1.0-t2v",
-  "input": {
-    "prompt": "一只猫在草地上奔跑",
-    "media": [
-      {
-        "type": "first_frame",
-        "url": "https://example.com/cat.jpg"
-      }
-    ]
-  },
-  "parameters": {
-    "resolution": "720P",
-    "duration": 5
-  }
-}
-```
-
-### 参考图生视频
-
-```json
-{
-  "model": "happyhorse-1.0-t2v",
-  "input": {
-    "prompt": "身着红色旗袍的女性，镜头侧面中景，随后切换低角度仰拍",
-    "media": [
-      {"type": "reference_image", "url": "https://example.com/ref1.jpg"},
-      {"type": "reference_image", "url": "https://example.com/ref2.jpg"}
-    ]
   },
   "parameters": {
     "resolution": "720P",
@@ -179,12 +135,10 @@
 | 统一 Schema 字段 | HappyHorse 字段 | 映射说明 |
 |------------------|-----------------|----------|
 | `prompt` | `input.prompt` | 视频描述文本 |
-| `first_frame` | `input.media[].type=first_frame` | 首帧图片 |
-| `reference_images` | `input.media[].type=reference_image` | 参考图片；与 first_frame 互斥 |
 | `resolution` | `parameters.resolution` | `720p` → `720P`（uppercase） |
 | `aspect_ratio` | `parameters.ratio` | `adaptive` 时不传，API 默认 `16:9` |
 | `duration_seconds` | `parameters.duration` | 视频时长（秒） |
-| `watermark` | 顶层 `watermark` | 统一 schema 参数，直接映射到 payload 顶层 |
-| `model_specific` | `parameters.*` 或顶层 | 可传 `seed` 等额外参数 |
+| `watermark` | `parameters.watermark` | 统一 schema 默认 `false`；上游省略时默认 `true` |
+| `model_specific.parameters` | `parameters.*` | 与 typed parameters 深度合并，可传 `seed` |
 
 **不支持的统一 Schema 字段：** `last_frame`、`reference_videos`、`reference_audios`、`with_audio`（无音频控制）。

@@ -293,6 +293,32 @@ async def test_validate_only_returns_the_payload_the_real_call_would_send():
 
 
 @pytest.mark.asyncio
+async def test_wan_i2v_preflight_merges_model_specific_parameters():
+    """Wan controls passed through ``model_specific`` must reach the approval payload."""
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="分镜叙事",
+            model="wan2.6-i2v",
+            first_frame="https://example.com/first-frame.png",
+            duration_seconds=2,
+            model_specific={"parameters": {"seed": 12345, "shot_type": "multi"}},
+            validate_only=True,
+        )
+
+    client.post.assert_not_called()
+    assert result["payload"]["parameters"] == {
+        "resolution": "1080P",
+        "duration": 2,
+        "prompt_extend": True,
+        "watermark": False,
+        "seed": 12345,
+        "shot_type": "multi",
+    }
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("svc", "kwargs", "watermark_path"),
     [
@@ -793,8 +819,18 @@ def test_wan_2_6_and_2_7_fall_back_to_supported_resolution_and_ratio(model, extr
     result = validate_request(adapter, req)
 
     assert result["corrected_args"]["resolution"] == "720p"
-    assert result["corrected_args"]["aspect_ratio"] == "16:9"
-    assert result["payload"]["parameters"]["ratio"] == "16:9"
+    if model == "wan2.6-t2v":
+        assert result["corrected_args"]["aspect_ratio"] == "16:9"
+        assert result["payload"]["parameters"]["size"] == "1280*720"
+    elif model == "wan2.6-r2v":
+        assert result["corrected_args"]["aspect_ratio"] == "16:9"
+        assert result["payload"]["parameters"]["size"] == "1280*720"
+    elif model == "wan2.7-videoedit":
+        assert result["corrected_args"]["aspect_ratio"] == "16:9"
+        assert result["payload"]["parameters"]["ratio"] == "16:9"
+    else:
+        assert result["corrected_args"]["aspect_ratio"] == "16:9"
+        assert result["payload"]["parameters"]["ratio"] == "16:9"
 
 
 @pytest.mark.parametrize("model", ["wan2.6-i2v", "wan2.7-i2v"])

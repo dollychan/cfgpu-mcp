@@ -5,12 +5,15 @@ model_name: wan2.6-t2v
 
 task_type: video
 resolutions: [720p, 1080p]
+default_resolution: 720p
+min_duration_seconds: 2
 endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
 capabilities:
   - text_to_video
+  - audio_generate
 
 cost_tier: 3
 speed_tier: 2

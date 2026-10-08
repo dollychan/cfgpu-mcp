@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.6-t2v` |
-| 能力标签 | text_to_video |
+| 能力标签 | text_to_video, audio_generate |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -23,21 +23,25 @@
 
 | 能力 | 说明 |
 |------|------|
-| **text_to_video** | 纯文本生成视频 |
+| **text_to_video** | 文本提示词生成视频 |
+| **audio_generate** | 可自动生成配套音频，或使用一条驱动音频同步口型 |
 
-> 仅文生视频。input 仅含 `prompt`，无 media。
+> 不使用 `media` 数组；可选的驱动音频使用 `input.audio_url`。
 
 ## 参数说明
 
 | 统一 Schema 字段 | wan2.6-t2v 字段 | 映射说明 |
 |------------------|-----------------|----------|
 | prompt | input.prompt | 文本提示词，支持分镜描述 |
-| resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
-| aspect_ratio | parameters.ratio | `16:9` / `9:16` / `1:1` / `4:3` / `3:4`，默认 `16:9` |
+| resolution | parameters.size | `720p` → `1280*720`；`1080p` → `1920*1080` |
+| aspect_ratio | - | 此模型的公开规格仅提供 16:9 尺寸；`adaptive` 按 16:9 处理 |
+| reference_audios[0] | input.audio_url | 可选驱动音频；未提供时模型自动生成音频 |
+| negative_prompt | parameters.negative_prompt | 负向提示词 |
 | prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
-| model_specific | （顶层合并） | 透传额外参数 |
+| model_specific.parameters.shot_type | parameters.shot_type | `single` / `multi`；仅 `prompt_extend=true` 时生效 |
+| model_specific.parameters.seed | parameters.seed | 0–2147483647；与基础 parameters 深度合并 |
 
 ## 请求示例
 
@@ -48,8 +52,7 @@
     "prompt": "一段紧张刺激的侦探追查故事...第1个镜头[0-3秒] 全景：雨夜的纽约街头..."
   },
   "parameters": {
-    "resolution": "720P",
-    "ratio": "16:9",
+    "size": "1280*720",
     "prompt_extend": true,
     "watermark": false,
     "duration": 5
@@ -105,7 +108,7 @@
 
 | 限制项 | 值 |
 |--------|-----|
-| 输入 | 仅文本提示词（无 media） |
-| 视频时长 | 显式指定（不支持 -1 智能时长） |
+| 输入 | 文本及可选的一条 `audio_url`（无 media） |
+| 视频时长 | 2–15 秒整数（不支持 -1 智能时长） |
 | 输出视频格式 | mp4 |
 | 视频链接有效期 | 24 小时 |

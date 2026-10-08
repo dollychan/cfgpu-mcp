@@ -39,7 +39,8 @@
 | prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
-| model_specific | （顶层合并） | 透传额外参数 |
+| negative_prompt | input.negative_prompt | 最多 500 字符 |
+| model_specific.parameters.seed | parameters.seed | 0–2147483647；与基础 parameters 深度合并 |
 
 > 文生视频不带 `media` 数组。
 
@@ -106,7 +107,7 @@
 | 限制项 | 值 |
 |--------|-----|
 | 输入 | 仅文本提示词（无 media） |
-| 视频时长 | 显式指定（不支持 -1 智能时长） |
+| 视频时长 | 2–15 秒整数（不支持 -1 智能时长） |
 | 输出视频格式 | mp4 |
 | 视频链接有效期 | 24 小时 |
 

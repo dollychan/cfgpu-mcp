@@ -3,11 +3,12 @@ from cfgpu_mcp.adapters.happyhorse_video import HappyHorseVideoAdapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput
 
 
-def _make_adapter() -> HappyHorseVideoAdapter:
+def _make_adapter(adapter_id: str = "happyhorse-1-0-t2v") -> HappyHorseVideoAdapter:
+    model_id = adapter_id.replace("-1-0-", "-1.0-")
     config = {
-        "adapter_id": "happyhorse-1-0-t2v",
-        "display_name": "happyhorse-1.0-t2v",
-        "cfgpu_model_id": "happyhorse-1.0-t2v",
+        "adapter_id": adapter_id,
+        "display_name": model_id,
+        "cfgpu_model_id": model_id,
         "task_type": "video",
         "endpoint": "/video/generations",
         "is_async": True,
@@ -38,15 +39,15 @@ def test_resolution_uppercased():
     assert payload["parameters"]["resolution"] == "720P"
 
 
-def test_first_frame_in_media():
-    adapter = _make_adapter()
+def test_first_frame_in_media_for_i2v():
+    adapter = _make_adapter("happyhorse-1-0-i2v")
     req = GenerateVideoInput(prompt="x", first_frame="https://example.com/f.jpg")
     payload = adapter.build_payload(req)
     assert payload["input"]["media"] == [{"type": "first_frame", "url": "https://example.com/f.jpg"}]
 
 
-def test_reference_images_in_media():
-    adapter = _make_adapter()
+def test_reference_images_in_media_for_r2v():
+    adapter = _make_adapter("happyhorse-1-0-r2v")
     req = GenerateVideoInput(
         prompt="x",
         reference_images=["https://example.com/r1.jpg", "https://example.com/r2.jpg"],
@@ -82,21 +83,22 @@ def test_cfgpu_model_id_only_in_model_field():
 
 def test_model_specific_merged():
     adapter = _make_adapter()
-    req = GenerateVideoInput(prompt="x", model_specific={"watermark": False})
+    req = GenerateVideoInput(prompt="x", model_specific={"parameters": {"seed": 42}})
     payload = adapter.build_payload(req)
-    assert payload["watermark"] is False
+    assert payload["parameters"]["seed"] == 42
 
 
-def test_watermark_defaults_false_at_payload_top_level():
+def test_watermark_defaults_false_in_parameters():
     payload = _make_adapter().build_payload(GenerateVideoInput(prompt="x"))
-    assert payload["watermark"] is False
+    assert payload["parameters"]["watermark"] is False
+    assert "watermark" not in payload
 
 
 def test_explicit_true_watermark_is_preserved():
     payload = _make_adapter().build_payload(
         GenerateVideoInput(prompt="x", watermark=True)
     )
-    assert payload["watermark"] is True
+    assert payload["parameters"]["watermark"] is True
 
 
 # ── extract_task_id ──────────────────────────────────────────────────────────
@@ -272,12 +274,11 @@ def test_supports_rejects_reference_audios():
     assert "reference_audios" in reason
 
 
-def test_supports_rejects_480p():
+def test_supports_480p():
     adapter = _make_adapter()
     req = GenerateVideoInput(prompt="x", resolution="480p")
     ok, reason = adapter.supports(req)
-    assert ok is False
-    assert "720p" in reason
+    assert ok is True, reason
 
 
 def test_supports_rejects_first_frame_with_reference_images():
@@ -299,18 +300,26 @@ def test_supports_accepts_text_only():
     assert ok is True
 
 
-def test_supports_accepts_first_frame():
+def test_t2v_rejects_first_frame():
     adapter = _make_adapter()
     req = GenerateVideoInput(prompt="x", first_frame="https://example.com/f.jpg")
     ok, _ = adapter.supports(req)
-    assert ok is True
+    assert ok is False
 
 
-def test_supports_accepts_reference_images():
+def test_t2v_rejects_reference_images():
     adapter = _make_adapter()
     req = GenerateVideoInput(prompt="x", reference_images=["https://example.com/r.jpg"])
     ok, _ = adapter.supports(req)
-    assert ok is True
+    assert ok is False
+
+
+def test_i2v_allows_an_empty_prompt_and_omits_ratio():
+    adapter = _make_adapter("happyhorse-1-0-i2v")
+    req = GenerateVideoInput(prompt="", first_frame="https://example.com/f.jpg", aspect_ratio="9:16")
+    ok, reason = adapter.supports(req)
+    assert ok, reason
+    assert "ratio" not in adapter.build_payload(req)["parameters"]
 
 
 def test_supports_rejects_smart_duration():

@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.6-r2v` |
-| 能力标签 | multi_modal_reference |
+| 能力标签 | multi_modal_reference, audio_generate |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -33,12 +33,10 @@
 |------------------|-----------------|----------|
 | prompt | input.prompt | 文本提示词，可引用 character1 等 |
 | reference_videos + reference_images | input.reference_urls | 合并为一个 URL 列表（视频在前，图片在后） |
-| resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
-| aspect_ratio | parameters.ratio | `16:9` / `9:16` / `1:1` / `4:3` / `3:4`，默认 `16:9` |
-| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
+| resolution + aspect_ratio | parameters.size | 720P：`1280*720` / `720*1280` / `960*960`；1080P：`1920*1080` / `1080*1920` |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
-| model_specific | （顶层合并） | 透传额外参数 |
+| model_specific.parameters.shot_type | parameters.shot_type | `single` / `multi` |
 
 ## 请求示例
 
@@ -50,9 +48,7 @@
     "reference_urls": ["https://.../vace.mp4"]
   },
   "parameters": {
-    "resolution": "720P",
-    "ratio": "16:9",
-    "prompt_extend": true,
+    "size": "1280*720",
     "watermark": false,
     "duration": 5
   }
@@ -107,7 +103,7 @@
 
 | 限制项 | 值 |
 |--------|-----|
-| 必填输入 | 至少 1 个参考视频或参考图片 |
-| 视频时长 | 显式指定（不支持 -1 智能时长） |
+| 必填输入 | 至少 1 个参考视频或参考图片；总数最多 5，视频最多 3 |
+| 视频时长 | 2–10 秒整数（不支持 -1 智能时长） |
 | 输出视频格式 | mp4 |
 | 视频链接有效期 | 24 小时 |

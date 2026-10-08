@@ -25,7 +25,7 @@ HappyHorse-1.0-R2V 支持参考生视频，更加稳定的主体与场景参考�
 |------|------|
 | **multi_modal_reference** | 参考生视频：最多 9 张参考图片 + 文本生成视频，稳定保持主体与场景参考 |
 
-**不支持：** text_to_video（纯文生视频）、image_to_video（首帧图生视频）、last_frame（尾帧）、reference_videos、reference_audios、480p 分辨率。
+**不支持：** text_to_video（纯文生视频）、image_to_video（首帧图生视频）、last_frame（尾帧）、reference_videos、reference_audios。支持 480P / 720P / 1080P。
 
 ## 参数说明
 
@@ -40,11 +40,11 @@ HappyHorse-1.0-R2V 支持参考生视频，更加稳定的主体与场景参考�
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `resolution` | string | `1080P` | 分辨率：`720P` 或 `1080P`，adapter 自动大写 |
+| `resolution` | string | `1080P` | 分辨率：`480P`、`720P` 或 `1080P`，adapter 自动大写 |
 | `aspect_ratio` | string | `16:9` | 宽高比：16:9、9:16、1:1、4:3、3:4、4:5、5:4 |
 | `duration_seconds` | integer | 5 | 视频时长（秒） |
-| `watermark` | boolean | `true` | 是否添加水印（统一 schema 参数，直接传入） |
-| `model_specific.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |
+| `watermark` | boolean | `false` | 写入 `parameters.watermark`；上游仅在省略时默认 `true` |
+| `model_specific.parameters.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |
 
 ## 示例
 
@@ -150,7 +150,7 @@ curl -X GET https://www.cfgpu.com/userapi/v1/video/tasks/<TASK_ID> \
 | `resolution` | `parameters.resolution` | `720p` → `720P`（uppercase） |
 | `aspect_ratio` | `parameters.ratio` | `adaptive` 时不传，API 默认 `16:9` |
 | `duration_seconds` | `parameters.duration` | 视频时长（秒） |
-| `watermark` | 顶层 `watermark` | 统一 schema 参数，直接映射到 payload 顶层 |
-| `model_specific` | `parameters.*` 或顶层 | 可传 `seed` 等额外参数 |
+| `watermark` | `parameters.watermark` | 统一 schema 默认 `false`；上游省略时默认 `true` |
+| `model_specific.parameters` | `parameters.*` | 与 typed parameters 深度合并，可传 `seed` |
 
 **不支持的统一 Schema 字段：** `first_frame`、`last_frame`、`reference_videos`、`reference_audios`、`with_audio`。

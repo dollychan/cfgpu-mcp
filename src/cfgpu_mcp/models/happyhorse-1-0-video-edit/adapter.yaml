@@ -9,5 +9,8 @@ model_name: happyhorse-1.0-video-edit
 capabilities:
   - video_edit
 
+resolutions: [720p, 1080p]
+default_resolution: 1080p
+
 cost_tier: 2
 speed_tier: 3

@@ -9,5 +9,9 @@ model_name: happyhorse-1.0-r2v
 capabilities:
   - multi_modal_reference
 
+resolutions: [480p, 720p, 1080p]
+default_resolution: 1080p
+min_duration_seconds: 3
+
 cost_tier: 2
 speed_tier: 3

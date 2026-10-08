@@ -62,7 +62,7 @@ def test_minus_one_is_refused_with_the_models_own_range(video_adapters):
             prompt="x", duration_seconds=-1, aspect_ratio="16:9", **_scenario(adapter)
         ))
         assert not ok, adapter.model_name
-        assert f"4–{adapter.max_duration_seconds} seconds" in reason
+        assert f"{adapter.min_duration_seconds}–{adapter.max_duration_seconds} seconds" in reason
         assert reason.startswith(adapter.model_name)  # the public id, never adapter_id
 
 
@@ -75,3 +75,15 @@ def test_over_maximum_suggests_minus_one_only_where_it_is_accepted(video_adapter
         ))
         assert not ok, adapter.model_name
         assert ("or -1" in reason) == adapter.accepts_smart_duration, reason
+
+
+def test_two_second_duration_is_available_to_documented_wan_models(video_adapters):
+    """The shared schema permits 2 seconds; adapters retain their own lower bound."""
+    for adapter in video_adapters:
+        ok, _ = adapter.supports(GenerateVideoInput(
+            prompt="x", duration_seconds=2, aspect_ratio="16:9", **_scenario(adapter)
+        ))
+        assert ok == (adapter.model_name in {
+            "wan2.7-i2v", "wan2.6-i2v", "wan2.6-t2v", "wan2.6-r2v",
+            "wan2.7-t2v", "wan2.7-r2v", "wan2.7-videoedit",
+        }), adapter.model_name

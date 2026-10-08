@@ -11,8 +11,9 @@
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "enum", "options": ["auto", "wan-video", "wan-video-fast", "doubao-seedance-1-5-pro", "doubao-seedance-2-0", "doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini","doubao-seedance-2-5", "happyhorse-1.0-t2v", "happyhorse-1.0-i2v", "happyhorse-1.0-r2v", "happyhorse-1.0-video-edit", "kling-video-o1", "kling-v3-omni", "wan2.7-t2v", "wan2.7-i2v", "wan2.7-r2v", "wan2.7-videoedit", "wan2.6-t2v", "wan2.6-i2v", "wan2.6-r2v", "cf-imagine-video", "cf-imagine-video-1.5","cfdream/minimax-h3","cfdream/minimax-h3-r2v","MiniMax-H3"], "default": "auto", "writable": "true" },
         "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"], "default": "adaptive", "writable": "true" },
-        "resolution": { "type": "enum", "options": ["480p", "720p", "768p", "1080p", "2k", "4k"], "default": null, "writable": "true", "note": "null uses the resolved model default (720p for every model except MiniMax-H3, whose default is 768p); this is the union of every model's tiers, so a value here also narrows routing — only Doubao Seedance 2.0 offers 4k and only MiniMax-H3 offers 768p/2k" },
-        "duration_seconds": { "type": "enum", "options": [-1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30], "default": null, "writable": "true", "note": "null uses the resolved model default; -1 = smart/auto duration (WAN 2.0 / Doubao Seedance); 30s is Doubao Seedance 2.5 only, WAN 2.0 / Seedance 2.0 cap at 15 and Seedance 1.5 Pro at 12; HappyHorse requires an explicit 4-15" },
+        "resolution": { "type": "enum", "options": ["480p", "720p", "768p", "1080p", "2k", "4k"], "default": null, "writable": "true", "note": "null uses the resolved model default (typically 720p; wan2.6-i2v and wan2.7-i2v default to 1080p, MiniMax-H3 to 768p); this is the union of every model's tiers, so a value here also narrows routing — only Doubao Seedance 2.0 offers 4k and only MiniMax-H3 offers 768p/2k" },
+        "duration_seconds": { "type": "enum", "options": [-1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30], "default": null, "writable": "true", "note": "null uses the resolved model default; -1 = smart/auto duration (WAN 2.0 / Doubao Seedance); 2s is currently supported by wan2.6-i2v and wan2.7-i2v, 30s only by Doubao Seedance 2.5; each model validates its own range" },
+        "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "supported by selected video models; see the fixed-model entry for its upstream mapping" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
         "first_frame": { "type": "url", "writable": "true" },
         "last_frame": { "type": "url", "writable": "true" },
@@ -122,20 +123,18 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1.0-t2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "21:9 and adaptive NOT supported; 4:5 and 5:4 available only via model_specific" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "480p NOT supported (adapter rejects); value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
-        "first_frame": { "type": "url", "writable": "true" },
-        "reference_images": { "type": "url_array", "maxItems": 9, "writable": "true" },
-        "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (true)" },
+        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio; adaptive uses the API default 16:9" },
+        "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "1080p", "writable": "true", "note": "uppercased for the API" },
+        "duration_seconds": { "type": "enum", "options": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 3-15 only; -1 is unsupported" },
+        "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark (upstream default is true only when omitted)" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
           "type": "object",
-          "note": "4:5 / 5:4 aspect ratios can only be set here (1080P is now reachable via the unified resolution arg)",
+          "note": "parameters is deep-merged with typed parameters; use parameters.ratio for upstream-only 4:5, 5:4, or 9:21",
           "fields": {
-            "seed": { "type": "integer", "min": 0, "max": 2147483647 }
+            "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "min": 0, "max": 2147483647 }, "ratio": { "type": "enum", "options": ["4:5", "5:4", "9:21"] } } }
           }
         }
       }
@@ -150,14 +149,15 @@
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.7-t2v", "writable": "false" },
         "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
+        "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 2-15 only; -1 is unsupported" },
+        "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to input.negative_prompt" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "prompt_extend": { "type": "boolean", "default": true, "writable": "true", "note": "mapped to parameters.prompt_extend; LLM prompt expansion may add latency" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level; no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
       }
     },
     {
@@ -165,19 +165,23 @@
       "modelId": "wan2.7-i2v",
       "modelName": "wan2.7-i2v",
       "displayName": "万相 2.7 (图生视频)",
-      "note": "Image-to-video; first_frame required. input.media=[{type:first_frame,url}]. watermark / prompt_extend map into parameters; aspect_ratio / with_audio are unused.",
+      "note": "Image-to-video and continuation. Supply exactly one first_frame or one reference_videos item (mapped to first_clip); optional last_frame, and one reference_audios item (mapped to driving_audio) only with first_frame. aspect_ratio / with_audio are unused.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.7-i2v", "writable": "false" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
+        "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 2-15 only; -1 (smart) NOT supported" },
+        "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to input.negative_prompt" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "prompt_extend": { "type": "boolean", "default": true, "writable": "true", "note": "mapped to parameters.prompt_extend; LLM prompt expansion may add latency" },
-        "first_frame": { "type": "url", "writable": "true", "note": "required (image-to-video)" },
+        "first_frame": { "type": "url", "writable": "true", "note": "use exactly one of first_frame or reference_videos[0]" },
+        "last_frame": { "type": "url", "writable": "true", "note": "mapped to media type=last_frame; allowed with first_frame or first_clip" },
+        "reference_audios": { "type": "url_array", "maxItems": 1, "writable": "true", "note": "mapped to media type=driving_audio; allowed only with first_frame" },
+        "reference_videos": { "type": "url_array", "maxItems": 1, "writable": "true", "note": "single source video mapped to media type=first_clip for continuation" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level; no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647, "note": "mapped to parameters.seed; same seed produces similar, not identical, output" } } } }, "note": "parameters is deep-merged with the typed Wan parameters; other top-level keys are passed through" }
       }
     },
     {
@@ -185,21 +189,24 @@
       "modelId": "wan2.7-r2v",
       "modelName": "wan2.7-r2v",
       "displayName": "万相 2.7 (参考生视频)",
-      "note": "Reference-to-video; requires >=1 reference_video or reference_image. input.media carries type=reference_video then reference_image. aspect_ratio / watermark / prompt_extend map into parameters; with_audio / first_frame / reference_audios are unused.",
+      "note": "Reference-to-video; requires >=1 reference_video or reference_image. An optional first_frame is sent as media type=first_frame; media count is at most 5. A request containing reference video is limited to 2-10 seconds.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.7-r2v", "writable": "false" },
         "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
+        "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "2-15 for image references; 2-10 when a reference video is supplied" },
+        "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to input.negative_prompt" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "prompt_extend": { "type": "boolean", "default": true, "writable": "true", "note": "mapped to parameters.prompt_extend; LLM prompt expansion may add latency" },
         "reference_videos": { "type": "url_array", "writable": "true", "note": "mapped to media type=reference_video (listed before reference images)" },
         "reference_images": { "type": "url_array", "writable": "true", "note": "mapped to media type=reference_image" },
+        "first_frame": { "type": "url", "writable": "true", "note": "optional; mapped to media type=first_frame" },
+        "reference_audios": { "type": "url_array", "maxItems": 5, "writable": "true", "note": "voice samples; item N maps to reference_video/reference_image N as media[].reference_voice" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level; no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
       }
     },
     {
@@ -207,21 +214,22 @@
       "modelId": "wan2.7-videoedit",
       "modelName": "wan2.7-videoedit",
       "displayName": "万相 2.7 (视频编辑)",
-      "note": "Video edit; requires exactly 1 source video in reference_videos plus optional reference_images. aspect_ratio / watermark / prompt_extend map into parameters; with_audio / first_frame / reference_audios are unused.",
+      "note": "Video edit; requires exactly 1 source video plus at most 4 reference images. Omitted aspect_ratio preserves the source ratio; omitted duration preserves the complete source clip.",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "edit instruction, e.g. 将视频中女孩的衣服替换为图片中的衣服" },
         "model": { "type": "string", "value": "wan2.7-videoedit", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4"], "default": "adaptive", "writable": "true", "note": "only explicit values map to parameters.ratio; adaptive preserves the source ratio" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
+        "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10], "writable": "true", "note": "omitted = preserve full source video; explicit 2-10 = truncate" },
+        "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to input.negative_prompt" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "prompt_extend": { "type": "boolean", "default": true, "writable": "true", "note": "mapped to parameters.prompt_extend; LLM prompt expansion may add latency" },
         "reference_videos": { "type": "url_array", "maxItems": 1, "writable": "true", "note": "the single source video to edit (mapped to media type=video); required" },
-        "reference_images": { "type": "url_array", "writable": "true", "note": "reference images driving the edit (mapped to media type=reference_image)" },
+        "reference_images": { "type": "url_array", "maxItems": 4, "writable": "true", "note": "reference images driving the edit (mapped to media type=reference_image)" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level; no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 }, "audio_setting": { "type": "enum", "options": ["auto", "origin"] } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
       }
     },
     {
@@ -229,19 +237,21 @@
       "modelId": "wan2.6-t2v",
       "modelName": "wan2.6-t2v",
       "displayName": "万相 2.6 (文生视频)",
-      "note": "Text-to-video. Flat input envelope: input={prompt} (no media array). aspect_ratio / watermark / prompt_extend map into parameters; with_audio is unused.",
+      "note": "Text-to-video. input={prompt, audio_url?}; resolution maps to parameters.size. No media array.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.6-t2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9"], "default": "16:9", "writable": "true", "note": "the published size choices are 16:9 only" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "maps to parameters.size (1280*720 / 1920*1080)" },
+        "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 2-15 only; -1 is unsupported" },
+        "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to parameters.negative_prompt" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "prompt_extend": { "type": "boolean", "default": true, "writable": "true", "note": "mapped to parameters.prompt_extend; LLM prompt expansion may add latency" },
+        "reference_audios": { "type": "url_array", "maxItems": 1, "writable": "true", "note": "first item maps to input.audio_url" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level; no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 }, "shot_type": { "type": "enum", "options": ["single", "multi"] } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
       }
     },
     {
@@ -249,12 +259,13 @@
       "modelId": "wan2.6-i2v",
       "modelName": "wan2.6-i2v",
       "displayName": "万相 2.6 (图生视频)",
-      "note": "Image-to-video; first_frame required. Flat input uses input.img_url plus optional input.audio_url. watermark / prompt_extend map into parameters; aspect_ratio / with_audio / last_frame / reference_images / reference_videos are unused.",
+      "note": "Image-to-video; first_frame required. Flat input uses input.img_url, optional input.audio_url, and optional input.negative_prompt. aspect_ratio / with_audio / last_frame / reference_images / reference_videos are unused; parameters.audio is Flash-only and is not sent for this model.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.6-i2v", "writable": "false" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
+        "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 2-15 only; -1 (smart) NOT supported" },
+        "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to input.negative_prompt" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "prompt_extend": { "type": "boolean", "default": true, "writable": "true", "note": "mapped to parameters.prompt_extend; LLM prompt expansion may add latency" },
         "first_frame": { "type": "url", "writable": "true", "note": "required; mapped to input.img_url" },
@@ -262,7 +273,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level; no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647, "note": "mapped to parameters.seed; same seed produces similar, not identical, output" }, "shot_type": { "type": "enum", "options": ["single", "multi"], "note": "mapped to parameters.shot_type; only effective when prompt_extend=true" } } } }, "note": "parameters is deep-merged with the typed Wan parameters; other top-level keys are passed through" }
       }
     },
     {
@@ -270,21 +281,20 @@
       "modelId": "wan2.6-r2v",
       "modelName": "wan2.6-r2v",
       "displayName": "万相 2.6 (参考生视频)",
-      "note": "Reference-to-video; requires >=1 reference_video or reference_image. Flat input merges them into input.reference_urls. aspect_ratio / watermark / prompt_extend map into parameters; with_audio / first_frame / reference_audios are unused.",
+      "note": "Reference-to-video; 1-5 total reference URLs (at most 3 videos) merge into input.reference_urls. resolution plus aspect_ratio map to parameters.size.",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "may refer to reference subjects as character1, etc." },
         "model": { "type": "string", "value": "wan2.6-r2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1"], "default": "16:9", "writable": "true", "note": "maps with resolution to parameters.size" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "maps with ratio to parameters.size" },
+        "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10], "default": 5, "writable": "true", "note": "explicit 2-10 only; -1 is unsupported" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
-        "prompt_extend": { "type": "boolean", "default": true, "writable": "true", "note": "mapped to parameters.prompt_extend; LLM prompt expansion may add latency" },
-        "reference_videos": { "type": "url_array", "writable": "true", "note": "merged into input.reference_urls (listed before reference images)" },
-        "reference_images": { "type": "url_array", "writable": "true", "note": "merged into input.reference_urls" },
+        "reference_videos": { "type": "url_array", "maxItems": 3, "writable": "true", "note": "merged into input.reference_urls (listed before reference images)" },
+        "reference_images": { "type": "url_array", "maxItems": 5, "writable": "true", "note": "combined image/video total is capped at 5" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level; no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "shot_type": { "type": "enum", "options": ["single", "multi"] } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
       }
     },
     {
@@ -416,24 +426,22 @@
       "modelId": "happyhorse-1.0-i2v",
       "modelName": "happyhorse-1.0-i2v",
       "displayName": "happyhorse-1.0-i2v",
-      "note": "Image-to-video variant of HappyHorse (shares the t2v adapter's validation): a first_frame, or up to 9 reference_images (mutually exclusive).",
+      "note": "Image-to-video: exactly one first_frame. Prompt is optional and output ratio follows the input image.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1.0-i2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "21:9 and adaptive NOT supported; 4:5 and 5:4 available only via model_specific" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "480p NOT supported (adapter rejects); value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
+        "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "1080p", "writable": "true", "note": "uppercased for the API" },
+        "duration_seconds": { "type": "enum", "options": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 3-15 only; -1 is unsupported" },
         "first_frame": { "type": "url", "writable": "true" },
-        "reference_images": { "type": "url_array", "maxItems": 9, "writable": "true", "note": "mutually exclusive with first_frame" },
-        "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (true)" },
+        "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
           "type": "object",
-          "note": "4:5 / 5:4 aspect ratios can only be set here",
+          "note": "parameters is deep-merged with typed parameters",
           "fields": {
-            "seed": { "type": "integer", "min": 0, "max": 2147483647 }
+            "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "min": 0, "max": 2147483647 } } }
           }
         }
       }
@@ -443,24 +451,23 @@
       "modelId": "happyhorse-1.0-r2v",
       "modelName": "happyhorse-1.0-r2v",
       "displayName": "happyhorse-1.0-r2v",
-      "note": "Reference-to-video variant of HappyHorse (shares the t2v adapter's validation): up to 9 reference_images.",
+      "note": "Reference-to-video: prompt plus 1-9 reference images; image/video inputs use a dedicated model.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1.0-r2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "21:9 and adaptive NOT supported; 4:5 and 5:4 available only via model_specific" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "480p NOT supported (adapter rejects); value is uppercased to 720P/1080P for the API" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) NOT supported (adapter rejects)" },
-        "first_frame": { "type": "url", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio; adaptive uses 16:9" },
+        "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "1080p", "writable": "true", "note": "uppercased for the API" },
+        "duration_seconds": { "type": "enum", "options": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 3-15 only; -1 is unsupported" },
         "reference_images": { "type": "url_array", "maxItems": 9, "writable": "true" },
-        "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (true)" },
+        "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
           "type": "object",
-          "note": "4:5 / 5:4 aspect ratios can only be set here",
+          "note": "parameters is deep-merged with typed parameters",
           "fields": {
-            "seed": { "type": "integer", "min": 0, "max": 2147483647 }
+            "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "min": 0, "max": 2147483647 }, "ratio": { "type": "enum", "options": ["4:5", "5:4", "9:21"] } } }
           }
         }
       }
@@ -474,17 +481,18 @@
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "edit instruction" },
         "model": { "type": "string", "value": "happyhorse-1.0-video-edit", "writable": "false" },
-        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "480p NOT supported (adapter rejects); value is uppercased to 720P/1080P for the API" },
+        "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
         "reference_videos": { "type": "url_array", "maxItems": 1, "writable": "true", "note": "the single source video to edit (required)" },
         "reference_images": { "type": "url_array", "maxItems": 5, "writable": "true" },
-        "watermark": { "type": "boolean", "writable": "true", "note": "null = use model default (true)" },
+        "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
           "type": "object",
+          "note": "parameters is deep-merged with typed parameters",
           "fields": {
-            "seed": { "type": "integer", "min": 0, "max": 2147483647 }
+            "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "min": 0, "max": 2147483647 }, "audio_setting": { "type": "enum", "options": ["auto", "origin"] } } }
           }
         }
       }

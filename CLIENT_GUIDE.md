@@ -578,7 +578,7 @@ cfgpu generate video "..." \
 
 # HappyHorse — 多参考图生视频（multi_modal_reference）
 cfgpu generate video "身着旗袍的女性，低角度仰拍" \
-  --model happyhorse-1-0-t2v \
+  --model happyhorse-1-0-r2v \
   --reference-images https://example.com/ref1.jpg \
   --reference-images https://example.com/ref2.jpg
 
@@ -602,9 +602,16 @@ cfgpu generate video "跟随参考视频运镜" --model kling-v3-omni -r 1080p \
 cfgpu generate video "侦探追查故事：第1个镜头[0-3秒]雨夜街头...第2个镜头[3-6秒]..." \
   --model wan-2-7-t2v -r 720p -d 5
 
-# 万相 2.7（wan-2-7-i2v）— 仅图生视频，必须提供首帧；需显式时长（不支持 -1 智能时长）
+# 万相 2.7（wan-2-7-i2v）— 图生视频（首帧，可选尾帧/驱动音频）或视频续生（一个源视频，可选尾帧）；需显式 2–15 秒时长
 cfgpu generate video "一只猫在草地上奔跑" \
   --model wan-2-7-i2v --first-frame https://example.com/cat.jpg -r 720p -d 5
+# 音频驱动口型：reference_audios 映射为 driving_audio
+cfgpu generate video "少年跟随说唱音频演唱" \
+  --model wan-2-7-i2v --first-frame https://example.com/rap.png \
+  --reference-audios https://example.com/rap.mp3 --last-frame https://example.com/end.png -d 5
+# 视频续生：唯一的 reference_videos 项映射为 first_clip
+cfgpu generate video "女孩继续向前走出画面" \
+  --model wan-2-7-i2v --reference-videos https://example.com/source.mp4 -d 10
 
 # 万相 2.7（wan-2-7-r2v）— 参考生视频，需 ≥1 个参考视频/图片；提示词可引用「视频1」「图片3」
 cfgpu generate video "视频2抱着图片3在咖啡厅弹民谣，视频1笑着看着视频2" \
@@ -621,7 +628,8 @@ cfgpu generate video "将视频中女孩的衣服替换为图片中的衣服" \
 
 # 万相 2.6 — 与 2.7 的 input 形态不同（扁平字段，非 media 数组），但 CLI 用法一致
 cfgpu generate video "侦探追查故事，电影级分镜..." --model wan-2-6-t2v -r 720p -d 5
-# 2.6 图生视频：首帧 → img_url，可选音频（reference_audios[0]）→ audio_url（如音频驱动 rap）
+# 2.6 图生视频：首帧 → img_url，可选音频（reference_audios[0]）→ audio_url（如音频驱动 rap）；支持 2–15 秒，默认 1080P
+# 多镜头仅在 prompt_extend=true 时生效：model_specific={"parameters":{"shot_type":"multi"}}
 cfgpu generate video "少年说唱 rap" --model wan-2-6-i2v \
   --first-frame https://example.com/rap.png \
   --reference-audios https://example.com/rap.mp3 -r 720p -d 5

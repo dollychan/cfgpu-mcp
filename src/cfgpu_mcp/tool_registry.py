@@ -550,8 +550,8 @@ class GenerateImageInput(BaseModel):
     n: int = Field(
         default=1,
         description="How many images to generate. 1–15 globally; individual models can "
-        "have a lower limit. For `cf-image-2`, 1–10 is an output ceiling. Seedream "
-        "and Wan image-set models also treat it as a ceiling for a related group, so "
+        "have a lower limit. Some image models treat 1–10 as an output ceiling; "
+        "Seedream and Wan image-set models also treat it as a ceiling for a related group, so "
         "they may return fewer images. Only models with the `multi_image_group` "
         "capability can produce more than one image. On Seedream group models the input "
         "reference images plus generated images must total at most 15.",
@@ -670,7 +670,7 @@ class GenerateVideoInput(BaseModel):
     duration_seconds: Optional[int] = Field(
         default=None,
         description="Video duration in seconds. None uses the selected model's default "
-        "and explicit values must be 4–30 or -1. Each model has its own maximum. -1 "
+        "and explicit values must be 2–30 or -1. Each model has its own range. -1 "
         "lets the model choose the length and is accepted only by the Seedance family; "
         "for every other model, write the number of seconds explicitly.",
     )
@@ -681,12 +681,18 @@ class GenerateVideoInput(BaseModel):
         # 30 is the fleet-wide maximum (Doubao Seedance 2.5); narrower per-model
         # ceilings are enforced by each adapter's supports(), so model="auto" can
         # route around them instead of hard-failing here.
-        if v is not None and v != -1 and not (4 <= v <= 30):
+        if v is not None and v != -1 and not (2 <= v <= 30):
             raise ValueError(
-                f"duration_seconds={v} is out of range. Use 4–30 seconds, or -1 for a "
+                f"duration_seconds={v} is out of range. Use 2–30 seconds, or -1 for a "
                 f"model-chosen duration where supported by the selected model."
             )
         return v
+    negative_prompt: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="Content to exclude from the output. Supported by selected models; "
+        "compatible video models send it in their input envelope.",
+    )
     aspect_ratio: Folded("16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive", ratio=True) = Field(
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",

@@ -31,9 +31,10 @@ class WanVideoAdapter(ModelAdapter):
       ``extract_task_id`` / ``extract_status`` / ``parse_response`` read the
       ``output`` envelope, tolerating both key casings.
 
-    This base class is 万相 2.7 图生视频 (``wan2.7-i2v``): image-to-video only, a
-    first-frame image is required. Siblings override ``_build_input`` (or the
-    ``_build_media`` helper it uses) and ``supports``.
+    This base class is 万相 2.7 图生视频 (``wan2.7-i2v``). It accepts a first
+    frame (optionally with a final frame and driving audio), or a source clip for
+    continuation (optionally with a final frame). Siblings override
+    ``_build_input`` (or the ``_build_media`` helper it uses) and ``supports``.
     """
 
     adapter_id = "wan-2-7-i2v"
@@ -72,12 +73,29 @@ class WanVideoAdapter(ModelAdapter):
         return resp.get("output") or {}
 
     def _build_media(self, req: "GenerateVideoInput") -> list[dict]:
-        """万相 2.7 image-to-video: a single first-frame image."""
-        return [{"type": "first_frame", "url": req.first_frame}]
+        """Build the documented Wan 2.7 i2v media combinations.
+
+        ``reference_videos`` is intentionally the continuation-source slot for
+        this adapter only: the unified schema has no separate ``first_clip``
+        field. ``supports`` constrains it to exactly one clip, so it cannot be
+        mistaken for Wan's multi-video reference-to-video model.
+        """
+        media: list[dict] = []
+        if req.first_frame:
+            media.append({"type": "first_frame", "url": req.first_frame})
+        elif req.reference_videos:
+            media.append({"type": "first_clip", "url": req.reference_videos[0]})
+        if req.last_frame:
+            media.append({"type": "last_frame", "url": req.last_frame})
+        if req.reference_audios:
+            media.append({"type": "driving_audio", "url": req.reference_audios[0]})
+        return media
 
     def _build_input(self, req: "GenerateVideoInput") -> dict:
         """Build the ``input`` object. 万相 2.7 default: prompt + optional media array."""
         inp: dict = {"prompt": req.prompt}
+        if req.negative_prompt:
+            inp["negative_prompt"] = req.negative_prompt
         media = self._build_media(req)
         if media:                                   # omit entirely for text-to-video
             inp["media"] = media
@@ -100,8 +118,25 @@ class WanVideoAdapter(ModelAdapter):
             "input": self._build_input(req),
             "parameters": parameters,
         }
-        if req.model_specific:
-            payload.update(req.model_specific)
+        return self._merge_model_specific(payload, req)
+
+    @staticmethod
+    def _merge_model_specific(payload: dict, req: "GenerateVideoInput") -> dict:
+        """Deep-merge the documented ``parameters`` escape hatch.
+
+        Every Wan video endpoint puts its advanced controls in ``parameters``.  A
+        shallow ``payload.update`` here would replace the typed controls when a
+        caller sets (for example) ``seed`` or ``shot_type``.
+        """
+        if not req.model_specific:
+            return payload
+        overrides = dict(req.model_specific)
+        parameter_overrides = overrides.pop("parameters", None)
+        if isinstance(parameter_overrides, dict):
+            payload.setdefault("parameters", {}).update(parameter_overrides)
+        elif parameter_overrides is not None:
+            overrides["parameters"] = parameter_overrides
+        payload.update(overrides)
         return payload
 
     def extract_task_id(self, resp: dict) -> str | None:
@@ -122,7 +157,7 @@ class WanVideoAdapter(ModelAdapter):
     def parse_response(self, resp: dict) -> NormalizedResult:
         output = self._output(resp)
         usage = resp.get("usage") or {}
-        video_url = output.get("videoUrl")
+        video_url = output.get("videoUrl") or output.get("video_url")
         return NormalizedResult(
             urls=[video_url] if video_url else [],
             expires_at=_default_expires_at(),
@@ -138,12 +173,21 @@ class WanVideoAdapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
-        if not req.first_frame:
-            return False, f"{self.adapter_id} is an image-to-video model and requires first_frame"
-        if req.last_frame:
-            return False, f"{self.adapter_id} does not support last_frame (first_frame only)"
-        if req.reference_images or req.reference_videos or req.reference_audios:
-            return False, f"{self.adapter_id} supports image-to-video only (no reference media)"
+        has_first_frame = bool(req.first_frame)
+        has_first_clip = bool(req.reference_videos)
+        if has_first_frame == has_first_clip:
+            return False, (
+                f"{self.adapter_id} requires exactly one first_frame or source video "
+                "(reference_videos[0] maps to first_clip)"
+            )
+        if req.reference_images:
+            return False, f"{self.adapter_id} does not support reference_images"
+        if req.reference_videos and len(req.reference_videos) != 1:
+            return False, f"{self.adapter_id} accepts exactly one source video (first_clip)"
+        if req.reference_audios and len(req.reference_audios) != 1:
+            return False, f"{self.adapter_id} accepts at most one driving audio track"
+        if has_first_clip and req.reference_audios:
+            return False, f"{self.adapter_id} supports driving audio only with first_frame"
         return True, ""
 
     def estimate_poll_timeout(self, req: "GenerateImageInput | GenerateVideoInput") -> int:
@@ -172,6 +216,13 @@ class WanVideoR2VAdapter(WanVideoAdapter):
             media.append({"type": "reference_video", "url": url})
         for url in (req.reference_images or []):
             media.append({"type": "reference_image", "url": url})
+        # The upstream attaches a voice sample to an individual reference item.
+        # Preserve the unified list's order: audio N belongs to the Nth reference
+        # video/image (the optional first frame is not a character reference).
+        for item, voice_url in zip(media, req.reference_audios or []):
+            item["reference_voice"] = voice_url
+        if req.first_frame:
+            media.append({"type": "first_frame", "url": req.first_frame})
         return media
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
@@ -180,12 +231,17 @@ class WanVideoR2VAdapter(WanVideoAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
-        if req.first_frame or req.last_frame:
-            return False, f"{self.adapter_id} is a reference-to-video model (use reference_videos/reference_images, not first/last_frame)"
-        if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
+        if req.last_frame:
+            return False, f"{self.adapter_id} does not support last_frame"
         if not (req.reference_videos or req.reference_images):
             return False, f"{self.adapter_id} requires at least one reference_video or reference_image"
+        if len(req.reference_audios or []) > len(req.reference_videos or []) + len(req.reference_images or []):
+            return False, f"{self.adapter_id} accepts at most one reference_voice per reference media item"
+        media_count = len(req.reference_videos or []) + len(req.reference_images or []) + bool(req.first_frame)
+        if media_count > 5:
+            return False, f"{self.adapter_id} accepts at most 5 media items (including first_frame)"
+        if req.reference_videos and self.resolve_duration_seconds(req) > 10:
+            return False, f"{self.adapter_id} accepts durations of 2–10 seconds when reference_videos are supplied"
         return True, ""
 
 
@@ -224,6 +280,40 @@ class WanVideoEditAdapter(WanVideoAdapter):
 
     adapter_id = "wan-2-7-videoedit"
 
+    def _uses_ratio(self) -> bool:
+        # Omitted ratio preserves the source video's aspect ratio.  It is not the
+        # Wan 2.7 T2V/R2V default of 16:9.
+        return False
+
+    def validation_corrections(self, req: "GenerateVideoInput") -> dict:
+        corrected = super().validation_corrections(req)
+        # Keep the source ratio for the unified default ``adaptive``.  An explicit
+        # unsupported ratio, however, can use the same safe 16:9 preflight fallback
+        # as the other Wan 2.7 endpoints.
+        if req.aspect_ratio != "adaptive" and req.aspect_ratio not in self._ALLOWED_RATIOS:
+            corrected["aspect_ratio"] = "16:9"
+        return corrected
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
+        assert isinstance(req, GenerateVideoInput)
+        parameters: dict = {
+            "resolution": self.resolve_resolution(req).upper(),
+            "prompt_extend": req.prompt_extend,
+            "watermark": req.watermark,
+        }
+        if req.aspect_ratio in self._ALLOWED_RATIOS:
+            parameters["ratio"] = req.aspect_ratio
+        # The upstream default is zero (= retain the complete source clip).  Do
+        # not silently crop it by turning the unified omitted value into 5 seconds.
+        if req.duration_seconds is not None:
+            parameters["duration"] = req.duration_seconds
+        payload = {
+            "model": self.cfgpu_model_id,
+            "input": self._build_input(req),
+            "parameters": parameters,
+        }
+        return self._merge_model_specific(payload, req)
+
     def _build_media(self, req: "GenerateVideoInput") -> list[dict]:
         media: list[dict] = []
         for url in (req.reference_videos or []):
@@ -246,6 +336,10 @@ class WanVideoEditAdapter(WanVideoAdapter):
             return False, f"{self.adapter_id} requires a source video (reference_videos)"
         if len(req.reference_videos) > 1:
             return False, f"{self.adapter_id} accepts a single source video"
+        if req.reference_images and len(req.reference_images) > 4:
+            return False, f"{self.adapter_id} accepts at most 4 reference_images"
+        if req.aspect_ratio != "adaptive" and req.aspect_ratio not in self._ALLOWED_RATIOS:
+            return False, f"{self.adapter_id} does not support aspect_ratio {req.aspect_ratio}"
         return True, ""
 
 
@@ -258,8 +352,30 @@ class Wan26VideoT2VAdapter(WanVideoAdapter):
 
     adapter_id = "wan-2-6-t2v"
 
+    _SIZES = {
+        "720p": "1280*720",
+        "1080p": "1920*1080",
+    }
+
     def _build_input(self, req: "GenerateVideoInput") -> dict:
-        return {"prompt": req.prompt}
+        inp = {"prompt": req.prompt}
+        if req.reference_audios:
+            inp["audio_url"] = req.reference_audios[0]
+        return inp
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
+        assert isinstance(req, GenerateVideoInput)
+        parameters: dict = {
+            "size": self._SIZES[self.resolve_resolution(req)],
+            "duration": self.resolve_duration_seconds(req),
+            "prompt_extend": req.prompt_extend,
+            "watermark": req.watermark,
+        }
+        if req.negative_prompt:
+            parameters["negative_prompt"] = req.negative_prompt
+        return self._merge_model_specific(
+            {"model": self.cfgpu_model_id, "input": self._build_input(req), "parameters": parameters}, req
+        )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
         ok, reason = self._supports_common(req)
@@ -268,8 +384,12 @@ class Wan26VideoT2VAdapter(WanVideoAdapter):
         assert isinstance(req, GenerateVideoInput)
         if req.first_frame or req.last_frame:
             return False, f"{self.adapter_id} is a text-to-video model (no first/last_frame)"
-        if req.reference_images or req.reference_videos or req.reference_audios:
+        if req.reference_images or req.reference_videos:
             return False, f"{self.adapter_id} is a text-to-video model (no reference media)"
+        if req.reference_audios and len(req.reference_audios) > 1:
+            return False, f"{self.adapter_id} accepts at most one driving audio track"
+        if req.aspect_ratio not in {"adaptive", "16:9"}:
+            return False, f"{self.adapter_id} supports only 16:9 output (parameters.size)"
         return True, ""
 
 
@@ -286,6 +406,8 @@ class Wan26VideoI2VAdapter(WanVideoAdapter):
 
     def _build_input(self, req: "GenerateVideoInput") -> dict:
         inp: dict = {"prompt": req.prompt, "img_url": req.first_frame}
+        if req.negative_prompt:
+            inp["negative_prompt"] = req.negative_prompt
         if req.reference_audios:
             inp["audio_url"] = req.reference_audios[0]
         return inp
@@ -318,9 +440,29 @@ class Wan26VideoR2VAdapter(WanVideoAdapter):
 
     adapter_id = "wan-2-6-r2v"
 
+    _SIZES = {
+        ("720p", "16:9"): "1280*720",
+        ("720p", "9:16"): "720*1280",
+        ("720p", "1:1"): "960*960",
+        ("1080p", "16:9"): "1920*1080",
+        ("1080p", "9:16"): "1080*1920",
+    }
+
     def _build_input(self, req: "GenerateVideoInput") -> dict:
         reference_urls = list(req.reference_videos or []) + list(req.reference_images or [])
         return {"prompt": req.prompt, "reference_urls": reference_urls}
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
+        assert isinstance(req, GenerateVideoInput)
+        ratio = "16:9" if req.aspect_ratio == "adaptive" else req.aspect_ratio
+        parameters = {
+            "size": self._SIZES[(self.resolve_resolution(req), ratio)],
+            "duration": self.resolve_duration_seconds(req),
+            "watermark": req.watermark,
+        }
+        return self._merge_model_specific(
+            {"model": self.cfgpu_model_id, "input": self._build_input(req), "parameters": parameters}, req
+        )
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
         ok, reason = self._supports_common(req)
@@ -333,4 +475,11 @@ class Wan26VideoR2VAdapter(WanVideoAdapter):
             return False, f"{self.adapter_id} does not support reference_audios"
         if not (req.reference_videos or req.reference_images):
             return False, f"{self.adapter_id} requires at least one reference_video or reference_image"
+        if len(req.reference_videos or []) + len(req.reference_images or []) > 5:
+            return False, f"{self.adapter_id} accepts at most 5 reference media items"
+        if len(req.reference_videos or []) > 3:
+            return False, f"{self.adapter_id} accepts at most 3 reference videos"
+        ratio = "16:9" if req.aspect_ratio == "adaptive" else req.aspect_ratio
+        if (self.resolve_resolution(req), ratio) not in self._SIZES:
+            return False, f"{self.adapter_id} does not support {self.resolve_resolution(req)} at ratio {ratio}"
         return True, ""

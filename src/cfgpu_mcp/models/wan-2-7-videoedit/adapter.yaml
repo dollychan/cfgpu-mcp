@@ -5,6 +5,10 @@ model_name: wan2.7-videoedit
 
 task_type: video
 resolutions: [720p, 1080p]
+default_resolution: 1080p
+min_duration_seconds: 2
+max_duration_seconds: 10
+max_reference_images: 4
 endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}

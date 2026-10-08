@@ -42,8 +42,9 @@ HappyHorse-1.0-Video-Edit 支持视频编辑，通过自然语言指令编辑视
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `resolution` | string | `1080P` | 分辨率：`720P` 或 `1080P`，adapter 自动大写 |
-| `watermark` | boolean | `true` | 是否添加水印（统一 schema 参数，直接传入） |
-| `model_specific.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |
+| `watermark` | boolean | `false` | 是否添加水印（上游未传时默认 `true`） |
+| `model_specific.parameters.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |
+| `model_specific.parameters.audio_setting` | string | `auto` | `auto` 或 `origin`（保留源音频） |
 
 > 输出视频的时长与宽高比跟随源视频，因此 `duration_seconds` / `aspect_ratio` 不写入 payload。
 
@@ -149,7 +150,7 @@ curl -X GET https://www.cfgpu.com/userapi/v1/video/tasks/<TASK_ID> \
 | `reference_videos` | `input.media[].type=video` | 源视频（单个，必填） |
 | `reference_images` | `input.media[].type=reference_image` | 参考图片数组（最多 5 张） |
 | `resolution` | `parameters.resolution` | `720p` → `720P`（uppercase） |
-| `watermark` | 顶层 `watermark` | 统一 schema 参数，直接映射到 payload 顶层 |
-| `model_specific` | `parameters.*` 或顶层 | 可传 `seed` 等额外参数 |
+| `watermark` | `parameters.watermark` | 统一 schema 默认 `false`；上游省略时默认 `true` |
+| `model_specific.parameters` | `parameters.*` | 与 typed parameters 深度合并，可传 `seed`、`audio_setting` |
 
 **不支持的统一 Schema 字段：** `first_frame`、`last_frame`、`reference_audios`、`with_audio`、`duration_seconds`（跟随源视频）、`aspect_ratio`（跟随源视频）。

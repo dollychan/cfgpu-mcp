@@ -132,7 +132,8 @@ def test_video_duration_rejects_out_of_range():
     with pytest.raises(ValidationError):
         GenerateVideoInput(prompt="x", duration_seconds=31)
     with pytest.raises(ValidationError):
-        GenerateVideoInput(prompt="x", duration_seconds=2)
+        GenerateVideoInput(prompt="x", duration_seconds=1)
+    assert GenerateVideoInput(prompt="x", duration_seconds=2).duration_seconds == 2
 
 
 def test_video_duration_allows_the_fleet_wide_maximum():

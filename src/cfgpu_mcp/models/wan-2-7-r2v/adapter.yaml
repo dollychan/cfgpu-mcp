@@ -5,12 +5,18 @@ model_name: wan2.7-r2v
 
 task_type: video
 resolutions: [720p, 1080p]
+default_resolution: 1080p
+min_duration_seconds: 2
+max_reference_images: 5
+max_reference_videos: 5
+max_reference_audios: 5
 endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
 capabilities:
   - multi_modal_reference
+  - audio_generate
 
 cost_tier: 3
 speed_tier: 2

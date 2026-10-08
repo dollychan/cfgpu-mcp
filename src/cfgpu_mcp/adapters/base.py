@@ -200,6 +200,7 @@ class ModelAdapter(ABC):
     #: Only read for ``UnderstandVisionInput``; media tasks use ``default_for`` above.
     analysis_depth_default_for: frozenset[str]
     max_duration_seconds: int    # video only: longest explicit duration accepted
+    min_duration_seconds: int    # video only: shortest explicit duration accepted
     default_duration_seconds: int
     #: Whether ``duration_seconds=-1`` ("the model picks the length") is accepted.
     #:
@@ -291,11 +292,12 @@ class ModelAdapter(ABC):
             )
         instance.analysis_depth_default_for = frozenset(analysis_depth_default_for)
         # GenerateVideoInput's own validator allows the widest range any model in
-        # the fleet accepts (4–30, for Doubao Seedance 2.5). Every narrower model
-        # declares its real ceiling here so supports() can reject locally instead
+        # the fleet accepts (2–30; Wan 2.7 allows 2 seconds). Every model can
+        # declare its real range here so supports() can reject locally instead
         # of letting the POST fail upstream. 15 was the schema-wide cap before
         # 2.5 arrived, so it stays the default and no existing model changes.
         instance.max_duration_seconds = config.get("max_duration_seconds", 15)
+        instance.min_duration_seconds = config.get("min_duration_seconds", 4)
         instance.default_duration_seconds = config.get("default_duration_seconds", 5)
         # Resolution is a per-model value set, not a fleet-wide one: asking a model
         # for a resolution it does not offer fails upstream as "the parameter
@@ -383,8 +385,13 @@ class ModelAdapter(ABC):
             if duration_seconds == -1 and not self.accepts_smart_duration:
                 return False, (
                     f"{self.model_name} requires an explicit duration: set duration_seconds "
-                    f"to 4–{self.max_duration_seconds} seconds (-1, a model-chosen duration, "
+                    f"to {self.min_duration_seconds}–{self.max_duration_seconds} seconds (-1, a model-chosen duration, "
                     f"is accepted only by the Seedance family)"
+                )
+            if duration_seconds != -1 and duration_seconds < self.min_duration_seconds:
+                return False, (
+                    f"{self.model_name} supports explicit durations of "
+                    f"{self.min_duration_seconds}–{self.max_duration_seconds} seconds"
                 )
             if duration_seconds != -1 and duration_seconds > self.max_duration_seconds:
                 # Offer -1 only where it is accepted: suggesting it to every model sent
@@ -392,7 +399,7 @@ class ModelAdapter(ABC):
                 smart = " (or -1 for a model-chosen duration)" if self.accepts_smart_duration else ""
                 return False, (
                     f"{self.model_name} supports explicit durations of "
-                    f"4–{self.max_duration_seconds} seconds{smart}"
+                    f"{self.min_duration_seconds}–{self.max_duration_seconds} seconds{smart}"
                 )
             resolution = self.resolve_resolution(req)
             if self.resolutions is not None and resolution not in self.resolutions:

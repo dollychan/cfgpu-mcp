@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.7-r2v` |
-| 能力标签 | multi_modal_reference |
+| 能力标签 | multi_modal_reference, audio_generate |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -27,7 +27,7 @@
 |------|------|
 | **multi_modal_reference** | 参考视频 + 参考图片 + 文本生成视频 |
 
-> 需至少提供 1 个参考视频或参考图片。不支持首帧/尾帧、纯文生视频、参考音频。
+> 需至少提供 1 个参考视频或参考图片；可选 `first_frame` 指定开场画面。`reference_audios` 按参考媒体顺序作为音色样本传入；不支持尾帧。
 
 ## 参数说明
 
@@ -36,12 +36,15 @@
 | prompt | input.prompt | 文本提示词，可引用「视频N」「图片N」 |
 | reference_videos | input.media[]（type=reference_video） | 参考视频 URL 数组 |
 | reference_images | input.media[]（type=reference_image） | 参考图片 URL 数组 |
+| first_frame | input.media[]（type=first_frame） | 可选首帧；提供时输出比例随首帧 |
+| reference_audios | input.media[].reference_voice | 按参考视频/图片顺序附加音色样本 |
 | resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
 | aspect_ratio | parameters.ratio | `16:9` / `9:16` / `1:1` / `4:3` / `3:4`，默认 `16:9` |
 | prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
-| model_specific | （顶层合并） | 透传额外参数 |
+| negative_prompt | input.negative_prompt | 最多 500 字符 |
+| model_specific.parameters.seed | parameters.seed | 0–2147483647；与基础 parameters 深度合并 |
 
 > media 数组顺序：先参考视频，后参考图片（与提示词中的引用序号对应）。
 
@@ -125,7 +128,7 @@
 
 | 限制项 | 值 |
 |--------|-----|
-| 必填输入 | 至少 1 个参考视频或参考图片 |
-| 视频时长 | 显式指定（不支持 -1 智能时长） |
+| 必填输入 | 至少 1 个参考视频或参考图片；全部 media 最多 5，首帧最多 1 |
+| 视频时长 | 仅参考图：2–15 秒；含参考视频：2–10 秒 |
 | 输出视频格式 | mp4 |
 | 视频链接有效期 | 24 小时 |

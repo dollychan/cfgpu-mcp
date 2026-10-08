@@ -35,11 +35,13 @@
 | reference_videos | input.media[]（type=video） | 源视频 URL（单个） |
 | reference_images | input.media[]（type=reference_image） | 参考图片 URL 数组 |
 | resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
-| aspect_ratio | parameters.ratio | `16:9` / `9:16` / `1:1` / `4:3` / `3:4`，默认 `16:9` |
+| aspect_ratio | parameters.ratio | 显式设置时才传；省略时沿用输入视频比例 |
 | prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
-| duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
-| model_specific | （顶层合并） | 透传额外参数 |
+| duration_seconds | parameters.duration | 2–10 秒时截断输入视频；省略时沿用完整输入视频（上游默认 0） |
+| negative_prompt | input.negative_prompt | 最多 500 字符 |
+| model_specific.parameters.audio_setting | parameters.audio_setting | `auto` / `origin` |
+| model_specific.parameters.seed | parameters.seed | 0–2147483647；与基础 parameters 深度合并 |
 
 ## 请求示例
 
@@ -55,10 +57,8 @@
   },
   "parameters": {
     "resolution": "720P",
-    "ratio": "16:9",
     "prompt_extend": true,
-    "watermark": false,
-    "duration": 5
+    "watermark": false
   }
 }
 ```
@@ -112,6 +112,6 @@
 | 限制项 | 值 |
 |--------|-----|
 | 必填输入 | 1 个源视频（reference_videos） |
-| 视频时长 | 显式指定（不支持 -1 智能时长） |
+| 视频时长 | 可选 2–10 秒；省略时保留完整输入视频 |
 | 输出视频格式 | mp4 |
 | 视频链接有效期 | 24 小时 |
