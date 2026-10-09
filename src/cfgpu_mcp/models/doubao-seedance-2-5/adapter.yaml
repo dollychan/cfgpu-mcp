@@ -24,12 +24,16 @@ quality_rank: 3
 max_duration_seconds: 30
 default_duration_seconds: -1
 
-max_reference_images: 30
-max_reference_videos: 10
-max_reference_audios: 10
-allow_audio_only_reference: true
-
 resolutions: [480p, 720p, 1080p]
 
 poll_config:
   default_timeout: 3000
+
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  reference_images: {max: 30}
+  reference_videos: {max: 10, role: reference}
+  # 「支持仅传入参考音频」— the one family member that takes audio on its own.
+  reference_audios: {max: 10, role: reference, standalone: true}

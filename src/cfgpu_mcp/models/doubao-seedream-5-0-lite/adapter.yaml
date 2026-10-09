@@ -7,12 +7,14 @@ endpoint: /images/generations
 is_async: false
 poll_endpoint: ~
 
-capabilities:
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_image
   - image_to_image
   - multi_image_fusion
   - multi_image_group
-  - web_search
+  - web_grounded_generation
 
 cost_tier: 2
 speed_tier: 3

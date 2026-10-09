@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.6-i2v` |
-| 能力标签 | image_to_video, audio_generate |
+| 任务（tasks） | image_to_video, audio_driven_video |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -24,7 +24,7 @@
 | 能力 | 说明 |
 |------|------|
 | **image_to_video** | 单张首帧图片 + 文本生成视频 |
-| **audio_generate** | 可传入驱动音频（audio_url），让画面与音频同步 |
+| **audio_driven_video** | 可传入驱动音频（audio_url），让画面与音频同步 |
 
 > input 使用扁平字段 `img_url`（首帧，必填）和 `audio_url`（可选），**不使用 media 数组**。不支持首尾帧、参考图片/视频。
 

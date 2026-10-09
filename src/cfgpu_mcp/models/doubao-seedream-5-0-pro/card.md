@@ -9,7 +9,7 @@ Seedream 5.0 Pro 是字节跳动发布的最新图像创作模型，将图像创
 | 任务类型 | image |
 | CFGPU 模型 ID | `doubao-seedream-5-0-pro` |
 | 同步/异步 | 同步（`is_async: false`，POST 响应即返回结果） |
-| 能力标签 | text_to_image, image_to_image, multi_image_fusion, region_edit, layer_decomposition, transparent_background |
+| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion, region_edit, layer_decomposition, transparent_background |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 

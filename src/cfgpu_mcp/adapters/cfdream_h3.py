@@ -38,12 +38,6 @@ from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import GenerateImageInput
 
-# comfy-gateway API.md §5 — the COMFY_AUTOGROW_V3 `max` on the r2v node.
-MAX_REFERENCE_IMAGES = 9
-MAX_REFERENCE_VIDEOS = 3
-MAX_REFERENCE_AUDIOS = 3
-
-
 def _parse_expires_at(raw: object) -> datetime:
     """Parse the gateway's ISO ``expires_at``; fall back to the fleet default.
 
@@ -182,11 +176,5 @@ class CfdreamH3RefAdapter(CfdreamH3Adapter):
                 f"{self.model_name} needs at least one reference_images / reference_videos / "
                 f"reference_audios — use cfdream/minimax-h3 for plain text-to-video"
             )
-        for name, values, cap in (
-            ("reference_images", req.reference_images, MAX_REFERENCE_IMAGES),
-            ("reference_videos", req.reference_videos, MAX_REFERENCE_VIDEOS),
-            ("reference_audios", req.reference_audios, MAX_REFERENCE_AUDIOS),
-        ):
-            if values and len(values) > cap:
-                return False, f"{self.model_name} accepts at most {cap} {name} (got {len(values)})"
+        # Reference counts: the base class, from `inputs:` in adapter.yaml.
         return True, ""

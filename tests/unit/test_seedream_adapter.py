@@ -14,7 +14,7 @@ def _make_adapter() -> SeedreamAdapter:
         "poll_endpoint": None,
         # Mirrors the real adapter.yaml: multi_image_group is what gates 组图, so a
         # fixture missing it describes a different model than the one shipped.
-        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion", "multi_image_group"},
+        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "multi_image_group"],
         "cost_tier": 2,
         "speed_tier": 3,
     }
@@ -30,7 +30,7 @@ def _make_pro_adapter() -> SeedreamAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"},
+        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"],
         "cost_tier": 2,
         "speed_tier": 3,
     }
@@ -46,7 +46,7 @@ def _make_flash_adapter() -> SeedreamAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"},
+        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"],
         "cost_tier": 1,
         "speed_tier": 5,
     }
@@ -387,7 +387,7 @@ def _make_4_0_adapter() -> SeedreamAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "capabilities": {"text_to_image", "multi_image_group"},
+        "tasks": ["text_to_image", "multi_image_group"],
         "cost_tier": 2,
         "speed_tier": 3,
     }
@@ -504,15 +504,15 @@ def test_the_billed_path_rejects_a_tier_the_model_does_not_have(factory, resolut
 # --- n / 组图 (sequential image generation) ----------------------------------
 
 
-def test_group_generation_is_gated_on_the_capability_not_on_the_model_id():
+def test_group_generation_is_gated_on_the_task_not_on_the_model_id():
     """A single-image variant must not be recognised by being 'not Pro'.
 
     Pro happens to be the only family member without 组图 today, so an ``adapter_id ==
     pro`` test passes right now — and would keep passing while silently switching 组图 on
-    for the next single-image variant. Variants without the capability must ignore n.
+    for the next single-image variant. Variants without the task must ignore n.
     """
     adapter = _make_adapter()
-    adapter.capabilities = adapter.capabilities - {"multi_image_group"}
+    adapter.tasks = tuple(t for t in adapter.tasks if t != "multi_image_group")
     ok, reason = adapter.supports(GenerateImageInput(prompt="x", n=4))
     assert ok
     assert reason == ""

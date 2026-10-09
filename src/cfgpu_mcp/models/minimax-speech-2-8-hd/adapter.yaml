@@ -7,10 +7,12 @@ task_type: audio
 endpoint: /voice/generations
 is_async: false
 
-capabilities:
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_speech
-  - emotion
-  - pronunciation_dict
+  - expressive_speech
+  - pronunciation_control
 
 cost_tier: 2
 speed_tier: 3

@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.7-i2v` |
-| 能力标签 | image_to_video, first_last_frame, video_extend, audio_generate |
+| 任务（tasks） | image_to_video, first_last_frame, audio_driven_video, video_extend |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -27,7 +27,7 @@
 |------|------|
 | **image_to_video** | 单张首帧图片 + 文本生成视频 |
 | **first_last_frame** | 首帧 + 尾帧控制起止画面；可额外提供驱动音频 |
-| **audio_generate** | 首帧模式可提供 WAV/MP3 驱动音频实现口型同步；未提供时模型自动生成配套音效 |
+| **audio_driven_video** | 首帧模式可提供 WAV/MP3 驱动音频实现口型同步；未提供时模型自动生成配套音效 |
 | **video_extend** | 一个 2–10 秒源视频片段续生；可附加尾帧 |
 
 支持的媒体组合：`first_frame`、`first_frame + driving_audio`、`first_frame + last_frame`、`first_frame + last_frame + driving_audio`、`first_clip`、`first_clip + last_frame`。每种媒体类型最多一个。项目统一字段中，`reference_audios[0]` 映射为 `driving_audio`，`reference_videos[0]` 映射为续生源 `first_clip`；后者不是参考生视频能力。

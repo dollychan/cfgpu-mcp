@@ -12,12 +12,12 @@ def _make_adapter(**overrides) -> KlingVideoAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {
-            "text_to_video",
-            "image_to_video",
-            "first_last_frame",
-            "multi_modal_reference",
-            "video_edit",
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video", "video_edit"],
+        "inputs": {
+            "first_frame": {},
+            "last_frame": {},
+            "reference_images": {},
+            "reference_videos": {"role": "reference"},
         },
         "cost_tier": 4,
         "speed_tier": 2,
@@ -420,7 +420,7 @@ def test_supports_rejects_reference_audios():
     req = GenerateVideoInput(prompt="x", reference_audios=["https://example.com/a.mp3"])
     ok, reason = adapter.supports(req)
     assert ok is False
-    assert "reference_audios" in reason
+    assert reason == "kling-video-o1 does not accept reference_audios"
 
 
 def test_supports_rejects_smart_duration():

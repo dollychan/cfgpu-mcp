@@ -119,7 +119,7 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if self.adapter_id != "happyhorse-1-0-i2v" and not req.prompt.strip():
-            return False, f"{self.adapter_id} requires a non-empty prompt"
+            return False, f"{self.model_name} requires a non-empty prompt"
         # Checked before the per-scenario branches: each of those would otherwise
         # report only half the conflict ("does not support reference_images"), and the
         # fix for HappyHorse is a different model either way — one per scenario.
@@ -132,27 +132,27 @@ class HappyHorseVideoAdapter(ModelAdapter):
             )
         if self.adapter_id == "happyhorse-1-0-t2v":
             if req.first_frame or req.reference_images:
-                return False, f"{self.adapter_id} is a text-to-video model (no image media)"
+                return False, f"{self.model_name} is a text-to-video model (no image media)"
         elif self.adapter_id == "happyhorse-1-0-i2v":
             if not req.first_frame:
-                return False, f"{self.adapter_id} requires first_frame"
+                return False, f"{self.model_name} requires first_frame"
             if req.reference_images:
-                return False, f"{self.adapter_id} does not support reference_images"
+                return False, f"{self.model_name} does not support reference_images"
         elif self.adapter_id == "happyhorse-1-0-r2v":
             if req.first_frame:
-                return False, f"{self.adapter_id} does not support first_frame"
+                return False, f"{self.model_name} does not support first_frame"
             if not req.reference_images:
-                return False, f"{self.adapter_id} requires at least one reference_image"
+                return False, f"{self.model_name} requires at least one reference_image"
         if req.last_frame:
-            return False, f"{self.adapter_id} does not support last_frame"
+            return False, f"{self.model_name} does not support last_frame"
         if req.reference_videos:
-            return False, f"{self.adapter_id} does not support reference_videos"
+            return False, f"{self.model_name} does not support reference_videos"
         if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
+            return False, f"{self.model_name} does not support reference_audios"
         if req.reference_images and len(req.reference_images) > 9:
-            return False, f"{self.adapter_id} accepts at most 9 reference_images"
+            return False, f"{self.model_name} accepts at most 9 reference_images"
         if self._uses_ratio() and req.aspect_ratio != "adaptive" and req.aspect_ratio not in self._RATIOS:
-            return False, f"{self.adapter_id} does not support aspect_ratio {req.aspect_ratio}"
+            return False, f"{self.model_name} does not support aspect_ratio {req.aspect_ratio}"
         return True, ""
 
 
@@ -195,15 +195,15 @@ class HappyHorseVideoEditAdapter(HappyHorseVideoAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if not req.prompt.strip():
-            return False, f"{self.adapter_id} requires a non-empty prompt"
+            return False, f"{self.model_name} requires a non-empty prompt"
         if not req.reference_videos:
-            return False, f"{self.adapter_id} requires a source video (reference_videos)"
+            return False, f"{self.model_name} requires a source video (reference_videos)"
         if len(req.reference_videos) > 1:
-            return False, f"{self.adapter_id} accepts a single source video"
+            return False, f"{self.model_name} accepts a single source video"
         if req.reference_images and len(req.reference_images) > 5:
-            return False, f"{self.adapter_id} accepts at most 5 reference_images"
+            return False, f"{self.model_name} accepts at most 5 reference_images"
         if req.first_frame or req.last_frame:
-            return False, f"{self.adapter_id} does not support first_frame/last_frame"
+            return False, f"{self.model_name} does not support first_frame/last_frame"
         if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
+            return False, f"{self.model_name} does not support reference_audios"
         return True, ""

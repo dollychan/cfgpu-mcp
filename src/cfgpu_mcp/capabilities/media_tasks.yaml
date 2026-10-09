@@ -2,6 +2,12 @@ schema_version: 1
 
 # Agent-facing media task vocabulary.  IDs are stable semantic contracts, not
 # adapter capability names and not provider/API parameter names.
+#
+# `requires` (video only) names the material a task cannot be performed without:
+# `all` slots must all be accepted, `any` needs at least one, and `audio_role`
+# fixes how the model must use the audio track (adapters/inputs.py AUDIO_ROLES).
+# A profile claiming a task its model's `inputs:` cannot carry fails the contract
+# tests, and an `inputs:` declaring a driving track forces `audio_driven_video`.
 tasks:
   text_to_video:
     media_type: video
@@ -13,26 +19,34 @@ tasks:
     name: Image to video
     description: Animate a supplied image as the opening visual of a new video.
     prompt_guidance: Describe the motion to add while preserving the supplied image's subject and composition.
+    requires: {all: [first_frame]}
   first_last_frame:
     media_type: video
     name: First and last frame video
     description: Create a video constrained by both an opening image and an ending image.
     prompt_guidance: Describe the transition and the motion that connects the two supplied frames.
+    requires: {all: [first_frame, last_frame]}
   reference_to_video:
     media_type: video
     name: Reference-guided video
-    description: Create a new video guided by supplied reference images, videos, or audio.
-    prompt_guidance: State which visual, character, motion, or audio qualities to preserve from the references.
+    description: >-
+      Create a new video guided by supplied reference images or videos. Some models
+      also take reference audio; a model's inputs.reference_audios.role says what it
+      does with it, and only audio_driven_video keeps a supplied track as the soundtrack.
+    prompt_guidance: State which visual, character, or motion qualities to preserve from the references.
+    requires: {any: [reference_images, reference_videos]}
   video_edit:
     media_type: video
     name: Video edit
     description: Modify an existing source video while retaining the requested parts of it.
     prompt_guidance: Identify the source-video element to change and explicitly state what must remain unchanged.
+    requires: {all: [reference_videos]}
   video_extend:
     media_type: video
     name: Video extension
     description: Continue an existing video beyond its current ending.
     prompt_guidance: Describe the next action, continuity details, and the intended ending.
+    requires: {all: [reference_videos]}
   synced_audio_output:
     media_type: video
     name: Synchronized audio output
@@ -41,8 +55,12 @@ tasks:
   audio_driven_video:
     media_type: video
     name: Audio-driven video
-    description: Use supplied audio to drive the timing or performance of a generated video.
+    description: >-
+      Keep a supplied audio track as the video's soundtrack and make the picture follow
+      it — lip movement, timing, rhythm. Use this, not reference_to_video, when the user
+      supplies speech that should be heard in the result.
     prompt_guidance: Provide the driving audio and describe the visual performer or motion that should follow it.
+    requires: {all: [reference_audios], audio_role: driving}
   web_grounded_generation:
     media_type: cross_media
     name: Web-grounded generation

@@ -241,31 +241,41 @@ class ModelRouter:
         # NOTE: auto_priority is deliberately *not* added here — it is a tie-break
         # applied after the score, see selection_key.
 
-        # Reference media capability bonus
+        # Preferences between models that all passed supports(). They read the declared
+        # tasks and inputs — never a separate capability vocabulary — and only order
+        # candidates: anything a model cannot serve was already filtered out.
         if isinstance(req, GenerateImageInput):
             if req.reference_images and (
-                "multi_image_fusion" in adapter.capabilities
-                or "multi_image_group" in adapter.capabilities
+                "multi_image_fusion" in adapter.tasks or "multi_image_group" in adapter.tasks
             ):
                 score += 3
-            # n > 1 asks for a 组图. A model without the capability does not fail — n is
-            # a compatibility hint it silently ignores and it returns a single image —
-            # so nothing downstream can catch a mismatch here. That makes this a real
-            # preference rather than a tie-break, at the same magnitude as the fusion
-            # bonus. (It matters now that auto_priority pins 5.0 Pro, the one Seedream
-            # *without* the capability, as the default pick.)
-            if req.n > 1 and "multi_image_group" in adapter.capabilities:
+            # n > 1 asks for more than one image. A model that does not honour n does not
+            # fail — n is a compatibility hint it silently ignores and it returns a single
+            # image — so nothing downstream can catch a mismatch here. That makes this a
+            # real preference rather than a tie-break, at the same magnitude as the fusion
+            # bonus. "Honours n" is the 组图 task (Seedream / 万相: a coherent series) or a
+            # declared max_images_per_request above 1 (CF Image 2: independent images,
+            # which is not the multi_image_group task).
+            if req.n > 1 and (
+                "multi_image_group" in adapter.tasks or (adapter.max_images_per_request or 1) > 1
+            ):
                 score += 3
-            # Region editing does not need to be *filtered* for here — supports() already
-            # rejects every model without the capability, so a regions request cannot
-            # reach a model that would ignore it. This is only a tie-break preference,
-            # same magnitude as the fusion bonus above.
-            if req.regions and "region_edit" in adapter.capabilities:
-                score += 3
+            # No region preference: supports() already rejects every model without
+            # region_edit, so every surviving candidate has it and a bonus orders nothing.
         elif isinstance(req, GenerateVideoInput):
-            if req.reference_images and "multi_modal_reference" in adapter.capabilities:
+            if req.reference_images and "reference_to_video" in adapter.tasks:
                 score += 3
-            if (req.reference_videos or req.reference_audios) and "multi_modal_reference" in adapter.capabilities:
+            # A reference video is ambiguous between "material to draw on" and "the video
+            # to edit or continue" (wan2.7-i2v accepts one as its first_clip and extends
+            # it). Without an edit/extend signal the plain reading is reference, so prefer
+            # models whose declared video role is `reference`.
+            videos = (adapter.inputs or {}).get("reference_videos")
+            if req.reference_videos and videos is not None and videos.role == "reference":
+                score += 3
+            # Audio intent (soundtrack vs. material) cannot be read from the request, so this
+            # keeps the reference-family preference the old capability encoded; an agent
+            # that needs the track kept selects an audio_driven_video model explicitly.
+            elif req.reference_audios and "reference_to_video" in adapter.tasks:
                 score += 3
 
         # Chinese prompt preference (image only — seedream is an image family)

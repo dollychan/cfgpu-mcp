@@ -4,6 +4,7 @@ from math import gcd
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.adapters.inputs import VIDEO_INPUT_SLOTS
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -228,24 +229,12 @@ class KlingVideoAdapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
-        # The create payload has an image_list and a video_list but no audio slot.
-        if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
+        # Slots not declared in `inputs:` — the create payload has an image_list and a
+        # video_list but no audio slot. test_video_inputs.py keeps this loop and the
+        # declaration in agreement.
+        for slot in VIDEO_INPUT_SLOTS:
+            if self.inputs is not None and getattr(req, slot) and slot not in self.inputs:
+                return False, f"{self.model_name} does not accept {slot}"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
-        # Validate the requested scene against the model's declared capabilities so
-        # model="auto" skips incapable models instead of failing post-submit.
-        if req.first_frame and req.last_frame:
-            needed = "first_last_frame"
-        elif req.reference_images or req.reference_videos:
-            needed = "multi_modal_reference"
-        elif req.first_frame:
-            needed = "image_to_video"
-        else:
-            needed = "text_to_video"
-        if needed not in self.capabilities:
-            return False, (
-                f"{self.adapter_id} does not support {needed} "
-                f"(capabilities: {', '.join(sorted(self.capabilities))})"
-            )
         return True, ""

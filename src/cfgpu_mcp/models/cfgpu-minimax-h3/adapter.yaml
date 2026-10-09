@@ -26,14 +26,28 @@ endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  first_frame: {}
+  last_frame: {}
+  reference_images: {max: 9}
+  reference_videos: {max: 3, role: reference}
+  # role=reference_audio upstream; the published example directs it from the prompt
+  # as a voice to speak in (「音色参考音频1」), not as a track to lip-sync. Audio-only
+  # reference input is not refused upstream or here.
+  reference_audios: {max: 3, role: reference, standalone: true}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_video
   - image_to_video
   - first_last_frame
-  - multi_modal_reference
-  # The upstream always includes a native audio track.  This describes output
-  # capability only: unlike models with a sound switch, audio cannot be off.
-  - audio_generate
+  - reference_to_video
+  - video_edit
+  - synced_audio_output
 
 # 480P, 768P and 2K are what this API actually produces, and they are members of the
 # unified enum in their own right — the adapter only upper-cases them. The latter two used to

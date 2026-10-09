@@ -16,3 +16,9 @@ quality_rank: 0
 # would have failed loudly — five declared defaults just fall through to the score,
 # which is the accidental ordering `default_for` exists to replace.
 default_for: []
+
+# Zeroed rather than inherited from gpt-image-2 (10). `max_images_per_request` means
+# "this model honours n up to here", and NanoBananaAdapter never sends `n` — it returns
+# one image whatever n says. Inherited, it made the router prefer this whole subtree
+# for n>1 requests it then silently served with a single image.
+max_images_per_request: ~

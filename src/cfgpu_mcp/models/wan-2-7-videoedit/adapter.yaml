@@ -8,12 +8,20 @@ resolutions: [720p, 1080p]
 default_resolution: 1080p
 min_duration_seconds: 2
 max_duration_seconds: 10
-max_reference_images: 4
 endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  reference_videos: {max: 1, role: source}   # the source video
+  reference_images: {max: 4}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - video_edit
 
 cost_tier: 3

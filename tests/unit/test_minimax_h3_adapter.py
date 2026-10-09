@@ -42,9 +42,9 @@ def test_model_and_endpoints_are_wired(adapter):
     assert adapter.cfgpu_model_id == "MiniMax-H3"
     assert adapter.endpoint == "/video/generations"
     assert adapter.poll_endpoint == "/video/tasks/{task_id}"
-    # This is an output capability, not a request control: MiniMax H3 always
-    # emits native audio and its API has no `with_audio` switch.
-    assert "audio_generate" in adapter.capabilities
+    # An output task, not a request control: MiniMax H3 always emits native audio
+    # and its API has no `with_audio` switch.
+    assert "synced_audio_output" in adapter.tasks
 
 
 @pytest.mark.parametrize(

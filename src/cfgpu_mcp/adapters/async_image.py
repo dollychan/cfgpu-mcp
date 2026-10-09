@@ -53,7 +53,7 @@ class _AsyncImageBase(ModelAdapter):
             return False, reason
         assert isinstance(req, GenerateImageInput)
         if not req.prompt.strip():
-            return False, f"{self.adapter_id} requires a non-empty prompt"
+            return False, f"{self.model_name} requires a non-empty prompt"
         return True, ""
 
     def validation_corrections(

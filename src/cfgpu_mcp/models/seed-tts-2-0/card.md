@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | audio (语音合成 / text-to-speech) |
 | CFGPU 模型 ID | `seed-tts-2.0` |
-| 能力标签 | text_to_speech |
+| 任务（tasks） | text_to_speech |
 | 调用方式 | 异步（提交后轮询查询） |
 | 成本档位 | 3/5 |
 | 速度档位 | 3/5 |

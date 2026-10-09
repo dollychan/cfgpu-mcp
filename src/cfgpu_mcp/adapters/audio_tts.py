@@ -242,17 +242,17 @@ class SeedTTSAdapter(ModelAdapter):
         if not ok:
             return False, reason
         if not req.text.strip():
-            return False, f"{self.adapter_id} requires non-empty text"
+            return False, f"{self.model_name} requires non-empty text"
         if req.voice is not None and req.voice not in _SEED_SYSTEM_VOICES:
             return False, _invalid_voice_reason(self.model_name, req.voice, _SEED_SYSTEM_VOICES)
         if req.audio_format not in {"mp3", "wav", "flac"}:
-            return False, f"{self.adapter_id} supports audio_format mp3, wav, or flac"
+            return False, f"{self.model_name} supports audio_format mp3, wav, or flac"
         if req.sample_rate is not None and req.sample_rate <= 0:
             return False, "sample_rate must be a positive integer"
         if req.bitrate is not None:
-            return False, f"{self.adapter_id} does not support bitrate"
+            return False, f"{self.model_name} does not support bitrate"
         if req.speed != 1.0 or req.volume != 1.0 or req.pitch != 0 or req.emotion is not None:
-            return False, f"{self.adapter_id} does not support speed, volume, pitch, or emotion"
+            return False, f"{self.model_name} does not support speed, volume, pitch, or emotion"
         return True, ""
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput") -> dict:
@@ -348,16 +348,16 @@ class MiniMaxSpeechAdapter(ModelAdapter):
         if not ok:
             return False, reason
         if not req.text.strip():
-            return False, f"{self.adapter_id} requires non-empty text"
+            return False, f"{self.model_name} requires non-empty text"
         if req.voice is not None and req.voice not in _MINIMAX_SYSTEM_VOICES:
             return False, _invalid_voice_reason(self.model_name, req.voice, _MINIMAX_SYSTEM_VOICES)
         if req.emotion is not None and req.emotion not in _MINIMAX_EMOTIONS:
             return False, (
-                f"{self.adapter_id} does not support emotion {req.emotion!r} "
+                f"{self.model_name} does not support emotion {req.emotion!r} "
                 f"(supported: {', '.join(sorted(_MINIMAX_EMOTIONS))})"
             )
         if req.audio_format not in {"mp3", "wav", "flac"}:
-            return False, f"{self.adapter_id} supports audio_format mp3, wav, or flac"
+            return False, f"{self.model_name} supports audio_format mp3, wav, or flac"
         if req.sample_rate is not None and req.sample_rate <= 0:
             return False, "sample_rate must be a positive integer"
         if req.bitrate is not None and req.bitrate <= 0:

@@ -13,7 +13,7 @@ def _make_adapter(adapter_id: str = "happyhorse-1-0-t2v") -> HappyHorseVideoAdap
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {"text_to_video", "image_to_video", "multi_modal_reference"},
+        "tasks": ["text_to_video", "image_to_video", "reference_to_video"],
         "cost_tier": 2,
         "speed_tier": 3,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 300},

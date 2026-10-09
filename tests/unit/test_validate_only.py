@@ -420,11 +420,11 @@ async def test_media_slot_values_reach_the_payload_untouched(slot):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("count, ok", [(9, True), (10, False)], ids=["at limit", "over limit"])
 async def test_media_slot_count_is_enforced_on_opaque_handles(count, ok):
-    """The other half: `max_reference_images` still bites, and it bites on handles.
+    """The other half: the declared `reference_images` max still bites, and on handles.
 
     Counting needs no knowledge of what a value *is*, which is exactly why this is the
     one media check a preflight can make honestly. `doubao-seedance-2-0` caps at 9
-    (`SeedanceVideoAdapter.supports`, not the base — the ceiling is per-adapter).
+    (its `inputs:` block, enforced by the base `supports()` — the ceiling is per-model).
     """
     refs = [f"m_{i}" for i in range(count)]
     a, b, c = _patched_real_registry(_client(), AsyncMock())

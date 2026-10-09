@@ -8,7 +8,7 @@ HappyHorse-1.0-R2V 支持参考生视频，更加稳定的主体与场景参考�
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `happyhorse-1.0-r2v` |
-| 能力标签 | multi_modal_reference |
+| 任务（tasks） | reference_to_video |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -23,7 +23,7 @@ HappyHorse-1.0-R2V 支持参考生视频，更加稳定的主体与场景参考�
 
 | 能力 | 说明 |
 |------|------|
-| **multi_modal_reference** | 参考生视频：最多 9 张参考图片 + 文本生成视频，稳定保持主体与场景参考 |
+| **reference_to_video** | 参考生视频：最多 9 张参考图片 + 文本生成视频，稳定保持主体与场景参考 |
 
 **不支持：** text_to_video（纯文生视频）、image_to_video（首帧图生视频）、last_frame（尾帧）、reference_videos、reference_audios。支持 480P / 720P / 1080P。
 

@@ -10,7 +10,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `doubao-seedance-2-5` |
-| 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference, video_edit, video_extend, audio_generate, web_search |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output, web_grounded_generation |
 | 成本档位 | 4/5 |
 | 速度档位 | 2/5 |
 
@@ -50,11 +50,11 @@
 | **text_to_video** | 纯文本生成视频，可直出 30 秒长叙事 |
 | **image_to_video** | 单张首帧图片 + 文本生成视频 |
 | **first_last_frame** | 首帧 + 尾帧图片 + 文本生成视频（精准控制起止画面） |
-| **multi_modal_reference** | 多模态参考生视频：图片(0-30) + 视频(0-10) + 音频(0-10) + 文本，单次总计 ≤ 50 |
+| **reference_to_video** | 多模态参考生视频：图片(0-30) + 视频(0-10) + 音频(0-10) + 文本，单次总计 ≤ 50 |
 | **video_edit** | 基于参考视频进行专业级可控编辑（替换元素、修改内容） |
 | **video_extend** | 延长已有视频时长 |
-| **audio_generate** | 生成与画面同步的有声视频（人声、音效、背景音乐），原生支持 10 余种语言 |
-| **web_search** | 联网搜索增强（仅文生视频支持） |
+| **synced_audio_output** | 生成与画面同步的有声视频（人声、音效、背景音乐），原生支持 10 余种语言 |
+| **web_grounded_generation** | 联网搜索增强（仅文生视频支持） |
 
 > 支持仅传入参考音频；文本提示词可选。
 

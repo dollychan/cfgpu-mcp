@@ -6,9 +6,10 @@ from cfgpu_mcp.adapters.base import (
     ModelAdapter,
     _default_expires_at,
     frames_vs_references_reason,
-    models_with_capability,
+    models_with_task,
     register_python_adapter,
 )
+from cfgpu_mcp.adapters.inputs import VIDEO_INPUT_SLOTS
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -287,15 +288,15 @@ class SeedanceVideoAdapter(ModelAdapter):
             # Seedance 1.5 Pro takes no reference media at all, so "move the picture
             # into reference_images" is only a fix on another model there.
             reference_model = None
-            if "multi_modal_reference" not in self.capabilities:
+            if "reference_images" not in (self.inputs or {}):
                 # One same-family example, read from the registry so it cannot name
-                # a disabled model; the full list is list_models' job, not an error's.
+                # a disabled model; the full list is list_model_profiles' job, not an error's.
                 sibling = next(
-                    (m for m in models_with_capability("multi_modal_reference")
+                    (m for m in models_with_task("reference_to_video")
                      if m.startswith("doubao-seedance")),
                     None,
                 )
-                reference_model = "list_models 中带 multi_modal_reference 能力的模型" + (
+                reference_model = 'list_model_profiles(required_tasks=["reference_to_video"]) 返回的模型' + (
                     f"（如 model={sibling}）" if sibling else ""
                 )
             return False, frames_vs_references_reason(
@@ -316,40 +317,15 @@ class SeedanceVideoAdapter(ModelAdapter):
         declared_reason = self._check_declared_omni_task_type(req)
         if declared_reason:
             return False, declared_reason
-        # Validate the requested scene type against the model's declared
-        # capabilities. The CFGPU API derives task_type server-side from the
-        # content array shape (e.g. a reference_video → r2v); a model that lacks
-        # the capability is rejected post-submit. Catch it here so the failure is
-        # local and clear, and so model="auto" routing skips incapable models.
-        if req.first_frame and req.last_frame:
-            needed = "first_last_frame"
-        elif req.first_frame:
-            needed = "image_to_video"
-        elif req.reference_images or req.reference_videos or req.reference_audios:
-            needed = "multi_modal_reference"
-        else:
-            needed = "text_to_video"
-        if needed not in self.capabilities:
-            return False, (
-                f"{self.adapter_id} does not support {needed} "
-                f"(capabilities: {', '.join(sorted(self.capabilities))})"
-            )
-        for field, values, limit in (
-            ("reference_images", req.reference_images, self.max_reference_images),
-            ("reference_videos", req.reference_videos, self.max_reference_videos),
-            ("reference_audios", req.reference_audios, self.max_reference_audios),
-        ):
-            if values and limit is not None and len(values) > limit:
-                return False, f"{self.adapter_id} accepts at most {limit} {field}"
-        if (
-            req.reference_audios
-            and not self.allow_audio_only_reference
-            and not (req.reference_images or req.reference_videos)
-        ):
-            return False, (
-                f"{self.adapter_id} does not allow audio-only reference input; "
-                "include at least one reference image or video"
-            )
+        # Slots the model does not declare in `inputs:`. The CFGPU API derives the
+        # scene server-side from the content array shape (e.g. a reference_video →
+        # r2v), so an unsupported one is rejected only post-submit. Refused here, not
+        # in the base class, so the frames-vs-references remedy above runs first;
+        # test_video_inputs.py keeps this and the declaration in agreement.
+        # Reference counts and the audio-only rule: the base class, from `inputs:`.
+        for slot in VIDEO_INPUT_SLOTS:
+            if self.inputs is not None and getattr(req, slot) and slot not in self.inputs:
+                return False, f"{self.model_name} does not accept {slot}"
         # WAN 2.0 Fast (doubao-seedance-2-0-fast) does not support 1080p in
         # text-to-video; the API rejects it post-submit. Catch it here so
         # model="auto" routing can fall back to the full wan-2-0 instead.

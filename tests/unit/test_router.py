@@ -60,7 +60,7 @@ def test_chinese_prompt_prefers_seedream_for_image():
     assert router._score(seedream, req) == router._score(seedream, en) + 2
 
 
-def test_reference_videos_score_multi_modal_capable_adapter():
+def test_reference_videos_score_reference_role_adapter():
     router = _router()
     req = GenerateVideoInput(
         prompt="test",
@@ -68,7 +68,21 @@ def test_reference_videos_score_multi_modal_capable_adapter():
         quality_tier="balanced",
     )
     adapter = router.select_model(req)
-    assert "multi_modal_reference" in adapter.capabilities
+    assert "reference_to_video" in adapter.tasks
+    assert adapter.inputs["reference_videos"].role == "reference"
+
+
+def test_a_lone_reference_video_prefers_reference_over_source_models():
+    """wan2.7-i2v accepts one video as the clip to *extend*; a plain reference request
+    must not tie with it. The role in `inputs:` is what breaks that tie."""
+    router = _router()
+    req = GenerateVideoInput(prompt="test", reference_videos=["https://example.com/v.mp4"])
+    source = router._registry.get("wan-2-7-i2v")
+    reference = router._registry.get("wan2.7-r2v")
+    assert source.supports(req)[0] and reference.supports(req)[0]
+    assert router._score(reference, req) == router._score(source, req) + 3 + (
+        (reference.speed_tier - reference.cost_tier) - (source.speed_tier - source.cost_tier)
+    )
 
 
 def test_best_tier_prefers_declared_quality_rank_over_price():
@@ -162,15 +176,29 @@ def test_auto_image_falls_back_to_5_0_lite_when_pro_unsupported():
 def test_declared_default_forwards_multi_image_request():
     """The balanced default accepts n=1–10 and forwards it upstream.
 
-    GPT Image 2 has the same multi-image capability used by the router's n>1
-    preference. Its n is an output ceiling, like Seedream's group-size ceiling.
+    GPT Image 2 honours n through its declared max_images_per_request, which is what the
+    router's n>1 preference reads. Its images are independent, so it does not claim the
+    multi_image_group task (a coherent series); its n is an output ceiling.
     """
     router = _router()
     req = GenerateImageInput(prompt="a cat", n=4)
     adapter = router.select_model(req)
     assert adapter.adapter_id == "gpt-image-2"
-    assert "multi_image_group" in adapter.capabilities
+    assert adapter.max_images_per_request == 10
+    assert "multi_image_group" not in adapter.tasks
     assert adapter.build_payload(req)["n"] == 4
+
+
+def test_models_that_ignore_n_get_no_group_preference():
+    """Nano Banana inherits from gpt-image-2 but never sends n. It used to inherit the
+    group capability too, so the router preferred it for n>1 and returned one image."""
+    router = _router()
+    nano = router._registry.get("nano-banana-2")
+    assert nano.max_images_per_request is None
+    assert "n" not in nano.build_payload(GenerateImageInput(prompt="x", n=4))
+    group = GenerateImageInput(prompt="x", n=4)
+    single = GenerateImageInput(prompt="x")
+    assert router._score(nano, group) == router._score(nano, single)
 
 
 def test_video_defaults_differ_per_quality_tier():
@@ -363,8 +391,8 @@ def test_undeclared_model_scores_exactly_as_before():
     assert adapter.quality_rank == 0
 
 
-def test_image_reference_bonus_uses_real_capability():
-    """The +3 reference bonus keys on the capability, not on a model name.
+def test_image_reference_bonus_uses_the_declared_task():
+    """The +3 reference bonus keys on the declared task, not on a model name.
 
     Asserted below the declared balanced default for the same reason the Chinese
     bonus is: ``default_for`` outranks the score, so the winner of a
@@ -386,8 +414,8 @@ def test_image_reference_bonus_uses_real_capability():
          if a.adapter_id != "gpt-image-2" and a.supports(req)[0]),
         key=lambda a: selection_key(router._score(a, req), a, "balanced"),
     )
-    caps = ranked[0].capabilities
-    assert "multi_image_fusion" in caps or "multi_image_group" in caps
+    tasks = ranked[0].tasks
+    assert "multi_image_fusion" in tasks or "multi_image_group" in tasks
 
 
 def test_explicit_model_bypasses_scoring():

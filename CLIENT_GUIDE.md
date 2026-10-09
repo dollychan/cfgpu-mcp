@@ -576,7 +576,7 @@ cfgpu generate video "..." \
   --reference-videos https://example.com/ref.mp4 \
   --reference-audios https://example.com/bgm.mp3
 
-# HappyHorse — 多参考图生视频（multi_modal_reference）
+# HappyHorse — 多参考图生视频（reference_to_video）
 cfgpu generate video "身着旗袍的女性，低角度仰拍" \
   --model happyhorse-1-0-r2v \
   --reference-images https://example.com/ref1.jpg \
@@ -698,12 +698,12 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
 
-> `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。支持 `n>1` 的是带
-> `multi_image_group` 能力的模型：`doubao-seedream-*`（自动设置
+> `n`（出图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。出**连贯组图**的是 tasks 含
+> `multi_image_group` 的模型：`doubao-seedream-*`（自动设置
 > `sequential_image_generation=auto` + `max_images=n`）与 `wan2.7-image`（自动设置
-> `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。**不支持组图的模型
-> （`doubao-seedream-5-0-pro`、`doubao-seedream-5-0-flash`、`gpt-image-2`、`nano-banana-*` 等）传 `n>1` 不报错，
-> `n` 被忽略、payload 里不带任何组图字段，只回一张图**（包括 `layer_decomposition` 分层拆解）。
+> `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。`cf-image-2` 按 `n` 出 1–10 张**互相独立**的图
+> （不是组图任务）。**其余模型（`doubao-seedream-5-0-pro`、`doubao-seedream-5-0-flash`、`nano-banana-*` 等）传 `n>1`
+> 不报错，`n` 被忽略、payload 里不带任何组图字段，只回一张图**（包括 `layer_decomposition` 分层拆解）。
 > 两家的 `n` 都是**上限而不是张数**：出几张由模型决定，少于 `n` 是正常结果，结果回来之前
 > 不要向用户承诺具体张数。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
 > HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，
@@ -776,6 +776,35 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 报错里会给出两条具体改法，按 prompt 的意图选一条：图片是人物/主体 → 移入 `reference_images`、删 `first_frame`；
 > 图片要原样开场 → 保留 `first_frame`、删掉 `reference_*`（删 `reference_audios` 就没有对口型了）。
 > 当前模型走不了的那条会直接指名要换的模型（如 HappyHorse 的 `happyhorse-1.0-r2v` / `happyhorse-1.0-i2v`）。
+
+> **`reference_audios` 在不同模型上用途不同，选模型前先看 `inputs`（2026-10-09 起）。**
+> `list_model_profiles` 给每个视频模型返回 `inputs`：它接受哪些素材槽、每槽最多几个，以及音频的
+> `role`。不在 `inputs` 里的槽，该模型不接受。音频有三种 `role`：
+>
+> | `role` | 含义 | 模型 |
+> |---|---|---|
+> | `driving` | 这段音频**原样**作为成片音轨，画面（口型、节奏）跟着它走 | `wan2.6-t2v`、`wan2.6-i2v`、`wan2.7-i2v` |
+> | `voice` | 音色样本，绑定到某个参考素材；模型用这个声音说新的台词，不播放原录音 | `wan2.7-r2v` |
+> | `reference` | 由 prompt 决定怎么用（背景音乐、模仿音色、参照节奏），**不保证**原声保留、口型对齐 | Seedance / WAN 2.0 系、`MiniMax-H3` |
+>
+> 用户给的是一段**语音**、要求「让人把这段话说出来」，就用 `required_tasks=["audio_driven_video"]`
+> 找模型 —— 它只返回 `role: driving` 的模型。用 `reference` 模型做这件事也会成功、也会计费，
+> 但得到的是一条口型对不上、甚至听不到原声的视频。只是拿一段音乐当背景，`reference` 模型就够了。
+> `standalone: false` 表示音频不能单独传，至少还要带一张图或一段视频。
+>
+> `reference_to_video` 从此只表示「图像或视频参考」，不再包含音频：Kling、Grok、HappyHorse 等模型
+> 也属于这个任务，但它们根本不收音频。
+>
+> **`reference_videos` 同样有 `role`**：`reference` 表示由 prompt 指挥的参考素材（会编辑、延长的模型上，prompt 也可以
+> 让它成为被编辑的那段）；`source` 表示它**永远**是被编辑或续写的那段视频（`wan2.7-i2v` 把它当作续写起点
+> `first_clip`，`wan2.7-videoedit` / `happyhorse-1.0-video-edit` 把它当作源视频）。想「参考这段视频的运镜重新拍」，
+> 不要选 `source` 模型 —— 它会直接续写或改动你给的那段。`model="auto"` 在只给参考视频时会优先 `reference` 模型。
+
+> **`list_models` 的 `capabilities` 字段已改名为 `tasks`（2026-10-09）**，取值换成与 `list_model_profiles` 相同的
+> canonical task（如 `multi_modal_reference` → `reference_to_video`、`audio_generate` → `synced_audio_output` 或
+> `audio_driven_video`、`web_search` → `web_grounded_generation`、`region_understand` → `region_understanding`），视频模型
+> 另带 `inputs`。按旧字段名解析 `list_models` 的脚本需要跟着改；`list_model_profiles` 的返回结构不变。
+> 拒绝理由里的模型名一律是对外的 `model_id`，不再出现内部目录名。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
 > `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；
@@ -866,7 +895,7 @@ cfgpu models list
 # 只看视频模型
 cfgpu models list --task-type video
 
-# 输出 JSON（含所有字段）
+# 输出 JSON（含所有字段：tasks，视频模型另有 inputs）
 cfgpu models list --json
 
 # 查看某个模型的详细说明（markdown）

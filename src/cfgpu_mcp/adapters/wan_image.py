@@ -61,10 +61,10 @@ _SIZE_MAP: dict[tuple[str, str], str] = {
     for ratio in _RATIOS
 }
 
-#: 图像集 (image-set) generation. Declared as a capability rather than inferred from the
+#: 图像集 (image-set) generation. Declared as a canonical task rather than inferred from the
 #: adapter_id, for the reason SeedreamAdapter spells out: a future variant without it
 #: would otherwise be sent `enable_sequential: true` and bill for images nobody asked for.
-_GROUP_CAPABILITY = "multi_image_group"
+_GROUP_TASK = "multi_image_group"
 
 #: `n` ceiling in image-set mode. Outside it the API's own range is 1–4, but this adapter
 #: never sends n>1 outside image-set mode (see build_payload), so 12 is the only cap that
@@ -123,22 +123,22 @@ class WanImageAdapter(ModelAdapter):
             return False, reason
         assert isinstance(req, GenerateImageInput)
         if not req.prompt.strip():
-            return False, f"{self.adapter_id} requires a non-empty prompt"
+            return False, f"{self.model_name} requires a non-empty prompt"
 
         allowed = self._allowed_tiers()
         if req.resolution not in allowed:
             return False, (
-                f"{self.adapter_id} does not support resolution {req.resolution} "
+                f"{self.model_name} does not support resolution {req.resolution} "
                 f"(supported: {', '.join(allowed)})"
             )
 
         reference_count = len(req.reference_images or [])
         if reference_count > _MAX_IMAGES:
-            return False, f"{self.adapter_id} accepts at most {_MAX_IMAGES} reference_images"
+            return False, f"{self.model_name} accepts at most {_MAX_IMAGES} reference_images"
 
         if req.n > _MAX_SEQUENTIAL_N:
             return False, (
-                f"{self.adapter_id} accepts n up to {_MAX_SEQUENTIAL_N} "
+                f"{self.model_name} accepts n up to {_MAX_SEQUENTIAL_N} "
                 f"(图像集 mode caps the group there); got {req.n}"
             )
 
@@ -150,7 +150,7 @@ class WanImageAdapter(ModelAdapter):
             missing = regions_missing_size(req.regions)
             if missing:
                 return False, (
-                    f"{self.adapter_id} 的 bbox_list 用原图绝对像素坐标，所以每个 region "
+                    f"{self.model_name} 的 bbox_list 用原图绝对像素坐标，所以每个 region "
                     f"都必须带 image_size=[width, height]（原图尺寸，不是显示画布尺寸）；"
                     f"image_index={missing} 上的 region 没有。尺寸绝不猜测：猜错不会报错，"
                     f"只会在图上另一个位置改出一张看着合理、还要计费的图。"
@@ -160,7 +160,7 @@ class WanImageAdapter(ModelAdapter):
             # enable_sequential, and the combination has no meaning to fall back on.
             if req.n > 1:
                 return False, (
-                    f"{self.adapter_id}: regions (交互式编辑) cannot be combined with n>1 "
+                    f"{self.model_name}: regions (交互式编辑) cannot be combined with n>1 "
                     f"(图像集) — a group is several independent images, a region marks one "
                     f"place on the image being edited. Call once per image."
                 )
@@ -172,12 +172,12 @@ class WanImageAdapter(ModelAdapter):
         assert isinstance(req, GenerateImageInput)
 
         # supports() is the gate, but build_payload is reachable directly (tests, and any
-        # future caller). A region that reached a model without the capability must stop
+        # future caller). A region that reached a model without the region_edit task must stop
         # here rather than be quietly dropped into a whole-image edit that generates a
         # picture and bills for it.
-        if req.regions and "region_edit" not in self.capabilities:
+        if req.regions and "region_edit" not in self.tasks:
             raise ValueError(
-                f"{self.adapter_id} does not support region editing (regions=), and "
+                f"{self.model_name} does not support region editing (regions=), and "
                 f"regions are never silently ignored."
             )
 
@@ -201,7 +201,7 @@ class WanImageAdapter(ModelAdapter):
         # images the set holds. Both keys are omitted at n=1 so the request stays in the
         # upstream default (enable_sequential=false, n=1) — and they are only ever sent
         # together, because enable_sequential=true with no `n` defaults to **12**.
-        if req.n > 1 and _GROUP_CAPABILITY in self.capabilities:
+        if req.n > 1 and _GROUP_TASK in self.tasks:
             parameters["enable_sequential"] = True
             parameters["n"] = req.n
         if req.regions:

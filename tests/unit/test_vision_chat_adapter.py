@@ -15,7 +15,7 @@ def _adapter(cfgpu_model_id: str = "qwen3.6-plus") -> QwenVisionAdapter:
         "task_type": "understand",
         "endpoint": "/model/v1/chat/completions",
         "is_async": False,
-        "capabilities": {"image_understanding", "video_understanding"},
+        "tasks": ["image_understanding", "video_understanding"],
         "cost_tier": 2,
         "speed_tier": 4,
     }

@@ -156,10 +156,10 @@ def test_seedream_5_0_pro_extends_resolves_seedream_adapter():
     pro = registry.get("doubao-seedream-5-0-pro")
     assert isinstance(pro, SeedreamAdapter)
     assert pro.cfgpu_model_id == "doubao-seedream-5-0-pro"
-    # capabilities override should drop multi_image_group / web_search present on lite
-    assert "multi_image_group" not in pro.capabilities
-    assert "web_search" not in pro.capabilities
-    assert "multi_image_fusion" in pro.capabilities
+    # its own tasks: replace lite's, dropping multi_image_group / web grounding
+    assert "multi_image_group" not in pro.tasks
+    assert "web_grounded_generation" not in pro.tasks
+    assert "multi_image_fusion" in pro.tasks
 
 
 def test_seedream_5_0_flash_reuses_the_sync_seedream_adapter():
@@ -168,7 +168,7 @@ def test_seedream_5_0_flash_reuses_the_sync_seedream_adapter():
     assert isinstance(flash, SeedreamAdapter)
     assert flash.cfgpu_model_id == "doubao-seedream-5-0-flash-260915"
     assert flash.is_async is False
-    assert "region_edit" in flash.capabilities
+    assert "region_edit" in flash.tasks
 
 
 @pytest.mark.parametrize(
@@ -192,13 +192,14 @@ def test_multilevel_extends_resolves_ancestor_python_adapter(adapter_id, cfgpu_m
 
 def test_seedance_2_5_inherits_the_wan_chain_and_raises_its_duration_cap():
     """doubao-seedance-2-5 → doubao-seedance-2-0 → wan-2-0: it must reuse
-    SeedanceVideoAdapter (two levels up) and inherit the full capability set,
+    SeedanceVideoAdapter (two levels up) and inherit the full task and input set,
     overriding only its identifiers, tiers and the 30s duration ceiling."""
     registry = _load()
     adapter = registry.get("doubao-seedance-2-5")
     assert isinstance(adapter, SeedanceVideoAdapter)
     assert adapter.cfgpu_model_id == "doubao-seedance-2-5"
-    assert registry.get("wan-2-0").capabilities == adapter.capabilities
+    assert registry.get("wan-2-0").tasks == adapter.tasks
+    assert registry.get("wan-2-0").inputs["first_frame"] == adapter.inputs["first_frame"]
     assert adapter.max_duration_seconds == 30
     assert registry.get("doubao-seedance-2-0").max_duration_seconds == 15
     assert registry.get("doubao-seedance-1-5-pro").max_duration_seconds == 12

@@ -12,7 +12,7 @@ def _gpt() -> GptImage2Adapter:
         "endpoint": "/v1/images/generations",
         "is_async": True,
         "poll_endpoint": "/v1/images/tasks/{task_id}",
-        "capabilities": {"text_to_image", "image_to_image"},
+        "tasks": ["text_to_image", "image_to_image"],
         "cost_tier": 2,
         "speed_tier": 3,
         "max_images_per_request": 10,
@@ -28,7 +28,7 @@ def _nano() -> NanoBananaAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": True,
         "poll_endpoint": "/v1/images/tasks/{task_id}",
-        "capabilities": {"text_to_image", "image_to_image"},
+        "tasks": ["text_to_image", "image_to_image"],
         "cost_tier": 4,
         "speed_tier": 3,
     })

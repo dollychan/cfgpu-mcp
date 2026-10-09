@@ -8,10 +8,11 @@ endpoint: /images/generations
 is_async: true
 poll_endpoint: /images/tasks/{task_id}
 
-capabilities:
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_image
   - image_to_image
-  - multi_image_group
 
 # GPT Image 2 accepts an upper bound of ten images in one call.
 max_images_per_request: 10
@@ -42,7 +43,7 @@ quality_rank: 3
 # quality_rank 3, which is a separate declaration and stays separate.
 #
 # Not a pin: supports() runs first, so a request this model cannot serve (a
-# `regions` edit — no region_edit capability) drops it before this key is read
+# `regions` edit — no region_edit task) drops it before this key is read
 # and the runner-up takes over normally.
 #
 default_for: [balanced]

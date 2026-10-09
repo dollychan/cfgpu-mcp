@@ -1,5 +1,6 @@
-"""Keep agent-facing task profiles complete, canonical, and free of adapter aliases."""
+"""Keep the canonical task lists complete, valid, and the only task vocabulary."""
 
+import re
 from pathlib import Path
 from typing import get_args
 
@@ -10,7 +11,6 @@ import yaml
 ROOT = Path(__file__).parent.parent.parent
 MODELS_DIR = ROOT / "src" / "cfgpu_mcp" / "models"
 TASKS_PATH = ROOT / "src" / "cfgpu_mcp" / "capabilities" / "media_tasks.yaml"
-PROFILE_KEYS = {"schema_version", "tasks"}
 
 
 def _load_yaml(path: Path) -> dict:
@@ -37,40 +37,65 @@ def test_profile_filter_enum_matches_the_canonical_task_dictionary():
     assert set(get_args(CanonicalTaskId)) == set(_load_yaml(TASKS_PATH)["tasks"])
 
 
-def test_every_adapter_has_a_canonical_task_profile():
-    adapters = {path.parent for path in MODELS_DIR.glob("*/adapter.yaml")}
-    profiles = {path.parent for path in MODELS_DIR.glob("*/profile.yaml")}
-    assert profiles == adapters
+def _registry():
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    return registry
 
 
-def test_profiles_reference_only_known_canonical_task_ids():
-    tasks = _load_yaml(TASKS_PATH)["tasks"]
-    for profile_path in MODELS_DIR.glob("*/profile.yaml"):
-        profile = _load_yaml(profile_path)
-        assert set(profile) == PROFILE_KEYS, profile_path
-        assert profile["schema_version"] == 1, profile_path
-        assert isinstance(profile["tasks"], list) and profile["tasks"], profile_path
-        assert len(profile["tasks"]) == len(set(profile["tasks"])), profile_path
-        assert set(profile["tasks"]).issubset(tasks), profile_path
+def test_every_model_declares_canonical_tasks():
+    """Each model's tasks live in its adapter.yaml (inherited through `extends`)."""
+    assert not list(MODELS_DIR.glob("*/profile.yaml")), "profile.yaml was folded into adapter.yaml"
+    missing = [a.adapter_id for a in _registry().list_all() if not a.tasks]
+    assert not missing, f"models without tasks: {missing}"
 
-        media_types = {
-            tasks[task_id]["media_type"]
-            for task_id in profile["tasks"]
-            if tasks[task_id]["media_type"] != "cross_media"
-        }
-        assert len(media_types) == 1, profile_path
+
+def test_the_retired_capability_vocabulary_is_refused():
+    from cfgpu_mcp.adapters.generic import GenericAdapter
+
+    with pytest.raises(ValueError, match="capabilities: vocabulary was retired"):
+        GenericAdapter.from_config({
+            "adapter_id": "x", "cfgpu_model_id": "x", "task_type": "image",
+            "endpoint": "/i", "capabilities": ["text_to_image"],
+        })
+    for raw in MODELS_DIR.glob("*/adapter.yaml"):
+        assert "capabilities" not in _load_yaml(raw), raw
+
+
+@pytest.mark.parametrize(
+    "tasks, message",
+    [
+        (["r2v"], "unknown canonical tasks"),
+        (["text_to_video"], "do not belong to a image model"),
+        (["text_to_image", "text_to_image"], "duplicates"),
+    ],
+)
+def test_tasks_are_validated_at_load(tasks, message):
+    from cfgpu_mcp.adapters.generic import GenericAdapter
+
+    with pytest.raises(ValueError, match=message):
+        GenericAdapter.from_config({
+            "adapter_id": "x", "cfgpu_model_id": "x", "task_type": "image",
+            "endpoint": "/i", "tasks": tasks,
+        })
+
+
+def test_cross_media_tasks_sit_on_any_media_type():
+    tasks = _registry().get("wan-2-0").tasks
+    assert "web_grounded_generation" in tasks
 
 
 def test_seedance_reference_and_edit_are_distinct_agent_tasks():
-    profile = _load_yaml(MODELS_DIR / "doubao-seedance-2-5" / "profile.yaml")
-    assert {"reference_to_video", "video_edit", "video_extend"}.issubset(profile["tasks"])
-    assert "multi_modal_reference" not in profile["tasks"]
+    tasks = _registry().get("doubao-seedance-2-5").tasks
+    assert {"reference_to_video", "video_edit", "video_extend"}.issubset(tasks)
+    assert "multi_modal_reference" not in tasks
 
 
 @pytest.mark.parametrize("adapter_id", ["cfgpu-minimax-h3", "cfdream-minimax-h3-r2v"])
 def test_minimax_h3_reference_video_supports_video_edit(adapter_id: str):
-    profile = _load_yaml(MODELS_DIR / adapter_id / "profile.yaml")
-    assert {"reference_to_video", "video_edit"}.issubset(profile["tasks"])
+    assert {"reference_to_video", "video_edit"}.issubset(_registry().get(adapter_id).tasks)
 
 
 @pytest.mark.asyncio
@@ -111,6 +136,7 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
             "tasks",
             "cost_tier",
             "speed_tier",
+            "inputs",  # video models only; video_edit is a video task
         }
         assert "adapter_id" not in model
         assert "capabilities" not in model
@@ -410,3 +436,50 @@ def test_cards_point_to_the_catalog_instead_of_listing_voices(adapter_id):
     section = card.split("## 系统音色列表", 1)[1].split("\n## ", 1)[0]
     assert "list_voice_profiles" in section
     assert "|" not in section
+
+
+@pytest.mark.asyncio
+async def test_profile_catalog_says_how_each_model_uses_audio(_full_registry):
+    """Speech-to-video selection needs the audio role, which the task list alone hides."""
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_model_profiles(media_type="video")
+    by_id = {model["model_id"]: model for model in catalog["models"]}
+    assert by_id["wan2.6-i2v"]["inputs"]["reference_audios"] == {
+        "max": 1, "role": "driving", "standalone": False,
+    }
+    assert by_id["wan2.7-r2v"]["inputs"]["reference_audios"]["role"] == "voice"
+    assert by_id["doubao-seedance-2-0"]["inputs"]["reference_audios"]["role"] == "reference"
+    assert "reference_audios" not in by_id["kling-video-o1"]["inputs"]
+    assert catalog["task_catalog"]["audio_driven_video"]["requires"] == {
+        "all": ["reference_audios"], "audio_role": "driving",
+    }
+
+    images = await model_service.list_model_profiles(media_type="image")
+    assert all("inputs" not in model for model in images["models"])
+
+
+@pytest.mark.asyncio
+async def test_audio_driven_search_returns_only_driving_models(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_model_profiles(required_tasks=["audio_driven_video"])
+    assert catalog["models"]
+    for model in catalog["models"]:
+        assert model["inputs"]["reference_audios"]["role"] == "driving"
+
+
+_RETIRED = re.compile(r"multi_modal_reference|audio_generate|\*\*web_search\*\*|region_understand\b|能力标签")
+
+
+@pytest.mark.parametrize("card", sorted(MODELS_DIR.glob("*/card.md")), ids=lambda p: p.parent.name)
+def test_cards_speak_the_canonical_vocabulary(card):
+    """A card is read by people and agents; a second vocabulary there is the drift that
+    the retired `capabilities` list was. `tools.type: web_search` is an upstream wire
+    value and stays."""
+    text = card.read_text(encoding="utf-8")
+    assert not _RETIRED.search(text), _RETIRED.search(text).group(0)
+    row = re.search(r"^\| 任务（tasks） \| ([^|]*) \|$", text, re.M)
+    if row:
+        declared = _registry().get(card.parent.name).tasks
+        assert [t.strip() for t in row.group(1).split(",")] == list(declared)

@@ -5,7 +5,7 @@
 | 属性 | 值 |
 |------|-----|
 | 任务类型 | image | 
-| 能力标签 | text_to_image, image_to_image |
+| 任务（tasks） | text_to_image, image_to_image |
 | 成本档位 | 4/5 |
 | 速度档位 | 3/5 |
 

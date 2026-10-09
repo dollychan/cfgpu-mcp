@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.7-t2v` |
-| 能力标签 | text_to_video |
+| 任务（tasks） | text_to_video |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 

@@ -11,7 +11,7 @@ CF‑Imagine‑Video 是 xAI 开发的文生 / 图生视频生成模型，采用
 | 任务类型 | video |
 | 公开模型 ID（`model` 参数 / `list_models`） | `cf-imagine-video` |
 | 上游 API 模型 ID（仅出现在请求体 `model` 字段） | `grok-imagine-video` |
-| 能力标签 | text_to_video, image_to_video, multi_modal_reference |
+| 任务（tasks） | text_to_video, image_to_video, reference_to_video |
 | 成本档位 | 2/5 |
 | 速度档位 | 4/5 |
 

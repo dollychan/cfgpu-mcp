@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.7-r2v` |
-| 能力标签 | multi_modal_reference, audio_generate |
+| 任务（tasks） | reference_to_video |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -25,7 +25,7 @@
 
 | 能力 | 说明 |
 |------|------|
-| **multi_modal_reference** | 参考视频 + 参考图片 + 文本生成视频 |
+| **reference_to_video** | 参考视频 + 参考图片 + 文本生成视频 |
 
 > 需至少提供 1 个参考视频或参考图片；可选 `first_frame` 指定开场画面。`reference_audios` 按参考媒体顺序作为音色样本传入；不支持尾帧。
 

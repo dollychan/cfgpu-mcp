@@ -552,8 +552,8 @@ class GenerateImageInput(BaseModel):
         description="How many images to generate. 1–15 globally; individual models can "
         "have a lower limit. Some image models treat 1–10 as an output ceiling; "
         "Seedream and Wan image-set models also treat it as a ceiling for a related group, so "
-        "they may return fewer images. Only models with the `multi_image_group` "
-        "capability can produce more than one image. On Seedream group models the input "
+        "they may return fewer images. Models that return one image ignore n; "
+        "list_model_profiles shows multi_image_group for the group models. On Seedream group models the input "
         "reference images plus generated images must total at most 15.",
     )
 
@@ -661,8 +661,11 @@ class GenerateVideoInput(BaseModel):
         accepts=["https_url", "asset_url"],
     )
     reference_audios: Optional[list[str]] = media_field(
-        slot="Reference audio that guides the generation. Model-specific combinations and "
-        "limits are validated by MCP before execution.",
+        slot="Audio supplied to the generation. Models use it differently — as the "
+        "soundtrack the picture follows, as a voice sample, or as material the prompt "
+        "directs — so check inputs.reference_audios.role in list_model_profiles; only a "
+        "'driving' role keeps the track as heard. Model-specific combinations and limits "
+        "are validated by MCP before execution.",
         role="audio",
         arity="many",
         accepts=["https_url", "asset_url"],
@@ -880,7 +883,7 @@ class UnderstandVisionInput(BaseModel):
     regions: Optional[list[RegionSpec]] = media_field(
         slot="Regions of `images` the user marked, so you can ask about a specific place "
         "rather than the whole picture ('what material is [[标记3]]?'). Accepted only by "
-        "models carrying the `region_understand` capability — passing regions to a model "
+        "models whose tasks include `region_understanding` — passing regions to a model "
         "without it is a hard error, never a silently whole-image answer. Reading a "
         "region and then describing it in words is also how you edit with a model that "
         "cannot take regions itself. Write every region you pass here into `prompt` as a "
@@ -958,7 +961,7 @@ class TaskWaitInput(BaseModel):
 
 
 class ListModelsInput(BaseModel):
-    """List available CFGPU models with their capabilities and identifiers."""
+    """List available CFGPU models with their canonical tasks, inputs and identifiers."""
 
     task_type: Optional[Folded("image", "video", "audio", "understand")] = Field(
         default=None,
@@ -1005,7 +1008,11 @@ CanonicalTaskId = Literal[
 
 
 class ListModelProfilesInput(BaseModel):
-    """Find models by canonical capabilities and return agent-facing profiles only."""
+    """Find models by canonical capabilities and return agent-facing profiles only.
+
+    Video models also list ``inputs``: the material slots they accept, item limits,
+    and how they use a supplied audio track (``role``).
+    """
 
     media_type: Optional[MediaType] = Field(
         default=None,

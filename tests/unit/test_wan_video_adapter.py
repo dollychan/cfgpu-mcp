@@ -11,7 +11,7 @@ from cfgpu_mcp.adapters.wan_video import (
 from cfgpu_mcp.tool_registry import GenerateVideoInput
 
 
-def _cfg(adapter_id, cfgpu_model_id, caps, timeout=400):
+def _cfg(adapter_id, cfgpu_model_id, tasks, timeout=400):
     return {
         "adapter_id": adapter_id,
         "display_name": adapter_id,
@@ -20,7 +20,7 @@ def _cfg(adapter_id, cfgpu_model_id, caps, timeout=400):
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": set(caps),
+        "tasks": sorted(tasks),
         "cost_tier": 3,
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": timeout},
@@ -38,7 +38,7 @@ def _make_adapter() -> WanVideoAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {"image_to_video"},
+        "tasks": ["image_to_video"],
         "cost_tier": 3,
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 400},
@@ -55,7 +55,7 @@ def _make_r2v_adapter() -> WanVideoR2VAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {"multi_modal_reference"},
+        "tasks": ["reference_to_video"],
         "cost_tier": 3,
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 500},
@@ -345,10 +345,9 @@ def test_r2v_image_only_supported():
 
 
 def test_r2v_accepts_first_frame_with_references_and_limits_video_duration():
-    config = {**_make_r2v_adapter().__dict__}
-    config["poll_config"] = {"default_timeout": 500}
-    config["min_duration_seconds"] = 2
-    adapter = WanVideoR2VAdapter.from_config(config)
+    adapter = WanVideoR2VAdapter.from_config(
+        {**_cfg("wan-2-7-r2v", "wan2.7-r2v", {"reference_to_video"}, timeout=500), "min_duration_seconds": 2}
+    )
     req = GenerateVideoInput(
         prompt="Image 1 中的人物登场",
         first_frame="https://first.png",
@@ -407,7 +406,7 @@ def _make_t2v_adapter() -> WanVideoT2VAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {"text_to_video"},
+        "tasks": ["text_to_video"],
         "cost_tier": 3,
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 400},
@@ -538,7 +537,7 @@ def test_wan26_t2v_flat_input():
 
 def test_wan26_t2v_maps_audio_and_negative_prompt_to_documented_locations():
     adapter = Wan26VideoT2VAdapter.from_config(
-        _cfg("wan-2-6-t2v", "wan2.6-t2v", {"text_to_video", "audio_generate"})
+        _cfg("wan-2-6-t2v", "wan2.6-t2v", {"text_to_video", "audio_driven_video"})
     )
     payload = adapter.build_payload(GenerateVideoInput(
         prompt="人物唱歌",
@@ -553,7 +552,7 @@ def test_wan26_t2v_maps_audio_and_negative_prompt_to_documented_locations():
 
 def test_wan26_i2v_img_url_and_optional_audio():
     adapter = Wan26VideoI2VAdapter.from_config(
-        _cfg("wan-2-6-i2v", "wan2.6-i2v", {"image_to_video", "audio_generate"})
+        _cfg("wan-2-6-i2v", "wan2.6-i2v", {"image_to_video", "audio_driven_video"})
     )
     # with audio
     payload = adapter.build_payload(
@@ -579,7 +578,7 @@ def test_wan26_i2v_img_url_and_optional_audio():
 
 def test_wan26_i2v_documented_defaults_and_controls():
     config = {
-        **_cfg("wan-2-6-i2v", "wan2.6-i2v", {"image_to_video", "audio_generate"}),
+        **_cfg("wan-2-6-i2v", "wan2.6-i2v", {"image_to_video", "audio_driven_video"}),
         "default_resolution": "1080p",
         "min_duration_seconds": 2,
     }
@@ -625,7 +624,7 @@ def test_wan26_i2v_documented_defaults_and_controls():
 )
 def test_wan26_i2v_supports(kwargs, ok_expected):
     adapter = Wan26VideoI2VAdapter.from_config(
-        _cfg("wan-2-6-i2v", "wan2.6-i2v", {"image_to_video", "audio_generate"})
+        _cfg("wan-2-6-i2v", "wan2.6-i2v", {"image_to_video", "audio_driven_video"})
     )
     ok, _ = adapter.supports(GenerateVideoInput(prompt="x", **kwargs))
     assert ok is ok_expected
@@ -633,7 +632,7 @@ def test_wan26_i2v_supports(kwargs, ok_expected):
 
 def test_wan26_r2v_reference_urls_flat_list():
     adapter = Wan26VideoR2VAdapter.from_config(
-        _cfg("wan-2-6-r2v", "wan2.6-r2v", {"multi_modal_reference"}, timeout=500)
+        _cfg("wan-2-6-r2v", "wan2.6-r2v", {"reference_to_video"}, timeout=500)
     )
     payload = adapter.build_payload(
         GenerateVideoInput(
@@ -669,7 +668,7 @@ def test_wan26_r2v_reference_urls_flat_list():
 )
 def test_wan26_r2v_supports(kwargs, ok_expected):
     adapter = Wan26VideoR2VAdapter.from_config(
-        _cfg("wan-2-6-r2v", "wan2.6-r2v", {"multi_modal_reference"}, timeout=500)
+        _cfg("wan-2-6-r2v", "wan2.6-r2v", {"reference_to_video"}, timeout=500)
     )
     ok, _ = adapter.supports(GenerateVideoInput(prompt="x", **kwargs))
     assert ok is ok_expected
@@ -677,7 +676,7 @@ def test_wan26_r2v_supports(kwargs, ok_expected):
 
 def test_wan26_r2v_rejects_more_than_five_references():
     config = {
-        **_cfg("wan-2-6-r2v", "wan2.6-r2v", {"multi_modal_reference"}),
+        **_cfg("wan-2-6-r2v", "wan2.6-r2v", {"reference_to_video"}),
         "min_duration_seconds": 2,
         "max_duration_seconds": 10,
     }

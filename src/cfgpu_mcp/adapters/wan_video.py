@@ -64,7 +64,7 @@ class WanVideoAdapter(ModelAdapter):
             and req.aspect_ratio not in self._ALLOWED_RATIOS
         ):
             return False, (
-                f"{self.adapter_id} does not support aspect_ratio {req.aspect_ratio} "
+                f"{self.model_name} does not support aspect_ratio {req.aspect_ratio} "
                 f"(supported: {', '.join(sorted(self._ALLOWED_RATIOS))})"
             )
         return True, ""
@@ -177,17 +177,17 @@ class WanVideoAdapter(ModelAdapter):
         has_first_clip = bool(req.reference_videos)
         if has_first_frame == has_first_clip:
             return False, (
-                f"{self.adapter_id} requires exactly one first_frame or source video "
+                f"{self.model_name} requires exactly one first_frame or source video "
                 "(reference_videos[0] maps to first_clip)"
             )
         if req.reference_images:
-            return False, f"{self.adapter_id} does not support reference_images"
+            return False, f"{self.model_name} does not support reference_images"
         if req.reference_videos and len(req.reference_videos) != 1:
-            return False, f"{self.adapter_id} accepts exactly one source video (first_clip)"
+            return False, f"{self.model_name} accepts exactly one source video (first_clip)"
         if req.reference_audios and len(req.reference_audios) != 1:
-            return False, f"{self.adapter_id} accepts at most one driving audio track"
+            return False, f"{self.model_name} accepts at most one driving audio track"
         if has_first_clip and req.reference_audios:
-            return False, f"{self.adapter_id} supports driving audio only with first_frame"
+            return False, f"{self.model_name} supports driving audio only with first_frame"
         return True, ""
 
     def estimate_poll_timeout(self, req: "GenerateImageInput | GenerateVideoInput") -> int:
@@ -232,16 +232,16 @@ class WanVideoR2VAdapter(WanVideoAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if req.last_frame:
-            return False, f"{self.adapter_id} does not support last_frame"
+            return False, f"{self.model_name} does not support last_frame"
         if not (req.reference_videos or req.reference_images):
-            return False, f"{self.adapter_id} requires at least one reference_video or reference_image"
+            return False, f"{self.model_name} requires at least one reference_video or reference_image"
         if len(req.reference_audios or []) > len(req.reference_videos or []) + len(req.reference_images or []):
-            return False, f"{self.adapter_id} accepts at most one reference_voice per reference media item"
+            return False, f"{self.model_name} accepts at most one reference_voice per reference media item"
         media_count = len(req.reference_videos or []) + len(req.reference_images or []) + bool(req.first_frame)
         if media_count > 5:
-            return False, f"{self.adapter_id} accepts at most 5 media items (including first_frame)"
+            return False, f"{self.model_name} accepts at most 5 media items (including first_frame)"
         if req.reference_videos and self.resolve_duration_seconds(req) > 10:
-            return False, f"{self.adapter_id} accepts durations of 2–10 seconds when reference_videos are supplied"
+            return False, f"{self.model_name} accepts durations of 2–10 seconds when reference_videos are supplied"
         return True, ""
 
 
@@ -264,9 +264,9 @@ class WanVideoT2VAdapter(WanVideoAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if req.first_frame or req.last_frame:
-            return False, f"{self.adapter_id} is a text-to-video model (no first/last_frame)"
+            return False, f"{self.model_name} is a text-to-video model (no first/last_frame)"
         if req.reference_images or req.reference_videos or req.reference_audios:
-            return False, f"{self.adapter_id} is a text-to-video model (no reference media)"
+            return False, f"{self.model_name} is a text-to-video model (no reference media)"
         return True, ""
 
 
@@ -329,17 +329,17 @@ class WanVideoEditAdapter(WanVideoAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if req.first_frame or req.last_frame:
-            return False, f"{self.adapter_id} is a video-edit model (use reference_videos/reference_images, not first/last_frame)"
+            return False, f"{self.model_name} is a video-edit model (use reference_videos/reference_images, not first/last_frame)"
         if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
+            return False, f"{self.model_name} does not support reference_audios"
         if not req.reference_videos:
-            return False, f"{self.adapter_id} requires a source video (reference_videos)"
+            return False, f"{self.model_name} requires a source video (reference_videos)"
         if len(req.reference_videos) > 1:
-            return False, f"{self.adapter_id} accepts a single source video"
+            return False, f"{self.model_name} accepts a single source video"
         if req.reference_images and len(req.reference_images) > 4:
-            return False, f"{self.adapter_id} accepts at most 4 reference_images"
+            return False, f"{self.model_name} accepts at most 4 reference_images"
         if req.aspect_ratio != "adaptive" and req.aspect_ratio not in self._ALLOWED_RATIOS:
-            return False, f"{self.adapter_id} does not support aspect_ratio {req.aspect_ratio}"
+            return False, f"{self.model_name} does not support aspect_ratio {req.aspect_ratio}"
         return True, ""
 
 
@@ -383,13 +383,13 @@ class Wan26VideoT2VAdapter(WanVideoAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if req.first_frame or req.last_frame:
-            return False, f"{self.adapter_id} is a text-to-video model (no first/last_frame)"
+            return False, f"{self.model_name} is a text-to-video model (no first/last_frame)"
         if req.reference_images or req.reference_videos:
-            return False, f"{self.adapter_id} is a text-to-video model (no reference media)"
+            return False, f"{self.model_name} is a text-to-video model (no reference media)"
         if req.reference_audios and len(req.reference_audios) > 1:
-            return False, f"{self.adapter_id} accepts at most one driving audio track"
+            return False, f"{self.model_name} accepts at most one driving audio track"
         if req.aspect_ratio not in {"adaptive", "16:9"}:
-            return False, f"{self.adapter_id} supports only 16:9 output (parameters.size)"
+            return False, f"{self.model_name} supports only 16:9 output (parameters.size)"
         return True, ""
 
 
@@ -418,13 +418,13 @@ class Wan26VideoI2VAdapter(WanVideoAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if not req.first_frame:
-            return False, f"{self.adapter_id} is an image-to-video model and requires first_frame"
+            return False, f"{self.model_name} is an image-to-video model and requires first_frame"
         if req.last_frame:
-            return False, f"{self.adapter_id} does not support last_frame (first_frame only)"
+            return False, f"{self.model_name} does not support last_frame (first_frame only)"
         if req.reference_images or req.reference_videos:
-            return False, f"{self.adapter_id} accepts only a first_frame image and an optional reference_audios track"
+            return False, f"{self.model_name} accepts only a first_frame image and an optional reference_audios track"
         if req.reference_audios and len(req.reference_audios) > 1:
-            return False, f"{self.adapter_id} accepts a single audio track (reference_audios)"
+            return False, f"{self.model_name} accepts a single audio track (reference_audios)"
         return True, ""
 
 
@@ -470,16 +470,16 @@ class Wan26VideoR2VAdapter(WanVideoAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if req.first_frame or req.last_frame:
-            return False, f"{self.adapter_id} is a reference-to-video model (use reference_videos/reference_images, not first/last_frame)"
+            return False, f"{self.model_name} is a reference-to-video model (use reference_videos/reference_images, not first/last_frame)"
         if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
+            return False, f"{self.model_name} does not support reference_audios"
         if not (req.reference_videos or req.reference_images):
-            return False, f"{self.adapter_id} requires at least one reference_video or reference_image"
+            return False, f"{self.model_name} requires at least one reference_video or reference_image"
         if len(req.reference_videos or []) + len(req.reference_images or []) > 5:
-            return False, f"{self.adapter_id} accepts at most 5 reference media items"
+            return False, f"{self.model_name} accepts at most 5 reference media items"
         if len(req.reference_videos or []) > 3:
-            return False, f"{self.adapter_id} accepts at most 3 reference videos"
+            return False, f"{self.model_name} accepts at most 3 reference videos"
         ratio = "16:9" if req.aspect_ratio == "adaptive" else req.aspect_ratio
         if (self.resolve_resolution(req), ratio) not in self._SIZES:
-            return False, f"{self.adapter_id} does not support {self.resolve_resolution(req)} at ratio {ratio}"
+            return False, f"{self.model_name} does not support {self.resolve_resolution(req)} at ratio {ratio}"
         return True, ""

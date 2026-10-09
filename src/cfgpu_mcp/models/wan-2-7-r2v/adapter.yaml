@@ -7,16 +7,25 @@ task_type: video
 resolutions: [720p, 1080p]
 default_resolution: 1080p
 min_duration_seconds: 2
-max_reference_images: 5
-max_reference_videos: 5
-max_reference_audios: 5
 endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
-  - multi_modal_reference
-  - audio_generate
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  first_frame: {}
+  reference_images: {max: 5}
+  reference_videos: {max: 5, role: reference}
+  # reference_voice: a timbre sample attached to the Nth visual reference; the model
+  # speaks in that voice, it does not play the recording.
+  reference_audios: {max: 5, role: voice, standalone: false}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
+  - reference_to_video
 
 cost_tier: 3
 speed_tier: 2

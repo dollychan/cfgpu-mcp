@@ -31,7 +31,7 @@ class QwenVisionAdapter(ModelAdapter):
     Registered under ``qwen-3-6-plus``; sibling Qwen vision models reuse
     this class via the registry extends-chain with their own ``cfgpu_model_id``.
 
-    Reads regions (``region_understand``) the same way the Seedream editor writes them:
+    Reads regions (``region_understanding``) the same way the Seedream editor writes them:
     a ``<bbox>`` tag on the [0, 999] grid, embedded in the prompt. That symmetry is the
     load-bearing part — asking "what is inside this box" and then editing that box are
     one conversation, and both ends speak the same coordinates, so nothing between them
@@ -50,9 +50,9 @@ class QwenVisionAdapter(ModelAdapter):
 
         prompt = req.prompt
         if req.regions:
-            if "region_understand" not in self.capabilities:
+            if "region_understanding" not in self.tasks:
                 raise ValueError(
-                    f"{self.adapter_id} does not support regions, and regions are never "
+                    f"{self.model_name} does not support regions, and regions are never "
                     f"silently ignored — an answer about the whole image, presented as "
                     f"an answer about the marked one, is worse than no answer."
                 )

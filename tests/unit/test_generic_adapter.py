@@ -12,7 +12,7 @@ def _make_adapter(extra: dict | None = None) -> GenericAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "capabilities": ["text_to_image"],
+        "tasks": ["text_to_image"],
         "cost_tier": 2,
         "speed_tier": 3,
         "payload_mapping": {

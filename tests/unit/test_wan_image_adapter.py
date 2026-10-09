@@ -68,8 +68,8 @@ def test_the_model_is_registered_as_a_synchronous_image_model():
     assert adapter.endpoint == "/images/generations"
 
 
-def test_it_declares_the_five_capabilities_it_implements():
-    assert _adapter().capabilities == {
+def test_it_declares_the_five_tasks_it_implements():
+    assert set(_adapter().tasks) == {
         "text_to_image",
         "image_to_image",
         "multi_image_fusion",
@@ -350,7 +350,7 @@ def test_a_size_less_regions_request_routes_to_a_prompt_coordinate_model_instead
         regions=[RegionSpec(image_index=0, box=[0.1, 0.1, 0.2, 0.2])],
     )
     adapter = ModelRouter(_registry()).resolve(req)
-    assert "region_edit" in adapter.capabilities
+    assert "region_edit" in adapter.tasks
     assert adapter.adapter_id != "wan-2-7-image"
 
 

@@ -31,7 +31,7 @@ def models() -> None:
               default=None, help="Filter by task type")
 @click.option("--json", "json_mode", is_flag=True, help="Output raw JSON")
 def list_cmd(task_type: str | None, json_mode: bool) -> None:
-    """List available models with capabilities."""
+    """List available models with their canonical tasks."""
     from cfgpu_mcp.service import model as svc
 
     try:

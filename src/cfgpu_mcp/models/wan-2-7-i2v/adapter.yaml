@@ -11,11 +11,23 @@ endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  first_frame: {}
+  last_frame: {}
+  reference_videos: {max: 1, role: source}   # first_clip — the clip to continue, not a reference
+  # driving_audio: lip-sync to this track; only with first_frame.
+  reference_audios: {max: 1, role: driving, standalone: false}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - image_to_video
   - first_last_frame
+  - audio_driven_video
   - video_extend
-  - audio_generate
 
 cost_tier: 3
 speed_tier: 2

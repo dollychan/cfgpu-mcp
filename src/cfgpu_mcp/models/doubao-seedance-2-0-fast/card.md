@@ -10,7 +10,7 @@ Seedance 2.0 fast 是豆包大模型团队推出的新一代多模态视频创�
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `doubao-seedance-2-0-fast-260128` |
-| 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference, video_edit, video_extend, audio_generate, web_search |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output, web_grounded_generation |
 | 成本档位 | 2/5 |
 | 速度档位 | 4/5 |
 
@@ -27,7 +27,7 @@ Seedance 2.0 fast 是豆包大模型团队推出的新一代多模态视频创�
 
 ## 能力说明
 
-与 Seedance 2.0 完全相同（text_to_video / image_to_video / first_last_frame / multi_modal_reference / video_edit / video_extend / audio_generate / web_search），生成速度更快、成本更低。
+与 Seedance 2.0 完全相同（text_to_video / image_to_video / first_last_frame / reference_to_video / video_edit / video_extend / synced_audio_output / web_grounded_generation），生成速度更快、成本更低。
 
 ## 参数与统一 Schema 映射
 

@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.6-r2v` |
-| 能力标签 | multi_modal_reference, audio_generate |
+| 任务（tasks） | reference_to_video |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -23,7 +23,7 @@
 
 | 能力 | 说明 |
 |------|------|
-| **multi_modal_reference** | 参考视频/图片 + 文本生成视频 |
+| **reference_to_video** | 参考视频/图片 + 文本生成视频 |
 
 > input 使用扁平的 `reference_urls` 数组（视频/图片 URL，**无 type 标签**），不使用 media 数组。需至少 1 个参考 URL。
 

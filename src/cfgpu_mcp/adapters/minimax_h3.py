@@ -29,13 +29,6 @@ if TYPE_CHECKING:
 #: reports the substitution so a preflight shows what will actually be sent.
 _T2V_DEFAULT_RATIO = "16:9"
 
-_REFERENCE_LIMITS = (
-    ("reference_images", 9),
-    ("reference_videos", 3),
-    ("reference_audios", 3),
-)
-
-
 @register_python_adapter
 class MinimaxH3Adapter(ModelAdapter):
     """Adapter for ``MiniMax-H3``, served by CFGPU (daily during the test phase).
@@ -245,10 +238,7 @@ class MinimaxH3Adapter(ModelAdapter):
             return False, "last_frame requires first_frame"
         if has_frames and has_references:
             return False, frames_vs_references_reason(self.model_name, req)
-        for name, limit in _REFERENCE_LIMITS:
-            values = getattr(req, name)
-            if values and len(values) > limit:
-                return False, f"{self.model_name} accepts at most {limit} {name} (got {len(values)})"
+        # Reference counts: the base class, from `inputs:` in adapter.yaml.
 
         # No aspect_ratio refusal here: `adaptive` on text-to-video is the schema
         # default, substituted in build_payload rather than rejected. Every other

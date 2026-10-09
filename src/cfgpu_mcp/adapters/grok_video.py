@@ -165,9 +165,9 @@ class GrokVideoAdapter(ModelAdapter):
         assert isinstance(req, GenerateVideoInput)
         # The request body has exactly one media slot, `refer_images`.
         if req.last_frame:
-            return False, f"{self.adapter_id} does not support last_frame (refer_images only)"
+            return False, f"{self.model_name} does not support last_frame (refer_images only)"
         if req.reference_videos:
-            return False, f"{self.adapter_id} does not support reference_videos"
+            return False, f"{self.model_name} does not support reference_videos"
         if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
+            return False, f"{self.model_name} does not support reference_audios"
         return True, ""

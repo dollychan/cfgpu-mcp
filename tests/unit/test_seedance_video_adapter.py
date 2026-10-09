@@ -12,7 +12,7 @@ def _make_adapter(cfgpu_model_id: str = "wan-video") -> SeedanceVideoAdapter:
         "endpoint": "/v1/video/tasks",
         "is_async": True,
         "poll_endpoint": "/v1/video/tasks/{task_id}",
-        "capabilities": {"text_to_video", "image_to_video", "first_last_frame", "multi_modal_reference"},
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video"],
         "cost_tier": 3,
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 600},
@@ -190,7 +190,7 @@ def test_supports_rejects_mixed_first_frame_and_reference_images():
 
 
 def _make_no_reference_adapter() -> SeedanceVideoAdapter:
-    """Adapter like Doubao Seedance 1.5 Pro: no multi_modal_reference."""
+    """Adapter like Doubao Seedance 1.5 Pro: no reference inputs."""
     config = {
         "adapter_id": "doubao-seedance-1-5-pro",
         "display_name": "Doubao Seedance 1.5 Pro",
@@ -199,37 +199,39 @@ def _make_no_reference_adapter() -> SeedanceVideoAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {"text_to_video", "image_to_video", "first_last_frame"},
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame"],
+        "inputs": {"first_frame": {}, "last_frame": {}},
         "cost_tier": 2,
         "speed_tier": 3,
     }
     return SeedanceVideoAdapter.from_config(config)
 
 
-def test_supports_rejects_reference_videos_without_capability():
+def test_supports_rejects_reference_videos_the_inputs_do_not_declare():
     adapter = _make_no_reference_adapter()
     req = GenerateVideoInput(prompt="x", reference_videos=["https://example.com/v.mp4"])
     ok, reason = adapter.supports(req)
     assert ok is False
-    assert "multi_modal_reference" in reason
+    assert reason == "doubao-seedance-1-5-pro does not accept reference_videos"
 
 
-def test_supports_rejects_reference_images_without_capability():
+def test_supports_rejects_reference_images_the_inputs_do_not_declare():
     adapter = _make_no_reference_adapter()
     req = GenerateVideoInput(prompt="x", reference_images=["https://example.com/r.jpg"])
     ok, reason = adapter.supports(req)
     assert ok is False
-    assert "multi_modal_reference" in reason
+    assert "does not accept reference_images" in reason
+    assert "capabilit" not in reason
 
 
-def test_supports_allows_first_frame_without_reference_capability():
+def test_supports_allows_first_frame_without_reference_inputs():
     adapter = _make_no_reference_adapter()
     req = GenerateVideoInput(prompt="x", first_frame="https://example.com/f.jpg")
     ok, _ = adapter.supports(req)
     assert ok is True
 
 
-def test_supports_allows_reference_videos_with_capability():
+def test_supports_allows_declared_reference_videos():
     adapter = _make_adapter()
     req = GenerateVideoInput(prompt="x", reference_videos=["https://example.com/v.mp4"])
     ok, _ = adapter.supports(req)
@@ -275,7 +277,7 @@ def test_seedance_rejects_duration_over_12():
         "endpoint": "/v1/video/tasks",
         "is_async": True,
         "poll_endpoint": "/v1/video/tasks/{task_id}",
-        "capabilities": {"text_to_video"},
+        "tasks": ["text_to_video"],
         "cost_tier": 2,
         "speed_tier": 3,
         "max_duration_seconds": 12,
@@ -296,19 +298,19 @@ def _make_2_5_adapter() -> SeedanceVideoAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {
-            "text_to_video", "image_to_video", "first_last_frame",
-            "multi_modal_reference", "video_edit", "video_extend", "audio_generate",
-        },
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video", "video_edit", "video_extend", "synced_audio_output"],
         "cost_tier": 4,
         "speed_tier": 2,
         "max_duration_seconds": 30,
         "default_duration_seconds": -1,
         "resolutions": ["480p", "720p", "1080p"],
-        "max_reference_images": 30,
-        "max_reference_videos": 10,
-        "max_reference_audios": 10,
-        "allow_audio_only_reference": True,
+        "inputs": {
+            "first_frame": {},
+            "last_frame": {},
+            "reference_images": {"max": 30},
+            "reference_videos": {"max": 10, "role": "reference"},
+            "reference_audios": {"max": 10, "role": "reference", "standalone": True},
+        },
     }
     return SeedanceVideoAdapter.from_config(config)
 
@@ -350,15 +352,15 @@ def _make_seedance_2_0_adapter(
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {
-            "text_to_video", "image_to_video", "first_last_frame",
-            "multi_modal_reference", "video_edit", "video_extend", "audio_generate",
-        },
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video", "video_edit", "video_extend", "synced_audio_output"],
         "resolutions": resolutions or ["480p", "720p", "1080p", "4k"],
-        "max_reference_images": 9,
-        "max_reference_videos": 3,
-        "max_reference_audios": 3,
-        "allow_audio_only_reference": False,
+        "inputs": {
+            "first_frame": {},
+            "last_frame": {},
+            "reference_images": {"max": 9},
+            "reference_videos": {"max": 3, "role": "reference"},
+            "reference_audios": {"max": 3, "role": "reference", "standalone": False},
+        },
     }
     return SeedanceVideoAdapter.from_config(config)
 
@@ -564,7 +566,7 @@ def _make_fast_adapter() -> SeedanceVideoAdapter:
         "endpoint": "/v1/video/tasks",
         "is_async": True,
         "poll_endpoint": "/v1/video/tasks/{task_id}",
-        "capabilities": {"text_to_video", "image_to_video", "first_last_frame", "multi_modal_reference"},
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video"],
         "cost_tier": 2,
         "speed_tier": 4,
     }
@@ -606,7 +608,7 @@ def test_seedance_accepts_smart_duration():
         "endpoint": "/v1/video/tasks",
         "is_async": True,
         "poll_endpoint": "/v1/video/tasks/{task_id}",
-        "capabilities": {"text_to_video"},
+        "tasks": ["text_to_video"],
         "cost_tier": 2,
         "speed_tier": 3,
     }

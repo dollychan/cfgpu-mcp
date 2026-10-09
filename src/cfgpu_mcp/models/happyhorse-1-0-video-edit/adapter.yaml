@@ -6,7 +6,16 @@ display_name: "happyhorse-1.0-video-edit"
 cfgpu_model_id: happyhorse-1.0-video-edit
 model_name: happyhorse-1.0-video-edit
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  reference_videos: {max: 1, role: source}   # the source video
+  reference_images: {max: 5}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - video_edit
 
 resolutions: [720p, 1080p]

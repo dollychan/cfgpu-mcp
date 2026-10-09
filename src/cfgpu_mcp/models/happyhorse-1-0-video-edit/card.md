@@ -8,7 +8,7 @@ HappyHorse-1.0-Video-Edit 支持视频编辑，通过自然语言指令编辑视
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `happyhorse-1.0-video-edit` |
-| 能力标签 | video_edit |
+| 任务（tasks） | video_edit |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 

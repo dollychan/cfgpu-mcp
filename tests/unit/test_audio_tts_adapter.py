@@ -24,7 +24,7 @@ def _seed_adapter() -> SeedTTSAdapter:
         "endpoint": "/voice/generations",
         "is_async": True,
         "poll_endpoint": "/voice/tasks/{task_id}",
-        "capabilities": {"text_to_speech"},
+        "tasks": ["text_to_speech"],
         "cost_tier": 3,
         "speed_tier": 3,
         "poll_config": {"base_interval": 3, "max_interval": 15, "backoff_factor": 1.3, "default_timeout": 300},
@@ -40,7 +40,7 @@ def _minimax_adapter(cfgpu_model_id: str = "MiniMax/speech-2.8-hd") -> MiniMaxSp
         "task_type": "audio",
         "endpoint": "/voice/generations",
         "is_async": False,
-        "capabilities": {"text_to_speech", "emotion"},
+        "tasks": ["text_to_speech", "expressive_speech"],
         "cost_tier": 2,
         "speed_tier": 3,
     }

@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `happyhorse-1.0-t2v` |
-| 能力标签 | text_to_video |
+| 任务（tasks） | text_to_video |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -16,7 +16,7 @@
 |------|------|
 | **text_to_video** | 纯文本生成视频 |
 | **image_to_video** | 请改用 `happyhorse-1.0-i2v` |
-| **multi_modal_reference** | 请改用 `happyhorse-1.0-r2v` |
+| **reference_to_video** | 请改用 `happyhorse-1.0-r2v` |
 
 **不支持：** 首帧、参考图片、尾帧、参考视频、参考音频。图生与参考生分别使用独立模型；支持 480P / 720P / 1080P。
 

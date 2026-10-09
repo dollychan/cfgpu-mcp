@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 
+from cfgpu_mcp.adapters.inputs import describe_inputs
 from cfgpu_mcp.voice_catalog import (
     AGE_GROUPS,
     FILTERABLE_GENDERS,
@@ -16,7 +17,6 @@ from cfgpu_mcp.voice_catalog import (
 )
 
 _MODELS_DIR = Path(__file__).parent.parent / "models"
-_TASKS_PATH = Path(__file__).parent.parent / "capabilities" / "media_tasks.yaml"
 _TASK_PARAMETERS_PATH = Path(__file__).parent.parent / "capabilities" / "task_parameters.yaml"
 _TASK_TYPES = frozenset({"image", "video", "audio", "understand"})
 # 4: voices come from models/*/voices.yaml; `language` became `languages` (codes) and
@@ -88,53 +88,29 @@ async def list_models(task_type: str | None = None) -> list[dict[str, Any]]:
 
     registry = get_registry()
     adapters = registry.list_all(task_type=fold_choice(task_type, _TASK_TYPES))
-    return [
-        {
+    # `tasks` replaced the retired adapter-internal `capabilities` (2026-10-09): one
+    # vocabulary everywhere, so this debugging view and the agent-facing profiles agree.
+    models = []
+    for a in adapters:
+        row = {
             "model_id":       a.model_name,
             "display_name":   a.display_name,
             "task_type":      a.task_type,
-            "capabilities":   sorted(a.capabilities),
+            "tasks":          list(a.tasks),
             "cost_tier":      a.cost_tier,
             "speed_tier":     a.speed_tier,
             "is_async":       a.is_async,
         }
-        for a in adapters
-    ]
+        if a.inputs is not None:
+            row["inputs"] = describe_inputs(a.inputs)
+        models.append(row)
+    return models
 
 
-def _load_task_catalog() -> tuple[int, dict[str, dict[str, str]]]:
-    """Read and minimally validate the agent-facing canonical task vocabulary."""
-    raw = yaml.safe_load(_TASKS_PATH.read_text())
-    if not isinstance(raw, dict) or raw.get("schema_version") != 1:
-        raise ValueError("media_tasks.yaml must declare schema_version: 1")
-    tasks = raw.get("tasks")
-    if not isinstance(tasks, dict) or not tasks:
-        raise ValueError("media_tasks.yaml must contain a non-empty tasks mapping")
+def _load_task_catalog() -> tuple[int, dict[str, dict[str, Any]]]:
+    from cfgpu_mcp.task_catalog import load_task_catalog
 
-    required = {"media_type", "name", "description", "prompt_guidance"}
-    for task_id, task in tasks.items():
-        if not isinstance(task_id, str) or not isinstance(task, dict):
-            raise ValueError("media_tasks.yaml contains an invalid task entry")
-        if set(task) != required or not all(isinstance(task[key], str) and task[key] for key in required):
-            raise ValueError(f"media_tasks.yaml task {task_id!r} has an invalid schema")
-    return raw["schema_version"], tasks
-
-
-def _load_profile(adapter_id: str, task_catalog: dict[str, dict[str, str]]) -> list[str]:
-    """Read one model profile without ever consulting its card or adapter aliases."""
-    profile_path = _MODELS_DIR / adapter_id / "profile.yaml"
-    raw = yaml.safe_load(profile_path.read_text()) if profile_path.exists() else None
-    if not isinstance(raw, dict) or set(raw) != {"schema_version", "tasks"}:
-        raise ValueError(f"model profile for {adapter_id!r} has an invalid schema")
-    tasks = raw.get("tasks")
-    if raw["schema_version"] != 1 or not isinstance(tasks, list) or not tasks:
-        raise ValueError(f"model profile for {adapter_id!r} has an invalid task list")
-    if any(not isinstance(task_id, str) for task_id in tasks) or len(tasks) != len(set(tasks)):
-        raise ValueError(f"model profile for {adapter_id!r} has duplicate or invalid task IDs")
-    unknown = set(tasks) - set(task_catalog)
-    if unknown:
-        raise ValueError(f"model profile for {adapter_id!r} references unknown tasks: {sorted(unknown)}")
-    return tasks
+    return load_task_catalog()
 
 
 def _load_task_parameter_contracts(
@@ -172,7 +148,7 @@ async def list_model_profiles(
     """List the agent-facing model catalog with canonical tasks only.
 
     This is intentionally separate from ``list_models``: the latter remains an
-    operations/debugging API and contains adapter capabilities. When callers request
+    operations/debugging API (with ``is_async`` and the unfiltered list). When callers request
     canonical tasks, matching models additionally expose compact ``task_parameters``
     templates, preventing agents from guessing model-specific API switches from card
     prose.
@@ -198,16 +174,7 @@ async def list_model_profiles(
 
     models: list[dict[str, Any]] = []
     for adapter in sorted(get_registry().list_all(task_type=media_type), key=lambda item: item.model_name):
-        tasks = _load_profile(adapter.adapter_id, task_catalog)
-        declared_media_types = {
-            task_catalog[profile_task]["media_type"]
-            for profile_task in tasks
-            if task_catalog[profile_task]["media_type"] != "cross_media"
-        }
-        if declared_media_types != {adapter.task_type}:
-            raise ValueError(
-                f"model profile for {adapter.adapter_id!r} does not match its task_type {adapter.task_type!r}"
-            )
+        tasks = list(adapter.tasks)
         supported_tasks = set(tasks)
         if requested_tasks and (
             not requested_tasks.issubset(supported_tasks)
@@ -223,6 +190,10 @@ async def list_model_profiles(
             "cost_tier": adapter.cost_tier,
             "speed_tier": adapter.speed_tier,
         }
+        if adapter.inputs is not None:
+            # Per-model, so it can say what the per-tool schema cannot: how many items a
+            # slot takes here, and what this model does with a supplied audio track.
+            model["inputs"] = describe_inputs(adapter.inputs)
         if requested_tasks:
             contracts = parameter_contracts.get(adapter.model_name, {})
             matched_contracts = {

@@ -5,6 +5,14 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal
 
+from cfgpu_mcp.adapters.inputs import (
+    LEGACY_INPUT_KEYS,
+    InputSlot,
+    check_declared_inputs,
+    parse_inputs,
+)
+from cfgpu_mcp.task_catalog import parse_tasks
+
 if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import (
         GenerateAudioInput,
@@ -32,8 +40,8 @@ def get_python_adapters() -> dict[str, type["ModelAdapter"]]:
     return _PYTHON_ADAPTERS
 
 
-def models_with_capability(capability: str) -> list[str]:
-    """Public ``model_name``s carrying ``capability``, or ``[]`` if the registry is unreachable.
+def models_with_task(task: str) -> list[str]:
+    """Public ``model_name``s declaring canonical ``task``, or ``[]`` if the registry is unreachable.
 
     For refusal messages that need to name the alternatives. Read from the registry rather
     than hard-coded so the advice cannot go stale as the fleet changes — and never allowed
@@ -42,7 +50,7 @@ def models_with_capability(capability: str) -> list[str]:
     try:
         from cfgpu_mcp.config import get_registry
 
-        return sorted(a.model_name for a in get_registry().list_all() if capability in a.capabilities)
+        return sorted(a.model_name for a in get_registry().list_all() if task in a.tasks)
     except Exception:  # pragma: no cover - defensive: advice must never break validation
         return []
 
@@ -160,7 +168,11 @@ class ModelAdapter(ABC):
     #: timeout, so the caller loses the connection *and* the task_id, and can no
     #: longer reach a job that is running fine. See service/video.py.
     force_async: bool
-    capabilities: set[str]
+    #: Canonical task IDs (``capabilities/media_tasks.yaml``), in display order. The one
+    #: vocabulary for what this model can do: code gates (regions, 组图, layer
+    #: decomposition, transparent background), routing preferences and the agent-facing
+    #: ``list_model_profiles`` all read it. See ``task_catalog.py``.
+    tasks: tuple[str, ...]
     cost_tier: int               # 1-5
     speed_tier: int              # 1-5
     #: Tie-break for ``model="auto"`` (all quality tiers). Without it a tie falls
@@ -227,13 +239,13 @@ class ModelAdapter(ABC):
     #: model's limit as a universal and reject calls that are legal on the model
     #: actually selected.
     max_regions_per_image: int | None
-    max_reference_images: int | None  # video only: per-model reference material limits
-    max_reference_videos: int | None
-    max_reference_audios: int | None
+    #: Video only: which material slots this model accepts, their counts, and how it
+    #: uses a supplied audio track (``adapters/inputs.py``). ``None`` = undeclared,
+    #: which a test forbids for every video model in the fleet.
+    inputs: "dict[str, InputSlot] | None"
     #: Maximum number of images that can be requested in one generation call. ``None``
     #: means the shared request-schema limit is the only local restriction.
     max_images_per_request: int | None
-    allow_audio_only_reference: bool
     poll_config: PollConfig | None
     extends: str | None          # parent adapter_id, or None
     card_base: str | None        # model dir to inherit card.md from; None = no inheritance
@@ -257,7 +269,13 @@ class ModelAdapter(ABC):
         instance.poll_endpoint = config.get("poll_endpoint")
         # Opt-in per model. Absent = previous behaviour (honour the caller's `wait`).
         instance.force_async = bool(config.get("force_async", False))
-        instance.capabilities = set(config.get("capabilities", []))
+        if "capabilities" in config:
+            raise ValueError(
+                f"{instance.adapter_id}: the capabilities: vocabulary was retired — list "
+                f"canonical task IDs under tasks: (task_catalog.py) and material slots under "
+                f"inputs: (adapters/inputs.py)"
+            )
+        instance.tasks = parse_tasks(instance.adapter_id, instance.task_type, config.get("tasks"))
         instance.cost_tier = config.get("cost_tier", 3)
         instance.speed_tier = config.get("speed_tier", 3)
         # Both default to 0 = undeclared, so a model that says nothing routes
@@ -310,13 +328,16 @@ class ModelAdapter(ABC):
         # whose set excludes it (MiniMax H3) must declare its own.
         instance.default_resolution = config.get("default_resolution", "720p")
         instance.max_regions_per_image = config.get("max_regions_per_image")
-        instance.max_reference_images = config.get("max_reference_images")
-        instance.max_reference_videos = config.get("max_reference_videos")
-        instance.max_reference_audios = config.get("max_reference_audios")
+        legacy = [key for key in LEGACY_INPUT_KEYS if key in config]
+        if legacy:
+            raise ValueError(
+                f"{instance.adapter_id}: {legacy} moved into the inputs: block "
+                f"(see adapters/inputs.py)"
+            )
+        instance.inputs = parse_inputs(instance.adapter_id, config.get("inputs"))
+        if instance.inputs is not None and instance.task_type != "video":
+            raise ValueError(f"{instance.adapter_id}: inputs: is declared for video models only")
         instance.max_images_per_request = config.get("max_images_per_request")
-        instance.allow_audio_only_reference = bool(
-            config.get("allow_audio_only_reference", False)
-        )
         pc = config.get("poll_config")
         instance.poll_config = PollConfig.from_dict(pc) if pc else None
         instance.extends = config.get("extends")
@@ -356,7 +377,7 @@ class ModelAdapter(ABC):
         }
         for cls, tt in expected.items():
             if isinstance(req, cls) and self.task_type != tt:
-                return False, f"{self.adapter_id} is a {self.task_type} model, not a {tt} model"
+                return False, f"{self.model_name} is a {self.task_type} model, not a {tt} model"
         # Regions are checked here, for every adapter, rather than in the two adapters
         # that accept them — the gate exists precisely for the models that do *not*, and
         # one left unguarded silently drops the coordinates and bills for the wrong
@@ -401,10 +422,14 @@ class ModelAdapter(ABC):
                     f"{self.model_name} supports explicit durations of "
                     f"{self.min_duration_seconds}–{self.max_duration_seconds} seconds{smart}"
                 )
+            if self.inputs is not None:
+                ok, reason = check_declared_inputs(self.model_name, self.inputs, req)
+                if not ok:
+                    return False, reason
             resolution = self.resolve_resolution(req)
             if self.resolutions is not None and resolution not in self.resolutions:
                 return False, (
-                    f"{self.adapter_id} does not support resolution "
+                    f"{self.model_name} does not support resolution "
                     f"{resolution} (supported: {', '.join(self.resolutions)})"
                 )
         return True, ""

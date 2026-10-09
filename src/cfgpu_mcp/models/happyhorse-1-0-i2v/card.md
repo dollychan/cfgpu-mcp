@@ -8,7 +8,7 @@ HappyHorse-1.0-I2V 支持图生视频，具备高度还原的动态画面生成�
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `happyhorse-1.0-i2v` |
-| 能力标签 | image_to_video |
+| 任务（tasks） | image_to_video |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 

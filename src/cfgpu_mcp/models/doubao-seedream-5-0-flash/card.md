@@ -9,7 +9,7 @@ Doubao Seedream 5.0 flash 是面向高频、规模化图片生产与快速交互
 | 任务类型 | image |
 | CFGPU 模型 ID | `doubao-seedream-5-0-flash-260915` |
 | 同步/异步 | 同步（POST 响应直接返回结果，无 task_id、无需轮询） |
-| 能力标签 | text_to_image, image_to_image, multi_image_fusion, region_edit |
+| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion, region_edit, layer_decomposition, transparent_background |
 | 输出档位 | 1K、1.5K、2K |
 | 成本档位 / 速度档位 | 1/5 / 5/5 |
 

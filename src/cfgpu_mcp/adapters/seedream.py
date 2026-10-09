@@ -101,12 +101,12 @@ _ALLOWED_TIERS: dict[str, tuple[str, ...]] = {
 #: pricier image than they requested.
 _TIER_RANK = {"1K": 0, "1.5K": 1, "2K": 2, "3K": 3, "4K": 4}
 
-#: 组图 (sequential image generation) is declared, not inferred from the adapter_id. Pro
-#: is the only family member without it today, but "not pro" is the wrong question to ask:
-#: a future variant that also lacks it would silently be sent
+#: 组图 (sequential image generation) is the declared canonical task, not inferred from the
+#: adapter_id. Pro is the only family member without it today, but "not pro" is the wrong
+#: question to ask: a future variant that also lacks it would silently be sent
 #: ``sequential_image_generation: auto`` and generate — and bill for — images nobody
 #: asked for.
-_GROUP_CAPABILITY = "multi_image_group"
+_GROUP_TASK = "multi_image_group"
 
 #: 输入的参考图数量 + 最终生成的图片数量 ≤ 15, for the models that do 组图 at all.
 _GROUP_TOTAL_CAP = 15
@@ -196,7 +196,7 @@ class SeedreamAdapter(ModelAdapter):
                 f"model_specific.{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
                 for error in exc.errors()
             )
-            return f"{self.adapter_id} has invalid model-specific parameters: {details}"
+            return f"{self.model_name} has invalid model-specific parameters: {details}"
         if (
             self.adapter_id == "doubao-seedream-5-0-flash"
             and parsed.optimize_prompt_options is not None
@@ -210,7 +210,7 @@ class SeedreamAdapter(ModelAdapter):
             if parsed.layer_decomposition:
                 if parsed.size not in _SEEDREAM_5_LAYER_SIZES:
                     return (
-                        f"{self.adapter_id} layer_decomposition only supports "
+                        f"{self.model_name} layer_decomposition only supports "
                         "model_specific.size='auto', '1K', '1.5K', or '2K'; "
                         "explicit WIDTHxHEIGHT is not supported"
                     )
@@ -218,7 +218,7 @@ class SeedreamAdapter(ModelAdapter):
                 match = _SEEDREAM_5_EXPLICIT_SIZE.fullmatch(parsed.size)
                 if match is None:
                     return (
-                        f"{self.adapter_id} model_specific.size must be a supported "
+                        f"{self.model_name} model_specific.size must be a supported "
                         "preset ('1K', '1.5K', '2K') or WIDTHxHEIGHT"
                     )
                 width, height = (int(value) for value in match.groups())
@@ -226,12 +226,12 @@ class SeedreamAdapter(ModelAdapter):
                 ratio = width / height
                 if not (_SEEDREAM_5_MIN_PIXELS <= pixels <= _SEEDREAM_5_MAX_PIXELS):
                     return (
-                        f"{self.adapter_id} explicit model_specific.size must contain "
+                        f"{self.model_name} explicit model_specific.size must contain "
                         f"{_SEEDREAM_5_MIN_PIXELS}-{_SEEDREAM_5_MAX_PIXELS} pixels"
                     )
                 if not (_SEEDREAM_5_MIN_RATIO <= ratio <= _SEEDREAM_5_MAX_RATIO):
                     return (
-                        f"{self.adapter_id} explicit model_specific.size must have a "
+                        f"{self.model_name} explicit model_specific.size must have a "
                         "width/height ratio between 1/16 and 16"
                     )
         return None
@@ -271,7 +271,7 @@ class SeedreamAdapter(ModelAdapter):
             return False, model_specific_error
         layer_decomposition = (req.model_specific or {}).get("layer_decomposition") is True
         if not req.prompt.strip() and not layer_decomposition:
-            return False, f"{self.adapter_id} requires a non-empty prompt"
+            return False, f"{self.model_name} requires a non-empty prompt"
 
         family = self._family
         # Checked here, not only in validation_corrections, so the *billed* path rejects
@@ -283,23 +283,23 @@ class SeedreamAdapter(ModelAdapter):
         allowed = _ALLOWED_TIERS[family]
         if req.resolution not in allowed:
             return False, (
-                f"{self.adapter_id} does not support resolution {req.resolution} "
+                f"{self.model_name} does not support resolution {req.resolution} "
                 f"(supported: {', '.join(allowed)})"
             )
 
         # The reference ceiling is a per-model fact (Pro takes 10, the rest 14), unlike
-        # 组图 below, which is a declared capability.
+        # 组图 below, which is a declared task.
         max_refs = 10 if family == "pro" else 14
         reference_count = len(req.reference_images or [])
         if reference_count > max_refs:
-            return False, f"{self.adapter_id} accepts at most {max_refs} reference_images"
+            return False, f"{self.model_name} accepts at most {max_refs} reference_images"
 
         if layer_decomposition:
-            if "layer_decomposition" not in self.capabilities:
-                return False, f"{self.adapter_id} does not support layer_decomposition"
+            if "layer_decomposition" not in self.tasks:
+                return False, f"{self.model_name} does not support layer_decomposition"
             if reference_count != 1:
                 return False, (
-                    f"{self.adapter_id} layer_decomposition requires exactly one "
+                    f"{self.model_name} layer_decomposition requires exactly one "
                     "reference_images item"
                 )
 
@@ -310,20 +310,20 @@ class SeedreamAdapter(ModelAdapter):
         # Whether a source URL actually has an alpha channel cannot be established
         # locally; enforce the deterministic portions and let upstream inspect it.
         if (req.model_specific or {}).get("background") == "transparent":
-            if "transparent_background" not in self.capabilities:
-                return False, f"{self.adapter_id} does not support transparent backgrounds"
+            if "transparent_background" not in self.tasks:
+                return False, f"{self.model_name} does not support transparent backgrounds"
             if reference_count != 1:
                 return False, (
-                    f"{self.adapter_id} transparent background requires exactly one "
+                    f"{self.model_name} transparent background requires exactly one "
                     "reference_images item"
                 )
             if (req.model_specific or {}).get("output_format") == "jpeg":
                 return False, "transparent background requires PNG output, not jpeg"
 
-        does_groups = _GROUP_CAPABILITY in self.capabilities
+        does_groups = _GROUP_TASK in self.tasks
         if does_groups and reference_count + req.n > _GROUP_TOTAL_CAP:
             return False, (
-                f"{self.adapter_id} requires reference_images count + n <= "
+                f"{self.model_name} requires reference_images count + n <= "
                 f"{_GROUP_TOTAL_CAP} (got {reference_count} + {req.n})"
             )
         # Region editing and 组图 are mutually exclusive in shape: a group is several
@@ -332,7 +332,7 @@ class SeedreamAdapter(ModelAdapter):
         # today — it exists so a future group-capable region model cannot pass silently.
         if does_groups and req.regions and req.n > 1:
             return False, (
-                f"{self.adapter_id}: regions (区域编辑) cannot be combined with n>1 "
+                f"{self.model_name}: regions (区域编辑) cannot be combined with n>1 "
                 f"(组图) — a group is several independent images, a region marks one "
                 f"place on the image being edited. Call once per image."
             )
@@ -349,12 +349,12 @@ class SeedreamAdapter(ModelAdapter):
             raise ValueError(model_specific_error)
 
         # supports() is the gate, but build_payload is also reachable directly (tests,
-        # and any future caller). A region that reached a model without the capability
+        # and any future caller). A region that reached a model without the region_edit task
         # must stop here rather than be quietly dropped into an ordinary whole-image
         # edit that generates a picture and bills for it.
-        if req.regions and "region_edit" not in self.capabilities:
+        if req.regions and "region_edit" not in self.tasks:
             raise ValueError(
-                f"{self.adapter_id} does not support region editing (regions=), and "
+                f"{self.model_name} does not support region editing (regions=), and "
                 f"regions are never silently ignored."
             )
 
@@ -390,7 +390,7 @@ class SeedreamAdapter(ModelAdapter):
                 if len(req.reference_images) == 1
                 else req.reference_images
             )
-        if req.n and req.n > 1 and _GROUP_CAPABILITY in self.capabilities:
+        if req.n and req.n > 1 and _GROUP_TASK in self.tasks:
             # 组图. Note "auto" does not mean "give me exactly n": the model decides both
             # *whether* to return a group and how many images it contains, and max_images
             # only caps it — so n is a ceiling, and fewer is a normal outcome, not a

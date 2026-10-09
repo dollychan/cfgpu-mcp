@@ -7,11 +7,24 @@ endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  first_frame: {}
+  last_frame: {}
+  reference_images: {}    # image_list: no documented count limit
+  # video_list, refer_type=feature. Editing (refer_type=base) is reached only through
+  # model_specific, so the declared default is reference. No documented count limit.
+  reference_videos: {role: reference}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_video
   - image_to_video
   - first_last_frame
-  - multi_modal_reference
+  - reference_to_video
   - video_edit
 
 cost_tier: 4

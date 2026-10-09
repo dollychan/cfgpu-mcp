@@ -11,7 +11,7 @@
 | 任务类型 | image |
 | CFGPU 模型 ID | `wan2.7-image` |
 | 同步/异步 | 同步（`is_async: false`，POST 响应即返回结果） |
-| 能力标签 | text_to_image, image_to_image, multi_image_fusion, multi_image_group, region_edit |
+| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion, multi_image_group, region_edit |
 | 成本档位 | 2/5 |
 | 速度档位 | 2/5 |
 

@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.7-videoedit` |
-| 能力标签 | video_edit |
+| 任务（tasks） | video_edit |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 

@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.6-t2v` |
-| 能力标签 | text_to_video, audio_generate |
+| 任务（tasks） | text_to_video, audio_driven_video |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -24,7 +24,7 @@
 | 能力 | 说明 |
 |------|------|
 | **text_to_video** | 文本提示词生成视频 |
-| **audio_generate** | 可自动生成配套音频，或使用一条驱动音频同步口型 |
+| **audio_driven_video** | 可自动生成配套音频，或使用一条驱动音频同步口型 |
 
 > 不使用 `media` 数组；可选的驱动音频使用 `input.audio_url`。
 

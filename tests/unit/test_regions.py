@@ -4,7 +4,7 @@ Three properties are load-bearing here and each has its own section below.
 
 1. **Coordinates are never invented and never dropped.** A box that goes missing does
    not raise — it produces a whole-image edit that looks plausible and gets billed. So
-   every path that could drop one is pinned: a model without the capability refuses, an
+   every path that could drop one is pinned: a model without the task refuses, an
    unreferenced region falls into the structured suffix, and an ambiguous placeholder
    fails closed rather than guessing an image.
 
@@ -412,7 +412,7 @@ def test_no_regions_leaves_the_prompt_byte_identical():
     assert text == "描述这张图"
 
 
-# ── the capability gate ─────────────────────────────────────────────────────
+# ── the task gate ─────────────────────────────────────────────────────────
 
 
 def test_a_model_without_region_edit_refuses():
@@ -486,13 +486,13 @@ def test_a_declared_per_image_ceiling_is_enforced_per_image():
         adapter.max_regions_per_image = None
 
 
-def test_vision_uses_its_own_capability_name():
+def test_vision_uses_its_own_task_name():
     """Reading a marked region does not imply being able to edit by one, so a single
-    shared capability would let a reader be routed an editing job."""
-    assert "region_understand" in _qwen().capabilities
-    assert "region_edit" not in _qwen().capabilities
-    assert "region_edit" in _pro().capabilities
-    assert "region_understand" not in _pro().capabilities
+    shared task would let a reader be routed an editing job."""
+    assert "region_understanding" in _qwen().tasks
+    assert "region_edit" not in _qwen().tasks
+    assert "region_edit" in _pro().tasks
+    assert "region_understanding" not in _pro().tasks
 
 
 # ── structural validation (schema layer) ────────────────────────────────────
@@ -565,7 +565,7 @@ def test_auto_routes_a_regions_request_to_a_region_model():
         prompt="改这里", reference_images=["https://example.com/a.jpg"], regions=[_region()]
     )
     adapter = ModelRouter(_registry()).resolve(req)
-    assert "region_edit" in adapter.capabilities
+    assert "region_edit" in adapter.tasks
 
 
 def test_naming_a_model_that_cannot_take_regions_is_a_hard_error():
@@ -616,11 +616,12 @@ def test_regions_and_group_images_are_mutually_exclusive():
     picture being edited.
 
     Unreachable through any shipped model — the only region editor is Pro, and Pro has
-    no 组图 capability, so it ignores n. Exercised here on a hypothetical group-capable
+    no 组图 task, so it ignores n. Exercised here on a hypothetical group-capable
     region model so that combination cannot start passing silently the day one exists.
     """
     adapter = _lite()
-    adapter.capabilities = adapter.capabilities | {"region_edit"}
+    original = adapter.tasks
+    adapter.tasks = original + ("region_edit",)
     try:
         req = GenerateImageInput(
             prompt="x",
@@ -632,7 +633,7 @@ def test_regions_and_group_images_are_mutually_exclusive():
         assert not ok
         assert "组图" in reason
     finally:
-        adapter.capabilities = adapter.capabilities - {"region_edit"}
+        adapter.tasks = original
 
 
 def test_thousandth_coordinates_do_not_drift_a_cell():

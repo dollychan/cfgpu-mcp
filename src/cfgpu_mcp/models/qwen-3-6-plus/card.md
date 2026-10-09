@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | understand (视觉理解 / 图像推理 / 视频理解) |
 | CFGPU 模型 ID | `qwen3.6-plus` |
-| 能力标签 | image_understanding, image_reasoning, video_understanding, long_video, long_document, tool_calling, visual_agent, long_context, region_understand |
+| 任务（tasks） | image_understanding, image_reasoning, video_understanding, long_video_understanding, long_document_understanding, region_understanding, tool_calling, visual_agent, long_context |
 | 调用方式 | 同步（POST `/model/v1/chat/completions` 直接返回结果） |
 | 上下文 | 128K |
 | 成本档位 | 2/5 |
@@ -39,7 +39,7 @@ Qwen3.6原生视觉语言系列Plus模型，展现出与当前顶尖前沿模型
 > Thinking 版本另有 `choices[0].message.reasoning_content` 推理过程（映射为
 > `reasoning`，在 `return_metadata=true` 时返回）。
 
-## 区域理解（`region_understand`）
+## 区域理解（`region_understanding`）
 
 用户在图片上圈的框可以直接作为 `regions` 传入，**不需要先把框画到图片上再让模型看**。
 qwen3.6-plus 输入输出双向都吃归一 `[0, 999]` 坐标，直接给数字是无损的；把框光栅化

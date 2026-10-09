@@ -6,8 +6,16 @@ display_name: "happyhorse-1.0-r2v"
 cfgpu_model_id: happyhorse-1.0-r2v
 model_name: happyhorse-1.0-r2v
 
-capabilities:
-  - multi_modal_reference
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  reference_images: {max: 9}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
+  - reference_to_video
 
 resolutions: [480p, 720p, 1080p]
 default_resolution: 1080p

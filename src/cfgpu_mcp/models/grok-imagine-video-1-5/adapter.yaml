@@ -8,10 +8,19 @@ endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  first_frame: {}         # refer_images[0]
+  reference_images: {}    # refer_images[1:]
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_video
   - image_to_video
-  - multi_modal_reference
+  - reference_to_video
 
 cost_tier: 3
 speed_tier: 3

@@ -33,7 +33,7 @@ import math
 import re
 from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.adapters.base import models_with_capability
+from cfgpu_mcp.adapters.base import models_with_task
 from cfgpu_mcp.errors import CFGPUError
 
 if TYPE_CHECKING:
@@ -50,8 +50,9 @@ GRID = 1000
 #: unbalanced string degrades to "no match" rather than swallowing the rest of the line.
 _PLACEHOLDER = re.compile(r"\[\[([^\[\]]{1,200})\]\]")
 
-_CAP_EDIT = "region_edit"
-_CAP_UNDERSTAND = "region_understand"
+#: The canonical tasks that gate regions (``tasks:`` in adapter.yaml).
+_TASK_EDIT = "region_edit"
+_TASK_UNDERSTAND = "region_understanding"
 
 
 def to_pixels(box: list[float], image_size: "list[int] | tuple[int, int]") -> tuple[int, int, int, int]:
@@ -421,22 +422,22 @@ def unsupported_reason(model_name: str, *, understand: bool) -> str:
     the regions just make the description accurate.
     """
     if understand:
-        alternatives = models_with_capability(_CAP_UNDERSTAND)
+        alternatives = models_with_task(_TASK_UNDERSTAND)
         tail = (
             f"请改用支持的模型：{' / '.join(alternatives)}。"
             if alternatives
             else "当前没有支持区域理解的模型可用。"
         )
-        return f"{model_name} 不支持按区域理解图片（缺 {_CAP_UNDERSTAND} 能力）。{tail}"
+        return f"{model_name} 不支持按区域理解图片（不具备 {_TASK_UNDERSTAND} 任务）。{tail}"
 
-    alternatives = models_with_capability(_CAP_EDIT)
+    alternatives = models_with_task(_TASK_EDIT)
     first = (
         f"(1) 换用支持的模型：{' / '.join(alternatives)}；"
         if alternatives
         else "(1) 当前没有支持区域编辑的模型可用；"
     )
     return (
-        f"{model_name} 不支持区域编辑（缺 {_CAP_EDIT} 能力），且区域绝不会被静默忽略"
+        f"{model_name} 不支持区域编辑（不具备 {_TASK_EDIT} 任务），且区域绝不会被静默忽略"
         f"——那会产出一张整图重绘、看着合理、还要计费的图。两种做法："
         f"{first}"
         f"(2) 保持当前模型，改走语义描述：先调 understand_vision(images=[…], regions=[…]) "
@@ -460,8 +461,8 @@ def check_regions(adapter: "ModelAdapter", req) -> tuple[bool, str]:
     if not regions:
         return True, ""
     understand = isinstance(req, UnderstandVisionInput)
-    capability = _CAP_UNDERSTAND if understand else _CAP_EDIT
-    if capability not in adapter.capabilities:
+    task = _TASK_UNDERSTAND if understand else _TASK_EDIT
+    if task not in adapter.tasks:
         return False, unsupported_reason(adapter.model_name, understand=understand)
     cap = adapter.max_regions_per_image
     if cap is not None:

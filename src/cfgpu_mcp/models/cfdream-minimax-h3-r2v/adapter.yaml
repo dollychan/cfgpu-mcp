@@ -15,6 +15,22 @@ model_name: cfdream/minimax-h3-r2v
 # A separate model id rather than a mode of the first one because these are a
 # different set of weights: fl2va and ref2va cannot be mixed, and the gateway
 # rejects first_frame/last_frame here just as it rejects reference_* there.
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+# comfy-gateway API.md §5 — the COMFY_AUTOGROW_V3 `max` on the r2v node. Frames are
+# inherited from cfdream-minimax-h3 and removed: these weights take none.
+inputs:
+  first_frame: null
+  last_frame: null
+  reference_images: {max: 9}
+  reference_videos: {max: 3, role: reference}
+  # Bound to the prompt by its <Audio N> tag. The card shows a lip-sync prompt, which
+  # is a prompt-level claim — not yet verified as an audio-driven contract.
+  reference_audios: {max: 3, role: reference, standalone: true}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - reference_to_video
-  - multi_modal_reference
+  - video_edit
