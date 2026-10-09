@@ -16,15 +16,19 @@ poll_endpoint: /video/tasks/{task_id}
 # Material slots this model accepts — the single source for supports(), the
 # profile catalog and the consistency tests (adapters/inputs.py). An absent slot
 # is not accepted.
-inputs: {}
+inputs:
+  # input.audio_url (reference): lip movement and motion are aligned to the track;
+  # longer than the video is cut, shorter leaves the rest silent.
+  reference_audios: {max: 1, role: driving, standalone: true}
 
 # Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
 # both the code gates and the agent-facing profile catalog.
 tasks:
   - text_to_video
+  - audio_driven_video
   - synced_audio_output
 
-# Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): the model generates matching sound (reference: 自动配音); no switch.
+# Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): the supplied track, or without audio_url sound the model generates (reference: 自动生成匹配的背景音乐或音效); no switch.
 outputs:
   audio: always
 

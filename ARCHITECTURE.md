@@ -918,7 +918,7 @@ src/cfgpu_mcp/
 │   │   ├── adapter.yaml        万相 2.7 参考生视频，WanVideoR2VAdapter（reference_to_video）
 │   │   └── card.md
 │   ├── wan-2-7-t2v/
-│   │   ├── adapter.yaml        万相 2.7 文生视频，WanVideoT2VAdapter（text_to_video，无 media）
+│   │   ├── adapter.yaml        万相 2.7 文生视频，WanVideoT2VAdapter（text_to_video；可选驱动音频走扁平 input.audio_url，无 media）
 │   │   └── card.md
 │   ├── wan-2-7-videoedit/
 │   │   ├── adapter.yaml        万相 2.7 视频编辑，WanVideoEditAdapter（video_edit，源视频+参考图）

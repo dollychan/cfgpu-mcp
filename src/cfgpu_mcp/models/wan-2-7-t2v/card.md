@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.7-t2v` |
-| 任务（tasks） | text_to_video, synced_audio_output |
+| 任务（tasks） | text_to_video, audio_driven_video, synced_audio_output |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -26,8 +26,10 @@
 | 能力 | 说明 |
 |------|------|
 | **text_to_video** | 纯文本生成视频 |
+| **audio_driven_video** | 可选一条驱动音频：人物口型与动作对齐音频轨道 |
+| **synced_audio_output** | 输出带声音：提供驱动音频时即该音轨；未提供时模型自动生成匹配的背景音乐或音效 |
 
-> 仅文生视频。不支持首帧/尾帧、参考视频/图片/音频。
+> 不支持首帧/尾帧、参考视频/图片。驱动音频使用 `input.audio_url`，不使用 `media` 数组。
 
 ## 参数说明
 
@@ -40,9 +42,10 @@
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
 | negative_prompt | input.negative_prompt | 最多 500 字符 |
+| reference_audios[0] | input.audio_url | 可选驱动音频（最多 1 条）：WAV / MP3，2–30 秒，≤ 15 MB；长于视频时截断，短于视频时剩余部分静音 |
 | model_specific.parameters.seed | parameters.seed | 0–2147483647；与基础 parameters 深度合并 |
 
-> 文生视频不带 `media` 数组。
+> 文生视频不带 `media` 数组；驱动音频走扁平的 `input.audio_url`。
 
 ## 异步任务流程
 
@@ -106,7 +109,7 @@
 
 | 限制项 | 值 |
 |--------|-----|
-| 输入 | 仅文本提示词（无 media） |
+| 输入 | 文本提示词及可选的一条 `audio_url`（无 media） |
 | 视频时长 | 2–15 秒整数（不支持 -1 智能时长） |
 | 输出视频格式 | mp4 |
 | 视频链接有效期 | 24 小时 |

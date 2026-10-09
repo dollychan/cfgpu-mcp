@@ -239,13 +239,21 @@ class WanVideoR2VAdapter(WanVideoAdapter):
 class WanVideoT2VAdapter(WanVideoAdapter):
     """万相 2.7 文生视频 (``wan2.7-t2v``).
 
-    Text-only: ``_build_media`` returns empty, so ``_build_input`` omits ``media``.
+    No ``media`` array: the one material it takes is a driving track on the flat
+    ``input.audio_url`` (the first ``reference_audios`` entry), which lip movement
+    and motion are aligned to — the 2.6 t2v shape, not 2.7 i2v's ``driving_audio``.
     """
 
     adapter_id = "wan-2-7-t2v"
 
     def _build_media(self, req: "GenerateVideoInput") -> list[dict]:
         return []
+
+    def _build_input(self, req: "GenerateVideoInput") -> dict:
+        inp = super()._build_input(req)
+        if req.reference_audios:
+            inp["audio_url"] = req.reference_audios[0]
+        return inp
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
         # Skip WanVideoAdapter.supports (it requires first_frame); go to base.
@@ -255,8 +263,10 @@ class WanVideoT2VAdapter(WanVideoAdapter):
         assert isinstance(req, GenerateVideoInput)
         if req.first_frame or req.last_frame:
             return False, f"{self.model_name} is a text-to-video model (no first/last_frame)"
-        if req.reference_images or req.reference_videos or req.reference_audios:
+        if req.reference_images or req.reference_videos:
             return False, f"{self.model_name} is a text-to-video model (no reference media)"
+        if req.reference_audios and len(req.reference_audios) > 1:
+            return False, f"{self.model_name} accepts at most one driving audio track"
         return True, ""
 
 

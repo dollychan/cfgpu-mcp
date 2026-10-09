@@ -449,6 +449,7 @@ def test_t2v_text_only_supported():
         {"first_frame": "https://f"},
         {"reference_images": ["https://i"]},
         {"reference_videos": ["https://v"]},
+        {"reference_audios": ["https://a1.mp3", "https://a2.mp3"]},
         {"duration_seconds": -1},
     ],
 )
@@ -456,6 +457,15 @@ def test_t2v_unsupported_scenes_rejected(kwargs):
     adapter = _make_t2v_adapter()
     ok, _ = adapter.supports(GenerateVideoInput(prompt="x", **kwargs))
     assert not ok
+
+
+def test_t2v_driving_audio_rides_flat_audio_url_not_media():
+    """input.audio_url per the wan2.7-t2v reference: the track lip movement and motion
+    are aligned to. Flat key like 2.6 t2v — this model has no media array."""
+    adapter = _make_t2v_adapter()
+    req = GenerateVideoInput(prompt="小猫将军念诗", reference_audios=["https://a.mp3"], duration_seconds=10)
+    assert adapter.supports(req) == (True, "")
+    assert adapter.build_payload(req)["input"] == {"prompt": "小猫将军念诗", "audio_url": "https://a.mp3"}
 
 
 # ── 万相 2.7 视频编辑 (videoedit) ─────────────────────────────────────────────

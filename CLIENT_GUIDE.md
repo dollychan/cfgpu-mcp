@@ -598,7 +598,8 @@ cfgpu generate video "跟随参考视频运镜" --model kling-v3-omni -r 1080p \
 #   此时 seconds 不下发，时长跟随源视频
 # 不支持 --reference-audios（请求体没有音频输入槽位）；--last-frame 必须与 --first-frame 同时给出
 
-# 万相 2.7（wan-2-7-t2v）— 文生视频，支持电影级分镜叙事；需显式时长（不支持 -1 智能时长）
+# 万相 2.7（wan-2-7-t2v）— 文生视频，支持电影级分镜叙事；需显式时长（不支持 -1 智能时长）；
+# 可选一条驱动音频（reference_audios → input.audio_url），口型与动作对齐音轨
 cfgpu generate video "侦探追查故事：第1个镜头[0-3秒]雨夜街头...第2个镜头[3-6秒]..." \
   --model wan-2-7-t2v -r 720p -d 5
 
@@ -791,7 +792,7 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 >
 > | `role` | 含义 | 模型 |
 > |---|---|---|
-> | `driving` | 这段音频**原样**作为成片音轨，画面（口型、节奏）跟着它走 | `wan2.6-t2v`、`wan2.6-i2v`、`wan2.7-i2v` |
+> | `driving` | 这段音频**原样**作为成片音轨，画面（口型、节奏）跟着它走 | `wan2.6-t2v`、`wan2.6-i2v`、`wan2.7-t2v`、`wan2.7-i2v` |
 > | `voice` | 音色样本，绑定到某个参考素材；模型用这个声音说新的台词，不播放原录音 | `wan2.7-r2v` |
 > | `reference` | 由 prompt 决定怎么用（背景音乐、模仿音色、参照节奏），**不保证**原声保留、口型对齐 | Seedance / WAN 2.0 系、`MiniMax-H3` |
 >
