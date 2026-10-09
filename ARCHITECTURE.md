@@ -222,7 +222,7 @@ Seedream 功能开关、router 加分；其余 23 个（`video_edit`、`video_ex
 | id 列表（list[str]） | `["wan-2-0", "wan-2-0-fast"]` | `select_model(allowed=...)` 仅在该候选范围内打分选最优 |
 | `"auto"`（str，默认） | `"auto"` | `select_model()` 在全部模型中打分选最优 |
 
-列表与 `"auto"` 都只产出**一个** task / 一个结果，区别仅是候选池大小；列表里若含未知或与当前任务类型不符的 id，`select_model()` 抛 `invalid_params`。**单个 id 的精确路径同样会过 `supports(req)`**：auto/列表路径靠 `supports()` 过滤候选，但直接点名的模型若与任务类型 / 能力不符，否则会让 `build_payload()` 里的 `assert` 泄漏成裸 `AssertionError`——因此 `resolve()` 在此也校验，不通过则抛带 `model_id` 的 `invalid_params`（触发 `get_model_card` 提示）。
+列表与 `"auto"` 都只产出**一个** task / 一个结果，区别仅是候选池大小；列表里若含未知或与当前任务类型不符的 id，`select_model()` 抛 `invalid_params`。**单个 id 的精确路径同样会过 `supports(req)`**：auto/列表路径靠 `supports()` 过滤候选，但直接点名的模型若与任务类型 / 能力不符，否则会让 `build_payload()` 里的 `assert` 泄漏成裸 `AssertionError`——因此 `resolve()` 在此也校验，不通过则抛带 `model_id` 的 `invalid_params`（追加通用的「调整参数或换模型」提示）。
 
 `ModelRouter.select_model()` 对候选模型打分，最高分获选：
 
@@ -703,7 +703,7 @@ CFGPUError.from_http_response(status, body)
 
 ### card.md 提示机制
 
-当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.model_name` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加「根据校验原因调整通用参数，或重新选择支持该任务的模型」；同时在 dict 中添加 `model_id`，方便可信调用方关联实际模型。它**不会**引导 LLM 去读 `get_model_card`：agent 应以 `list_model_profiles` 的 canonical task 选型，具体参数合法性仍由 MCP preflight / adapter 校验决定。**agent 侧只见 `model_id`（全局唯一的 `model_name`），从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`**。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
+当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.model_name` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加「根据校验原因调整通用参数，或重新选择支持该任务的模型」；同时在 dict 中添加 `model_id`，方便可信调用方关联实际模型。它**不会**引导 LLM 去读 `get_model_card`：agent 应以 `list_model_profiles` 的 canonical task 选型，具体参数合法性仍由 MCP preflight / adapter 校验决定。**所有运行时错误文本都不点名查询类工具**（`get_model_card` / `list_models` / `list_model_profiles` / `list_voice_profiles`），只写数据：task ID、字段名、`task_type`。原因是工具是否暴露由 `disabled_tools` 决定（生产配置就禁用了 `get_model_card`），Mode B / CLI 的工具名也不同。`test_errors.py::test_runtime_messages_name_no_model_lookup_tool` 用 AST 扫描 adapters / router / errors / task_manager / service / client 里的字符串字面量（docstring 除外），守住这条规则。**agent 侧只见 `model_id`（全局唯一的 `model_name`），从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`**。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
 
 ### 错误在各层的展示方式
 

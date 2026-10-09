@@ -1146,13 +1146,15 @@ The request failed because the output video may be related to copyright restrict
 {
   "error": true,
   "error_type": "invalid_params",
-  "message": "请求参数错误：image size must be at least 3686400 pixels 请调用 get_model_card 获取模型 gpt-image-2 的详细参数说明和使用示例。",
+  "message": "请求参数错误：image size must be at least 3686400 pixels 请根据校验原因调整通用参数，或重新选择支持该任务的模型。",
   "retryable": false,
   "model_id": "gpt-image-2"
 }
 ```
 
-当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加 `get_model_card` 提示，`model_id` 字段也会出现在 dict 中。LLM 可直接用 `model_id` 值调用 `get_model_card` 获取该模型的完整参数说明。（`model_id` 即全局唯一的 `model_name`；对外从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`。）
+当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加一句通用提示（调整参数或换模型），`model_id` 字段也会出现在 dict 中。
+
+**错误文本不会点名任何查询类工具**（`get_model_card` / `list_models` / `list_model_profiles` / `list_voice_profiles`）。哪些工具对外暴露由宿主的 `disabled_tools` 决定，Mode B / CLI 的工具名也不同，所以点名一个工具，可能指向一个不存在的工具。错误文本只写数据：task ID（如「tasks 含 reference_to_video 的模型」）、字段名（如音色目录的 `voice` 字段）、`task_type`。LLM 再用手头有的工具去查这些数据。宿主若改了工具名，不必改写错误文本。（`model_id` 即全局唯一的 `model_name`；对外从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`。）
 
 `error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
 

@@ -290,13 +290,14 @@ class SeedanceVideoAdapter(ModelAdapter):
             reference_model = None
             if "reference_images" not in (self.inputs or {}):
                 # One same-family example, read from the registry so it cannot name
-                # a disabled model; the full list is list_model_profiles' job, not an error's.
+                # a disabled model. The text names the task, never a tool: which tools a
+                # host exposes is its own config (disabled_tools), and the CLI has none.
                 sibling = next(
                     (m for m in models_with_task("reference_to_video")
                      if m.startswith("doubao-seedance")),
                     None,
                 )
-                reference_model = 'list_model_profiles(required_tasks=["reference_to_video"]) 返回的模型' + (
+                reference_model = "tasks 含 reference_to_video 的模型" + (
                     f"（如 model={sibling}）" if sibling else ""
                 )
             return False, frames_vs_references_reason(

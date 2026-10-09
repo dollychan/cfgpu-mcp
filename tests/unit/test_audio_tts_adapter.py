@@ -358,7 +358,9 @@ def test_voice_rejection_points_to_the_agent_facing_voice_catalog():
     error.model_id = "MiniMax/speech-2.8-hd"
 
     message = error.to_tool_result_dict()["message"]
-    assert "list_voice_profiles" in message
+    assert "系统音色目录" in message and "voice 字段" in message
+    # The data, not a tool: tool names are the host's choice (disabled_tools).
+    assert "list_voice_profiles" not in message
     assert "get_model_card" not in message
 
 

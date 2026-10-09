@@ -56,7 +56,7 @@
 
 ### 核心参数
 
-API 请求结构与 `wan-video` 一致（详见 `wan-video` 的模型卡，可调用 get_model_card 获取），以下列出差异点。
+API 请求结构与 `wan-video` 一致（详见 `wan-video` 的模型卡），以下列出差异点。
 
 ### 视频输出参数（差异）
 

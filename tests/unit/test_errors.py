@@ -173,3 +173,48 @@ def test_card_hint_true_does_not_force_hint_on_unhinted_type():
     """The flag can only suppress; it never adds a hint to a type that has none."""
     err = CFGPUError(error_type="auth", user_message="Token 无效", model_id="wan-2-0", card_hint=True)
     assert "get_model_card" not in err.to_tool_result_dict()["message"]
+
+
+def test_runtime_messages_name_no_model_lookup_tool():
+    """Refusals and remedies name the data (a task ID, a field), never a lookup tool.
+
+    Which tools exist is the host's choice (``disabled_tools`` — production disables
+    ``get_model_card``), and Mode B / the CLI have other names or none, so a message
+    sending the caller to a tool by name can point at one that is not there. Scans
+    every string literal outside docstrings in the modules that raise.
+    """
+    import ast
+    from pathlib import Path
+
+    import cfgpu_mcp
+
+    lookup_tools = ("get_model_card", "list_models", "list_model_profiles", "list_voice_profiles")
+    root = Path(cfgpu_mcp.__file__).parent
+    files = [
+        *sorted((root / "adapters").glob("*.py")),
+        root / "router.py",
+        root / "errors.py",
+        root / "task_manager.py",
+        *sorted((root / "service").glob("*.py")),
+        *sorted((root / "client").glob("*.py")),
+    ]
+    offenders = []
+    for path in files:
+        tree = ast.parse(path.read_text())
+        docstrings = {
+            id(node.body[0].value)
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+        }
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and id(node) not in docstrings
+                and any(tool in node.value for tool in lookup_tools)
+            ):
+                offenders.append(f"{path.relative_to(root)}:{node.lineno}: {node.value[:80]!r}")
+    assert not offenders, "\n".join(offenders)

@@ -82,19 +82,21 @@ class CFGPUError(Exception):
         self.retryable: bool = retryable if retryable is not None else error_type in _RETRYABLE
         # Agent-facing model identifier (the public model_name, exposed as
         # ``model_id``). Never the internal adapter_id / cfgpu_model_id — see
-        # get_model_card hint.
+        # model-selection hint.
         self.model_id: str | None = model_id
         # Caller-supplied correlation handle (see tool_registry.stamp_echo), echoed on
         # the error result so a failure can be joined back to the request. Deliberately
         # the only echo field carried here: the sibling ``caption`` labels an artifact,
         # and a failed call produced none.
         self.request_id: str | None = request_id
-        # Opt-out for the generic "call get_model_card" sentence. ``None`` (the
+        # Opt-out for the generic "adjust or reselect" sentence. ``None`` (the
         # default) keeps the per-error_type behaviour; ``False`` suppresses it.
         #
-        # The hint assumes the card can answer the question, which is not always
-        # true for opaque upstream-only fields. A raiser that already knows the
-        # concrete remedy may set this to False and state it instead.
+        # The hint is generic, and a generic step displaces a concrete one. A raiser
+        # that already knows the concrete remedy sets this to False and states it.
+        # Neither the hint nor any remedy names a tool: which tools exist is the
+        # host's config (``disabled_tools``), and Mode B / the CLI have other names
+        # or none — so messages name the data instead (a task ID, a field).
         #
         # It can only ever suppress: a type that has no hint never gains one.
         self.card_hint: bool | None = card_hint

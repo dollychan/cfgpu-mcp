@@ -53,7 +53,7 @@
 
 **参数与 `wan-video` 完全一致。**
 
-详细参数说明请参考 `wan-video` 的模型卡（可调用 get_model_card 获取）。
+详细参数说明请参考 `wan-video` 的模型卡。
 
 ## 示例
 
@@ -160,7 +160,7 @@
 
 ## 约束与限制
 
-与 `wan-video` 一致，详见 `wan-video` 的模型卡（可调用 get_model_card 获取）。
+与 `wan-video` 一致，详见 `wan-video` 的模型卡。
 
 ## 响应结构
 
@@ -203,4 +203,4 @@
 
 ## 与统一 Schema 的映射
 
-与 `wan-video` 映射一致，详见 `wan-video` 的模型卡（可调用 get_model_card 获取）。
+与 `wan-video` 映射一致，详见 `wan-video` 的模型卡。

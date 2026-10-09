@@ -176,8 +176,8 @@ _MINIMAX_VOICE_REMEDY = (
     "含 uranus 的（形如 xxx_uranus_bigtts、ICL_uranus_xxx_tob）是 seed-tts 的 speaker，MiniMax 一律不接受。"
     "音色 id 的首尾空格、全角括号、不规则大小写等字符都须准确照抄，不得自行规范化。"
     "不需要特定音色时省略 voice 即可，默认为 male-qn-qingse。"
-    "需要选择音色时，调用 list_voice_profiles(model_ids=[当前 model_id])，"
-    "按语言或风格关键词查询后，只能逐字使用返回的 voice 字段；label 只是展示名称，不能传入。"
+    "需要选择音色时，先按语言或风格关键词查询当前 model_id 的系统音色目录，"
+    "只能逐字使用目录返回的 voice 字段；label 只是展示名称，不能传入。"
 )
 
 _MINIMAX_EMOTION_REMEDY = (

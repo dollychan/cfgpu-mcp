@@ -62,7 +62,7 @@ def test_a_model_without_reference_support_points_route_one_elsewhere(registry):
     ok, reason = adapter.supports(_req(first_frame="f", reference_images=["r"]))
 
     assert not ok
-    assert '改用 list_model_profiles(required_tasks=["reference_to_video"]) 返回的模型' in reason
+    assert "改用 tasks 含 reference_to_video 的模型" in reason
     assert "multi_modal_reference" not in reason
     assert "doubao-seedance-1-5-pro）" not in reason  # never suggests itself
 
