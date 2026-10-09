@@ -24,6 +24,11 @@ inputs:
 tasks:
   - image_to_video
   - audio_driven_video
+  - synced_audio_output
+
+# Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): without audio_url the model dubs automatically; `audio: false` is wan2.6-i2v-flash only.
+outputs:
+  audio: always
 
 cost_tier: 3
 speed_tier: 2

@@ -171,6 +171,16 @@ profile 里却没有 `audio_driven_video`；适配器层的 `audio_generate` 在
 `video_extend`。上线时视频侧零差异；图片侧查出 CF Image 2 与四个 Nano Banana 一直把整组参考图原样下发却没声明
 `multi_image_fusion`，已补上。`auto` 路由在 144 个图片请求矩阵上无变化（这些请求本来就选 CF Image 2）。
 
+**`outputs.audio`：输出有没有声音（2026-10-09）。** 视频 adapter.yaml 新增 `outputs: {audio: always | switchable | never}`
+（`adapters/inputs.py` 的 `AUDIO_OUTPUTS`；缺省 = 文档未说明，例如声音跟随源视频的编辑模型）。这个事实以前写了两遍：
+`synced_audio_output` 任务（给 agent）和各 adapter 是否下发 `with_audio`（代码），前者漂移了——可灵、cfdream H3 两个都
+受开关控制，Grok 与万相 2.6/2.7 恒出声（万相不给驱动音频时自动配音），却都没声明。现在测试要求双向一致：
+`synced_audio_output` ⟺ `always`/`switchable`；`switchable` ⟺ `with_audio` 改变 payload（对每个 adapter 实际构造
+两份 payload 比较）。声明：`wan-2-0`（Seedance 全族继承）、可灵、cfdream H3 为 `switchable`；`MiniMax-H3`、Grok、万相
+2.6/2.7 的 t2v/i2v/r2v 为 `always`；`wan2.7-videoedit` 与 HappyHorse 不声明（编辑模型的声音跟随源视频，HappyHorse
+文生/图生/参考的文档未说明）。`list_models` / `list_model_profiles` 以 `outputs` 发布。路由不读这个任务，`auto` 不变。
+钉住 `with_audio` 仍只在可灵上做（见下文），`switchable` 只说明开关有效，不改变这一范围。
+
 任务 id 没有改名，`catalog_version` 不变。按音频用途拆出新任务仍是后续一步。
 
 #### 废弃适配器内部的 `capabilities` 词表；`tasks:` 并入 adapter.yaml；视频也分用途（2026-10-09）

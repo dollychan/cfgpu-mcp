@@ -8,7 +8,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `kling-video-o1` |
-| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, synced_audio_output |
 | 成本档位 | 4/5 |
 | 速度档位 | 2/5 |
 

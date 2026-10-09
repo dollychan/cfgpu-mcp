@@ -20,6 +20,11 @@ inputs: {}
 # both the code gates and the agent-facing profile catalog.
 tasks:
   - text_to_video
+  - synced_audio_output
+
+# Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): the model generates matching sound (reference: 自动配音); no switch.
+outputs:
+  audio: always
 
 cost_tier: 3
 speed_tier: 2

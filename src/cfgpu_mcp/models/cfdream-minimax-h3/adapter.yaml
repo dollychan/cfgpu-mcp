@@ -48,6 +48,11 @@ tasks:
   - text_to_video
   - image_to_video
   - first_last_frame
+  - synced_audio_output
+
+# Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): with_audio is sent as-is (the r2v variant inherits this).
+outputs:
+  audio: switchable
 
 # All three tiers, matching comfy-gateway's OPEN_RESOLUTIONS (0.4 / 0.9 / 2.0 MP).
 # Widened from ["480p"] on 2026-08-14: the narrow list was a calibration state,

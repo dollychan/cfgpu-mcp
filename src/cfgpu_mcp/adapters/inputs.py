@@ -150,6 +150,33 @@ def parse_inputs(adapter_id: str, raw: Any) -> dict[str, InputSlot] | None:
     return slots
 
 
+#: Whether the generated video carries sound — the ``outputs:`` block's one key.
+#:
+#: - ``always``     — every output has a soundtrack; ``with_audio`` cannot turn it off.
+#: - ``switchable`` — ``with_audio`` reaches the request and decides it.
+#: - ``never``      — silent output.
+#:
+#: Absent = undocumented (e.g. an edit model whose sound follows its source). It is
+#: what ``synced_audio_output`` means, so a test holds that task equal to
+#: ``always``/``switchable``, and ``switchable`` equal to ``with_audio`` changing the
+#: payload — the flag is honoured exactly where this says so.
+AUDIO_OUTPUTS = ("always", "switchable", "never")
+
+
+def parse_outputs(adapter_id: str, raw: Any) -> dict[str, str] | None:
+    """Validate an ``outputs:`` block. ``None`` = undeclared."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict) or set(raw) - {"audio"}:
+        raise ValueError(f"{adapter_id}: outputs takes only an audio key")
+    audio = raw.get("audio")
+    if audio is not None and audio not in AUDIO_OUTPUTS:
+        raise ValueError(
+            f"{adapter_id}: outputs.audio must be one of {list(AUDIO_OUTPUTS)} (got {audio!r})"
+        )
+    return {"audio": audio} if audio is not None else {}
+
+
 def describe_inputs(inputs: dict[str, InputSlot]) -> dict[str, dict[str, Any]]:
     """The agent-facing form, in schema slot order."""
     return {name: slot.describe(name) for name, slot in inputs.items()}

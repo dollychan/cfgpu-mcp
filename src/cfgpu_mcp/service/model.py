@@ -103,6 +103,8 @@ async def list_models(task_type: str | None = None) -> list[dict[str, Any]]:
         }
         if a.inputs is not None:
             row["inputs"] = describe_inputs(a.inputs)
+        if a.outputs:
+            row["outputs"] = dict(a.outputs)
         models.append(row)
     return models
 
@@ -194,6 +196,9 @@ async def list_model_profiles(
             # Per-model, so it can say what the per-tool schema cannot: how many items a
             # slot takes here, and what this model does with a supplied audio track.
             model["inputs"] = describe_inputs(adapter.inputs)
+        if adapter.outputs:
+            # Whether with_audio means anything here: always / switchable / never.
+            model["outputs"] = dict(adapter.outputs)
         if requested_tasks:
             contracts = parameter_contracts.get(adapter.model_name, {})
             matched_contracts = {

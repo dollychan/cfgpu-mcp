@@ -129,7 +129,7 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     assert catalog["models"] == sorted(catalog["models"], key=lambda model: model["model_id"])
 
     for model in catalog["models"]:
-        assert set(model) == {
+        assert set(model) - {"outputs"} == {
             "model_id",
             "display_name",
             "task_type",
@@ -138,6 +138,8 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
             "speed_tier",
             "inputs",  # video models only; video_edit is a video task
         }
+        # outputs: video models that document their sound only (edit models do not)
+        assert model.get("outputs", {"audio": "always"})["audio"] in ("always", "switchable", "never")
         assert "adapter_id" not in model
         assert "capabilities" not in model
         assert "is_async" not in model

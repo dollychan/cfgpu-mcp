@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.6-r2v` |
-| 任务（tasks） | reference_to_video |
+| 任务（tasks） | reference_to_video, synced_audio_output |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 

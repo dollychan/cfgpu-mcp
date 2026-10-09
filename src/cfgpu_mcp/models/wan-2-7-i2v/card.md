@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.7-i2v` |
-| 任务（tasks） | image_to_video, first_last_frame, audio_driven_video, video_extend |
+| 任务（tasks） | image_to_video, first_last_frame, audio_driven_video, video_extend, synced_audio_output |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 

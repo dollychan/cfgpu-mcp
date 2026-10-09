@@ -10,6 +10,7 @@ from cfgpu_mcp.adapters.inputs import (
     InputSlot,
     check_declared_inputs,
     parse_inputs,
+    parse_outputs,
 )
 from cfgpu_mcp.task_catalog import parse_tasks
 
@@ -243,6 +244,9 @@ class ModelAdapter(ABC):
     #: uses a supplied audio track (``adapters/inputs.py``). ``None`` = undeclared,
     #: which a test forbids for every video model in the fleet.
     inputs: "dict[str, InputSlot] | None"
+    #: Video only: what the output carries besides pictures — today only whether it
+    #: has sound (``adapters/inputs.py`` AUDIO_OUTPUTS). ``None`` = undeclared.
+    outputs: dict[str, str] | None
     #: Maximum number of images that can be requested in one generation call. ``None``
     #: means the shared request-schema limit is the only local restriction.
     max_images_per_request: int | None
@@ -337,6 +341,9 @@ class ModelAdapter(ABC):
         instance.inputs = parse_inputs(instance.adapter_id, config.get("inputs"))
         if instance.inputs is not None and instance.task_type != "video":
             raise ValueError(f"{instance.adapter_id}: inputs: is declared for video models only")
+        instance.outputs = parse_outputs(instance.adapter_id, config.get("outputs"))
+        if instance.outputs is not None and instance.task_type != "video":
+            raise ValueError(f"{instance.adapter_id}: outputs: is declared for video models only")
         instance.max_images_per_request = config.get("max_images_per_request")
         pc = config.get("poll_config")
         instance.poll_config = PollConfig.from_dict(pc) if pc else None

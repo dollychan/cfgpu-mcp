@@ -28,6 +28,11 @@ tasks:
   - first_last_frame
   - audio_driven_video
   - video_extend
+  - synced_audio_output
+
+# Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): without driving_audio the model generates matching sound; no switch.
+outputs:
+  audio: always
 
 cost_tier: 3
 speed_tier: 2

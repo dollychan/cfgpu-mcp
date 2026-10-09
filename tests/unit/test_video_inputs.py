@@ -340,3 +340,51 @@ def test_a_source_video_slot_implies_an_edit_or_extend_task(adapter):
     """``role: source`` means the supplied video is always what gets edited or continued."""
     if _role(adapter, "reference_videos") == "source":
         assert {"video_edit", "video_extend"} & set(adapter.tasks), adapter.adapter_id
+
+
+# ── outputs.audio ⟺ synced_audio_output ⟺ with_audio reaching the payload ─────
+#
+# Whether a video has sound is one fact that used to be written down twice: as the
+# synced_audio_output task (agent-facing) and implicitly in whether each adapter sends
+# with_audio (code). The task drifted — Kling and the cfdream H3 pair honour the switch,
+# Grok and 万相 2.6/2.7 always emit sound, none of them claimed it.
+
+
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=lambda a: a.adapter_id)
+def test_synced_audio_output_is_claimed_exactly_when_the_output_has_sound(adapter):
+    audio = (adapter.outputs or {}).get("audio")
+    claims = "synced_audio_output" in adapter.tasks
+    assert claims == (audio in ("always", "switchable")), (
+        f"{adapter.adapter_id}: outputs.audio={audio!r} but synced_audio_output "
+        f"{'claimed' if claims else 'not claimed'}"
+    )
+
+
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=lambda a: a.adapter_id)
+def test_with_audio_reaches_the_payload_exactly_when_declared_switchable(adapter, accepted):
+    """``switchable`` is a promise that the flag decides; anything else says it cannot."""
+    counts = accepted[adapter.adapter_id][0]
+    base = _request(counts)
+    on = adapter.build_payload(base.model_copy(update={"with_audio": True}))
+    off = adapter.build_payload(base.model_copy(update={"with_audio": False}))
+    honoured = on != off
+    switchable = (adapter.outputs or {}).get("audio") == "switchable"
+    assert honoured == switchable, (
+        f"{adapter.adapter_id}: with_audio {'changes' if honoured else 'does not change'} "
+        f"the payload but outputs.audio is {(adapter.outputs or {}).get('audio')!r}"
+    )
+
+
+@pytest.mark.parametrize(
+    "raw, message",
+    [
+        ({"audio": "sometimes"}, "outputs.audio must be one of"),
+        ({"video": "x"}, "outputs takes only an audio key"),
+        ("always", "outputs takes only an audio key"),
+    ],
+)
+def test_malformed_outputs_are_rejected(raw, message):
+    from cfgpu_mcp.adapters.inputs import parse_outputs
+
+    with pytest.raises(ValueError, match=message):
+        parse_outputs("m", raw)

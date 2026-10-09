@@ -811,6 +811,11 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `text_to_image` / `image_to_image` / `multi_image_fusion`）与模型的本地校验**严格一致**：声明了就一定接受这种请求，
 > 接受这种请求就一定声明了。按这些任务筛选得到的就是全部可用模型，不会漏。CF Image 2 与 Nano Banana 系列
 > 因此新增了 `multi_image_fusion`（它们一直接受多张参考图）。
+>
+> **视频模型新增 `outputs.audio`**（`list_models` / `list_model_profiles` 均返回）：`always` = 成片一定有声，
+> `with_audio=false` 关不掉；`switchable` = `with_audio` 决定有无声音；`never` = 无声；没有这个字段 = 文档未说明
+> （如编辑模型，声音跟随源视频）。`synced_audio_output` 与它严格一致，因此可灵、cfdream H3、Grok、万相 2.6/2.7
+> 的 t2v/i2v/r2v 新增了这个任务。需要无声成片时，应选 `switchable` 或 `never` 的模型。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
 > `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；
