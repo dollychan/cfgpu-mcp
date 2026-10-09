@@ -466,7 +466,10 @@ async def test_profile_catalog_says_how_each_model_uses_audio(_full_registry):
     }
 
     images = await model_service.list_model_profiles(media_type="image")
-    assert all("inputs" not in model for model in images["models"])
+    image_inputs = {model["model_id"]: model["inputs"] for model in images["models"]}
+    assert image_inputs["wan2.7-image"] == {"reference_images": {"max": 9}, "regions": {"max_per_image": 2}}
+    assert image_inputs["doubao-seedream-5-0-pro"]["reference_images"] == {"max": 10}
+    assert "reference_audios" not in image_inputs["cf-image-2"]
 
 
 @pytest.mark.asyncio

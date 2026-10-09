@@ -787,7 +787,7 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 
 > **`reference_audios` 在不同模型上用途不同，选模型前先看 `inputs`（2026-10-09 起）。**
 > `list_model_profiles` 给每个视频模型返回 `inputs`：它接受哪些素材槽、每槽最多几个，以及音频的
-> `role`。不在 `inputs` 里的槽，该模型不接受。音频有三种 `role`：
+> `role`（图片与理解模型同样返回 `inputs`：参考图上限，读区域的模型另有 `regions.max_per_image`）。不在 `inputs` 里的槽，该模型不接受。音频有三种 `role`：
 >
 > | `role` | 含义 | 模型 |
 > |---|---|---|
@@ -917,7 +917,7 @@ cfgpu models list
 # 只看视频模型
 cfgpu models list --task-type video
 
-# 输出 JSON（含所有字段：tasks，视频模型另有 inputs）
+# 输出 JSON（含所有字段：tasks、inputs，视频模型另有 outputs）
 cfgpu models list --json
 
 # 查看某个模型的详细说明（markdown）

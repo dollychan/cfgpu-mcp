@@ -274,15 +274,11 @@ class ModelAdapter(ABC):
     #: have removed it from every ordinary call — including the plainest one,
     #: ``generate_video(prompt=...)`` — and made naming it explicitly a hard error.
     default_resolution: str
-    #: How many marked regions this model accepts on a single image, or None for no
-    #: local limit. Declarative because it is per-model while the ``regions`` schema is
-    #: per-tool: writing the tightest model's cap into the schema would present one
-    #: model's limit as a universal and reject calls that are legal on the model
-    #: actually selected.
-    max_regions_per_image: int | None
-    #: Video only: which material slots this model accepts, their counts, and how it
-    #: uses a supplied audio track (``adapters/inputs.py``). ``None`` = undeclared,
-    #: which a test forbids for every video model in the fleet.
+    #: Which material slots this model accepts and their counts (``adapters/inputs.py``,
+    #: slots per task_type): video adds how a supplied audio track is used; image and
+    #: understanding models carry ``regions.max_per_image`` — per-model, which is why it
+    #: cannot live in the per-tool ``regions`` schema. ``None`` = undeclared, which a
+    #: test forbids for every video, image and understanding model in the fleet.
     inputs: "dict[str, InputSlot] | None"
     #: Video only: what the output carries besides pictures — today only whether it
     #: has sound (``adapters/inputs.py`` AUDIO_OUTPUTS). ``None`` = undeclared.
@@ -377,16 +373,15 @@ class ModelAdapter(ABC):
         # stays the default here and no existing model's behaviour changes. A model
         # whose set excludes it (MiniMax H3) must declare its own.
         instance.default_resolution = config.get("default_resolution", "720p")
-        instance.max_regions_per_image = config.get("max_regions_per_image")
         legacy = [key for key in LEGACY_INPUT_KEYS if key in config]
         if legacy:
             raise ValueError(
                 f"{instance.adapter_id}: {legacy} moved into the inputs: block "
                 f"(see adapters/inputs.py)"
             )
-        instance.inputs = parse_inputs(instance.adapter_id, config.get("inputs"))
-        if instance.inputs is not None and instance.task_type != "video":
-            raise ValueError(f"{instance.adapter_id}: inputs: is declared for video models only")
+        instance.inputs = parse_inputs(
+            instance.adapter_id, config.get("inputs"), instance.task_type
+        )
         instance.outputs = parse_outputs(instance.adapter_id, config.get("outputs"))
         if instance.outputs is not None and instance.task_type != "video":
             raise ValueError(f"{instance.adapter_id}: outputs: is declared for video models only")
@@ -438,6 +433,12 @@ class ModelAdapter(ABC):
         ok, reason = check_regions(self, req)
         if not ok:
             return False, reason
+        # Video runs this further down, after its own checks; for image and
+        # understanding models the declaration is the whole slot contract.
+        if self.inputs is not None and not isinstance(req, (GenerateVideoInput, GenerateAudioInput)):
+            ok, reason = check_declared_inputs(self.model_name, self.inputs, req, refuse_undeclared=True)
+            if not ok:
+                return False, reason
         if isinstance(req, (GenerateImageInput, GenerateVideoInput)):
             ok, reason = self._check_aspect_ratio(req)
             if not ok:

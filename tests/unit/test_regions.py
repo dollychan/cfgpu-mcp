@@ -456,7 +456,7 @@ def test_seedream_pro_has_no_region_count_ceiling():
     """Explicitly unlimited, not merely unspecified: an invented cap would reject calls
     the model accepts."""
     adapter = _pro()
-    assert adapter.max_regions_per_image is None
+    assert adapter.inputs["regions"].max_per_image is None
     req = GenerateImageInput(
         prompt="x",
         reference_images=["https://example.com/a.jpg"],
@@ -466,8 +466,11 @@ def test_seedream_pro_has_no_region_count_ceiling():
 
 
 def test_a_declared_per_image_ceiling_is_enforced_per_image():
+    from cfgpu_mcp.adapters.inputs import InputSlot
+
     adapter = _pro()
-    adapter.max_regions_per_image = 2
+    original = adapter.inputs
+    adapter.inputs = {**original, "regions": InputSlot(max_per_image=2)}
     try:
         req = GenerateImageInput(
             prompt="x",
@@ -483,7 +486,7 @@ def test_a_declared_per_image_ceiling_is_enforced_per_image():
         assert not ok
         assert "image_index=0" in reason and "3" in reason
     finally:
-        adapter.max_regions_per_image = None
+        adapter.inputs = original
 
 
 def test_vision_uses_its_own_task_name():
@@ -619,9 +622,12 @@ def test_regions_and_group_images_are_mutually_exclusive():
     no 组图 task, so it ignores n. Exercised here on a hypothetical group-capable
     region model so that combination cannot start passing silently the day one exists.
     """
+    from cfgpu_mcp.adapters.inputs import InputSlot
+
     adapter = _lite()
-    original = adapter.tasks
+    original, original_inputs = adapter.tasks, adapter.inputs
     adapter.tasks = original + ("region_edit",)
+    adapter.inputs = {**original_inputs, "regions": InputSlot()}
     try:
         req = GenerateImageInput(
             prompt="x",
@@ -633,7 +639,7 @@ def test_regions_and_group_images_are_mutually_exclusive():
         assert not ok
         assert "组图" in reason
     finally:
-        adapter.tasks = original
+        adapter.tasks, adapter.inputs = original, original_inputs
 
 
 def test_thousandth_coordinates_do_not_drift_a_cell():

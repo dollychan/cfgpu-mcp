@@ -116,7 +116,7 @@
 
 - **外层列表与图片槽位一一对齐**，没有框的图片补 `[]`。这个补位由 adapter 做：调用方传扁平
   的 `regions`（每个带 `image_index`），少写一项不会报错，只会把框落到另一张图上。
-- **单张图最多 2 个框**（`max_regions_per_image: 2`），超出在本地就被拒绝。
+- **单张图最多 2 个框**（adapter.yaml `inputs.regions.max_per_image: 2`），超出在本地就被拒绝。
 - **必须带 `image_size`**：`bbox_list` 要的是原图绝对像素，而尺寸绝不猜测——猜错不会报错，
   只会在图上另一个位置改出一张看着合理、还要计费的图。缺 `image_size` 的请求在
   `supports()` 就被拒（`model="auto"` 会因此绕开本模型，改走 prompt 内嵌坐标的

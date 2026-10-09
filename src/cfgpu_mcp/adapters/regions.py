@@ -464,7 +464,8 @@ def check_regions(adapter: "ModelAdapter", req) -> tuple[bool, str]:
     task = _TASK_UNDERSTAND if understand else _TASK_EDIT
     if task not in adapter.tasks:
         return False, unsupported_reason(adapter.model_name, understand=understand)
-    cap = adapter.max_regions_per_image
+    slot = (adapter.inputs or {}).get("regions")
+    cap = slot.max_per_image if slot else None
     if cap is not None:
         counts: dict[int, int] = {}
         for r in regions:

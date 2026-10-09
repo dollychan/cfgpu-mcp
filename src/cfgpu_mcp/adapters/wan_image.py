@@ -71,8 +71,6 @@ _GROUP_TASK = "multi_image_group"
 #: can be hit.
 _MAX_SEQUENTIAL_N = 12
 
-#: `content` may hold one text object and 0–9 images.
-_MAX_IMAGES = 9
 
 
 @register_python_adapter
@@ -134,9 +132,6 @@ class WanImageAdapter(ModelAdapter):
                 f"(supported: {', '.join(allowed)})"
             )
 
-        reference_count = len(req.reference_images or [])
-        if reference_count > _MAX_IMAGES:
-            return False, f"{self.model_name} accepts at most {_MAX_IMAGES} reference_images"
 
         if req.n > _MAX_SEQUENTIAL_N:
             return False, (

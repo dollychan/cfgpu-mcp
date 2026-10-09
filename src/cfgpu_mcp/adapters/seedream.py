@@ -281,12 +281,8 @@ class SeedreamAdapter(ModelAdapter):
                 f"(supported: {', '.join(allowed)})"
             )
 
-        # The reference ceiling is a per-model fact (Pro takes 10, the rest 14), unlike
-        # 组图 below, which is a declared task.
-        max_refs = 10 if family == "pro" else 14
+        # The reference ceiling (Pro 10, the rest 14) is adapter.yaml inputs, checked by the base.
         reference_count = len(req.reference_images or [])
-        if reference_count > max_refs:
-            return False, f"{self.model_name} accepts at most {max_refs} reference_images"
 
         if layer_decomposition:
             if "layer_decomposition" not in self.tasks:

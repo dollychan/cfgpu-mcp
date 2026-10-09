@@ -1,7 +1,8 @@
-"""Per-model input contract for video adapters — the ``inputs:`` block of adapter.yaml.
+"""Per-model input contract — the ``inputs:`` block of adapter.yaml.
 
-Which material slots a model accepts, how many items each takes, and what a supplied
-audio track is *for*. Before this existed those facts lived in three places that drifted
+Which material slots a model accepts, how many items each takes, and (video) what a
+supplied audio track is *for*. Declared by video, image and understanding models, each
+with its own tool's slots (``INPUT_SLOTS``). Before this existed those facts lived in three places that drifted
 independently: ad-hoc checks inside each ``supports()``, a ``max_reference_*`` field
 declared by some models and not others, and the agent-facing ``profile.yaml``, whose
 ``reference_to_video`` promised audio on models that refuse every audio track.
@@ -40,6 +41,14 @@ VIDEO_INPUT_SLOTS = (
     "reference_audios",
 )
 _FRAME_SLOTS = frozenset({"first_frame", "last_frame"})
+
+#: The material slots of each tool, per task_type. ``regions`` is a slot like the
+#: others — boxes are material the model must read — but its limit is per image.
+INPUT_SLOTS = {
+    "video": VIDEO_INPUT_SLOTS,
+    "image": ("reference_images", "regions"),
+    "understand": ("images", "video", "regions"),
+}
 _VISUAL_SLOTS = ("first_frame", "last_frame", "reference_images", "reference_videos")
 
 #: How a model consumes a supplied audio track. One slot, three different contracts —
@@ -72,6 +81,9 @@ _SLOT_KEYS = {
     "reference_images": frozenset({"max"}),
     "reference_videos": frozenset({"max", "role"}),
     "reference_audios": frozenset({"max", "role", "standalone"}),
+    "images": frozenset({"max"}),
+    "video": frozenset(),
+    "regions": frozenset({"max_per_image"}),
 }
 
 #: Pre-``inputs`` spellings. Rejected rather than ignored: a leftover limit that is
@@ -81,6 +93,7 @@ LEGACY_INPUT_KEYS = (
     "max_reference_videos",
     "max_reference_audios",
     "allow_audio_only_reference",
+    "max_regions_per_image",
 )
 
 
@@ -91,11 +104,14 @@ class InputSlot:
     max: int | None = None          # None = no local limit (frames are always 1)
     role: str | None = None         # reference_videos / reference_audios: VIDEO_ROLES / AUDIO_ROLES
     standalone: bool = False        # reference_audios only: valid with no image/video input
+    max_per_image: int | None = None  # regions only: boxes per image, None = no local limit
 
     def describe(self, name: str) -> dict[str, Any]:
         out: dict[str, Any] = {}
         if self.max is not None:
             out["max"] = self.max
+        if self.max_per_image is not None:
+            out["max_per_image"] = self.max_per_image
         if self.role is not None:
             out["role"] = self.role
         if name == "reference_audios":
@@ -103,7 +119,7 @@ class InputSlot:
         return out
 
 
-def parse_inputs(adapter_id: str, raw: Any) -> dict[str, InputSlot] | None:
+def parse_inputs(adapter_id: str, raw: Any, task_type: str = "video") -> dict[str, InputSlot] | None:
     """Validate an ``inputs:`` block. ``None`` = undeclared; ``{}`` = accepts no material.
 
     A slot set to ``null`` is dropped, which is how a variant removes a slot it
@@ -111,16 +127,19 @@ def parse_inputs(adapter_id: str, raw: Any) -> dict[str, InputSlot] | None:
     """
     if raw is None:
         return None
+    if task_type not in INPUT_SLOTS:
+        raise ValueError(f"{adapter_id}: inputs: is not declared for {task_type} models")
     if not isinstance(raw, dict):
         raise ValueError(f"{adapter_id}: inputs must be a mapping of slot → settings")
-    unknown = set(raw) - set(VIDEO_INPUT_SLOTS)
+    valid = INPUT_SLOTS[task_type]
+    unknown = set(raw) - set(valid)
     if unknown:
         raise ValueError(
             f"{adapter_id}: inputs has unknown slots {sorted(unknown)} "
-            f"(valid: {list(VIDEO_INPUT_SLOTS)})"
+            f"(valid for {task_type}: {list(valid)})"
         )
     slots: dict[str, InputSlot] = {}
-    for name in VIDEO_INPUT_SLOTS:
+    for name in valid:
         if name not in raw or raw[name] is None:
             continue
         spec = raw[name]
@@ -132,9 +151,10 @@ def parse_inputs(adapter_id: str, raw: Any) -> dict[str, InputSlot] | None:
                 f"{adapter_id}: inputs.{name} has unsupported keys {sorted(extra)} "
                 f"(allowed: {sorted(_SLOT_KEYS[name]) or 'none'})"
             )
-        limit = spec.get("max")
-        if limit is not None and (isinstance(limit, bool) or not isinstance(limit, int) or limit < 1):
-            raise ValueError(f"{adapter_id}: inputs.{name}.max must be a positive integer")
+        for key in ("max", "max_per_image"):
+            limit = spec.get(key)
+            if limit is not None and (isinstance(limit, bool) or not isinstance(limit, int) or limit < 1):
+                raise ValueError(f"{adapter_id}: inputs.{name}.{key} must be a positive integer")
         role = spec.get("role")
         standalone = spec.get("standalone", False)
         if name in _ROLES and role not in _ROLES[name]:
@@ -146,7 +166,10 @@ def parse_inputs(adapter_id: str, raw: Any) -> dict[str, InputSlot] | None:
         if name == "reference_audios":
             if not isinstance(standalone, bool):
                 raise ValueError(f"{adapter_id}: inputs.reference_audios.standalone must be a boolean")
-        slots[name] = InputSlot(max=limit, role=role, standalone=standalone)
+        slots[name] = InputSlot(
+            max=spec.get("max"), role=role, standalone=standalone,
+            max_per_image=spec.get("max_per_image"),
+        )
     return slots
 
 
@@ -177,15 +200,34 @@ def parse_outputs(adapter_id: str, raw: Any) -> dict[str, str] | None:
     return {"audio": audio} if audio is not None else {}
 
 
+def _task_of(req: Any) -> str:
+    from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+
+    if isinstance(req, GenerateVideoInput):
+        return "video"
+    return "image" if isinstance(req, GenerateImageInput) else "understand"
+
+
 def describe_inputs(inputs: dict[str, InputSlot]) -> dict[str, dict[str, Any]]:
     """The agent-facing form, in schema slot order."""
     return {name: slot.describe(name) for name, slot in inputs.items()}
 
 
 def check_declared_inputs(
-    model_name: str, inputs: dict[str, InputSlot], req: "GenerateVideoInput"
+    model_name: str, inputs: dict[str, InputSlot], req: Any, *, refuse_undeclared: bool = False
 ) -> tuple[bool, str]:
-    """Enforce declared counts and the audio ``standalone`` rule for declared slots."""
+    """Enforce declared counts and the audio ``standalone`` rule for declared slots.
+
+    ``refuse_undeclared`` also refuses material in a slot the model did not declare.
+    Image and understanding models take it from here; video adapters refuse undeclared
+    slots in their own code, so the refusal can name a sibling model. ``regions``'
+    per-image limit is checked by ``regions.check_regions``, whose refusal says how to
+    split the call.
+    """
+    if refuse_undeclared:
+        for name in INPUT_SLOTS.get(_task_of(req), ()):
+            if getattr(req, name, None) and name not in inputs:
+                return False, f"{model_name} does not accept {name}"
     for name, slot in inputs.items():
         if slot.max is None or name in _FRAME_SLOTS:
             continue
@@ -195,7 +237,7 @@ def check_declared_inputs(
     audio = inputs.get("reference_audios")
     if (
         audio is not None
-        and req.reference_audios
+        and getattr(req, "reference_audios", None)
         and not audio.standalone
         and not any(getattr(req, name) for name in _VISUAL_SLOTS)
     ):

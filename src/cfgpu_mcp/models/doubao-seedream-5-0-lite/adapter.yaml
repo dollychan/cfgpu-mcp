@@ -15,6 +15,10 @@ tasks:
   - multi_image_fusion
   - multi_image_group
 
+# Material slots (adapters/inputs.py). Seedream 4.0 / 4.5 inherit these.
+inputs:
+  reference_images: {max: 14}
+
 cost_tier: 2
 speed_tier: 3
 

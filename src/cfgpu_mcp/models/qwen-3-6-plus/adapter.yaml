@@ -21,10 +21,15 @@ tasks:
   - region_understanding
   - long_context
 
-# No documented ceiling. This is what makes reading the escape hatch for editors that do
-# have one: five regions can be understood in a single call and then edited across
-# however many calls the editing model's own limit requires.
-max_regions_per_image: ~
+# All qwen vision models inherit this. No documented ceiling on images or boxes. The
+# missing region cap is what makes reading the escape hatch for editors that do have
+# one: five regions can be understood in a single call and then edited across however
+# many calls the editing model's own limit requires.
+inputs:
+  images: {}
+  video: {}
+  regions: {}
+
 
 cost_tier: 2
 speed_tier: 4

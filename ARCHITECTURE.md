@@ -145,6 +145,14 @@ profile 里却没有 `audio_driven_video`；适配器层的 `audio_generate` 在
   `wan-video-fast` 此前完全没有的 9/3/3 上限。
 - **`list_model_profiles`** 给每个视频模型加 `inputs` 字段（新增字段，向后兼容）。这是逐模型的列表，所以能写
   逐模型的上限，不违背 `x-cfgpu-media`「schema 只写宽松事实」的原则。
+
+**图片与理解模型也声明 `inputs`（2026-10-09）。** 槽集合按工具区分（`INPUT_SLOTS`）：图片 `reference_images` / `regions`，
+理解 `images` / `video` / `regions`；`regions` 的上限是 `max_per_image`。参考图上限以前写死在代码里
+（`seedream.py` 的 `max_refs` —— Pro 10、其余 14；`wan_image.py` 的 `_MAX_IMAGES = 9`），区域上限是单独的
+`max_regions_per_image` 键，agent 都看不见；现在都在 `inputs`，旧键加载即报错。这两类模型由基类 `supports()` 拒绝
+未声明的槽（视频仍由 adapter 自己拒，好让拒绝理由点名兄弟模型）；区域上限仍由 `regions.check_regions` 执行，因为它的
+拒绝理由要告诉调用方怎么拆分。`test_image_tasks.py` 要求参考图上限与 `supports()` 一致、`regions` 槽 ⟺ 区域任务
+（图片 `region_edit` / 理解 `region_understanding`）。纯内部迁移：上限值不变，450 个请求的路由矩阵无变化。
 - **测试**（`tests/unit/test_video_inputs.py`）对每个视频模型枚举素材槽 × 数量（0、1、max、max+1）组合，
   调 `supports()`，双向核对：被接受的请求不得用到未声明的槽、不得超过上限、未声明 `standalone` 不得纯音频；
   每个声明的槽和上限都必须有被接受的请求真正用到。

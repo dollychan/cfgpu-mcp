@@ -19,10 +19,14 @@ tasks:
   - layer_decomposition
   - transparent_background
 
-# No documented ceiling on how many regions one image may carry, so none is enforced
+# Pro takes fewer references than lite and reads regions; Flash inherits both. No
+# documented ceiling on how many regions one image may carry, so none is enforced
 # locally. Left absent rather than guessed: an invented cap would reject calls the model
 # accepts, which is the one failure a local check must never add.
-max_regions_per_image: ~
+inputs:
+  reference_images: {max: 10}
+  regions: {}
+
 
 # cost_tier / speed_tier inherited from doubao-seedream-5-0-lite (2 / 3).
 
