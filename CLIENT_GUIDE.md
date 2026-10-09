@@ -749,8 +749,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 向不支持某档的模型传该档，正式调用会在发请求前被拒；`validate_only=true` 则不报错，而是在
 > **可灵（`kling-video-o1` / `kling-v3-omni`）的 `with_audio` 永远出现在 `corrected_args` 里**，
 > 无论取值是 true 还是 false。它在这两个模型上映射为真实请求字段 `sound`（万相 2.6/2.7、
-> HappyHorse 压根不发这个字段），而可灵 card 里 `sound` 的上游默认值是「-」—— 没有默认值，
-> 所以统一 Schema 那个静默的 `with_audio=true` 就是全部决定。要向人展示审批卡的宿主，请把
+> HappyHorse 压根不发这个字段）。上游 `sound` 默认 `off`，统一 Schema 却默认 `with_audio=true`
+> 且总会发送，所以起决定作用的是一个与模型自身相反的静默默认值。
+> 源视频原声另由 `video_list[].keep_original_sound` 控制（经 `model_specific`）。要向人展示审批卡的宿主，请把
 > 这一行显示出来，并按 `{**原参数, **corrected_args}` 原样回传：否则卡片上根本没有音频这一
 > 行，人批准的是一条自带配乐的片子。这是**钉住**而不是纠正，值没有被改过。
 

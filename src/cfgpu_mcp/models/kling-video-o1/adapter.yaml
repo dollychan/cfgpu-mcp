@@ -30,6 +30,8 @@ tasks:
 cost_tier: 4
 speed_tier: 2
 resolutions: [480p, 720p, 1080p]
+# seconds: 3–15 (upstream enum); the fleet default minimum is 4.
+min_duration_seconds: 3
 
 poll_config:
   base_interval: 5

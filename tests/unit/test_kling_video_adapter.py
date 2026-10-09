@@ -224,10 +224,20 @@ def test_cfgpu_model_id_only_in_model_field():
 
 def test_model_specific_merged_and_overrides():
     adapter = _make_adapter()
-    req = GenerateVideoInput(prompt="x", model_specific={"mode": "pro", "negative_prompt": "blurry"})
+    # watermark_info is a real Kling field with no unified-schema counterpart.
+    req = GenerateVideoInput(prompt="x", model_specific={"mode": "pro", "watermark_info": {"enabled": True}})
     payload = adapter.build_payload(req)
     assert payload["mode"] == "pro"
-    assert payload["negative_prompt"] == "blurry"
+    assert payload["watermark_info"] == {"enabled": True}
+
+
+def test_with_audio_maps_to_sound_even_with_a_reference_video():
+    """No rewrite: the doc's "only off with a video" is unverified, and the price
+    table bills a with-video sounded tier — upstream decides, not the adapter."""
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", reference_videos=["https://ref.mp4"])
+    assert adapter.build_payload(req)["sound"] == "on"
+    assert adapter.validation_corrections(req)["with_audio"] is True
 
 
 # ── parse_response ───────────────────────────────────────────────────────────
@@ -421,6 +431,20 @@ def test_supports_rejects_reference_audios():
     ok, reason = adapter.supports(req)
     assert ok is False
     assert reason == "kling-video-o1 does not accept reference_audios"
+
+
+@pytest.mark.parametrize("seconds, ok", [(2, False), (3, True), (15, True), (16, False)])
+def test_registered_duration_range_is_3_to_15(seconds, ok):
+    from pathlib import Path
+
+    import cfgpu_mcp
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+
+    registry = AdapterRegistry(model_dir=Path(cfgpu_mcp.__file__).parent / "models")
+    registry.load()
+    for name in ("kling-video-o1", "kling-v3-omni"):
+        adapter = registry.get(name)
+        assert adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=seconds))[0] is ok
 
 
 def test_supports_rejects_smart_duration():

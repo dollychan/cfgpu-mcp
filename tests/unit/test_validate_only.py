@@ -470,7 +470,7 @@ async def test_validate_only_rejects_what_supports_would_reject():
 async def test_kling_preflight_pins_the_sound_switch(model):
     """`with_audio` reaches corrected_args even when the caller never mentioned it.
 
-    Kling maps it to a real `sound` field and its card documents no upstream default,
+    Kling maps it to a real `sound` field whose upstream default (`off`) disagrees,
     so the schema's silent `True` is the whole decision. A host that shows an approval
     card built from the caller's arguments would otherwise show no audio row at all.
     """

@@ -34,9 +34,9 @@
 | model | string | ✓ | - | 固定值：`kling-video-o1` |
 | prompt | string | ✓ | - | 视频描述，支持中英文 |
 | size | string | - | 1280x720 | 输出像素尺寸 `宽x高`，由统一 Schema 的 `resolution` + `aspect_ratio` 映射得到 |
-| mode | string | - | std | 生成模式：`std`（标准）/ `pro`（高质量），由 `quality_tier` 映射（`best` → `pro`） |
-| seconds | string | ✓ | "5" | 视频时长（秒），字符串形式。视频编辑（`refer_type=base`）时不传，时长跟随源视频 |
-| sound | string | - | - | 是否生成有声视频：`on` / `off`，由 `with_audio` 映射 |
+| mode | string | - | pro | 生成模式：`std`（标准）/ `pro`（高质量），由 `quality_tier` 映射（`best` → `pro`）；adapter 总是显式发送 |
+| seconds | string | ✓ | "5" | 视频时长（秒），字符串形式，取值 3–15。视频编辑（`refer_type=base`）时不传，时长跟随源视频 |
+| sound | string | - | off | 是否生成有声视频：`on` / `off`，由 `with_audio` 直接映射 |
 | image_list | array | - | - | 图片输入数组，元素为 `{"image": url, "type": ...}`；`type` 可为 `first_frame`（首帧）/ `end_frame`（尾帧），**省略 `type` 即普通参考图**，带 `type` 与不带 `type` 的元素可混用 |
 | video_list | array | - | - | 视频输入数组，元素为 `{"video_url": url, "refer_type": ...}`；`refer_type` 为 `feature`（参考其运镜/风格）或 `base`（作为被编辑的源视频） |
 
@@ -48,7 +48,7 @@
 | resolution + aspect_ratio | size | 映射成像素 `宽x高`，`aspect_ratio=adaptive` 时按 16:9 处理 |
 | quality_tier | mode | `best` → `pro`，其余 → `std` |
 | duration_seconds | seconds | 转成字符串透传；不支持 `-1` 智能时长 |
-| with_audio | sound | `true` → `on`，`false` → `off`。**preflight 会把它钉进 `corrected_args`**：`sound` 在本模型是真实请求字段（万相 2.6/2.7、HappyHorse 压根不发它），而上表里 `sound` 的默认值是「-」—— 上游没有默认值，所以统一 Schema 那个静默的 `true` 就是全部决定。不钉住的话，按调用方原始参数生成的审批卡上根本没有音频这一行 |
+| with_audio | sound | `true` → `on`，`false` → `off`。**preflight 会把它钉进 `corrected_args`**：`sound` 在本模型是真实请求字段（万相 2.6/2.7、HappyHorse 压根不发它），上游默认 `off`，统一 Schema 却默认 `true` 且总会发送，起决定作用的是一个与模型自身相反的静默默认值。不钉住的话，按调用方原始参数生成的审批卡上根本没有音频这一行。源视频原声另由 `video_list[].keep_original_sound`（`yes` / `no`，经 `model_specific`）控制 |
 | first_frame | image_list[] | `{"image": url, "type": "first_frame"}` |
 | last_frame | image_list[] | `{"image": url, "type": "end_frame"}`；需与 `first_frame` 同时给出 |
 | reference_images | image_list[] | `{"image": url}`（不带 `type`） |
@@ -80,7 +80,8 @@ adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `ref
 - 支持文生视频、图生视频（首帧）、首尾帧、多图/视频参考、视频编辑。
 - 不支持 `reference_audios`：请求体没有音频输入槽位。
 - `last_frame` 必须与 `first_frame` 同时给出（尾帧 `end_frame` 依赖首帧）。
-- 需要显式时长，不支持 `duration_seconds=-1`。
+- 需要显式时长 3–15 秒，不支持 `duration_seconds=-1`。
+- 上游参数说明称「有参考视频时 `sound` 只能为 `off`」，但未经验证，且价格表列有「有视频输入的有声视频」一档，故 adapter 不改写，`with_audio` 原样映射，由上游裁决。
 
 ## 异步任务流程
 
