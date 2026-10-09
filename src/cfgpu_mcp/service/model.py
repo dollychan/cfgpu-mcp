@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -15,6 +15,9 @@ from cfgpu_mcp.voice_catalog import (
     language_matches,
     load_language_vocabulary,
 )
+
+if TYPE_CHECKING:
+    from cfgpu_mcp.adapters.base import ModelAdapter
 
 _MODELS_DIR = Path(__file__).parent.parent / "models"
 _TASK_PARAMETERS_PATH = Path(__file__).parent.parent / "capabilities" / "task_parameters.yaml"
@@ -82,33 +85,46 @@ def _merge_cards(base_md: str, variant_md: str) -> str:
     return "".join(merged.values())
 
 
+def _profile_row(adapter: "ModelAdapter") -> dict[str, Any]:
+    """One model's agent-facing description, shared by both catalogs.
+
+    ``list_models`` and ``list_model_profiles`` used to build this twice, so every new
+    declared field (inputs, outputs, aspect_ratios) had to be added in two places and a
+    miss would make the two views disagree about the same model.
+    """
+    row: dict[str, Any] = {
+        "model_id": adapter.model_name,
+        "display_name": adapter.display_name,
+        "task_type": adapter.task_type,
+        "tasks": list(adapter.tasks),
+        "cost_tier": adapter.cost_tier,
+        "speed_tier": adapter.speed_tier,
+    }
+    if adapter.inputs is not None:
+        # Per-model, so it can say what the per-tool schema cannot: how many items a
+        # slot takes here, and (video) what this model does with a supplied audio track.
+        row["inputs"] = describe_inputs(adapter.inputs)
+    if adapter.outputs:
+        # Whether with_audio means anything here: always / switchable / never.
+        row["outputs"] = dict(adapter.outputs)
+    if adapter.aspect_ratios:
+        # Absent = every schema ratio; video models always also take adaptive.
+        row["aspect_ratios"] = list(adapter.aspect_ratios)
+    return row
+
+
 async def list_models(task_type: str | None = None) -> list[dict[str, Any]]:
+    """Operations / debugging view: every model's profile row plus ``is_async``.
+
+    Agents choose models with ``list_model_profiles`` (task filters, parameter
+    templates); production configs typically disable this tool.
+    """
     from cfgpu_mcp.config import get_registry
     from cfgpu_mcp.tool_registry import fold_choice
 
     registry = get_registry()
     adapters = registry.list_all(task_type=fold_choice(task_type, _TASK_TYPES))
-    # `tasks` replaced the retired adapter-internal `capabilities` (2026-10-09): one
-    # vocabulary everywhere, so this debugging view and the agent-facing profiles agree.
-    models = []
-    for a in adapters:
-        row = {
-            "model_id":       a.model_name,
-            "display_name":   a.display_name,
-            "task_type":      a.task_type,
-            "tasks":          list(a.tasks),
-            "cost_tier":      a.cost_tier,
-            "speed_tier":     a.speed_tier,
-            "is_async":       a.is_async,
-        }
-        if a.inputs is not None:
-            row["inputs"] = describe_inputs(a.inputs)
-        if a.outputs:
-            row["outputs"] = dict(a.outputs)
-        if a.aspect_ratios:
-            row["aspect_ratios"] = list(a.aspect_ratios)
-        models.append(row)
-    return models
+    return [{**_profile_row(a), "is_async": a.is_async} for a in adapters]
 
 
 def _load_task_catalog() -> tuple[int, dict[str, dict[str, Any]]]:
@@ -178,32 +194,14 @@ async def list_model_profiles(
 
     models: list[dict[str, Any]] = []
     for adapter in sorted(get_registry().list_all(task_type=media_type), key=lambda item: item.model_name):
-        tasks = list(adapter.tasks)
-        supported_tasks = set(tasks)
+        supported_tasks = set(adapter.tasks)
         if requested_tasks and (
             not requested_tasks.issubset(supported_tasks)
             if match == "all"
             else not requested_tasks & supported_tasks
         ):
             continue
-        model = {
-            "model_id": adapter.model_name,
-            "display_name": adapter.display_name,
-            "task_type": adapter.task_type,
-            "tasks": tasks,
-            "cost_tier": adapter.cost_tier,
-            "speed_tier": adapter.speed_tier,
-        }
-        if adapter.inputs is not None:
-            # Per-model, so it can say what the per-tool schema cannot: how many items a
-            # slot takes here, and what this model does with a supplied audio track.
-            model["inputs"] = describe_inputs(adapter.inputs)
-        if adapter.outputs:
-            # Whether with_audio means anything here: always / switchable / never.
-            model["outputs"] = dict(adapter.outputs)
-        if adapter.aspect_ratios:
-            # Absent = every schema ratio; video models always also take adaptive.
-            model["aspect_ratios"] = list(adapter.aspect_ratios)
+        model = _profile_row(adapter)
         if requested_tasks:
             contracts = parameter_contracts.get(adapter.model_name, {})
             matched_contracts = {

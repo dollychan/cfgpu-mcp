@@ -12,7 +12,7 @@ from cfgpu_mcp.tool_registry import CanonicalTaskId, CapabilityMatch, MediaType,
 def register(mcp: FastMCP) -> None:
     @mcp.tool()
     async def list_models(task_type: Optional[str] = None) -> list:
-        """List available CFGPU models with their canonical tasks, inputs and identifiers."""
+        """List every model with is_async, for operations and debugging. Each row is the same model profile list_model_profiles returns; choose models with list_model_profiles, which filters by task and adds parameter templates."""
         try:
             return await model_service.list_models(task_type)
         except Exception as e:

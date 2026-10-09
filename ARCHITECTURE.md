@@ -153,6 +153,12 @@ profile 里却没有 `audio_driven_video`；适配器层的 `audio_generate` 在
 未声明的槽（视频仍由 adapter 自己拒，好让拒绝理由点名兄弟模型）；区域上限仍由 `regions.check_regions` 执行，因为它的
 拒绝理由要告诉调用方怎么拆分。`test_image_tasks.py` 要求参考图上限与 `supports()` 一致、`regions` 槽 ⟺ 区域任务
 （图片 `region_edit` / 理解 `region_understanding`）。纯内部迁移：上限值不变，450 个请求的路由矩阵无变化。
+
+**两个目录共用一个行构造（2026-10-09）。** `list_models` 与 `list_model_profiles` 以前各自拼每个模型的字典，`inputs` /
+`outputs` / `aspect_ratios` 每加一个字段都要改两处，漏一处两个视图就对同一个模型说法不一。现在都调用
+`service/model._profile_row`；`list_models` 只多一个 `is_async`，定位为运维/调试视图（生产 `config.yaml` 禁用它），
+agent 选模型用 `list_model_profiles`（任务过滤 + 参数模板）。`test_list_models_rows_are_the_profile_rows_plus_is_async`
+钉住两者逐行相等。
 - **测试**（`tests/unit/test_video_inputs.py`）对每个视频模型枚举素材槽 × 数量（0、1、max、max+1）组合，
   调 `supports()`，双向核对：被接受的请求不得用到未声明的槽、不得超过上限、未声明 `standalone` 不得纯音频；
   每个声明的槽和上限都必须有被接受的请求真正用到。

@@ -503,3 +503,14 @@ def test_cards_speak_the_canonical_vocabulary(card):
     if row:
         declared = _registry().get(card.parent.name).tasks
         assert [t.strip() for t in row.group(1).split(",")] == list(declared)
+
+
+@pytest.mark.asyncio
+async def test_list_models_rows_are_the_profile_rows_plus_is_async(_full_registry):
+    """One builder: a declared field added to one catalog reaches the other."""
+    from cfgpu_mcp.service import model as model_service
+
+    profiles = {m["model_id"]: m for m in (await model_service.list_model_profiles())["models"]}
+    for row in await model_service.list_models():
+        assert set(row) - set(profiles[row["model_id"]]) == {"is_async"}
+        assert {k: v for k, v in row.items() if k != "is_async"} == profiles[row["model_id"]]

@@ -961,7 +961,7 @@ class TaskWaitInput(BaseModel):
 
 
 class ListModelsInput(BaseModel):
-    """List available CFGPU models with their canonical tasks, inputs and identifiers."""
+    """List every model with is_async, for operations and debugging. Each row is the same model profile list_model_profiles returns; choose models with list_model_profiles, which filters by task and adds parameter templates."""
 
     task_type: Optional[Folded("image", "video", "audio", "understand")] = Field(
         default=None,

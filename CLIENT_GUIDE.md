@@ -819,6 +819,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 接受这种请求就一定声明了。按这些任务筛选得到的就是全部可用模型，不会漏。CF Image 2 与 Nano Banana 系列
 > 因此新增了 `multi_image_fusion`（它们一直接受多张参考图）。
 >
+> **`list_models` 与 `list_model_profiles` 的每一行完全相同**，`list_models` 只多一个 `is_async`。`list_models` 是运维/调试
+> 视图，给 agent 选模型请用 `list_model_profiles`（支持按任务过滤，并给出参数模板）。
+>
 > **视频模型新增 `outputs.audio`**（`list_models` / `list_model_profiles` 均返回）：`always` = 成片一定有声，
 > `with_audio=false` 关不掉；`switchable` = `with_audio` 决定有无声音；`never` = 无声；没有这个字段 = 文档未说明
 > （如编辑模型，声音跟随源视频）。`synced_audio_output` 与它严格一致，因此可灵、cfdream H3、Grok、万相 2.6/2.7
