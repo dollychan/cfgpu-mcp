@@ -114,3 +114,33 @@ def test_the_retired_region_key_is_refused_at_load():
             "adapter_id": "x", "cfgpu_model_id": "x", "task_type": "image",
             "endpoint": "/i", "max_regions_per_image": 2,
         })
+
+
+# ── understanding scenario tasks ⟺ supports() ────────────────────────────────
+#
+# After catalog_version 2 the understanding vocabulary holds only tasks a request can
+# ask for, each decided by what the request carries — so, like the image and video
+# scenario tasks, each is held equal to what supports() accepts.
+
+
+def _understanding_shapes():
+    from cfgpu_mcp.tool_registry import RegionSpec, UnderstandVisionInput
+
+    image = "https://example.com/a.png"
+    return {
+        "image_understanding": UnderstandVisionInput(prompt="what is this", images=[image]),
+        "video_understanding": UnderstandVisionInput(prompt="what happens", video="https://example.com/v.mp4"),
+        "region_understanding": UnderstandVisionInput(
+            prompt="what is here", images=[image],
+            regions=[RegionSpec(image_index=0, box=[0.1, 0.1, 0.5, 0.5])],
+        ),
+    }
+
+
+@pytest.mark.parametrize("task", sorted(_understanding_shapes()))
+@pytest.mark.parametrize(
+    "adapter", [a for a in _WITH_INPUTS if a.task_type == "understand"], ids=lambda a: a.adapter_id
+)
+def test_understanding_tasks_are_claimed_exactly_when_supports_accepts_them(adapter, task):
+    ok, reason = adapter.supports(_understanding_shapes()[task])
+    assert ok == (task in adapter.tasks), f"{adapter.adapter_id} {task}: {reason or 'accepted'}"

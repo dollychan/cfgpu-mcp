@@ -200,6 +200,12 @@ profile 里却没有 `audio_driven_video`；适配器层的 `audio_generate` 在
 `model_specific` 传的 `tools` 照旧原样下发，卡片里的上游参数说明也保留。路由与代码门槛都不读这三个任务，`auto` 不变。
 卡片词表测试把三个 id 加入退役词，防止回流。
 
+同一版本 2 里还删了 `image_reasoning` / `long_context` / `long_video_understanding` / `long_document_understanding`：它们描述的是
+模型素质而不是请求，没有任何参数能要求它们，四个 qwen 模型的声明也完全相同（`understand_vision` 甚至不收文档）。分支尚未发布，
+所以两批删除并在一个版本里，对外只有一次不兼容变更。理解类词表剩 `image_understanding` / `video_understanding` /
+`region_understanding`，都只由请求携带的素材决定，`test_image_tasks.py` 用探针要求它们与 `supports()` 双向一致。
+qwen 四个模型之间的区别本来就由 `analysis_depth_default_for`（fast / balanced / thorough）与成本、速度档位表达。
+
 #### 废弃适配器内部的 `capabilities` 词表；`tasks:` 并入 adapter.yaml；视频也分用途（2026-10-09）
 
 **问题。** 每个模型原来有两份「能做什么」：`adapter.yaml` 的 `capabilities`（30 个词，给代码用）和 `profile.yaml`

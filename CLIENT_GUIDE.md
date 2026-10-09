@@ -825,8 +825,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 的 t2v/i2v/r2v 新增了这个任务。需要无声成片时，应选 `switchable` 或 `never` 的模型。
 >
 > **`list_model_profiles` 的 `catalog_version` 升为 2**：删除了 `web_grounded_generation`、`tool_calling`、`visual_agent`
-> 三个任务。它们没有任何工具参数能触发，按它们筛出模型也无法在调用里用上。仍以 `required_tasks` 传这三个 id 会得到
-> 参数错误。需要上游联网搜索时，可在支持的模型上通过 `model_specific` 传上游的 `tools` 字段，参数见模型卡。
+> 三个任务（没有任何工具参数能触发，按它们筛出模型也无法在调用里用上），以及 `image_reasoning`、`long_context`、
+> `long_video_understanding`、`long_document_understanding` 四个只描述模型素质的理解类任务（所有视觉模型声明相同，
+> 没有区分度；按深度选模型用 `analysis_depth`）。仍以 `required_tasks` 传这七个 id 会得到参数错误。需要上游联网搜索时，可在支持的模型上通过 `model_specific` 传上游的 `tools` 字段，参数见模型卡。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
 > `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；

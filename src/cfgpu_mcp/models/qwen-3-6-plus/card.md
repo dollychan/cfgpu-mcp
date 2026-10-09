@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | understand (视觉理解 / 图像推理 / 视频理解) |
 | CFGPU 模型 ID | `qwen3.6-plus` |
-| 任务（tasks） | image_understanding, image_reasoning, video_understanding, long_video_understanding, long_document_understanding, region_understanding, long_context |
+| 任务（tasks） | image_understanding, video_understanding, region_understanding |
 | 调用方式 | 同步（POST `/model/v1/chat/completions` 直接返回结果） |
 | 上下文 | 128K |
 | 成本档位 | 2/5 |

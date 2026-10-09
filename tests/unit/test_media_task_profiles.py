@@ -82,7 +82,10 @@ def test_tasks_are_validated_at_load(tasks, message):
         })
 
 
-@pytest.mark.parametrize("task", ["web_grounded_generation", "tool_calling", "visual_agent"])
+@pytest.mark.parametrize("task", [
+    "web_grounded_generation", "tool_calling", "visual_agent",
+    "image_reasoning", "long_context", "long_video_understanding", "long_document_understanding",
+])
 def test_tasks_no_call_can_trigger_are_not_in_the_vocabulary(task):
     """Removed in catalog_version 2: no tool parameter reaches them, so an agent that
     filtered by one picked a model for something its call could never ask for."""
@@ -485,6 +488,7 @@ async def test_audio_driven_search_returns_only_driving_models(_full_registry):
 _RETIRED = re.compile(
     r"multi_modal_reference|audio_generate|\*\*web_search\*\*|region_understand\b|能力标签"
     r"|web_grounded_generation|tool_calling|visual_agent"
+    r"|image_reasoning|long_context|long_video_understanding|long_document_understanding"
 )
 
 

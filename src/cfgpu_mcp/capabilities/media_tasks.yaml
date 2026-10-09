@@ -1,8 +1,11 @@
 schema_version: 1
 # What agents see as list_model_profiles' catalog_version. Bumped when a task ID is
 # removed or changes meaning, so a cached filter fails loudly instead of matching
-# nothing. 2: dropped web_grounded_generation / tool_calling / visual_agent — no tool
-# parameter could trigger them, and an agent picks a model by what the call can do.
+# nothing. 2: dropped web_grounded_generation / tool_calling / visual_agent (no tool
+# parameter could trigger them) and image_reasoning / long_context /
+# long_video_understanding / long_document_understanding (they describe the model, not
+# a request: no argument asks for them, and every vision model declared them alike).
+# An agent picks a model by what the call can do.
 catalog_version: 2
 
 # Agent-facing media task vocabulary.  IDs are stable semantic contracts, not
@@ -124,33 +127,13 @@ tasks:
     name: Image understanding
     description: Answer questions about, describe, or extract information from images.
     prompt_guidance: Ask a concrete question and provide the relevant image or images.
-  image_reasoning:
-    media_type: understand
-    name: Image reasoning
-    description: Reason about relationships, anomalies, or conclusions supported by an image.
-    prompt_guidance: State the reasoning goal and the evidence to inspect in the image.
   video_understanding:
     media_type: understand
     name: Video understanding
     description: Answer questions about, summarize, or analyze a video.
     prompt_guidance: State the event, time range, or question to analyze and provide the video.
-  long_video_understanding:
-    media_type: understand
-    name: Long-video understanding
-    description: Analyze a long video and retrieve information across its duration.
-    prompt_guidance: Specify the event, time range, or cross-video question of interest.
-  long_document_understanding:
-    media_type: understand
-    name: Long-document understanding
-    description: Analyze and answer questions about a long document.
-    prompt_guidance: State the requested extraction, comparison, or conclusion and provide the document.
   region_understanding:
     media_type: understand
     name: Region understanding
     description: Answer questions about a selected region of an image.
     prompt_guidance: Identify the selected region and ask a concrete question about it.
-  long_context:
-    media_type: understand
-    name: Long context
-    description: Reason over a large amount of supplied context.
-    prompt_guidance: State the question and identify the relevant material within the context.

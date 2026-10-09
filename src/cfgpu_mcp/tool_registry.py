@@ -995,12 +995,8 @@ CanonicalTaskId = Literal[
     "expressive_speech",
     "pronunciation_control",
     "image_understanding",
-    "image_reasoning",
     "video_understanding",
-    "long_video_understanding",
-    "long_document_understanding",
     "region_understanding",
-    "long_context",
 ]
 
 
