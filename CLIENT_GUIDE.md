@@ -806,6 +806,11 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `audio_driven_video`、`web_search` → `web_grounded_generation`、`region_understand` → `region_understanding`），视频模型
 > 另带 `inputs`。按旧字段名解析 `list_models` 的脚本需要跟着改；`list_model_profiles` 的返回结构不变。
 > 拒绝理由里的模型名一律是对外的 `model_id`，不再出现内部目录名。
+>
+> 只描述素材形状的「场景」任务（`text_to_video` / `image_to_video` / `first_last_frame` / `reference_to_video`、
+> `text_to_image` / `image_to_image` / `multi_image_fusion`）与模型的本地校验**严格一致**：声明了就一定接受这种请求，
+> 接受这种请求就一定声明了。按这些任务筛选得到的就是全部可用模型，不会漏。CF Image 2 与 Nano Banana 系列
+> 因此新增了 `multi_image_fusion`（它们一直接受多张参考图）。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
 > `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；

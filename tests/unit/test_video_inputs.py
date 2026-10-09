@@ -270,3 +270,73 @@ def test_refusals_name_the_public_model_never_the_adapter_id(adapter):
         if not ok:
             assert adapter.adapter_id not in reason, reason
             assert "capabilit" not in reason, reason
+
+
+# ── scenario tasks ⟺ what supports() accepts ─────────────────────────────────
+#
+# Four video tasks name nothing but a shape of material, so whether a model has them
+# is decided by supports() alone. The checks above only run one way (a claim must be
+# reachable); these run both, because the drift that matters most is the silent one —
+# a model that does the job but never says so is invisible to an agent filtering by
+# task, and no request ever fails to reveal it.
+
+
+def _role(adapter, slot):
+    spec = (adapter.inputs or {}).get(slot)
+    return spec.role if spec else None
+
+
+def _text_only(adapter, c):
+    return not any(c.values())
+
+
+def _first_frame_only(adapter, c):
+    return c["first_frame"] and not any(v for k, v in c.items() if k != "first_frame")
+
+
+def _first_and_last_frame_only(adapter, c):
+    return (
+        c["first_frame"] and c["last_frame"]
+        and not (c["reference_images"] or c["reference_videos"] or c["reference_audios"])
+    )
+
+
+def _references_without_frames(adapter, c):
+    """Reference images and/or reference-role videos, with no frame and no audio.
+
+    A ``source``-role video makes any request an edit or extension of it, so such a
+    request is never this shape even when reference images ride along.
+    """
+    if c["reference_videos"] and _role(adapter, "reference_videos") != "reference":
+        return False
+    return (
+        not (c["first_frame"] or c["last_frame"] or c["reference_audios"])
+        and (c["reference_images"] or c["reference_videos"])
+    )
+
+
+_SCENARIO_TASKS = {
+    "text_to_video": _text_only,
+    "image_to_video": _first_frame_only,
+    "first_last_frame": _first_and_last_frame_only,
+    "reference_to_video": _references_without_frames,
+}
+
+
+@pytest.mark.parametrize("task", sorted(_SCENARIO_TASKS))
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=lambda a: a.adapter_id)
+def test_scenario_tasks_are_claimed_exactly_when_supports_accepts_them(adapter, task, accepted):
+    shape = _SCENARIO_TASKS[task]
+    reachable = any(shape(adapter, c) for c in accepted[adapter.adapter_id])
+    claims = task in adapter.tasks
+    assert reachable == claims, (
+        f"{adapter.adapter_id}: supports() {'accepts' if reachable else 'refuses'} the "
+        f"{task} request shape but the task is {'claimed' if claims else 'not claimed'}"
+    )
+
+
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=lambda a: a.adapter_id)
+def test_a_source_video_slot_implies_an_edit_or_extend_task(adapter):
+    """``role: source`` means the supplied video is always what gets edited or continued."""
+    if _role(adapter, "reference_videos") == "source":
+        assert {"video_edit", "video_extend"} & set(adapter.tasks), adapter.adapter_id

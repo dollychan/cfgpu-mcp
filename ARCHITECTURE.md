@@ -161,6 +161,16 @@ profile 里却没有 `audio_driven_video`；适配器层的 `audio_generate` 在
 因为它是唯一完全由输入事实决定的任务。**测试证明不了语义能力**：MiniMax-H3 收参考视频，所以 `video_edit` 能过结构检查，
 但它是否真的编辑得好仍只有卡片和实测能回答。
 
+**场景任务与 `supports()` 双向一致（2026-10-09）。** 有七个任务只描述素材的形状，因此是否具备完全由 `supports()`
+决定：视频的 `text_to_video`（无素材）、`image_to_video`（只有首帧）、`first_last_frame`（首尾帧）、`reference_to_video`
+（参考图和/或 `role: reference` 的参考视频，无帧、无音频；带 `source` 视频的请求一律算编辑）；图片的 `text_to_image` /
+`image_to_image` / `multi_image_fusion`（0 / 1 / 2 张参考图）。上面的检查只有一个方向（声明的必须可达），漏掉的正是
+最隐蔽的一种漂移：模型做得了却没声明，按任务筛选的 agent 就看不见它，而且没有任何请求会失败把它暴露出来。
+`test_video_inputs.py::test_scenario_tasks_are_claimed_exactly_when_supports_accepts_them` 与
+`test_image_tasks.py` 用探针请求逐一比对，要求「声明 ⟺ 接受」；`role: source` 的视频槽必须配 `video_edit` 或
+`video_extend`。上线时视频侧零差异；图片侧查出 CF Image 2 与四个 Nano Banana 一直把整组参考图原样下发却没声明
+`multi_image_fusion`，已补上。`auto` 路由在 144 个图片请求矩阵上无变化（这些请求本来就选 CF Image 2）。
+
 任务 id 没有改名，`catalog_version` 不变。按音频用途拆出新任务仍是后续一步。
 
 #### 废弃适配器内部的 `capabilities` 词表；`tasks:` 并入 adapter.yaml；视频也分用途（2026-10-09）
@@ -256,7 +266,7 @@ Seedream 功能开关、router 加分；其余 23 个（`video_edit`、`video_ex
 
 `gpt-image-2` 是第二例（2026-09-09），理由不同：它在 balanced 档记 1 分，与整个 Seedream 家族的旧成员打平，平局本来是 `auto_priority` 能解的。解不了的是中文 —— `_score` 给每个 `doubao-seedream` 加 2 分，于是中文 prompt 下 5.0 Pro 记 3 分、直接在**分数**这一关就赢了，`auto_priority` 作为第三关键字根本轮不到开口。一个英文成立、中文翻盘的默认不是默认。同样只声明 `balanced`：`fast` 现在由速度 5、成本 1 的 `doubao-seedream-5-0-flash` 自然胜出；`best` 本就由 `quality_rank: 3` 落在这里，是另一个字段的另一次声明，两者互不代表。
 
-**`n > 1` 不再是例外。** `gpt-image-2` 声明 `multi_image_group`，接受 `n=1`–`10`，且 `GptImage2Adapter.build_payload` 将这个值原样上送；`n` 是输出张数上限，模型可能少于请求值。Seedream 的同名参数也是组图的张数上限。`reference_images` 则是另一个维度：`gpt-image-2` 有 `image_to_image` 且 `_finalize_payload` 确实把参考图发上去了，缺的只是 `multi_image_fusion`，属于「由一个非专精的模型来做」而不是「被丢掉」。
+**`n > 1` 不再是例外。** `gpt-image-2` 声明 `max_images_per_request: 10`（独立多张，不是组图，所以不声明 `multi_image_group`），接受 `n=1`–`10`，且 `GptImage2Adapter.build_payload` 将这个值原样上送；`n` 是输出张数上限，模型可能少于请求值。Seedream 的同名参数也是组图的张数上限。`reference_images` 则是另一个维度：`gpt-image-2` 有 `image_to_image` 且 `_finalize_payload` 确实把参考图发上去了，多张参考图同样原样下发，因此声明了 `multi_image_fusion`（Nano Banana 继承同一声明）。
 
 **按档划分是它的安全属性，不是装饰。** 「谁是默认」对不同的问法本就有不同答案：日常请求想要的模型，未必是调用方点名要快时想要的那个。`MiniMax-H3` 只声明 `balanced`，所以 `fast` 仍归 `doubao-seedance-2-0-fast`（6 分，确实更快），`best` 仍归 `doubao-seedance-2-5`（`quality_rank`，39 比 6）。**也不是钉死**：它只在 `supports()` 已经放行的候选里生效，720p/1080p 或超过 15 秒会让 H3 在读到这个字段之前就出局，兜底自然接手。`selection_key` 的 `quality_tier` 参数**没有缺省值** —— 它现在决定第一关键字，漏传会得到一个看起来仍然合法、实际排错了的次序。
 
