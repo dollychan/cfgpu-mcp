@@ -183,17 +183,23 @@ class ModelRouter:
             candidates = [a for a in candidates if id(a) in chosen]
 
         scored: list[tuple[int, "ModelAdapter"]] = []
+        corrected: list[tuple[int, "ModelAdapter"]] = []
         for adapter in candidates:
-            candidate_req = req
-            if for_validation:
+            if adapter.supports(req)[0]:
+                scored.append((self._score(adapter, req), adapter))
+            elif for_validation:
+                # validate_only may route to a model that needs a correction (a lower
+                # resolution, the nearest ratio) — but only when no model takes the
+                # request as written. Otherwise the preflight rewrites the caller's
+                # values while another model would have honoured them, and the billed
+                # call without corrected_args picks that other model.
                 corrections = adapter.validation_corrections(req)
                 if corrections:
                     candidate_req = req.model_copy(update=corrections)
-            ok, _ = adapter.supports(candidate_req)
-            if not ok:
-                continue
-            score = self._score(adapter, candidate_req)
-            scored.append((score, adapter))
+                    if adapter.supports(candidate_req)[0]:
+                        corrected.append((self._score(adapter, candidate_req), adapter))
+        if not scored:
+            scored = corrected
 
         if not scored:
             raise CFGPUError(

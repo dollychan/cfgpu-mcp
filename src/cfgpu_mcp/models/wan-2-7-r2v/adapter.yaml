@@ -5,6 +5,8 @@ model_name: wan2.7-r2v
 
 task_type: video
 resolutions: [720p, 1080p]
+# Accepted aspect_ratio values (parameters.ratio). adaptive is always accepted.
+aspect_ratios: ["16:9", "9:16", "1:1", "4:3", "3:4"]
 default_resolution: 1080p
 min_duration_seconds: 2
 endpoint: /video/generations

@@ -137,7 +137,7 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     assert catalog["models"] == sorted(catalog["models"], key=lambda model: model["model_id"])
 
     for model in catalog["models"]:
-        assert set(model) - {"outputs"} == {
+        assert set(model) - {"outputs", "aspect_ratios"} == {
             "model_id",
             "display_name",
             "task_type",

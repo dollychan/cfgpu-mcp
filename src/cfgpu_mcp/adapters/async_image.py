@@ -68,13 +68,8 @@ class _AsyncImageBase(ModelAdapter):
             corrected["resolution"] = "1K"
         elif req.resolution == "3K":
             corrected["resolution"] = "2K"
-        allowed_ratios = (
-            {"1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3"}
-            if self.adapter_id == "gpt-image-2"
-            else {"1:1", "3:4", "4:3", "9:16", "16:9", "21:9"}
-        )
-        if req.aspect_ratio not in allowed_ratios:
-            corrected["aspect_ratio"] = "1:1"
+        # Ratio: the base corrects to the nearest of adapter.yaml's aspect_ratios.
+        corrected.update(super().validation_corrections(req))
         return corrected
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:

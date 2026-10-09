@@ -242,7 +242,7 @@ class SeedreamAdapter(ModelAdapter):
         assert isinstance(req, GenerateImageInput)
         family = self._family
         allowed = _ALLOWED_TIERS[family]
-        corrected: dict[str, Any] = {}
+        corrected: dict[str, Any] = super().validation_corrections(req)   # aspect_ratio
 
         resolution = req.resolution
         if resolution not in allowed:
@@ -253,12 +253,6 @@ class SeedreamAdapter(ModelAdapter):
                 else min(allowed, key=_TIER_RANK.__getitem__)
             )
             corrected["resolution"] = resolution
-
-        # Defensive only: every published table covers all eight ratios, so this cannot
-        # fire today. It stays so that adding a tier with partial rows degrades to a
-        # reported correction rather than to silently unreported geometry.
-        if (resolution, req.aspect_ratio) not in _TIER_TABLE[family]:
-            corrected["aspect_ratio"] = "1:1"
         return corrected
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:

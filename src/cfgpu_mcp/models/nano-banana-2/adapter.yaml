@@ -22,3 +22,6 @@ default_for: []
 # one image whatever n says. Inherited, it made the router prefer this whole subtree
 # for n>1 requests it then silently served with a single image.
 max_images_per_request: ~
+
+# Accepted aspect_ratio values (replaces CF Image 2's list for the whole Nano Banana subtree). adaptive is always accepted.
+aspect_ratios: ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"]

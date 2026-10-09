@@ -105,6 +105,8 @@ async def list_models(task_type: str | None = None) -> list[dict[str, Any]]:
             row["inputs"] = describe_inputs(a.inputs)
         if a.outputs:
             row["outputs"] = dict(a.outputs)
+        if a.aspect_ratios:
+            row["aspect_ratios"] = list(a.aspect_ratios)
         models.append(row)
     return models
 
@@ -199,6 +201,9 @@ async def list_model_profiles(
         if adapter.outputs:
             # Whether with_audio means anything here: always / switchable / never.
             model["outputs"] = dict(adapter.outputs)
+        if adapter.aspect_ratios:
+            # Absent = every schema ratio; video models always also take adaptive.
+            model["aspect_ratios"] = list(adapter.aspect_ratios)
         if requested_tasks:
             contracts = parameter_contracts.get(adapter.model_name, {})
             matched_contracts = {

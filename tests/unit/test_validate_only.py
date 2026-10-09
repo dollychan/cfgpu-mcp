@@ -734,10 +734,10 @@ async def test_validate_only_runs_build_payload():
         ("cf-image-2", "3K", "9:21", {"resolution": "2K"}),
         ("cf-image-2", "3K", "3:1", {"resolution": "2K"}),
         ("cf-image-2", "3K", "1:3", {"resolution": "2K"}),
-        ("cf2", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
-        ("cf-pro", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
-        ("cf-pro-official", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
-        ("cf-pro-premium", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
+        ("cf2", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "4:3"}),
+        ("cf-pro", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "4:3"}),
+        ("cf-pro-official", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "4:3"}),
+        ("cf-pro-premium", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "4:3"}),
     ],
 )
 def test_every_image_model_reports_safe_enum_fallbacks(model, resolution, aspect_ratio, expected):

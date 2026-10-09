@@ -5,6 +5,8 @@ model_name: wan2.6-r2v
 
 task_type: video
 resolutions: [720p, 1080p]
+# Accepted aspect_ratio values (parameters.size; supports() also checks the resolution × ratio pair). adaptive is always accepted.
+aspect_ratios: ["16:9", "9:16", "1:1"]
 default_resolution: 720p
 min_duration_seconds: 2
 max_duration_seconds: 10

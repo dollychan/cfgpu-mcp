@@ -23,3 +23,6 @@ speed_tier: 3
 # extend this file and zero it back out, so the fallback is the newest lite rather
 # than the alphabetically first name.
 auto_priority: 1
+
+# Accepted aspect_ratio values (every family's pixel tables cover these eight; Seedream's whole family inherits them). adaptive is always accepted.
+aspect_ratios: ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"]

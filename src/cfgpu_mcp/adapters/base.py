@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -152,6 +153,44 @@ _ANALYSIS_DEPTHS = frozenset({"fast", "balanced", "thorough"})
 _RESOLUTION_ORDER = {"480p": 0, "720p": 1, "768p": 2, "1080p": 3, "2k": 4, "4k": 5}
 
 
+def _schema_ratios(task_type: str) -> list[str]:
+    """The tool schema's own aspect_ratio enum — the only values a declaration may name."""
+    from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+
+    model = GenerateImageInput if task_type == "image" else GenerateVideoInput
+    return model.model_json_schema()["properties"]["aspect_ratio"]["enum"]
+
+
+def _parse_aspect_ratios(adapter_id: str, task_type: str, raw: Any) -> tuple[str, ...] | None:
+    """Validate ``aspect_ratios:``. ``None`` = no local restriction.
+
+    ``adaptive`` (the video default) is never listed: it is always accepted and each
+    adapter decides what it means — listing it would make the default itself refusable,
+    which is how MiniMax H3 once became unreachable under a 720p default.
+    """
+    if raw is None:
+        return None
+    if task_type not in ("image", "video"):
+        raise ValueError(f"{adapter_id}: aspect_ratios is declared for image and video models only")
+    allowed = [r for r in _schema_ratios(task_type) if r != "adaptive"]
+    if not isinstance(raw, list) or not raw or any(r not in allowed for r in raw):
+        raise ValueError(
+            f"{adapter_id}: aspect_ratios must be a non-empty list drawn from {allowed} "
+            "(adaptive is always accepted and never listed)"
+        )
+    return tuple(raw)
+
+
+def _nearest_ratio(ratio: str, supported: tuple[str, ...]) -> str:
+    """The supported ratio closest in shape (log of width/height); ties keep orientation."""
+    def value(r: str) -> float:
+        w, h = (int(v) for v in r.split(":"))
+        return math.log(w / h)
+
+    target = value(ratio)
+    return min(supported, key=lambda r: (abs(value(r) - target), (value(r) >= 0) != (target >= 0)))
+
+
 class ModelAdapter(ABC):
     # Subclasses must declare these as class attributes
     adapter_id: str
@@ -224,6 +263,7 @@ class ModelAdapter(ABC):
     #: this server picked would be a billed choice nobody made.
     accepts_smart_duration: bool = False
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
+    aspect_ratios: tuple[str, ...] | None  # image/video: allowed ratios (adaptive always ok), None = unrestricted
     #: The tier used when the caller omits ``resolution`` (video only).
     #:
     #: The schema default is ``None`` ("you pick") rather than a concrete tier for the
@@ -327,6 +367,12 @@ class ModelAdapter(ABC):
         # Models that have documented their set list it here; None means "no local
         # restriction", which is what every model did before this existed.
         instance.resolutions = config.get("resolutions")
+        # Ratio is per-model the same way resolution is. Without it, an unsupported
+        # ratio was refused only by validate_only's corrections while the billed path
+        # sent it on — and Seedream / 万相 2.7 图像 silently rendered it square.
+        instance.aspect_ratios = _parse_aspect_ratios(
+            instance.adapter_id, instance.task_type, config.get("aspect_ratios")
+        )
         # 720p was the schema-wide default before `resolution` became optional, so it
         # stays the default here and no existing model's behaviour changes. A model
         # whose set excludes it (MiniMax H3) must declare its own.
@@ -392,6 +438,10 @@ class ModelAdapter(ABC):
         ok, reason = check_regions(self, req)
         if not ok:
             return False, reason
+        if isinstance(req, (GenerateImageInput, GenerateVideoInput)):
+            ok, reason = self._check_aspect_ratio(req)
+            if not ok:
+                return False, reason
         if isinstance(req, GenerateImageInput) and (
             self.max_images_per_request is not None
             and req.n > self.max_images_per_request
@@ -441,6 +491,16 @@ class ModelAdapter(ABC):
                 )
         return True, ""
 
+    def _check_aspect_ratio(self, req: Any) -> tuple[bool, str]:
+        if self.aspect_ratios is None or req.aspect_ratio == "adaptive":
+            return True, ""
+        if req.aspect_ratio in self.aspect_ratios:
+            return True, ""
+        return False, (
+            f"{self.model_name} does not support aspect_ratio {req.aspect_ratio} "
+            f"(supported: {', '.join(self.aspect_ratios)})"
+        )
+
     def translate_task_failure(self, error: str) -> tuple[str, str, bool | None] | None:
         """Reclassify an asynchronous task failure the caller can fix.
 
@@ -459,33 +519,37 @@ class ModelAdapter(ABC):
     ) -> dict[str, Any]:
         """Safe tool-argument fallbacks used by ``validate_only``.
 
-        Corrections are deliberately limited to ordered output tiers.  Dropping a
-        reference, inventing a missing frame, or changing a voice would alter the
-        caller's creative intent, so those remain hard validation errors.  A resolution
-        fallback is different: adapters already have a concrete supported tier to use,
-        and reporting it in ``corrected_args`` makes that previously silent choice
-        explicit and reproducible on the billed call.
+        Corrections are deliberately limited to output shape: an ordered resolution
+        tier and the aspect ratio.  Dropping a reference, inventing a missing frame, or
+        changing a voice would alter the caller's creative intent, so those remain hard
+        validation errors.  A shape fallback is different: the model has a concrete
+        supported value near the requested one, and reporting it in ``corrected_args``
+        makes the choice explicit and reproducible on the billed call.
         """
-        from cfgpu_mcp.tool_registry import GenerateVideoInput
+        from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
 
+        corrected: dict[str, Any] = {}
+        if isinstance(req, (GenerateImageInput, GenerateVideoInput)) and not self._check_aspect_ratio(req)[0]:
+            corrected["aspect_ratio"] = _nearest_ratio(req.aspect_ratio, self.aspect_ratios)
         if not isinstance(req, GenerateVideoInput):
-            return {}
+            return corrected
         # An omitted resolution is already this model's own tier, so there is nothing to
         # correct — and writing the resolved value into corrected_args would turn a
         # delegated choice into a pin the caller never asked for.
         if req.resolution is None:
-            return {}
+            return corrected
         if self.resolutions is None or req.resolution in self.resolutions:
-            return {}
+            return corrected
 
         order = _RESOLUTION_ORDER
         supported = [value for value in self.resolutions if value in order]
         if not supported:
-            return {}
+            return corrected
         requested_rank = order[req.resolution]
         lower = [value for value in supported if order[value] <= requested_rank]
         fallback = max(lower, key=order.__getitem__) if lower else min(supported, key=order.__getitem__)
-        return {"resolution": fallback}
+        corrected["resolution"] = fallback
+        return corrected
 
     def resolve_resolution(self, req: "GenerateVideoInput") -> str:
         """Resolve an omitted unified resolution to this model's own default tier."""

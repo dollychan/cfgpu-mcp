@@ -107,15 +107,17 @@ class WanImageAdapter(ModelAdapter):
     ) -> dict[str, Any]:
         assert isinstance(req, GenerateImageInput)
         allowed = self._allowed_tiers()
+        corrected: dict[str, Any] = super().validation_corrections(req)   # aspect_ratio
         if req.resolution in allowed:
-            return {}
+            return corrected
         at_or_below = [t for t in allowed if _TIER_RANK[t] <= _TIER_RANK[req.resolution]]
         fallback = (
             max(at_or_below, key=_TIER_RANK.__getitem__)
             if at_or_below
             else min(allowed, key=_TIER_RANK.__getitem__)
         )
-        return {"resolution": fallback}
+        corrected["resolution"] = fallback
+        return corrected
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
         ok, reason = super().supports(req)

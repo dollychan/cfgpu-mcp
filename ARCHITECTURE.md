@@ -1118,6 +1118,22 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
   **默认值为什么是 `None`（`default_resolution`，2026-09-07）。** `resolution` 是 `supports()` 会读的字段，所以一个写死的全队默认值等于「每个模型都必须支持这一档，否则会被一个调用方根本没提的参数挤出 `model="auto"`」。MiniMax-H3 恰好是这种模型：它有 480P / 768P / 2K 三档，却没有 720p。于是统一 Schema 的默认值改成 `None`（= 「你来定」），真实档位落在 `adapter.yaml` 的 `default_resolution`（缺省 `720p`，与改动前完全一致，只有 MiniMax-H3 写 `768p`），由 `ModelAdapter.resolve_resolution(req)` 解析 —— 与 `duration_seconds` → `default_duration_seconds` 完全同构。**所有 adapter 读的都是 `self.resolve_resolution(req)`，不是 `req.resolution`。** 不这么做的代价不是抽象缺失，而是最朴素的一次调用 `generate_video(prompt=...)` 会绕开 `MiniMax-H3` 的 `default_for: [balanced]` 声明，而显式点名 `model="MiniMax-H3"` 又会直接报「不支持 720p」—— 和 `_T2V_DEFAULT_RATIO` 当初躲开的是同一个坑。相应地 `validation_corrections` 对 `resolution is None` 返回 `{}`：那已经是该模型自己的档位，把它写进 `corrected_args` 等于把一个「交给模型决定」钉成调用方从没做过的选择。
 
+  **`aspect_ratios`：画幅比例与分辨率同样按模型声明（2026-10-09）。** 图片与视频 `adapter.yaml` 可声明
+  `aspect_ratios: [...]`，基类 `supports()` 统一检查，`None` 表示接受 schema 的全部比例；`adaptive` 永不列出、总是放行，
+  其含义由各 adapter 决定（否则默认值本身就可能被拒）。`validate_only` 回退到声明中**形状最接近**的比例（宽高比取对数比较，
+  平局时正方形归横向），不再一律回退 `1:1`。以前比例集合散在 8 处代码里，其中 CF Image 2 / Nano Banana、Seedream、
+  万相 2.7 图像只在 `validation_corrections` 里检查：预检会纠正，正式调用却原样发出 —— Nano Banana 把不支持的比例发给
+  上游，Seedream 与万相 2.7 图像把 `9:21` / `3:1` / `1:3` 静默画成正方形（2048x2048）。声明：Seedream 全族与万相 2.7 图像 8 种、
+  CF Image 2 11 种、Nano Banana 6 种、万相 2.7 t2v/r2v/videoedit 5 种、万相 2.6 t2v 仅 16:9、万相 2.6 r2v 3 种、可灵 3 种
+  （16:9 / 9:16 / 1:1，见 `kling-v3-omni/reference`）；其余模型未声明。`list_models` / `list_model_profiles` 发布该字段。
+  `test_aspect_ratios.py` 对每个图片、视频 adapter 双向探针。
+
+  **预检路由按原始请求打分。** `model="auto"` 的 `validate_only` 以前先对每个候选套用它的 corrections 再打分，而 corrections
+  里含「钉住」（`adaptive` → `16:9`、可灵的 `with_audio`）与改值（Seedance 2.5 首帧时改成 `adaptive`），于是预检与正式调用
+  在 450 个请求的矩阵里有 102 个选了不同模型。现在候选一律按原始请求打分；只有没有任何候选原样接受时，才退而选需要纠正的
+  候选。改后两条路径在全部 450 个请求上选中同一模型。正式调用的路由变化 27 处：图片 `9:21` / `3:1` / `1:3` 从 Seedream 5.0
+  Flash 改到 CF Image 2，带首帧、`best` 的视频 `4:3` / `3:4` / `21:9` 从可灵改到 Seedance 2.0 Fast 或 Grok。
+
   **`480p` / `768p` / `2k` 是 MiniMax-H3 的一等原生取值，不是别名。** `768p` / `2k` 从前是靠「声明 720p/1080p，再在 `build_payload` 里翻译成 768P/2K」实现的，结果是：要 720p 的调用方被静默按 768P 出片和计费，而这个模型的原生档位反而没有拼法。现在 adapter 只做 `.upper()`，翻译表已删除。其他模型**不**接受 `768p` / `2k` —— `supports()` 拒绝，`validate_only` 通过 `validation_corrections` 回退到「不高于请求值的最近一档」（`768p` → `720p`，`2k` → `1080p`，Seedance 2.0 fast 这种没有 1080p 的则 `2k` → `720p`）。档位次序表是 `adapters/base.py` 的 `_RESOLUTION_ORDER`，**必须与统一枚举逐一对应**：漏一个不会报错，只会让那一档静默跳过回退，`validate_only` 于是放行一个正式调用必然拒绝的请求（`test_resolution_order_covers_the_whole_schema_enum` 钉住这一点）。
 
   **封闭取值的拼写一律纠正而不报错（2026-09-30）。** 一个只在大小写、首尾空格（画幅比例还有分隔符）上与某个成员不同的值，指向的就是那个成员，没有第二种解读 —— 拒绝它只会让调用方多花一轮（在宿主的预检后面，就是一张作废的审批卡）去学一种拼写。起因是 `resolution="480P"`：图片档位大写（`2K`）、视频档位小写（`480p`），而 MiniMax-H3 的模型卡写的是 `480P`。实现是 `tool_registry.Folded(*choices, ratio=False)`：`Annotated[Literal[choices], BeforeValidator(...)]`，发布出去的 `enum` 不变，匹配不上任何成员的值照旧报 `literal_error`。覆盖 `resolution`（图/视频）、`aspect_ratio`（图/视频；`16：9`、`16/9`、`16x9`、`16×9`、`16 : 9` 都折成 `16:9`）、`quality_tier`、`audio_format`、`emotion`、`analysis_depth`、`list_models.task_type`、`list_model_profiles.media_type` / `match`、`list_voice_profiles.gender` / `age`。**每个入口都要折一次**，因为它们不经过同一处校验：schema（Mode B 与 `generate_*` 服务）；FastMCP 签名（Mode A 在服务之前按签名校验，所以 `understand_vision` / `list_voice_profiles` 的签名改用同一组别名）；接收裸字符串的服务函数（`list_models` / `list_model_profiles` / `list_voice_profiles`，Mode B 与 CLI 绕过 schema，用公开的 `fold_choice`）；CLI（`cli/choices.schema_choice` 从 schema 读取取值并 `case_sensitive=False`，顺带补齐了手抄列表漏掉的 `1K` / `1.5K`、`3:2` / `2:3` / `21:9`、`audio` / `understand`）。**模型名同理**：`AdapterRegistry.get` 在精确匹配之后按「去空格 + casefold」回退（`_by_folded`），两个模型折叠后撞名时该键记为 `None` —— 撞名只会退回报错，绝不会解析到错的模型；候选列表与 `list_voice_profiles(model_ids=…)` 都经 `registry.get` 解析。**不折叠的**：`voice`（有的音色 id 合法地只差大小写或尾部空格）和 `CanonicalTaskId`（本就全小写蛇形，且契约测试按 `get_args` 读它）。测试：`tests/unit/test_spelling_folding.py`。

@@ -39,15 +39,16 @@ class WanVideoAdapter(ModelAdapter):
 
     adapter_id = "wan-2-7-i2v"
 
-    _ALLOWED_RATIOS = frozenset({"16:9", "9:16", "1:1", "4:3", "3:4"})
     _RATIOLESS_ADAPTERS = frozenset({"wan-2-6-i2v", "wan-2-7-i2v"})
 
     def _uses_ratio(self) -> bool:
         return self.adapter_id not in self._RATIOLESS_ADAPTERS
 
     def validation_corrections(self, req: "GenerateVideoInput") -> dict:
+        # The base corrects an explicit unsupported ratio to the nearest declared one;
+        # this pins what ``adaptive`` resolves to on an endpoint that always sends a ratio.
         corrected = super().validation_corrections(req)
-        if self._uses_ratio() and req.aspect_ratio not in self._ALLOWED_RATIOS:
+        if self._uses_ratio() and req.aspect_ratio == "adaptive":
             corrected["aspect_ratio"] = "16:9"
         return corrected
 
@@ -55,18 +56,7 @@ class WanVideoAdapter(ModelAdapter):
         ok, reason = ModelAdapter.supports(self, req)
         if not ok:
             return False, reason
-        assert isinstance(req, GenerateVideoInput)
-        # ``adaptive`` is the unified schema default and maps to this API's 16:9
-        # default. Other unsupported ratios are only corrected by validate_only.
-        if (
-            self._uses_ratio()
-            and req.aspect_ratio != "adaptive"
-            and req.aspect_ratio not in self._ALLOWED_RATIOS
-        ):
-            return False, (
-                f"{self.model_name} does not support aspect_ratio {req.aspect_ratio} "
-                f"(supported: {', '.join(sorted(self._ALLOWED_RATIOS))})"
-            )
+        # Ratio is checked by the base against the adapter.yaml ``aspect_ratios``.
         return True, ""
 
     def _output(self, resp: dict) -> dict:
@@ -110,9 +100,9 @@ class WanVideoAdapter(ModelAdapter):
             "duration": self.resolve_duration_seconds(req),
         }
         if self._uses_ratio():
-            parameters["ratio"] = (
-                req.aspect_ratio if req.aspect_ratio in self._ALLOWED_RATIOS else "16:9"
-            )
+            # ``adaptive`` maps to this API's 16:9 default; supports() has refused
+            # any other ratio outside the declared set.
+            parameters["ratio"] = "16:9" if req.aspect_ratio == "adaptive" else req.aspect_ratio
         payload: dict = {
             "model": self.cfgpu_model_id,           # Only place cfgpu_model_id is used
             "input": self._build_input(req),
@@ -285,15 +275,6 @@ class WanVideoEditAdapter(WanVideoAdapter):
         # Wan 2.7 T2V/R2V default of 16:9.
         return False
 
-    def validation_corrections(self, req: "GenerateVideoInput") -> dict:
-        corrected = super().validation_corrections(req)
-        # Keep the source ratio for the unified default ``adaptive``.  An explicit
-        # unsupported ratio, however, can use the same safe 16:9 preflight fallback
-        # as the other Wan 2.7 endpoints.
-        if req.aspect_ratio != "adaptive" and req.aspect_ratio not in self._ALLOWED_RATIOS:
-            corrected["aspect_ratio"] = "16:9"
-        return corrected
-
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
         parameters: dict = {
@@ -301,7 +282,7 @@ class WanVideoEditAdapter(WanVideoAdapter):
             "prompt_extend": req.prompt_extend,
             "watermark": req.watermark,
         }
-        if req.aspect_ratio in self._ALLOWED_RATIOS:
+        if req.aspect_ratio != "adaptive":   # adaptive keeps the source video's ratio
             parameters["ratio"] = req.aspect_ratio
         # The upstream default is zero (= retain the complete source clip).  Do
         # not silently crop it by turning the unified omitted value into 5 seconds.
@@ -338,8 +319,6 @@ class WanVideoEditAdapter(WanVideoAdapter):
             return False, f"{self.model_name} accepts a single source video"
         if req.reference_images and len(req.reference_images) > 4:
             return False, f"{self.model_name} accepts at most 4 reference_images"
-        if req.aspect_ratio != "adaptive" and req.aspect_ratio not in self._ALLOWED_RATIOS:
-            return False, f"{self.model_name} does not support aspect_ratio {req.aspect_ratio}"
         return True, ""
 
 
@@ -388,8 +367,6 @@ class Wan26VideoT2VAdapter(WanVideoAdapter):
             return False, f"{self.model_name} is a text-to-video model (no reference media)"
         if req.reference_audios and len(req.reference_audios) > 1:
             return False, f"{self.model_name} accepts at most one driving audio track"
-        if req.aspect_ratio not in {"adaptive", "16:9"}:
-            return False, f"{self.model_name} supports only 16:9 output (parameters.size)"
         return True, ""
 
 

@@ -767,6 +767,13 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > （720p/1080p）会回退到不高于请求值的最近一档（分别为 `480p` / `768p`）。**不传 `resolution` 时 `corrected_args` 里不会出现它**
 > —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
 >
+> **画幅比例按模型限制（2026-10-09 起）。** `list_models` / `list_model_profiles` 对有限制的模型返回 `aspect_ratios`；
+> 没有这个字段表示接受全部比例，视频模型总是接受 `adaptive`。正式调用向不支持的模型传比例会在发请求前被拒，
+> `model="auto"` 会绕开它；`validate_only` 在 `corrected_args` 里给出该模型**形状最接近**的比例（如 Nano Banana 上
+> `3:2` → `4:3`，Seedream 上 `3:1` → `21:9`）。以前 Seedream 与万相 2.7 图像会把 `9:21` / `3:1` / `1:3` 静默画成正方形，
+> Nano Banana 会把不支持的比例直接发给上游，现在都改为明确拒绝。`model="auto"` 的预检只有在没有任何模型原样接受时，
+> 才会选一个需要纠正的模型。
+>
 > **封闭取值的拼写无所谓（2026-09-30 起）。** 大小写、首尾空格不影响：`480P` / `2K`（视频）、`2k` / `1.5k`（图片）、
 > `Fast`、`MP3`、`Happy`、`Female`、`model="minimax-h3"` 都会折成规范写法；画幅比例的 `16：9`（全角冒号）、`16/9`、
 > `16x9` 也按 `16:9` 处理。`validate_only`、正式调用、Agent SDK 与 CLI 行为一致；只有不在枚举里的值（如 `360p`、
