@@ -31,6 +31,8 @@ cost_tier: 4
 speed_tier: 2
 resolutions: [480p, 720p, 1080p]
 # seconds: 3–15 (upstream enum); the fleet default minimum is 4.
+# O1's ranges and defaults are taken from the V3 Omni doc (kling-v3-omni/reference),
+# assumed identical until O1's own doc is available.
 min_duration_seconds: 3
 
 poll_config:

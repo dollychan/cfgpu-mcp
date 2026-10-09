@@ -1,0 +1,67 @@
+model
+enum, 必填
+模型名称。对应可灵文档 model_name 字段。
+
+default: kling-v3-omni
+
+
+multi_shot
+boolean
+是否生成多镜头视频。当前参数为 true 时，prompt 参数无效；当前参数为 false 时，shot_type 参数及 multi_prompt 参数无效。
+
+default: false
+
+shot_type
+enum
+分镜方式。枚举值：customize。当 multi_shot 参数为 true 时，当前参数必填。
+
+
+prompt
+string
+文本提示词，可包含正向描述和负向描述。可将提示词模板化来满足不同的视频生成需求。Omni 模型可通过 Prompt 与主体、图片、视频等内容实现多种能力：通过 <<<>>> 的格式来指定某个主体、图片、视频，如：<<<element_1>>>、<<<image_1>>>、<<<video_1>>>。长度不能超过 2500 个字符。当 multi_shot 参数为 false 或 shot_type 参数为 intelligence 时，当前参数不得为空。不同模型版本、视频模式支持范围不同，详见能力地图。
+
+multi_prompt
+object[]
+各分镜信息，如提示词、时长等。通过 index、prompt、duration 参数定义分镜序号及相应提示词和时长，其中：最多支持 6 个分镜，最少支持 1 个分镜；每个分镜相关内容的最大长度不超过 512；每个分镜的时长不大于当前任务的总时长，不小于 1；所有分镜的时长之和等于当前任务的总时长。当 multi_shot 参数为 true 且 shot_type 参数为 customize 时，当前参数不得为空。
+
+
+image_list
+object[]
+参考图列表。包括主体、场景、风格等参考图片，也可作为首帧或尾帧生成视频。当作为首帧或尾帧生成视频时：通过 type 参数来定义图片是否为首尾帧（first_frame 为首帧，end_frame 为尾帧）；暂不支持仅尾帧，即有尾帧图时必须有首帧图；首帧或首尾帧生视频时，不能使用视频编辑功能。支持传入图片 Base64 编码或图片 URL（确保可访问）。图片格式支持 .jpg/.jpeg/.png，文件大小不超过 10MB，宽高尺寸不小于 300px，宽高比在 1:2.5~2.5:1 之间。有参考视频时，参考图片数量不得超过 4；无参考视频时，参考图片数量不得超过 7。数组中超过 2 张图片时，不支持设置尾帧。image_url 参数值不得为空。
+
+
+video_list
+object[]
+参考视频，通过 URL 方式获取。可作为特征参考视频，也可作为待编辑视频，默认为待编辑视频；可选择性保留视频原声。通过 refer_type 参数区分参考视频类型：feature 为特征参考视频，base 为待编辑视频。参考视频为待编辑视频时，不能定义视频首尾帧。通过 keep_original_sound 参数选择是否保留视频原声（yes 为保留，no 为不保留），当前参数对特征参考视频（feature）也生效。有参考视频时，sound 参数值只能为 off。视频格式仅支持 MP4/MOV；视频时长不少于 3 秒，上限与模型版本有关；视频宽高尺寸需介于 720px（含）和 2160px（含）之间；视频帧率基于 24fps~60fps，生成视频时会输出为 24fps。至多仅支持上传 1 段视频，视频大小不超过 200MB。video_url 参数值不得为空。不同模型版本、视频模式支持范围不同，详见能力地图。
+
+
+sound
+enum
+生成视频时是否同时生成声音。
+
+default: off
+
+
+mode
+enum
+生成视频的模式。枚举值：std，pro，4k。其中 std：标准模式（720P），基础模式，性价比高；其中 pro：专家模式（1080P），高表现模式，生成视频质量更佳；4k：4K模式，高表现（同pro），生成视频质量更佳，输出视频分辨率为4K。不同模型版本、视频模式支持范围不同，详见能力地图https://docs.qingque.cn/d/home/eZQAyImcbaS0fz-8ANjXvU5ed?identityId=2Cn18n4EIHT。
+
+default: pro
+
+
+size
+string
+生成视频的画面纵横比（宽:高）。对应可灵的 aspect_ratio 字段，服务内部自动将 size（如 1280x720）转换为 aspect_ratio（如 16:9）。可灵文档枚举值：16:9, 9:16, 1:1。未使用首帧参考或视频编辑功能时，当前参数必填。
+
+seconds
+enum
+生成视频时长，单位 s。对应可灵文档 duration 字段。枚举值：3，4，5，6，7，8，9，10，11，12，13，14，15。使用视频编辑功能（refer_type 为 base）时，输出结果与传入视频时长相同，此时当前参数无效，按输入视频时长四舍五入取整计量计费。不同模型版本、视频模式支持范围不同，详见能力地图。
+
+default: 5
+
+
+watermark_info
+object
+是否同时生成含水印的结果。通过 enabled 参数定义。暂不支持自定义水印。
+
+
