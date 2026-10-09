@@ -8,7 +8,7 @@ Seedream 4.5 是字节跳动推出的图像多模态模型，整合了文生图�
 |------|-----|
 | 任务类型 | image |
 | CFGPU 模型 ID | `doubao-seedream-4-5-251128` |
-| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion, multi_image_group, web_grounded_generation |
+| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion, multi_image_group |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -27,7 +27,6 @@ Seedream 4.5 是字节跳动推出的图像多模态模型，整合了文生图�
 | **image_to_image** | 单张参考图 + 文本生成图像 |
 | **multi_image_fusion** | 多张参考图（2-14）+ 文本生成单张融合图像 |
 | **multi_image_group** | 生成组图（内容关联的多张图片），支持文生组图、单图生组图、多图生组图 |
-| **web_grounded_generation** | 联网搜索增强，提升时效性内容生成质量 |
 
 ## 参数说明
 

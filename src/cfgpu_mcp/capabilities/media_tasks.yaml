@@ -1,4 +1,9 @@
 schema_version: 1
+# What agents see as list_model_profiles' catalog_version. Bumped when a task ID is
+# removed or changes meaning, so a cached filter fails loudly instead of matching
+# nothing. 2: dropped web_grounded_generation / tool_calling / visual_agent — no tool
+# parameter could trigger them, and an agent picks a model by what the call can do.
+catalog_version: 2
 
 # Agent-facing media task vocabulary.  IDs are stable semantic contracts, not
 # adapter capability names and not provider/API parameter names.
@@ -61,11 +66,6 @@ tasks:
       supplies speech that should be heard in the result.
     prompt_guidance: Provide the driving audio and describe the visual performer or motion that should follow it.
     requires: {all: [reference_audios], audio_role: driving}
-  web_grounded_generation:
-    media_type: cross_media
-    name: Web-grounded generation
-    description: Use web information to enhance a generation request when the model supports it.
-    prompt_guidance: State the factual topic to ground; do not assume a particular search parameter or source format.
 
   text_to_image:
     media_type: image
@@ -149,16 +149,6 @@ tasks:
     name: Region understanding
     description: Answer questions about a selected region of an image.
     prompt_guidance: Identify the selected region and ask a concrete question about it.
-  tool_calling:
-    media_type: understand
-    name: Tool calling
-    description: Select and call declared tools as part of a reasoning workflow.
-    prompt_guidance: Provide the available tools and the task objective; tool schemas remain a control-layer concern.
-  visual_agent:
-    media_type: understand
-    name: Visual agent
-    description: Combine visual understanding with multi-step task execution.
-    prompt_guidance: State the goal, the visual inputs, and any permitted actions.
   long_context:
     media_type: understand
     name: Long context

@@ -19,8 +19,6 @@ tasks:
   - long_video_understanding
   - long_document_understanding
   - region_understanding
-  - tool_calling
-  - visual_agent
   - long_context
 
 # No documented ceiling. This is what makes reading the escape hatch for editors that do

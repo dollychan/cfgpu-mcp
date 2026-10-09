@@ -27,6 +27,8 @@ def load_task_catalog() -> tuple[int, dict[str, dict[str, Any]]]:
     raw = yaml.safe_load(TASKS_PATH.read_text())
     if not isinstance(raw, dict) or raw.get("schema_version") != 1:
         raise ValueError("media_tasks.yaml must declare schema_version: 1")
+    if not isinstance(raw.get("catalog_version"), int):
+        raise ValueError("media_tasks.yaml must declare an integer catalog_version")
     tasks = raw.get("tasks")
     if not isinstance(tasks, dict) or not tasks:
         raise ValueError("media_tasks.yaml must contain a non-empty tasks mapping")
@@ -39,7 +41,7 @@ def load_task_catalog() -> tuple[int, dict[str, dict[str, Any]]]:
             raise ValueError(f"media_tasks.yaml task {task_id!r} has an invalid schema")
         if "requires" in task:
             _validate_task_requires(task_id, task)
-    return raw["schema_version"], tasks
+    return raw["catalog_version"], tasks
 
 
 def _validate_task_requires(task_id: str, task: dict[str, Any]) -> None:
@@ -72,8 +74,7 @@ def _validate_task_requires(task_id: str, task: dict[str, Any]) -> None:
 def parse_tasks(adapter_id: str, task_type: str, raw: Any) -> tuple[str, ...]:
     """Validate an adapter's ``tasks:`` list against the vocabulary and its task_type.
 
-    Order is kept — it is the order ``list_model_profiles`` shows. ``cross_media``
-    tasks (web grounding) may sit on any media type.
+    Order is kept — it is the order ``list_model_profiles`` shows.
     """
     if raw is None:
         return ()
@@ -88,9 +89,7 @@ def parse_tasks(adapter_id: str, task_type: str, raw: Any) -> tuple[str, ...]:
             f"{adapter_id}: tasks references unknown canonical tasks {unknown} "
             "(capabilities/media_tasks.yaml)"
         )
-    foreign = [
-        t for t in raw if catalog[t]["media_type"] not in (task_type, "cross_media")
-    ]
+    foreign = [t for t in raw if catalog[t]["media_type"] != task_type]
     if foreign:
         raise ValueError(f"{adapter_id}: tasks {foreign} do not belong to a {task_type} model")
     return tuple(raw)

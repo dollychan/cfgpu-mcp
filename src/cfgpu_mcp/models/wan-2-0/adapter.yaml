@@ -30,7 +30,6 @@ tasks:
   - video_edit
   - video_extend
   - synced_audio_output
-  - web_grounded_generation
 
 # Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): generate_audio ← with_audio (the whole Seedance family inherits this).
 outputs:

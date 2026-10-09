@@ -107,7 +107,7 @@ media tasks — the **only** vocabulary for what a model can do (2026-10-09; see
 next section for the adapter-internal `capabilities` list it replaced). Each
 `models/<adapter_id>/adapter.yaml` lists its IDs under `tasks:` (inherited through
 `extends`, validated by `task_catalog.parse_tasks` at load: known ID, matching
-`task_type`, `cross_media` allowed anywhere). The list holds task IDs only — no
+`task_type`). The list holds task IDs only — no
 payload field names, no parameter ranges. In particular, `reference_to_video` and
 `video_edit` are distinct tasks even when a provider transports both through a
 reference-video field.
@@ -182,6 +182,15 @@ profile 里却没有 `audio_driven_video`；适配器层的 `audio_generate` 在
 钉住 `with_audio` 仍只在可灵上做（见下文），`switchable` 只说明开关有效，不改变这一范围。
 
 任务 id 没有改名，`catalog_version` 不变。按音频用途拆出新任务仍是后续一步。
+
+**`catalog_version: 2`：删除没有调用开关的任务（2026-10-09）。** `web_grounded_generation`（Seedance 全族、Seedream
+4.0/4.5/5.0 lite）与 `tool_calling` / `visual_agent`（qwen 全族）从词表删除。三者都没有任何工具参数能触发 —— agent
+按它们筛出模型，却无法在调用里要求这件事；qwen 四个模型声明完全相同，也没有区分度。agent 选模型看的是这次调用能做
+什么，而不是模型背后还有什么本事。`web_grounded_generation` 是唯一的 `cross_media` 任务，这个媒体类型随之删除。
+`catalog_version` 现在由 `media_tasks.yaml` 顶层的 `catalog_version` 单独给出（以前直接取 `schema_version`）：删除或改义
+任务 id 就加一，缓存了旧筛选条件的 agent 会得到参数错误，而不是静默的空结果。上游联网搜索本身没有被禁：经
+`model_specific` 传的 `tools` 照旧原样下发，卡片里的上游参数说明也保留。路由与代码门槛都不读这三个任务，`auto` 不变。
+卡片词表测试把三个 id 加入退役词，防止回流。
 
 #### 废弃适配器内部的 `capabilities` 词表；`tasks:` 并入 adapter.yaml；视频也分用途（2026-10-09）
 

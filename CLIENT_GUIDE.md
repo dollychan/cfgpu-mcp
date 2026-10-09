@@ -803,7 +803,7 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 
 > **`list_models` 的 `capabilities` 字段已改名为 `tasks`（2026-10-09）**，取值换成与 `list_model_profiles` 相同的
 > canonical task（如 `multi_modal_reference` → `reference_to_video`、`audio_generate` → `synced_audio_output` 或
-> `audio_driven_video`、`web_search` → `web_grounded_generation`、`region_understand` → `region_understanding`），视频模型
+> `audio_driven_video`、`region_understand` → `region_understanding`；旧的 `web_search` 已不再对应任何任务，见下），视频模型
 > 另带 `inputs`。按旧字段名解析 `list_models` 的脚本需要跟着改；`list_model_profiles` 的返回结构不变。
 > 拒绝理由里的模型名一律是对外的 `model_id`，不再出现内部目录名。
 >
@@ -816,6 +816,10 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `with_audio=false` 关不掉；`switchable` = `with_audio` 决定有无声音；`never` = 无声；没有这个字段 = 文档未说明
 > （如编辑模型，声音跟随源视频）。`synced_audio_output` 与它严格一致，因此可灵、cfdream H3、Grok、万相 2.6/2.7
 > 的 t2v/i2v/r2v 新增了这个任务。需要无声成片时，应选 `switchable` 或 `never` 的模型。
+>
+> **`list_model_profiles` 的 `catalog_version` 升为 2**：删除了 `web_grounded_generation`、`tool_calling`、`visual_agent`
+> 三个任务。它们没有任何工具参数能触发，按它们筛出模型也无法在调用里用上。仍以 `required_tasks` 传这三个 id 会得到
+> 参数错误。需要上游联网搜索时，可在支持的模型上通过 `model_specific` 传上游的 `tools` 字段，参数见模型卡。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
 > `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；

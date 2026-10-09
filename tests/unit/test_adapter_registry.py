@@ -156,9 +156,8 @@ def test_seedream_5_0_pro_extends_resolves_seedream_adapter():
     pro = registry.get("doubao-seedream-5-0-pro")
     assert isinstance(pro, SeedreamAdapter)
     assert pro.cfgpu_model_id == "doubao-seedream-5-0-pro"
-    # its own tasks: replace lite's, dropping multi_image_group / web grounding
+    # its own tasks: replace lite's, dropping multi_image_group
     assert "multi_image_group" not in pro.tasks
-    assert "web_grounded_generation" not in pro.tasks
     assert "multi_image_fusion" in pro.tasks
 
 

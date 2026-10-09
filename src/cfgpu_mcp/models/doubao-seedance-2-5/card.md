@@ -10,7 +10,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `doubao-seedance-2-5` |
-| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output, web_grounded_generation |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output |
 | 成本档位 | 4/5 |
 | 速度档位 | 2/5 |
 
@@ -54,7 +54,6 @@
 | **video_edit** | 基于参考视频进行专业级可控编辑（替换元素、修改内容） |
 | **video_extend** | 延长已有视频时长 |
 | **synced_audio_output** | 生成与画面同步的有声视频（人声、音效、背景音乐），原生支持 10 余种语言 |
-| **web_grounded_generation** | 联网搜索增强（仅文生视频支持） |
 
 > 支持仅传入参考音频；文本提示词可选。
 

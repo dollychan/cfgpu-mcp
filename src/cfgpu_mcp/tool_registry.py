@@ -984,7 +984,6 @@ CanonicalTaskId = Literal[
     "video_extend",
     "synced_audio_output",
     "audio_driven_video",
-    "web_grounded_generation",
     "text_to_image",
     "image_to_image",
     "multi_image_fusion",
@@ -1001,8 +1000,6 @@ CanonicalTaskId = Literal[
     "long_video_understanding",
     "long_document_understanding",
     "region_understanding",
-    "tool_calling",
-    "visual_agent",
     "long_context",
 ]
 

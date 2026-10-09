@@ -14,7 +14,6 @@ tasks:
   - image_to_image
   - multi_image_fusion
   - multi_image_group
-  - web_grounded_generation
 
 cost_tier: 2
 speed_tier: 3

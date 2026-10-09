@@ -8,7 +8,7 @@ Seedream 4.0 是基于领先架构的 SOTA 级多模态图像创作模型，其�
 |------|-----|
 | 任务类型 | image |
 | CFGPU 模型 ID | `doubao-seedream-4-0-250828` |
-| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion, multi_image_group, web_grounded_generation |
+| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion, multi_image_group |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -27,7 +27,6 @@ Seedream 4.0 是基于领先架构的 SOTA 级多模态图像创作模型，其�
 | **image_to_image** | 单张参考图 + 文本生成图像 |
 | **multi_image_fusion** | 多张参考图（2-14）+ 文本生成单张融合图像 |
 | **multi_image_group** | 生成组图（内容关联的多张图片），支持文生组图、单图生组图、多图生组图 |
-| **web_grounded_generation** | 联网搜索增强，提升时效性内容生成质量 |
 
 ## 参数说明
 

@@ -27,7 +27,7 @@ def test_media_task_dictionary_has_stable_descriptions():
 
     for task_id, task in tasks.items():
         assert task_id.replace("_", "").isalnum(), task_id
-        assert task["media_type"] in {"video", "image", "audio", "understand", "cross_media"}
+        assert task["media_type"] in {"video", "image", "audio", "understand"}
         assert all(isinstance(task[field], str) and task[field] for field in ("name", "description", "prompt_guidance"))
 
 
@@ -82,9 +82,17 @@ def test_tasks_are_validated_at_load(tasks, message):
         })
 
 
-def test_cross_media_tasks_sit_on_any_media_type():
-    tasks = _registry().get("wan-2-0").tasks
-    assert "web_grounded_generation" in tasks
+@pytest.mark.parametrize("task", ["web_grounded_generation", "tool_calling", "visual_agent"])
+def test_tasks_no_call_can_trigger_are_not_in_the_vocabulary(task):
+    """Removed in catalog_version 2: no tool parameter reaches them, so an agent that
+    filtered by one picked a model for something its call could never ask for."""
+    from cfgpu_mcp.task_catalog import load_task_catalog, parse_tasks
+
+    version, catalog = load_task_catalog()
+    assert version == 2
+    assert task not in catalog
+    with pytest.raises(ValueError, match="unknown canonical tasks"):
+        parse_tasks("m", "video", [task])
 
 
 def test_seedance_reference_and_edit_are_distinct_agent_tasks():
@@ -122,7 +130,7 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
 
     catalog = await model_service.list_model_profiles(required_tasks=["video_edit"])
-    assert catalog["catalog_version"] == 1
+    assert catalog["catalog_version"] == 2
     assert set(catalog) == {"catalog_version", "task_catalog", "models"}
     assert set(catalog["task_catalog"]) == {"video_edit"}
     assert all("video_edit" in model["tasks"] for model in catalog["models"])
@@ -471,7 +479,10 @@ async def test_audio_driven_search_returns_only_driving_models(_full_registry):
         assert model["inputs"]["reference_audios"]["role"] == "driving"
 
 
-_RETIRED = re.compile(r"multi_modal_reference|audio_generate|\*\*web_search\*\*|region_understand\b|能力标签")
+_RETIRED = re.compile(
+    r"multi_modal_reference|audio_generate|\*\*web_search\*\*|region_understand\b|能力标签"
+    r"|web_grounded_generation|tool_calling|visual_agent"
+)
 
 
 @pytest.mark.parametrize("card", sorted(MODELS_DIR.glob("*/card.md")), ids=lambda p: p.parent.name)
