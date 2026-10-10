@@ -35,7 +35,7 @@
 | prompt | string | ✓ | - | 视频描述，支持中英文 |
 | size | string | - | 1280x720 | 输出像素尺寸 `宽x高`，由统一 Schema 的 `resolution` + `aspect_ratio` 映射得到 |
 | mode | string | - | pro | 生成模式：`std`（标准）/ `pro`（高质量），由 `quality_tier` 映射（`best` → `pro`）；adapter 总是显式发送 |
-| seconds | string | ✓ | "5" | 视频时长（秒），字符串形式，取值 3–15。视频编辑（`refer_type=base`）时不传，时长跟随源视频 |
+| seconds | string | ✓ | "5" | 视频时长（秒），字符串形式，取值 3–10。视频编辑（`refer_type=base`）时不传，时长跟随源视频 |
 | sound | string | - | off | 是否生成有声视频：`on` / `off`，由 `with_audio` 直接映射 |
 | image_list | array | - | - | 图片输入数组，元素为 `{"image": url, "type": ...}`；`type` 可为 `first_frame`（首帧）/ `end_frame`（尾帧），**省略 `type` 即普通参考图**，带 `type` 与不带 `type` 的元素可混用 |
 | video_list | array | - | - | 视频输入数组，元素为 `{"video_url": url, "refer_type": ...}`；`refer_type` 为 `feature`（参考其运镜/风格）或 `base`（作为被编辑的源视频） |
@@ -80,7 +80,7 @@ adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `ref
 - 支持文生视频、图生视频（首帧）、首尾帧、多图/视频参考、视频编辑。
 - 不支持 `reference_audios`：请求体没有音频输入槽位。
 - `last_frame` 必须与 `first_frame` 同时给出（尾帧 `end_frame` 依赖首帧）。
-- 需要显式时长 3–15 秒，不支持 `duration_seconds=-1`。
+- 需要显式时长 3–10 秒，不支持 `duration_seconds=-1`。
 - 上游参数说明称「有参考视频时 `sound` 只能为 `off`」，但未经验证，且价格表列有「有视频输入的有声视频」一档，故 adapter 不改写，`with_audio` 原样映射，由上游裁决。
 
 ## 异步任务流程
