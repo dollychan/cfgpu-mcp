@@ -972,18 +972,18 @@
       "modelId": "auto",
       "modelName": "auto",
       "displayName": "Auto (router selects a voice model)",
-      "note": "Unified tool schema from GenerateAudioInput (text-to-speech). Model not yet fixed; ranges are the union of the unified schema, not a specific model. Once a model is chosen, switch to that model's entry — seed-tts-2-0 ignores speed/volume/pitch/emotion/bitrate.",
+      "note": "Unified tool schema from GenerateAudioInput (text-to-speech). Model not yet fixed; ranges are the union of the unified schema, not a specific model. Once a model is chosen, switch to that model's entry — each model has its own speed/volume/pitch/bitrate/sample_rate ranges; seed-tts-2-0 rejects emotion and MiniMax speech-2.8 rejects whisper; wav/flac are MiniMax-only.",
       "args": {
         "text": { "type": "text", "writable": "true", "note": "text to synthesize (required)" },
         "model": { "type": "enum", "options": ["auto", "MiniMax/speech-2.8-hd", "MiniMax/speech-2.8-turbo", "seed-tts-2.0"], "default": "auto", "writable": "true" },
         "voice": { "type": "string", "writable": "true", "note": "voice/speaker id; null = each model's own default. MiniMax uses voice ids (e.g. male-qn-qingse); seed-tts uses speaker ids (e.g. zh_female_xiaohe_uranus_bigtts). See each model's card for the full list" },
-        "audio_format": { "type": "enum", "options": ["mp3", "wav", "pcm", "flac"], "default": "mp3", "writable": "true" },
+        "audio_format": { "type": "enum", "options": ["mp3", "wav", "pcm", "flac", "ogg_opus"], "default": "mp3", "writable": "true", "note": "keep mp3 unless the user explicitly asked for another format; wav/flac MiniMax only" },
         "sample_rate": { "type": "integer", "writable": "true", "note": "output sample rate in Hz (e.g. 24000, 32000); null = model default" },
-        "bitrate": { "type": "integer", "writable": "true", "note": "output bitrate in bps (MiniMax only, e.g. 128000); null = model default" },
-        "speed": { "type": "number", "default": 1.0, "writable": "true", "note": "speech speed multiplier (MiniMax only)" },
-        "volume": { "type": "number", "default": 1.0, "writable": "true", "note": "speech volume multiplier (MiniMax only)" },
-        "pitch": { "type": "integer", "default": 0, "writable": "true", "note": "speech pitch offset (MiniMax only)" },
-        "emotion": { "type": "string", "writable": "true", "note": "emotion hint, e.g. happy/sad/angry (MiniMax only); null lets the model infer from text" },
+        "bitrate": { "type": "integer", "writable": "true", "note": "output bitrate in bps (MiniMax 32000/64000/128000/256000, mp3 only; seed-tts 64000/160000); null = model default" },
+        "speed": { "type": "number", "default": 1.0, "writable": "true", "note": "speech speed multiplier (0.5–2.0 on both families)" },
+        "volume": { "type": "number", "default": 1.0, "writable": "true", "note": "speech volume multiplier (seed-tts: 0.5–2.0; MiniMax: (0, 10])" },
+        "pitch": { "type": "integer", "default": 0, "writable": "true", "note": "speech pitch offset in semitones (-12–12 on both families)" },
+        "emotion": { "type": "string", "writable": "true", "note": "emotion hint, e.g. happy/sad/angry (MiniMax only; speech-2.8 has no whisper); null lets the model infer from text" },
         "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }], "default": "balanced", "writable": "true", "note": "router selection preference; no effect once a specific model is chosen" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
@@ -996,27 +996,46 @@
       "modelId": "MiniMax/speech-2.8-hd",
       "modelName": "MiniMax/speech-2.8-hd",
       "displayName": "MiniMax 语音 2.8 HD",
-      "note": "Synchronous text-to-speech, high-fidelity tier. Supports the full MiniMax voice-control set (speed/volume/pitch/emotion/bitrate). Billed per character.",
+      "note": "Synchronous text-to-speech, high-fidelity tier. Supports the full MiniMax voice-control set (speed/volume/pitch/emotion/bitrate) within the ranges below; out-of-range values are a local error, never clamped. Billed per character; text length is left to upstream.",
       "args": {
-        "text": { "type": "text", "writable": "true", "note": "text to synthesize (required); supports inline emotion/event tags like (laughs)" },
+        "text": { "type": "text", "writable": "true", "note": "maps to input.text (required; length checked upstream); supports interjection tags: (laughs) (chuckle) (coughs) (clear-throat) (groans) (breath) (pant) (inhale) (exhale) (gasps) (sniffs) (sighs) (snorts) (burps) (lip-smacking) (humming) (hissing) (emm) (whistles) (sneezes) (crying) (applause)" },
         "model": { "type": "string", "value": "MiniMax/speech-2.8-hd", "writable": "false" },
         "voice": { "type": "string", "default": "male-qn-qingse", "writable": "true", "note": "maps to input.voice_setting.voice_id; 327 system voices across 中文/粤语/英/日/韩/西/葡/法 etc. — see card.md for the full list" },
-        "audio_format": { "type": "enum", "options": ["mp3", "wav", "flac"], "default": "mp3", "writable": "true", "note": "maps to input.audio_setting.format" },
-        "sample_rate": { "type": "integer", "default": 32000, "writable": "true", "note": "maps to input.audio_setting.sample_rate" },
-        "bitrate": { "type": "integer", "default": 128000, "writable": "true", "note": "maps to input.audio_setting.bitrate" },
-        "speed": { "type": "number", "default": 1.0, "writable": "true", "note": "maps to input.voice_setting.speed" },
-        "volume": { "type": "number", "default": 1.0, "writable": "true", "note": "maps to input.voice_setting.vol" },
-        "pitch": { "type": "integer", "default": 0, "writable": "true", "note": "maps to input.voice_setting.pitch" },
-        "emotion": { "type": "enum", "options": ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent", "whisper"], "writable": "true", "note": "maps to input.voice_setting.emotion; null = auto-infer" },
+        "audio_format": { "type": "enum", "options": ["mp3", "wav", "flac", "pcm", "ogg_opus"], "default": "mp3", "writable": "true", "note": "maps to input.audio_setting.format (ogg_opus is sent as opus); keep mp3 unless the user explicitly asked for another format" },
+        "sample_rate": { "type": "enum", "options": [8000, 16000, 22050, 24000, 32000, 44100], "default": 32000, "writable": "true", "note": "maps to input.audio_setting.sample_rate; ogg_opus takes only 8000/16000/24000 and defaults to 24000 (the relay rejects the documented 12000/48000)" },
+        "bitrate": { "type": "enum", "options": [32000, 64000, 128000, 256000], "default": 128000, "writable": "true", "note": "maps to input.audio_setting.bitrate; mp3 only — not sent for other formats, and refused if set" },
+        "speed": { "type": "number", "min": 0.5, "max": 2.0, "default": 1.0, "writable": "true", "note": "maps to input.voice_setting.speed" },
+        "volume": { "type": "number", "min": 0, "max": 10, "default": 1.0, "writable": "true", "note": "maps to input.voice_setting.vol; must be > 0" },
+        "pitch": { "type": "integer", "min": -12, "max": 12, "default": 0, "writable": "true", "note": "maps to input.voice_setting.pitch (semitones)" },
+        "emotion": { "type": "enum", "options": ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent"], "writable": "true", "note": "maps to input.voice_setting.emotion; null = auto-infer (recommended). speech-2.8 does not support whisper" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
           "type": "object",
-          "note": "merged at the top of input; other direct MiniMax fields",
+          "note": "shaped like the payload: input is merged key by key, and input.voice_setting / audio_setting / voice_modify one level further, so only the changed fields need writing",
           "fields": {
-            "pronunciation_dict": { "type": "object", "note": "custom pronunciation, e.g. {\"tone\": [\"处理/(chu3)(li3)\", \"危险/dangerous\"]}" },
-            "subtitle_enable": { "type": "boolean", "default": false, "note": "return subtitle timing" }
+            "input": {
+              "type": "object",
+              "fields": {
+                "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"处理/(chu3)(li3)\", \"危险/dangerous\"]}; Chinese tones as digits 1–5 (5 = neutral)" },
+                "language_boost": { "type": "enum", "options": ["auto", "Chinese", "Chinese,Yue", "English", "Arabic", "Russian", "Spanish", "French", "Portuguese", "German", "Turkish", "Dutch", "Ukrainian", "Vietnamese", "Indonesian", "Japanese", "Italian", "Korean", "Thai", "Polish", "Romanian", "Greek", "Czech", "Finnish", "Hindi", "Bulgarian", "Danish", "Hebrew", "Malay", "Persian", "Slovak", "Swedish", "Croatian", "Filipino", "Hungarian", "Norwegian", "Slovenian", "Catalan", "Nynorsk", "Tamil", "Afrikaans"], "note": "boost recognition of minority languages / dialects; null = off" },
+                "voice_setting": { "type": "object", "fields": { "english_normalization": { "type": "boolean", "default": false, "note": "normalize English numbers; slight latency" } } },
+                "audio_setting": { "type": "object", "fields": { "channel": { "type": "enum", "options": [1, 2], "default": 1, "note": "this server sends mono (1); upstream's own default is 2" } } },
+                "voice_modify": {
+                  "type": "object",
+                  "note": "voice effects; mp3 / wav / flac only — refused upstream for pcm and opus",
+                  "fields": {
+                    "pitch": { "type": "integer", "min": -100, "max": 100, "note": "deeper (-100) ↔ brighter (100)" },
+                    "intensity": { "type": "integer", "min": -100, "max": 100, "note": "forceful (-100) ↔ soft (100)" },
+                    "timbre": { "type": "integer", "min": -100, "max": 100, "note": "full (-100) ↔ crisp (100)" },
+                    "sound_effects": { "type": "enum", "options": ["spacious_echo", "auditorium_echo", "lofi_telephone", "robotic"] }
+                  }
+                },
+                "aigc_watermark": { "type": "boolean", "default": false, "note": "append an AIGC rhythm marker to the end of the audio" },
+                "subtitle_enable": { "type": "boolean", "default": false, "note": "return subtitle timing" }
+              }
+            }
           }
         }
       }
@@ -1026,27 +1045,46 @@
       "modelId": "MiniMax/speech-2.8-turbo",
       "modelName": "MiniMax/speech-2.8-turbo",
       "displayName": "MiniMax 语音 2.8 Turbo",
-      "note": "Synchronous text-to-speech; faster/cheaper Turbo tier. Inherits minimax-speech-2-8-hd: identical parameters and request structure, only the model id differs.",
+      "note": "Synchronous text-to-speech; faster/cheaper Turbo tier. Inherits minimax-speech-2-8-hd: identical parameters, ranges and request structure, only the model id differs.",
       "args": {
-        "text": { "type": "text", "writable": "true", "note": "text to synthesize (required); supports inline emotion/event tags like (laughs)" },
+        "text": { "type": "text", "writable": "true", "note": "maps to input.text (required; length checked upstream); supports interjection tags: (laughs) (chuckle) (coughs) (clear-throat) (groans) (breath) (pant) (inhale) (exhale) (gasps) (sniffs) (sighs) (snorts) (burps) (lip-smacking) (humming) (hissing) (emm) (whistles) (sneezes) (crying) (applause)" },
         "model": { "type": "string", "value": "MiniMax/speech-2.8-turbo", "writable": "false" },
         "voice": { "type": "string", "default": "male-qn-qingse", "writable": "true", "note": "maps to input.voice_setting.voice_id; 327 system voices — see minimax-speech-2-8-hd card.md for the full list" },
-        "audio_format": { "type": "enum", "options": ["mp3", "wav", "flac"], "default": "mp3", "writable": "true", "note": "maps to input.audio_setting.format" },
-        "sample_rate": { "type": "integer", "default": 32000, "writable": "true", "note": "maps to input.audio_setting.sample_rate" },
-        "bitrate": { "type": "integer", "default": 128000, "writable": "true", "note": "maps to input.audio_setting.bitrate" },
-        "speed": { "type": "number", "default": 1.0, "writable": "true", "note": "maps to input.voice_setting.speed" },
-        "volume": { "type": "number", "default": 1.0, "writable": "true", "note": "maps to input.voice_setting.vol" },
-        "pitch": { "type": "integer", "default": 0, "writable": "true", "note": "maps to input.voice_setting.pitch" },
-        "emotion": { "type": "enum", "options": ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent", "whisper"], "writable": "true", "note": "maps to input.voice_setting.emotion; null = auto-infer" },
+        "audio_format": { "type": "enum", "options": ["mp3", "wav", "flac", "pcm", "ogg_opus"], "default": "mp3", "writable": "true", "note": "maps to input.audio_setting.format (ogg_opus is sent as opus); keep mp3 unless the user explicitly asked for another format" },
+        "sample_rate": { "type": "enum", "options": [8000, 16000, 22050, 24000, 32000, 44100], "default": 32000, "writable": "true", "note": "maps to input.audio_setting.sample_rate; ogg_opus takes only 8000/16000/24000 and defaults to 24000 (the relay rejects the documented 12000/48000)" },
+        "bitrate": { "type": "enum", "options": [32000, 64000, 128000, 256000], "default": 128000, "writable": "true", "note": "maps to input.audio_setting.bitrate; mp3 only — not sent for other formats, and refused if set" },
+        "speed": { "type": "number", "min": 0.5, "max": 2.0, "default": 1.0, "writable": "true", "note": "maps to input.voice_setting.speed" },
+        "volume": { "type": "number", "min": 0, "max": 10, "default": 1.0, "writable": "true", "note": "maps to input.voice_setting.vol; must be > 0" },
+        "pitch": { "type": "integer", "min": -12, "max": 12, "default": 0, "writable": "true", "note": "maps to input.voice_setting.pitch (semitones)" },
+        "emotion": { "type": "enum", "options": ["happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent"], "writable": "true", "note": "maps to input.voice_setting.emotion; null = auto-infer (recommended). speech-2.8 does not support whisper" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
           "type": "object",
-          "note": "merged at the top of input; other direct MiniMax fields",
+          "note": "shaped like the payload: input is merged key by key, and input.voice_setting / audio_setting / voice_modify one level further, so only the changed fields need writing",
           "fields": {
-            "pronunciation_dict": { "type": "object", "note": "custom pronunciation, e.g. {\"tone\": [\"处理/(chu3)(li3)\", \"危险/dangerous\"]}" },
-            "subtitle_enable": { "type": "boolean", "default": false, "note": "return subtitle timing" }
+            "input": {
+              "type": "object",
+              "fields": {
+                "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"处理/(chu3)(li3)\", \"危险/dangerous\"]}; Chinese tones as digits 1–5 (5 = neutral)" },
+                "language_boost": { "type": "enum", "options": ["auto", "Chinese", "Chinese,Yue", "English", "Arabic", "Russian", "Spanish", "French", "Portuguese", "German", "Turkish", "Dutch", "Ukrainian", "Vietnamese", "Indonesian", "Japanese", "Italian", "Korean", "Thai", "Polish", "Romanian", "Greek", "Czech", "Finnish", "Hindi", "Bulgarian", "Danish", "Hebrew", "Malay", "Persian", "Slovak", "Swedish", "Croatian", "Filipino", "Hungarian", "Norwegian", "Slovenian", "Catalan", "Nynorsk", "Tamil", "Afrikaans"], "note": "boost recognition of minority languages / dialects; null = off" },
+                "voice_setting": { "type": "object", "fields": { "english_normalization": { "type": "boolean", "default": false, "note": "normalize English numbers; slight latency" } } },
+                "audio_setting": { "type": "object", "fields": { "channel": { "type": "enum", "options": [1, 2], "default": 1, "note": "this server sends mono (1); upstream's own default is 2" } } },
+                "voice_modify": {
+                  "type": "object",
+                  "note": "voice effects; mp3 / wav / flac only — refused upstream for pcm and opus",
+                  "fields": {
+                    "pitch": { "type": "integer", "min": -100, "max": 100, "note": "deeper (-100) ↔ brighter (100)" },
+                    "intensity": { "type": "integer", "min": -100, "max": 100, "note": "forceful (-100) ↔ soft (100)" },
+                    "timbre": { "type": "integer", "min": -100, "max": 100, "note": "full (-100) ↔ crisp (100)" },
+                    "sound_effects": { "type": "enum", "options": ["spacious_echo", "auditorium_echo", "lofi_telephone", "robotic"] }
+                  }
+                },
+                "aigc_watermark": { "type": "boolean", "default": false, "note": "append an AIGC rhythm marker to the end of the audio" },
+                "subtitle_enable": { "type": "boolean", "default": false, "note": "return subtitle timing" }
+              }
+            }
           }
         }
       }
@@ -1056,21 +1094,46 @@
       "modelId": "seed-tts-2.0",
       "modelName": "seed-tts-2.0",
       "displayName": "豆包语音合成 2.0 (Seed-TTS 2.0)",
-      "note": "Asynchronous text-to-speech (submit then poll). 122 expressive Chinese system voices (角色扮演/有声阅读/客服/视频配音), emotion + ASMR support. Only voice / audio_format / sample_rate are used — speed/volume/pitch/emotion/bitrate are MiniMax-only and ignored here.",
+      "note": "Asynchronous text-to-speech (submit then poll). 122 expressive Chinese system voices (角色扮演/有声阅读/客服/视频配音); expressiveness comes from the voice itself (情感变化/ASMR voices), not from an emotion parameter. Text up to 100,000 characters. speed/volume/pitch/bitrate are honoured within the ranges below (out-of-range is a local error, never clamped); emotion is not supported and is rejected.",
       "args": {
         "text": { "type": "text", "writable": "true", "note": "maps to req_params.text (required)" },
         "model": { "type": "string", "value": "seed-tts-2.0", "writable": "false" },
         "voice": { "type": "string", "default": "zh_female_xiaohe_uranus_bigtts", "writable": "true", "note": "maps to req_params.speaker; *_uranus_bigtts voices support 情感变化/指令遵循/ASMR — see card.md for the full list" },
-        "audio_format": { "type": "enum", "options": ["mp3", "wav", "flac"], "default": "mp3", "writable": "true", "note": "maps to req_params.audio_params.format" },
-        "sample_rate": { "type": "integer", "default": 24000, "writable": "true", "note": "maps to req_params.audio_params.sample_rate" },
+        "audio_format": { "type": "enum", "options": ["mp3", "pcm", "ogg_opus"], "default": "mp3", "writable": "true", "note": "maps to req_params.audio_params.format; keep mp3 unless the user explicitly asked for pcm or ogg_opus" },
+        "sample_rate": { "type": "enum", "options": [8000, 16000, 22050, 24000, 32000, 44100, 48000], "default": 24000, "writable": "true", "note": "maps to req_params.audio_params.sample_rate; ogg_opus accepts only 48000 (and defaults to it)" },
+        "bitrate": { "type": "enum", "options": [64000, 160000], "writable": "true", "note": "maps to req_params.audio_params.bit_rate; mp3/ogg_opus only — pcm takes none; null = upstream default (64000 for mp3)" },
+        "speed": { "type": "number", "min": 0.5, "max": 2.0, "default": 1.0, "writable": "true", "note": "maps to req_params.audio_params.speech_rate = (speed-1)*100" },
+        "volume": { "type": "number", "min": 0.5, "max": 2.0, "default": 1.0, "writable": "true", "note": "maps to req_params.audio_params.loudness_rate = (volume-1)*100" },
+        "pitch": { "type": "integer", "min": -12, "max": 12, "default": 0, "writable": "true", "note": "maps to req_params.additions.post_process.pitch (semitones)" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
           "type": "object",
-          "note": "merged at the top of req_params; other direct seed-tts fields",
+          "note": "shaped like the payload and merged level by level: req_params -> audio_params / additions. additions may be an object or a JSON string; it is serialized to the JSON string upstream requires and merged with the post_process the pitch arg produces",
           "fields": {
-            "callback_url": { "type": "string", "note": "async completion callback URL" }
+            "req_params": {
+              "type": "object",
+              "fields": {
+                "callback_url": { "type": "string", "note": "async completion callback URL" },
+                "ssml": { "type": "text", "note": "SSML text; zh/en voices only; requires additions.disable_markdown_filter=false" },
+                "audio_params": { "type": "object", "fields": { "enable_timestamp": { "type": "boolean", "default": false, "note": "return word-level timestamps" } } },
+                "additions": {
+                  "type": "object",
+                  "fields": {
+                    "explicit_language": { "type": "enum", "options": ["zh-cn", "en", "es-mx", "id", "pt-br"], "note": "read only this language; the text must contain it" },
+                    "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"北京/(bei3)(jing1)\", \"omg/oh my god\"]}; up to 5000 entries, each source word ≤ 9 chars; do not combine with SSML" },
+                    "silence_duration": { "type": "integer", "min": 0, "max": 30000, "default": 0, "note": "trailing silence in ms" },
+                    "disable_markdown_filter": { "type": "boolean", "default": false },
+                    "disable_emoji_filter": { "type": "boolean", "default": false },
+                    "latex_parser": { "type": "enum", "options": ["v2"], "note": "requires disable_markdown_filter=true; adds latency" },
+                    "max_length_to_filter_parenthesis": { "type": "integer", "min": 0, "max": 100, "default": 0, "note": "skip parenthesised text up to this length; 0 = off" },
+                    "aigc_watermark": { "type": "boolean", "default": false },
+                    "disable_default_bit_rate": { "type": "boolean", "default": false, "note": "true also allows bit_rate 16000/32000 (set via req_params.audio_params.bit_rate)" }
+                  }
+                }
+              }
+            }
           }
         }
       }

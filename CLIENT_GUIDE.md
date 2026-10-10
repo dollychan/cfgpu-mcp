@@ -675,17 +675,30 @@ cfgpu generate audio "今天是不是很开心呀(laughs)，当然了！" \
   --model minimax-speech-2-8-hd --voice male-qn-qingse --emotion happy
 cfgpu generate audio "更快更省的合成" --model minimax-speech-2-8-turbo --speed 1.2
 
-# 调整输出格式与采样率（MiniMax 还可设 --bitrate）
+# 调整输出格式与采样率（wav/flac 仅 MiniMax；pcm/ogg_opus 两族都支持；不指定时一律 mp3）
 cfgpu generate audio "..." --format wav --sample-rate 24000
 
-# pronunciation_dict / subtitle_enable 等 MiniMax 专有字段走 --model-specific
+# seed-tts 的语速/音量/音调/码率：--speed/--volume 取 0.5–2.0，--pitch 取 -12–12，--bitrate 取 64000/160000
+cfgpu generate audio "慢一点读" --model seed-tts-2-0 --speed 0.8 --pitch -2
+
+# seed-tts 的其余上游字段（ssml、explicit_language、发音词典……）走 --model-specific，按 payload 形状逐层合并；
+# additions 写成对象即可（适配器负责序列化成上游要求的 JSON 字符串）
+cfgpu generate audio "我在北京用 mobile 说 omg" --model seed-tts-2-0 \
+  --model-specific '{"req_params": {"additions": {"pronunciation_dict": {"tone": ["北京/(bei3)(jing1)", "omg/oh my god"]}}}}'
+
+# pronunciation_dict / language_boost / voice_modify 等 MiniMax 专有字段走 --model-specific，
+# 按 payload 形状逐层合并（input → voice_setting / audio_setting / voice_modify），不会覆盖 text
 cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
-  --model-specific '{"input": {"pronunciation_dict": {"tone": ["处理/(chu3)(li3)"]}}}'
+  --model-specific '{"input": {"pronunciation_dict": {"tone": ["处理/(chu3)(li3)"]}, "voice_modify": {"sound_effects": "spacious_echo"}}}'
 ```
 
 > `seed-tts-2-0` 为异步（提交后轮询 `/voice/tasks/{task_id}`，产物是音频 URL），MiniMax 两款为同步（POST 直接返回结果）。
 > **MiniMax 不返回 URL**：音频以十六进制字符串内联在 `output.data.audio`，服务端解码后放进 `inline_media`（见 §返回值格式），`urls` 为空数组。
-> `--speed/--volume/--pitch/--emotion` 仅 MiniMax 生效，seed-tts 会忽略；音频链接 24 小时内有效。
+> `--emotion` 仅 MiniMax 支持，seed-tts 收到会在本地拒绝（`model="auto"` 时改路由到 MiniMax）；MiniMax speech-2.8 的取值是 `happy/sad/angry/fearful/disgusted/surprised/calm/fluent`，**不支持 `whisper`**。`--speed/--volume/--pitch/--bitrate` 两族都支持，取值范围各不相同，越界在本地拒绝，不会被悄悄夹到边界。
+> MiniMax speech-2.8：`speed` 0.5–2，`volume` (0, 10]，`pitch` -12–12；`audio_format` 支持 `mp3/wav/flac/pcm/ogg_opus`（`ogg_opus` 发给上游时写作 `opus`）；`sample_rate` 取 8000/16000/22050/24000/32000/44100，`ogg_opus` 只能取 8000/16000/24000（缺省 24000；文档列出的 12000/48000 过不了中转的参数校验）；`bitrate` 取 32000/64000/128000/256000 且**只对 mp3 有效** —— 其他格式不发送，显式传入会被拒绝；文本长度不做本地校验，超长由上游拒绝。`text` 可插入 22 种语气词标签，如 `(laughs)`、`(sighs)`、`(breath)`。
+> seed-tts 的 `audio_format` 只有 `mp3` / `pcm` / `ogg_opus`，`sample_rate` 只能取 8000/16000/22050/24000/32000/44100/48000，`ogg_opus` 固定 48000（缺省时自动用 48000），`pcm` 不接受 `bitrate`；文本上限 10 万字符。`validate_only` 会把不支持的格式改回 `mp3`、采样率/码率改到最近的合法值，并写进 `corrected_args`。
+> **默认输出 mp3**：`audio_format` 的字段描述要求模型只在用户明确要求时才换格式。
+> seed-tts 的下载链接有效期 **1 小时**（音频在服务端保留 7 天，过期后再查一次 `task_status` 即可拿到新链接）；`expires_at` 优先取上游的 `urlExpireTime`。
 
 **选音色：`list_voice_profiles`。** 返回每个音色的 `voice`（原样填进 `generate_audio.voice`）、`label`（仅展示，不能当 voice 传）、`languages`（语言代码，如 `zh` / `yue` / `en-US` / `pt-BR`）、`gender`（`male` / `female` / `neutral` / `unknown`）、`age`（`child` / `young` / `middle_aged` / `senior`）、`tags`（风格特质与适用场景）、`model_ids`（哪些模型接受它），有的还带 `description`（音色描述）和 `accent`（语言代码表达不了的口音），模型默认音色另带 `default: true`。音色数据来自平台的 `model_audio_voices` 导出。筛选参数：
 
@@ -957,7 +970,7 @@ done
 |------|------|:--------:|------|
 | `urls` | `list[str]` | ✓ | 生成的资源 URL 列表 |
 | `expires_at` | `str \| null` | ✓ | URL 过期时间（ISO 8601），通常 24 小时后失效 |
-| `inline_media` | `list[object]` | ✓（有才出现） | **内联产物**：部分模型不给下载链接，直接把媒体内容返回（目前仅 MiniMax 语音）。每项为 `{data, mime_type, filename}`，`data` 是 base64 编码的文件内容，可直接解码落盘。此时 `urls` 为空数组 —— `inline_media` 就是本次产物本身，因此与 `urls` 同级、**不受 `return_metadata` 影响**；无内联产物的模型不会出现该字段。MCP 下它走 `structuredContent` 侧信道（不进模型上下文），见 §content / structuredContent 拆分 |
+| `inline_media` | `list[object]` | ✓（有才出现） | **内联产物**：部分模型不给下载链接，直接把媒体内容返回（目前仅 MiniMax 语音）。每项为 `{data, mime_type, filename}`，`data` 是 base64 编码的文件内容，可直接解码落盘。**`audio_format="pcm"` 时例外**：`data` 是无文件头的裸采样（16-bit 小端），`mime_type` 为 `audio/pcm`，并额外带 `sample_format: "s16le"`、`sample_rate`、`channels`（取自上游返回的实际值）—— 不按这三项包装（如加 WAV 头）就无法播放。此时 `urls` 为空数组 —— `inline_media` 就是本次产物本身，因此与 `urls` 同级、**不受 `return_metadata` 影响**；无内联产物的模型不会出现该字段。MCP 下它走 `structuredContent` 侧信道（不进模型上下文），见 §content / structuredContent 拆分 |
 | `request_id` | `str` | ✓（传了才有） | 你在 generate_* 里传的那个值，原样回显。它**就是任务主键**，所以传了它的调用不会再拿到 `task_id`——见下方「单一句柄」 |
 | `task_id` | `str` | | **仅当本次调用没传 `request_id` 时出现**：服务端为这一行生成的 id，作用与 `request_id` 完全相同（拿它调 `task_status` / `task_wait`）。它**不是**上游服务自己的任务 id，那个是内部字段，任何返回里都不出现 |
 | `model_used` | `str \| null` | | 实际使用的模型公开标识（`model_name`，与 `list_models()`/`model` 参数同一套 id 空间；从不是内部的 `cfgpu_model_id`）。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |

@@ -769,8 +769,10 @@ class GenerateAudioInput(BaseModel):
         description="Voice/speaker id supported by the selected model, copied verbatim from "
         "the `voice` field of list_voice_profiles. None uses that model's default voice.",
     )
-    audio_format: Folded("mp3", "wav", "pcm", "flac") = Field(
-        default="mp3", description="Output audio container/format"
+    audio_format: Folded("mp3", "wav", "pcm", "flac", "ogg_opus") = Field(
+        default="mp3",
+        description="Output audio container/format. Leave it at mp3 unless the user "
+        "explicitly asked for another format; support for the others varies by model.",
     )
     sample_rate: Optional[int] = Field(
         default=None,

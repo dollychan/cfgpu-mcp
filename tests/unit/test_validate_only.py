@@ -880,7 +880,6 @@ async def test_audio_validate_only_accepts_exact_system_voice_ids(model, voice):
         "surprised",
         "calm",
         "fluent",
-        "whisper",
     ],
 )
 @pytest.mark.asyncio
@@ -981,18 +980,38 @@ async def test_audio_auto_routes_only_to_a_model_owning_the_voice(voice, expecte
 
 
 @pytest.mark.asyncio
-async def test_audio_pcm_falls_back_and_reports_the_effective_format():
+async def test_audio_minimax_whisper_is_refused_on_2_8():
+    """speech-2.8 does not support whisper; delivery is never silently corrected."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c, pytest.raises(CFGPUError) as exc:
+        await audio_service.generate_audio(
+            text="hello",
+            model="MiniMax/speech-2.8-hd",
+            emotion="whisper",
+            validate_only=True,
+        )
+
+    assert exc.value.error_type == "invalid_params"
+    assert "whisper" in exc.value.user_message
+
+
+@pytest.mark.asyncio
+async def test_audio_ogg_opus_reports_the_opus_sample_rate_fallback():
     a, b, c = _patched_real_registry(_client(), AsyncMock())
     with a, b, c:
         result = await audio_service.generate_audio(
             text="hello",
             model="MiniMax/speech-2.8-hd",
-            audio_format="pcm",
+            audio_format="ogg_opus",
+            sample_rate=32000,
             validate_only=True,
         )
 
-    assert result["corrected_args"] == {"audio_format": "mp3", "voice": "male-qn-qingse"}
-    assert result["payload"]["input"]["audio_setting"]["format"] == "mp3"
+    assert result["corrected_args"] == {"sample_rate": 24000, "voice": "male-qn-qingse"}
+    setting = result["payload"]["input"]["audio_setting"]
+    assert setting["format"] == "opus"
+    assert setting["sample_rate"] == 24000
+    assert "bitrate" not in setting
 
 
 def _sent_voice(payload: dict) -> str:
