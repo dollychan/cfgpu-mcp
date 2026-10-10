@@ -84,7 +84,12 @@ disabled_tools:                # MCP tools to not expose; omit / null / [] = all
   #
   # Valid names (an unknown one fails at startup):
   #   generate_image  generate_video  generate_audio  understand_vision
-  #   task_status  task_wait  list_models  get_model_card
+  #   task_status  task_wait  list_models  list_model_profiles  get_model_card
+  #
+  # Agent-facing deployment: expose list_model_profiles for model selection, and
+  # hide the operations/debugging tools that disclose adapter-level detail:
+  # - list_models
+  # - get_model_card
   #
   # Note task_status / task_wait are how async generation results are collected —
   # disabling them alongside generate_video leaves callers with no way to finish

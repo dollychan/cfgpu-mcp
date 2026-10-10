@@ -162,13 +162,16 @@ async def test_request_raises_auth_when_no_token_anywhere():
     ("cfgpu-daily", "providers.cfgpu-daily.http_timeout"),
     ("comfy", "providers.comfy.http_timeout"),
 ])
-async def test_timeout_names_the_knob_that_governs_this_provider(provider, expected):
+async def test_timeout_names_the_knob_that_governs_this_provider(provider, expected, caplog):
     """Only the built-in cfgpu provider reads cfgpu_api.http_timeout.
 
     config.get_client prefers a provider's own http_timeout whenever it is set, so
     pointing a non-cfgpu timeout at the top-level key sends the reader to a knob
     that changes nothing for the model that just failed: they raise it, retry, time
     out identically, and stop trusting the message.
+
+    The knob goes to the operator's log and ``original["setting"]`` — never to the
+    message, whose reader is an agent that cannot edit config.yaml.
     """
     client = CFGPUClient(
         api_token="t", base_url="https://x.test", http_timeout=120,
@@ -182,18 +185,21 @@ async def test_timeout_names_the_knob_that_governs_this_provider(provider, expec
             await client.post("/v1/x", json={})
 
     assert exc.value.error_type == "timeout"
-    assert expected in exc.value.user_message
+    assert exc.value.original["setting"] == expected
+    assert expected in caplog.text
+    assert "config.yaml" not in exc.value.user_message
+    assert "_timeout" not in exc.value.user_message
     assert f"provider {provider!r}" in exc.value.user_message
     # The provider must also ride `original`: a timeout report that does not say
     # which upstream stalled cannot be acted on from the log alone.
     assert exc.value.original["provider"] == provider
     if provider != "cfgpu":
-        assert "cfgpu_api.http_timeout" not in exc.value.user_message
+        assert "cfgpu_api.http_timeout" not in caplog.text
 
 
 
 @pytest.mark.asyncio
-async def test_connect_phase_timeout_points_at_connect_timeout_not_http_timeout():
+async def test_connect_phase_timeout_points_at_connect_timeout_not_http_timeout(caplog):
     """A connect timeout is an ``asyncio.TimeoutError`` too — one handler, two causes.
 
     aiohttp raises ConnectionTimeoutError for DNS / TCP / TLS, i.e. before the
@@ -215,12 +221,15 @@ async def test_connect_phase_timeout_points_at_connect_timeout_not_http_timeout(
 
     assert exc.value.error_type == "timeout"
     assert exc.value.original["phase"] == "connect"
-    assert "providers.cfgpu-daily.connect_timeout" in exc.value.user_message
-    # The knob that cannot work must be named only to rule it out.
-    assert "增大 providers.cfgpu-daily.http_timeout 不会有任何作用" in exc.value.user_message
-    # And the base_url has to be in the text: "can this box reach that host" is
-    # the actual next step, and it needs the host to be checkable.
-    assert "https://x.test" in exc.value.user_message
+    assert exc.value.original["setting"] == "providers.cfgpu-daily.connect_timeout"
+    # The operator's log names the right knob, rules out the wrong one, and carries
+    # the base_url: "can this box reach that host" is the actual next step.
+    assert "providers.cfgpu-daily.connect_timeout" in caplog.text
+    assert "raising providers.cfgpu-daily.http_timeout will not help" in caplog.text
+    assert "https://x.test" in caplog.text
+    # The agent gets none of that — only a step it can take.
+    assert "_timeout" not in exc.value.user_message
+    assert exc.value.retryable is True
 
 
 @pytest.mark.asyncio

@@ -60,7 +60,7 @@ def test_chinese_prompt_prefers_seedream_for_image():
     assert router._score(seedream, req) == router._score(seedream, en) + 2
 
 
-def test_reference_videos_score_multi_modal_capable_adapter():
+def test_reference_videos_score_reference_role_adapter():
     router = _router()
     req = GenerateVideoInput(
         prompt="test",
@@ -68,7 +68,21 @@ def test_reference_videos_score_multi_modal_capable_adapter():
         quality_tier="balanced",
     )
     adapter = router.select_model(req)
-    assert "multi_modal_reference" in adapter.capabilities
+    assert "reference_to_video" in adapter.tasks
+    assert adapter.inputs["reference_videos"].role == "reference"
+
+
+def test_a_lone_reference_video_prefers_reference_over_source_models():
+    """wan2.7-i2v accepts one video as the clip to *extend*; a plain reference request
+    must not tie with it. The role in `inputs:` is what breaks that tie."""
+    router = _router()
+    req = GenerateVideoInput(prompt="test", reference_videos=["https://example.com/v.mp4"])
+    source = router._registry.get("wan-2-7-i2v")
+    reference = router._registry.get("wan2.7-r2v")
+    assert source.supports(req)[0] and reference.supports(req)[0]
+    assert router._score(reference, req) == router._score(source, req) + 3 + (
+        (reference.speed_tier - reference.cost_tier) - (source.speed_tier - source.cost_tier)
+    )
 
 
 def test_best_tier_prefers_declared_quality_rank_over_price():
@@ -118,9 +132,8 @@ def test_auto_image_defaults_differ_per_quality_tier():
 
     "balanced" is gpt-image-2's by ``default_for`` — an operator decision that
     outranks the score outright, in whichever language the prompt is written.
-    "fast" has no declaration and still falls to 5.0 Pro on ``auto_priority``: every
-    Seedream shares speed_tier 3 / cost_tier 2, so the family ties on score and the
-    adapter_id tie-break would otherwise hand it to the oldest member (4.0).
+    Flash has the fastest declared speed tier and the lowest cost tier, so it is the
+    natural winner for ``fast`` while retaining the Pro editing feature set at 2K.
     "best" is gpt-image-2's again, by ``quality_rank`` — a different field reaching
     the same model, which is why the balanced assertion above proves nothing about
     rank (see test_best_tier_prefers_declared_quality_rank_over_price).
@@ -128,7 +141,7 @@ def test_auto_image_defaults_differ_per_quality_tier():
     router = _router()
     expected = {
         "balanced": "gpt-image-2",             # default_for
-        "fast": "doubao-seedream-5-0-pro",     # auto_priority
+        "fast": "doubao-seedream-5-0-flash",   # speed 5, cost 1
         "best": "gpt-image-2",                 # quality_rank
     }
     for tier, adapter_id in expected.items():
@@ -160,33 +173,32 @@ def test_auto_image_falls_back_to_5_0_lite_when_pro_unsupported():
     assert ranked[0].adapter_id == "doubao-seedream-5-0-lite"
 
 
-def test_declared_default_outranks_the_group_bonus_and_n_degrades():
-    """``n > 1`` no longer routes around the model that ignores it. Deliberate.
+def test_declared_default_forwards_multi_image_request():
+    """The balanced default accepts n=1–10 and forwards it upstream.
 
-    The +3 group bonus lives in ``_score``, and ``default_for`` is the key *above*
-    the score, so gpt-image-2 wins a balanced group request despite lacking
-    ``multi_image_group`` — its build_payload never sends ``n`` and the caller gets
-    one image. That is the documented cost of declaring a default: the operator
-    decision is allowed to overrule the heuristic, which is the whole point of
-    writing it down, and there is no signal downstream that can catch the mismatch
-    (``n`` is a compatibility hint every model without the capability ignores in
-    silence). Pinned so the degradation stays a decision on record rather than a
-    surprise; a caller who needs a real 组图 names a Seedream explicitly.
-
-    The bonus itself is untouched and still orders everyone below the default.
+    GPT Image 2 honours n through its declared max_images_per_request, which is what the
+    router's n>1 preference reads. Its images are independent, so it does not claim the
+    multi_image_group task (a coherent series); its n is an output ceiling.
     """
     router = _router()
     req = GenerateImageInput(prompt="a cat", n=4)
     adapter = router.select_model(req)
     assert adapter.adapter_id == "gpt-image-2"
-    assert "multi_image_group" not in adapter.capabilities
+    assert adapter.max_images_per_request == 10
+    assert "multi_image_group" not in adapter.tasks
+    assert adapter.build_payload(req)["n"] == 4
 
-    runners_up = sorted(
-        (a for a in router._registry.list_all(task_type="image")
-         if a.adapter_id != "gpt-image-2" and a.supports(req)[0]),
-        key=lambda a: selection_key(router._score(a, req), a, "balanced"),
-    )
-    assert "multi_image_group" in runners_up[0].capabilities
+
+def test_models_that_ignore_n_get_no_group_preference():
+    """Nano Banana inherits from gpt-image-2 but never sends n. It used to inherit the
+    group capability too, so the router preferred it for n>1 and returned one image."""
+    router = _router()
+    nano = router._registry.get("nano-banana-2")
+    assert nano.max_images_per_request is None
+    assert "n" not in nano.build_payload(GenerateImageInput(prompt="x", n=4))
+    group = GenerateImageInput(prompt="x", n=4)
+    single = GenerateImageInput(prompt="x")
+    assert router._score(nano, group) == router._score(nano, single)
 
 
 def test_video_defaults_differ_per_quality_tier():
@@ -322,13 +334,11 @@ def test_quality_tier_vocabulary_matches_the_schema():
     the other way. A tier added to the schema but not here would be refused as a
     typo by every adapter.yaml that tried to declare it.
     """
-    import typing
-
     from cfgpu_mcp.adapters.base import _QUALITY_TIERS
 
     for model in (GenerateImageInput, GenerateVideoInput):
-        annotation = model.model_fields["quality_tier"].annotation
-        assert set(typing.get_args(annotation)) == _QUALITY_TIERS, model.__name__
+        enum = model.model_json_schema()["properties"]["quality_tier"]["enum"]
+        assert set(enum) == _QUALITY_TIERS, model.__name__
 
 
 def test_default_for_is_undeclared_by_default():
@@ -381,8 +391,8 @@ def test_undeclared_model_scores_exactly_as_before():
     assert adapter.quality_rank == 0
 
 
-def test_image_reference_bonus_uses_real_capability():
-    """The +3 reference bonus keys on the capability, not on a model name.
+def test_image_reference_bonus_uses_the_declared_task():
+    """The +3 reference bonus keys on the declared task, not on a model name.
 
     Asserted below the declared balanced default for the same reason the Chinese
     bonus is: ``default_for`` outranks the score, so the winner of a
@@ -404,8 +414,8 @@ def test_image_reference_bonus_uses_real_capability():
          if a.adapter_id != "gpt-image-2" and a.supports(req)[0]),
         key=lambda a: selection_key(router._score(a, req), a, "balanced"),
     )
-    caps = ranked[0].capabilities
-    assert "multi_image_fusion" in caps or "multi_image_group" in caps
+    tasks = ranked[0].tasks
+    assert "multi_image_fusion" in tasks or "multi_image_group" in tasks
 
 
 def test_explicit_model_bypasses_scoring():
@@ -479,12 +489,31 @@ def test_resolve_auto_selects_from_all():
     assert adapter.adapter_id == "doubao-seedance-2-0-fast"
 
 
-def test_understand_request_selects_understand_model():
+@pytest.mark.parametrize(("analysis_depth", "expected"), [
+    ("fast", "qwen-3-7-flash"),
+    ("balanced", "qwen-3-7-plus"),
+    ("thorough", "qwen-3-8-max"),
+])
+def test_understand_request_routes_by_analysis_depth(analysis_depth, expected):
     router = _router()
-    req = UnderstandVisionInput(prompt="描述这张图片", images=["https://x/a.jpg"])
+    req = UnderstandVisionInput(
+        prompt="描述这张图片", images=["https://x/a.jpg"], analysis_depth=analysis_depth
+    )
     adapter = router.select_model(req)
     assert adapter.task_type == "understand"
-    assert adapter.adapter_id == "qwen-3-6-plus"
+    assert adapter.adapter_id == expected
+
+
+def test_understand_explicit_model_overrides_analysis_depth():
+    """The depth is only an auto-routing preference, never a model override."""
+    router = _router()
+    req = UnderstandVisionInput(
+        prompt="描述这张图片",
+        images=["https://x/a.jpg"],
+        model="qwen3.6-plus",
+        analysis_depth="thorough",
+    )
+    assert router.resolve(req).adapter_id == "qwen-3-6-plus"
 
 
 def test_understand_request_never_selects_media_model():

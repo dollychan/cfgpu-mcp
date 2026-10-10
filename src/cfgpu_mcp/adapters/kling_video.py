@@ -4,6 +4,7 @@ from math import gcd
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.adapters.inputs import VIDEO_INPUT_SLOTS
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -125,12 +126,11 @@ class KlingVideoAdapter(ModelAdapter):
         ``sound`` is a real request field on this model, not an ignored unified flag:
         Kling is one of four video families that honour ``with_audio`` at all (the 万相
         2.6/2.7 and HappyHorse families never send it, Grok and MiniMax H3 always emit
-        audio and have no switch). Its own card documents **no upstream default** for
-        ``sound`` — so unlike every other honouring model, there is no "what happens if
-        nobody decides" to fall back on, and the decision is entirely the schema's
-        ``with_audio: bool = True``. That default is silent: an approval card built from
-        the caller's own arguments shows no audio row at all, and the human approves a
-        soundtrack nobody asked for.
+        audio and have no switch). Upstream defaults ``sound`` to ``off`` while the
+        schema's ``with_audio: bool = True`` always sends it, so what decides is a
+        default that disagrees with the model's own — and it is silent: an approval
+        card built from the caller's own arguments shows no audio row at all, and the
+        human approves a soundtrack nobody asked for.
 
         So this is a *pin*, not a fallback — the same shape as pinning a delegated
         ``model``, and for the same reason: an approval only means something if it names
@@ -228,26 +228,12 @@ class KlingVideoAdapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
-        # The create payload has an image_list and a video_list but no audio slot.
-        if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
+        # Slots not declared in `inputs:` — the create payload has an image_list and a
+        # video_list but no audio slot. test_video_inputs.py keeps this loop and the
+        # declaration in agreement.
+        for slot in VIDEO_INPUT_SLOTS:
+            if self.inputs is not None and getattr(req, slot) and slot not in self.inputs:
+                return False, f"{self.model_name} does not accept {slot}"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
-        # Validate the requested scene against the model's declared capabilities so
-        # model="auto" skips incapable models instead of failing post-submit.
-        if req.first_frame and req.last_frame:
-            needed = "first_last_frame"
-        elif req.reference_images or req.reference_videos:
-            needed = "multi_modal_reference"
-        elif req.first_frame:
-            needed = "image_to_video"
-        else:
-            needed = "text_to_video"
-        if needed not in self.capabilities:
-            return False, (
-                f"{self.adapter_id} does not support {needed} "
-                f"(capabilities: {', '.join(sorted(self.capabilities))})"
-            )
         return True, ""

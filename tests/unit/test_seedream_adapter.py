@@ -14,7 +14,7 @@ def _make_adapter() -> SeedreamAdapter:
         "poll_endpoint": None,
         # Mirrors the real adapter.yaml: multi_image_group is what gates 组图, so a
         # fixture missing it describes a different model than the one shipped.
-        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion", "multi_image_group"},
+        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "multi_image_group"],
         "cost_tier": 2,
         "speed_tier": 3,
     }
@@ -30,9 +30,25 @@ def _make_pro_adapter() -> SeedreamAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "capabilities": {"text_to_image", "image_to_image", "multi_image_fusion"},
+        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"],
         "cost_tier": 2,
         "speed_tier": 3,
+    }
+    return SeedreamAdapter.from_config(config)
+
+
+def _make_flash_adapter() -> SeedreamAdapter:
+    config = {
+        "adapter_id": "doubao-seedream-5-0-flash",
+        "display_name": "Doubao Seedream 5.0 flash",
+        "cfgpu_model_id": "doubao-seedream-5-0-flash-260915",
+        "task_type": "image",
+        "endpoint": "/v1/images/generations",
+        "is_async": False,
+        "poll_endpoint": None,
+        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"],
+        "cost_tier": 1,
+        "speed_tier": 5,
     }
     return SeedreamAdapter.from_config(config)
 
@@ -167,13 +183,15 @@ def test_2k_21x9_maps_to_correct_size():
 
 # --- doubao-seedream-5-0-pro (single-image, 1K/2K) ---
 
-def test_pro_n_greater_than_one_is_ignored():
-    adapter = _make_pro_adapter()
+@pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
+def test_pro_and_flash_ignore_n_and_send_no_group_fields(factory):
+    """`n` is a ceiling; on a model without 组图 it is ignored, never refused."""
+    adapter = factory()
     req = GenerateImageInput(prompt="x", n=4)
     ok, reason = adapter.supports(req)
-    assert ok
-    assert reason == ""
+    assert ok, reason
     payload = adapter.build_payload(req)
+    assert "n" not in payload
     assert "sequential_image_generation" not in payload
     assert "sequential_image_generation_options" not in payload
 
@@ -210,6 +228,149 @@ def test_pro_cfgpu_model_id_in_model_field():
     assert str(payload).count("doubao-seedream-5-0-pro") == 1
 
 
+def test_flash_uses_pro_geometry_and_is_synchronous():
+    """Flash supports the same 1K / 1.5K / 2K range as Pro."""
+    adapter = _make_flash_adapter()
+    req = GenerateImageInput(prompt="x", resolution="1.5K", aspect_ratio="16:9", watermark=False)
+    assert adapter.supports(req) == (True, "")
+    payload = adapter.build_payload(req)
+    assert payload == {
+        "model": "doubao-seedream-5-0-flash-260915",
+        "prompt": "x",
+        "size": "2048x1152",
+        "response_format": "url",
+        "watermark": False,
+    }
+
+
+def test_flash_rejects_unsupported_resolution():
+    ok, reason = _make_flash_adapter().supports(
+        GenerateImageInput(prompt="x", resolution="3K")
+    )
+    assert not ok
+    assert "supported: 1K, 1.5K, 2K" in reason
+
+
+def test_layer_decomposition_returns_ordered_urls_without_layer_metadata():
+    adapter = _make_flash_adapter()
+    req = GenerateImageInput(
+        prompt="",
+        reference_images=["https://example.com/source.png"],
+        model_specific={"layer_decomposition": True},
+    )
+    assert adapter.supports(req) == (True, "")
+    items = [
+        {"url": "https://cdn/base.jpeg", "z_index": 0},
+        {
+            "url": "https://cdn/layer.png",
+            "z_index": 1,
+            "bounding_box": {"normalized": [1, 2, 3, 4]},
+        },
+    ]
+    result = adapter.parse_response({"data": items})
+    assert result.urls == ["https://cdn/base.jpeg", "https://cdn/layer.png"]
+    assert not hasattr(result, "image_items")
+    assert "image_items" not in result.to_dict(return_metadata=True)
+
+
+def test_layer_decomposition_falls_back_to_upstream_image_items_urls():
+    result = _make_flash_adapter().parse_response({
+        "data": [],
+        "image_items": [
+            {"z_index": 1, "url": "https://cdn/layer.png"},
+            {"z_index": 0, "url": "https://cdn/base.jpeg"},
+        ],
+    })
+    assert result.urls == ["https://cdn/base.jpeg", "https://cdn/layer.png"]
+
+
+@pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
+@pytest.mark.parametrize(
+    "resolution, model_specific, expected_size",
+    [
+        ("2K", {"layer_decomposition": True}, "2K"),
+        ("1K", {"layer_decomposition": True}, "1K"),
+        ("2K", {"layer_decomposition": True, "size": "auto"}, "auto"),
+    ],
+)
+def test_layer_decomposition_sends_only_supported_size_presets(
+    factory, resolution, model_specific, expected_size
+):
+    payload = factory().build_payload(GenerateImageInput(
+        prompt="", resolution=resolution,
+        reference_images=["https://example.com/source.png"],
+        model_specific=model_specific,
+    ))
+    assert payload["size"] == expected_size
+
+
+@pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
+@pytest.mark.parametrize(
+    "model_specific, expected",
+    [
+        ({"layer_decomposition": True, "size": "2048x2048"}, "explicit WIDTHxHEIGHT"),
+        ({"layer_decomposition": True, "size": "3K"}, "only supports"),
+        ({"size": "512x512"}, "921600-4624220 pixels"),
+        ({"size": "100x10000"}, "width/height ratio"),
+        ({"size": "auto"}, "must be a supported preset"),
+    ],
+)
+def test_pro_and_flash_strictly_validate_upstream_size(factory, model_specific, expected):
+    ok, reason = factory().supports(GenerateImageInput(prompt="x", model_specific=model_specific))
+    assert not ok
+    assert expected in reason
+
+
+def test_pro_allows_documented_explicit_size_for_normal_generation():
+    payload = _make_pro_adapter().build_payload(GenerateImageInput(
+        prompt="x", model_specific={"size": "2048x1024"}
+    ))
+    assert payload["size"] == "2048x1024"
+
+
+def test_transparent_background_requires_one_input_and_png_output():
+    adapter = _make_flash_adapter()
+    req = GenerateImageInput(
+        prompt="edit",
+        reference_images=["https://example.com/layer.png"],
+        model_specific={"background": "transparent", "output_format": "png"},
+    )
+    assert adapter.supports(req) == (True, "")
+    invalid = req.model_copy(update={"model_specific": {"background": "transparent", "output_format": "jpeg"}})
+    assert "requires PNG" in adapter.supports(invalid)[1]
+
+
+@pytest.mark.parametrize("factory", [_make_pro_adapter, _make_flash_adapter])
+@pytest.mark.parametrize(
+    "model_specific, message",
+    [
+        ({"layer_decomposition": "true"}, "layer_decomposition: Input should be a valid boolean"),
+        ({"layer_decomposition": True, "unknown": 1}, "unknown: Extra inputs are not permitted"),
+        ({"background": "blue"}, "background: Input should be 'opaque' or 'transparent'"),
+    ],
+)
+def test_pro_and_flash_reject_invalid_model_specific_schema(factory, model_specific, message):
+    ok, reason = factory().supports(GenerateImageInput(prompt="x", model_specific=model_specific))
+    assert not ok
+    assert message in reason
+
+
+def test_flash_rejects_pro_only_fast_prompt_optimization():
+    ok, reason = _make_flash_adapter().supports(GenerateImageInput(
+        prompt="x",
+        model_specific={"optimize_prompt_options": {"mode": "fast"}},
+    ))
+    assert not ok
+    assert "only supports" in reason
+
+
+def test_build_payload_rechecks_pro_and_flash_model_specific_schema():
+    with pytest.raises(ValueError, match="layer_decomposition"):
+        _make_pro_adapter().build_payload(GenerateImageInput(
+            prompt="x", model_specific={"layer_decomposition": "true"}
+        ))
+
+
 # --- per-family size tables -------------------------------------------------
 #
 # Pro and the Lite/4.x line publish *different* pixel values for the same tier and
@@ -226,7 +387,7 @@ def _make_4_0_adapter() -> SeedreamAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "capabilities": {"text_to_image", "multi_image_group"},
+        "tasks": ["text_to_image", "multi_image_group"],
         "cost_tier": 2,
         "speed_tier": 3,
     }
@@ -343,15 +504,15 @@ def test_the_billed_path_rejects_a_tier_the_model_does_not_have(factory, resolut
 # --- n / 组图 (sequential image generation) ----------------------------------
 
 
-def test_group_generation_is_gated_on_the_capability_not_on_the_model_id():
+def test_group_generation_is_gated_on_the_task_not_on_the_model_id():
     """A single-image variant must not be recognised by being 'not Pro'.
 
     Pro happens to be the only family member without 组图 today, so an ``adapter_id ==
     pro`` test passes right now — and would keep passing while silently switching 组图 on
-    for the next single-image variant. Variants without the capability must ignore n.
+    for the next single-image variant. Variants without the task must ignore n.
     """
     adapter = _make_adapter()
-    adapter.capabilities = adapter.capabilities - {"multi_image_group"}
+    adapter.tasks = tuple(t for t in adapter.tasks if t != "multi_image_group")
     ok, reason = adapter.supports(GenerateImageInput(prompt="x", n=4))
     assert ok
     assert reason == ""
@@ -360,10 +521,18 @@ def test_group_generation_is_gated_on_the_capability_not_on_the_model_id():
     assert "sequential_image_generation_options" not in payload
 
 
-def test_single_image_seedream_ignores_n():
-    ok, reason = _make_pro_adapter().supports(GenerateImageInput(prompt="x", n=4))
-    assert ok
-    assert reason == ""
+def test_layer_decomposition_ignores_n_too():
+    """Every layer_decomposition model lacks 组图, so n>1 there is ignored like anywhere else."""
+    adapter = _make_pro_adapter()
+    req = GenerateImageInput(
+        prompt="",
+        n=4,
+        reference_images=["https://example.com/source.png"],
+        model_specific={"layer_decomposition": True},
+    )
+    ok, reason = adapter.supports(req)
+    assert ok, reason
+    assert "sequential_image_generation" not in adapter.build_payload(req)
 
 
 @pytest.mark.parametrize(

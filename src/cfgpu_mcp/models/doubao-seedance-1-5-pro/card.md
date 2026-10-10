@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | 模型 ID | `doubao-seedance-1-5-pro` |
-| 能力标签 | text_to_video, image_to_video, first_last_frame, audio_generate, sample_mode |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, synced_audio_output |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 
@@ -49,14 +49,14 @@
 | **text_to_video** | 纯文本生成视频 |
 | **image_to_video** | 单张首帧图片 + 文本生成视频 |
 | **first_last_frame** | 首帧 + 尾帧图片 + 文本生成视频（精准控制起止画面） |
-| **audio_generate** | 生成与画面同步的有声视频（人声、音效、背景音乐） |
-| **sample_mode** | 样片模式：快速生成低质量预览，确认效果后再生成正式版 |
+| **synced_audio_output** | 生成与画面同步的有声视频（人声、音效、背景音乐） |
+| `sample_mode`（`model_specific` 参数，不是任务） | 样片模式：快速生成低质量预览，确认效果后再生成正式版 |
 
 ## 参数说明
 
 ### 核心参数
 
-API 请求结构与 `wan-video` 一致（详见 `wan-video` 的模型卡，可调用 get_model_card 获取），以下列出差异点。
+API 请求结构与 `wan-video` 一致（详见 `wan-video` 的模型卡），以下列出差异点。
 
 ### 视频输出参数（差异）
 

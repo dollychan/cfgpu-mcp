@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal, Optional
 
 from mcp.types import CallToolResult, TextContent
-from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, field_validator, model_validator
 
 
 # ── Media (material) slot annotations ───────────────────────────────────────
@@ -46,7 +46,7 @@ MEDIA_ANNOTATION_KEY = "x-cfgpu-media"
 # right call for an LLM to make, and hosts that need it can still pass it.
 _WIRE_FORMS: dict[str, str] = {
     "https_url": "a publicly reachable https:// URL",
-    "asset_url": "an `asset://<ASSET_ID>` handle (Seedance / WAN video models only)",
+    "asset_url": "an `asset://<ASSET_ID>` handle (supported by eligible video models only)",
     # A region is not a file — but it *is* a reference into one, and it is subject to
     # exactly the two problems the annotation exists to solve: a host with its own
     # annotation layer must know which parameter to re-describe (it hands the model a
@@ -93,9 +93,8 @@ def media_field(
     Caps and mutual exclusions are the opposite shape: they are per-model (this schema is
     per-tool), so a host that reads them as enforceable would reject calls that are legal
     on the model actually being used. There is deliberately no ``max_items`` / ``excludes``
-    / ``requires`` key; such limits live in the prose as model-relative guidance, with
-    ``get_model_card`` / ``list_models`` as the authority and cfgpu's own validation as
-    the enforcement point.
+    / ``requires`` key; such limits are owned by adapter validation. The agent-facing
+    profile catalog is selection guidance, not a substitute for that enforcement.
 
     Every media slot is optional and defaults to ``None`` (kept here rather than at each
     call site so the eight declarations stay comparable; the schema-consistency test pins
@@ -177,8 +176,8 @@ class RegionSpec(BaseModel):
         default=None,
         description="`[width, height]` in pixels of the **original** image this region "
         "was drawn on (not the size of the canvas it was displayed at). Pass it whenever "
-        "you have it: models whose region field takes absolute pixels (e.g. "
-        "`wan2.7-image`) **require** it and reject the call without it, since a size can "
+        "you have it: models whose region field takes absolute pixels **require** it and "
+        "reject the call without it, since a size can "
         "never be guessed — a wrong one silently edits a different rectangle. Models "
         "that carry coordinates in the prompt do not need it, so omitting it narrows "
         "which model can serve the request rather than failing outright.",
@@ -298,7 +297,9 @@ def image_refs_field(image_slot: str) -> Any:
         f"image' yourself: ordinals shift whenever the image list is rebuilt, and a "
         f"sentence that hard-codes one then points at the wrong picture without any "
         f"error. Handles are also the qualified half of a `[[<handle>#<label>]]` region "
-        f"placeholder. Passed through untouched — never fetched, never sent upstream.",
+        f"placeholder. A `[[...]]` that matches no handle or label is refused before "
+        f"anything is sent, since it would otherwise reach the model as literal text. "
+        f"Passed through untouched — never fetched, never sent upstream.",
     )
 
 
@@ -385,6 +386,60 @@ def label_field() -> Any:
     )
 
 
+# ── Enum spelling ───────────────────────────────────────────────────────────
+#
+# Every closed vocabulary below is a case-sensitive Literal, and callers reach them by
+# copying from somewhere with its own conventions: image tiers are upper-case (``2K``)
+# and video tiers lower-case (``480p``), while a model card may spell a tier either way
+# (MiniMax H3's says ``480P``); a Chinese prompt writes ratios with a full-width colon
+# (``16：9``). Such a value carries no ambiguity, only the wrong spelling, so rejecting it
+# costs a round trip (or, behind a host's preflight, a failed approval card) to learn
+# nothing. ``Folded`` maps it to the canonical member before validation; anything that
+# matches no member still fails exactly as before, and the published enum is unchanged.
+# Only for vocabularies where folding cannot merge two members — voice ids are
+# deliberately not folded (some legitimately differ only by case or a trailing space).
+
+def fold_choice(value: Any, choices: "tuple[str, ...] | frozenset[str]") -> Any:
+    """``value`` spelled as its matching member of ``choices``, else ``value`` unchanged.
+
+    Public for the service layer, whose Mode B / CLI callers bypass these schemas.
+    """
+    if not isinstance(value, str):
+        return value
+    folded = value.strip().casefold()
+    for choice in choices:
+        if choice.casefold() == folded:
+            return choice
+    return value
+
+
+#: Separators written for "width:height" that mean nothing else in this position.
+_RATIO_SEPARATORS = str.maketrans({"：": ":", "/": ":", "x": ":", "X": ":", "×": ":", "*": ":"})
+
+
+def _fold_ratio(value: Any, choices: tuple[str, ...]) -> Any:
+    if isinstance(value, str):
+        compact = "".join(value.split()).translate(_RATIO_SEPARATORS)
+        if compact.count(":") == 1:
+            value = compact
+    return fold_choice(value, choices)
+
+
+def Folded(*choices: str, ratio: bool = False) -> Any:
+    """``Literal[choices]`` that first folds case, surrounding space (and, for ``ratio``,
+    the separator) onto the canonical member."""
+    fold = _fold_ratio if ratio else fold_choice
+    return Annotated[Literal[choices], BeforeValidator(lambda v: fold(v, choices))]
+
+
+_IMAGE_RESOLUTIONS = ("1K", "1.5K", "2K", "3K", "4K")
+_VIDEO_RESOLUTIONS = ("480p", "720p", "768p", "1080p", "2k", "4k")
+QualityTier = Folded("fast", "balanced", "best")
+AnalysisDepth = Folded("fast", "balanced", "thorough")
+VoiceGender = Folded("male", "female", "neutral")
+VoiceAge = Folded("child", "young", "middle_aged", "senior")
+
+
 # ── Validate-only (preflight) ───────────────────────────────────────────────
 #
 # A caller that gates generation behind human approval has an ordering problem this
@@ -430,20 +485,13 @@ def validate_only_field() -> Any:
     """Declare the preflight switch (kept in one place so the four copies can't drift)."""
     return Field(
         default=False,
-        description="Preflight only: resolve the model, validate every parameter against "
-        "it, and build the real upstream payload — then return **without sending it**. "
-        "No task is created, nothing is generated, nothing is billed. Returns "
-        "`{validated: true, model_used, task_type, is_async, cost_tier, speed_tier, "
+        description="When true, resolve the model, validate parameters, and build the "
+        "upstream payload without sending it. No task is created, nothing is generated, "
+        "and nothing is billed. Returns "
+        "`{validated: true, model_used, task_type, cost_tier, speed_tier, "
         "payload}` where `model_used` is the concrete model (so `model=\"auto\"` reports "
         "what routing picked) and `payload` is the exact request the real call would "
-        "send. On any problem it raises the identical error the real call would, so a "
-        "pass here means the parameters are accepted. **This flag belongs to the calling "
-        "host, not to the model writing the arguments.** A host that preflights on your "
-        "behalf assigns it itself and ignores whatever you put here, so a call you send "
-        "with `validate_only=true` may well execute for real and be billed — leave it "
-        "unset and never describe a call as \"just a validation\" unless you are the host "
-        "running your own approval loop. Not a preview of the *output* — it says the "
-        "request is well-formed, not that generation will succeed.",
+        "send. This does not preview the output or guarantee upstream success.",
     )
 
 
@@ -452,25 +500,23 @@ def validate_only_field() -> Any:
 class GenerateImageInput(BaseModel):
     """Generate image from text prompt using CFGPU models."""
 
-    prompt: str = Field(description="Text description of the image to generate")
+    prompt: str = Field(
+        description="Text description of the image to generate. Required by the tool; "
+        "pass an empty string for documented image-analysis modes such as Seedream 5.0 "
+        "layer decomposition, which works from one input image.",
+    )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'doubao-seedream-5-0-lite'), "
+        description="A single currently available model_id from list_model_profiles, "
         "a list of model_ids to restrict automatic selection to those candidates "
-        "(e.g. ['doubao-seedream-5-0-lite', 'cf-pro']), or 'auto' to choose from all models",
+        "or 'auto' to choose from all available models",
     )
-    aspect_ratio: Literal["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"] = Field(default="1:1")
-    resolution: Literal["1K", "1.5K", "2K", "3K", "4K"] = Field(
+    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", ratio=True) = Field(default="1:1")
+    resolution: Folded(*_IMAGE_RESOLUTIONS) = Field(
         default="2K",
-        description="Output resolution tier. The tiers a model actually offers differ "
-        "per family and asking for one outside it is rejected rather than quietly "
-        "downgraded (doubao-seedream-5-0-pro: 1K/1.5K/2K; 5-0-lite and 4.5: 2K/3K/4K; "
-        "4.0: 1K/2K/3K/4K). 1.5K exists only on doubao-seedream-5-0-pro, where it looks "
-        "better than 1K at a documented-equal price — but cfgpu sends exact pixels, "
-        "not the tier name, so 1.5K may bill at the higher band; use 1K if the rate "
-        "matters more than the exact aspect ratio. With model='auto' the tier "
-        "steers which model is picked; with an explicit model, validate_only reports "
-        "the nearest supported tier in corrected_args.",
+        description="Output resolution tier. Each model supports a subset of these "
+        "tiers; an unsupported explicit value is rejected. When model='auto', a chosen "
+        "tier limits selection to compatible models.",
     )
     reference_images: Optional[list[str]] = media_field(
         slot="Reference images that guide the generation. Also the images that `regions` "
@@ -483,8 +529,8 @@ class GenerateImageInput(BaseModel):
         slot="Regions of `reference_images` to edit, as boxes the user marked. Supply "
         "this only for a positional edit ('replace what is inside this box'); a "
         "whole-image edit ('make it watercolour') needs no regions. Accepted only by "
-        "models carrying the `region_edit` capability — check with list_models / "
-        "get_model_card; passing regions to a model without it is a hard error, never a "
+        "models whose profile lists `region_edit`; passing regions to a model without it "
+        "is a hard error, never a "
         "silent whole-image edit. Write every region you pass here into `prompt` as a "
         "`[[label]]` placeholder, in the clause it belongs to — that is where the region "
         "is rendered into the sentence (as coordinates, or as a phrase like '图2中框选的"
@@ -503,16 +549,12 @@ class GenerateImageInput(BaseModel):
     image_refs: Optional[list[str]] = image_refs_field("reference_images")
     n: int = Field(
         default=1,
-        description="Upper bound on how many images to generate as one related group "
-        "(组图 / sequential image generation). 1–15. **This is a ceiling, not a count**: "
-        "the model decides for itself whether to return a group at all and how many "
-        "images it contains, so asking for 4 may return 1, 2, 3, or 4 — fewer is a normal "
-        "outcome, not a failure, and no setting forces an exact number. Do not promise the "
-        "user a specific count before the result comes back. Only models with the "
-        "`multi_image_group` capability accept n>1 (the doubao-seedream-* line except "
-        "5-0-pro, which is single-image); models without that capability silently ignore "
-        "n and generate one image. On group models the input reference images plus the "
-        "generated images must total at most 15.",
+        description="How many images to generate. 1–15 globally; individual models can "
+        "have a lower limit. Some image models treat 1–10 as an output ceiling; "
+        "Seedream and Wan image-set models also treat it as a ceiling for a related group, so "
+        "they may return fewer images. Models that return one image ignore n; "
+        "list_model_profiles shows multi_image_group for the group models. On Seedream group models the input "
+        "reference images plus generated images must total at most 15.",
     )
 
     @field_validator("n")
@@ -523,12 +565,11 @@ class GenerateImageInput(BaseModel):
                 f"n={v} is out of range. Image group size must be between 1 and 15."
             )
         return v
-    quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    quality_tier: QualityTier = Field(default="balanced")
     watermark: bool = Field(
         default=False,
         description="Add an 'AI generated' watermark. Defaults to false and is sent "
-        "explicitly by models whose upstream API supports it. Not supported by "
-        "gpt-image-2 / nano-banana models (ignored there).",
+        "explicitly when supported by the selected model; otherwise it is ignored.",
     )
     wait: bool = Field(
         default=True,
@@ -542,7 +583,10 @@ class GenerateImageInput(BaseModel):
     model_specific: Optional[dict] = Field(
         default=None,
         description="Model-specific parameters passed directly to API, e.g. {'tools': [{'type': 'web_search'}]}. "
-        "Merged last, so it overrides typed fields like watermark.",
+        "Merged last, so it overrides typed fields like watermark. For Seedream 5.0 "
+        "Pro/Flash, this is a strict schema: ordinary image generation may set "
+        "size to a documented WIDTHxHEIGHT value (for example '2048x1024'), while "
+        "layer_decomposition=true accepts only size='auto', '1K', '1.5K', or '2K'.",
     )
     request_id: Optional[str] = Field(
         default=None,
@@ -577,13 +621,13 @@ class GenerateVideoInput(BaseModel):
     prompt: str = Field(
         default="",
         description="Text description of the video. Required for text-to-video; optional "
-        "for Seedance image/reference-driven tasks, including Seedance 2.5 audio-only input.",
+        "for model-supported image, reference, or audio-driven workflows.",
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'wan-video'), "
+        description="A single currently available model_id from list_model_profiles, "
         "a list of model_ids to restrict automatic selection to those candidates "
-        "(e.g. ['wan-video', 'wan-video-fast']), or 'auto' to choose from all models",
+        "or 'auto' to choose from all available models",
     )
     # All five slots accept `asset://<ASSET_ID>`: the Seedance / WAN request schema takes a
     # 素材 ID on `image_url.url`, `video_url.url` and `audio_url.url` alike (see
@@ -603,26 +647,25 @@ class GenerateVideoInput(BaseModel):
         accepts=["https_url", "asset_url"],
     )
     reference_images: Optional[list[str]] = media_field(
-        slot="Reference images that guide the generation (role=reference_image). Typically "
-        "up to 9 (up to 30 on Doubao Seedance 2.5), and on most models mutually exclusive "
-        "with first_frame / last_frame — call get_model_card for the chosen model's actual "
-        "limits.",
+        slot="Reference images that guide the generation. Model-specific counts and input "
+        "combinations are validated by MCP before execution.",
         role="image",
         arity="many",
         accepts=["https_url", "asset_url"],
     )
     reference_videos: Optional[list[str]] = media_field(
-        slot="Reference videos that guide the generation (role=reference_video). Support and "
-        "limits vary by model (the Seedance 2.0 family takes up to 3, Seedance 2.5 up to 10) "
-        "— call get_model_card for the chosen model.",
+        slot="Reference videos that guide the generation. Model-specific support and limits "
+        "are validated by MCP before execution.",
         role="video",
         arity="many",
         accepts=["https_url", "asset_url"],
     )
     reference_audios: Optional[list[str]] = media_field(
-        slot="Reference audio that guides the generation (role=reference_audio). Support, "
-        "limits, and whether audio may be supplied without an accompanying image or video "
-        "vary by model — call get_model_card for the chosen model.",
+        slot="Audio supplied to the generation. Models use it differently — as the "
+        "soundtrack the picture follows, as a voice sample, or as material the prompt "
+        "directs — so check inputs.reference_audios.role in list_model_profiles; only a "
+        "'driving' role keeps the track as heard. Model-specific combinations and limits "
+        "are validated by MCP before execution.",
         role="audio",
         arity="many",
         accepts=["https_url", "asset_url"],
@@ -630,11 +673,9 @@ class GenerateVideoInput(BaseModel):
     duration_seconds: Optional[int] = Field(
         default=None,
         description="Video duration in seconds. None uses the selected model's default "
-        "(-1 smart duration for Doubao Seedance 2.5; 5 seconds for existing models). "
-        "Explicit ranges: 4–30 (Doubao Seedance 2.5), 4–15 (WAN 2.0, "
-        "WAN 2.0 Fast, the Doubao Seedance 2.0 family, HappyHorse) or 4–12 (Doubao Seedance "
-        "1.5 Pro). Use -1 for a model-chosen 'smart' duration (supported by WAN 2.0 and the "
-        "Doubao Seedance family).",
+        "and explicit values must be 2–30 or -1. Each model has its own range. -1 "
+        "lets the model choose the length and is accepted only by the Seedance family; "
+        "for every other model, write the number of seconds explicitly.",
     )
 
     @field_validator("duration_seconds")
@@ -643,35 +684,33 @@ class GenerateVideoInput(BaseModel):
         # 30 is the fleet-wide maximum (Doubao Seedance 2.5); narrower per-model
         # ceilings are enforced by each adapter's supports(), so model="auto" can
         # route around them instead of hard-failing here.
-        if v is not None and v != -1 and not (4 <= v <= 30):
+        if v is not None and v != -1 and not (2 <= v <= 30):
             raise ValueError(
-                f"duration_seconds={v} is out of range. Use 4–30 seconds, or -1 for a "
-                f"model-chosen 'smart' duration (WAN 2.0 / Doubao Seedance). Note only "
-                f"Doubao Seedance 2.5 goes beyond 15 seconds; WAN 2.0 and Seedance 2.0 cap "
-                f"at 15, and Doubao Seedance 1.5 Pro at 12."
+                f"duration_seconds={v} is out of range. Use 2–30 seconds, or -1 for a "
+                f"model-chosen duration where supported by the selected model."
             )
         return v
-    aspect_ratio: Literal["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"] = Field(
+    negative_prompt: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="Content to exclude from the output. Supported by selected models; "
+        "compatible video models send it in their input envelope.",
+    )
+    aspect_ratio: Folded("16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive", ratio=True) = Field(
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",
     )
-    resolution: Optional[Literal["480p", "720p", "768p", "1080p", "2k", "4k"]] = Field(
+    resolution: Optional[Folded(*_VIDEO_RESOLUTIONS)] = Field(
         default=None,
         description="Video resolution. None (the default) uses the selected model's own "
         "default tier, so an omitted resolution never rules a model out of automatic "
         "selection — pass a value only when you actually need that tier. The tiers are a "
-        "fleet-wide vocabulary and each model offers a subset: Doubao Seedance 2.0 "
-        "supports 480p/720p/1080p/4k; Doubao Seedance 2.5 supports 480p/720p/1080p; "
-        "Doubao Seedance 2.0 fast and 2.0 mini support 480p/720p only. 1080p is also "
-        "supported by WAN 2.0, Doubao Seedance 1.5 Pro, and HappyHorse (HappyHorse's own "
-        "default is 1080p). WAN 2.0 Fast does NOT support 1080p for text-to-video (only "
-        "480p/720p; 1080p works only with an image/video input). HappyHorse does not "
-        "support 480p (minimum 720p). 768p and 2k belong to MiniMax H3 alone; it also "
-        "offers 480p and defaults to 768p. No other model accepts 768p or 2k. Call "
-        "get_model_card or list_models for the chosen model's set.",
+        "fleet-wide vocabulary and each model offers a subset. An unsupported explicit "
+        "tier is rejected; with model='auto', a chosen tier limits selection to "
+        "compatible models.",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
-    quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    quality_tier: QualityTier = Field(default="balanced")
     watermark: bool = Field(
         default=False,
         description="Add a watermark. Defaults to false and is sent explicitly by models "
@@ -680,7 +719,7 @@ class GenerateVideoInput(BaseModel):
     prompt_extend: bool = Field(
         default=True,
         description="Use an LLM to rewrite and expand the prompt before generation. "
-        "Used by WAN 2.6/2.7; disabling it reduces latency and preserves the original prompt.",
+        "When supported, disabling it reduces latency and preserves the original prompt.",
     )
     wait: bool = Field(
         default=True,
@@ -721,17 +760,16 @@ class GenerateAudioInput(BaseModel):
     text: str = Field(description="Text to synthesize into speech")
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'seed-tts-2.0'), "
+        description="A single currently available model_id from list_model_profiles, "
         "a list of model_ids to restrict automatic selection to those candidates "
-        "(e.g. ['MiniMax/speech-2.8-hd', 'MiniMax/speech-2.8-turbo']), or 'auto' to choose from all voice models",
+        "or 'auto' to choose from all available voice models",
     )
     voice: Optional[str] = Field(
         default=None,
-        description="Voice/speaker id. seed-tts-2-0 uses speaker ids like "
-        "'zh_female_xiaohe_uranus_bigtts'; MiniMax uses voice ids like 'male-qn-qingse'. "
-        "None falls back to each model's own default.",
+        description="Voice/speaker id supported by the selected model, copied verbatim from "
+        "the `voice` field of list_voice_profiles. None uses that model's default voice.",
     )
-    audio_format: Literal["mp3", "wav", "pcm", "flac"] = Field(
+    audio_format: Folded("mp3", "wav", "pcm", "flac") = Field(
         default="mp3", description="Output audio container/format"
     )
     sample_rate: Optional[int] = Field(
@@ -740,13 +778,13 @@ class GenerateAudioInput(BaseModel):
     )
     bitrate: Optional[int] = Field(
         default=None,
-        description="Output bitrate in bps (MiniMax only, e.g. 128000). None uses the model's default.",
+        description="Output bitrate in bps, when supported by the selected model. None uses its default.",
     )
-    speed: float = Field(default=1.0, description="Speech speed multiplier (MiniMax only)")
-    volume: float = Field(default=1.0, description="Speech volume multiplier (MiniMax only)")
-    pitch: int = Field(default=0, description="Speech pitch offset (MiniMax only)")
+    speed: float = Field(default=1.0, description="Speech speed multiplier, when supported by the selected model")
+    volume: float = Field(default=1.0, description="Speech volume multiplier, when supported by the selected model")
+    pitch: int = Field(default=0, description="Speech pitch offset, when supported by the selected model")
     emotion: Optional[
-        Literal[
+        Folded(
             "happy",
             "sad",
             "angry",
@@ -756,13 +794,14 @@ class GenerateAudioInput(BaseModel):
             "calm",
             "fluent",
             "whisper",
-        ]
+        )
     ] = Field(
         default=None,
-        description="MiniMax emotion control: happy, sad, angry, fearful, disgusted, "
-        "surprised, calm, fluent, or whisper. None lets the model infer emotion from text.",
+        description="Emotion control, when supported by the selected model: happy, sad, "
+        "angry, fearful, disgusted, surprised, calm, fluent, or whisper. None lets the "
+        "model infer emotion from text.",
     )
-    quality_tier: Literal["fast", "balanced", "best"] = Field(default="balanced")
+    quality_tier: QualityTier = Field(default="balanced")
     wait: bool = Field(
         default=True,
         description="Leave unset. The call waits for the task and returns the finished "
@@ -812,10 +851,17 @@ class UnderstandVisionInput(BaseModel):
     )
     model: str | list[str] = Field(
         default="auto",
-        description="A single model_id from list_models (e.g. 'qwen3.6-plus'), "
+        description="A single currently available model_id from list_model_profiles, "
         "a list of model_ids to restrict automatic selection to those candidates, "
         "or 'auto' to choose from all vision-understanding models. Prefer 'auto' "
         "unless a specific model is required — an unknown id falls back to auto.",
+    )
+    analysis_depth: AnalysisDepth = Field(
+        default="balanced",
+        description="Routing preference when model='auto'. 'fast' favors lower latency, "
+        "'balanced' is the default for ordinary visual analysis, and 'thorough' favors "
+        "the configured detailed-analysis default. Explicit model selection takes precedence; "
+        "media and capability requirements are always enforced.",
     )
     images: Optional[list[str]] = media_field(
         slot="Images to analyze (image understanding / reasoning). Multiple images are "
@@ -837,7 +883,7 @@ class UnderstandVisionInput(BaseModel):
     regions: Optional[list[RegionSpec]] = media_field(
         slot="Regions of `images` the user marked, so you can ask about a specific place "
         "rather than the whole picture ('what material is [[标记3]]?'). Accepted only by "
-        "models carrying the `region_understand` capability — passing regions to a model "
+        "models whose tasks include `region_understanding` — passing regions to a model "
         "without it is a hard error, never a silently whole-image answer. Reading a "
         "region and then describing it in words is also how you edit with a model that "
         "cannot take regions itself. Write every region you pass here into `prompt` as a "
@@ -915,12 +961,107 @@ class TaskWaitInput(BaseModel):
 
 
 class ListModelsInput(BaseModel):
-    """List available CFGPU models with their capabilities and identifiers."""
+    """List every model with is_async, for operations and debugging. Each row is the same model profile list_model_profiles returns; choose models with list_model_profiles, which filters by task and adds parameter templates."""
 
-    task_type: Optional[Literal["image", "video", "audio", "understand"]] = Field(
+    task_type: Optional[Folded("image", "video", "audio", "understand")] = Field(
         default=None,
         description="Filter by task type, None returns all models",
     )
+
+
+MediaType = Folded("image", "video", "audio", "understand")
+CapabilityMatch = Folded("all", "any")
+
+# Keep this closed enum in sync with capabilities/media_tasks.yaml. The matching
+# contract test deliberately fails if a new canonical task is not admitted to
+# every agent-facing schema.
+CanonicalTaskId = Literal[
+    "text_to_video",
+    "image_to_video",
+    "first_last_frame",
+    "reference_to_video",
+    "video_edit",
+    "video_extend",
+    "synced_audio_output",
+    "audio_driven_video",
+    "text_to_image",
+    "image_to_image",
+    "multi_image_fusion",
+    "multi_image_group",
+    "region_edit",
+    "layer_decomposition",
+    "transparent_background",
+    "text_to_speech",
+    "expressive_speech",
+    "pronunciation_control",
+    "image_understanding",
+    "video_understanding",
+    "region_understanding",
+]
+
+
+class ListModelProfilesInput(BaseModel):
+    """Find models by canonical capabilities and return agent-facing profiles only.
+
+    Video models also list ``inputs``: the material slots they accept, item limits,
+    and how they use a supplied audio track (``role``).
+    """
+
+    media_type: Optional[MediaType] = Field(
+        default=None,
+        description="Filter by media task type, None returns the complete profile catalog",
+    )
+    required_tasks: Optional[list[CanonicalTaskId]] = Field(
+        default=None,
+        min_length=1,
+        description="Canonical capabilities the model must support, such as ['video_edit']. "
+        "When set, matching models may include task_parameters: copy its call_template "
+        "into the generation call, then add concrete media URLs and an optional creative "
+        "prompt. This is required for feature modes such as layer_decomposition, whose "
+        "API switch cannot be inferred from the task name.",
+    )
+    match: CapabilityMatch = Field(
+        default="all",
+        description="'all' requires every capability; 'any' returns models supporting at least one",
+    )
+
+
+class ListVoiceProfilesInput(BaseModel):
+    """Find voices; copy result.voice to generate_audio.voice, never its display label."""
+
+    model_ids: Optional[list[str]] = Field(
+        default=None,
+        min_length=1,
+        description="Optional public audio model_ids to restrict compatible voices",
+    )
+    language: Optional[str] = Field(
+        default=None,
+        description="Language or dialect in any common spelling or code, such as '中文', "
+        "'English', '英文', '粤语', or 'ja'. 'English' also covers American and British "
+        "English voices. An unrecognised spelling is rejected with the accepted list",
+    )
+    gender: Optional[VoiceGender] = Field(
+        default=None,
+        description="Voice gender; 'neutral' is for non-human voices. Voices whose gender "
+        "has not been catalogued are left out when this is set",
+    )
+    age: Optional[VoiceAge] = Field(
+        default=None,
+        description="Apparent age of the voice: 'child', 'young' (young adult), "
+        "'middle_aged', or 'senior'",
+    )
+    query: Optional[str] = Field(
+        default=None,
+        description=(
+            "Keyword intent matched against the voice name, handle, tags, description, "
+            "accent, and language; "
+            "separate terms with spaces to require each (for example, '温柔 知性'). "
+            "A term that names a gender, such as '男声' or 'female', filters like `gender`. "
+            "In each result, only 'voice' is valid for generate_audio.voice; 'label' is display-only"
+        ),
+    )
+    limit: int = Field(default=20, ge=1, le=100, description="Maximum voices per page (1-100)")
+    cursor: int = Field(default=0, ge=0, description="Offset returned as next_cursor by the previous page")
 
 
 class GetModelCardInput(BaseModel):
@@ -1099,6 +1240,40 @@ def annotate_artifact(result: Any) -> Any:
     return result
 
 
+def normalize_image_items_urls(result: dict[str, Any]) -> dict[str, Any]:
+    """Use legacy layer ``image_items`` as a URL fallback, then hide it.
+
+    Seedream layer decomposition now exposes only the compact, ordered ``urls`` list.
+    Older task rows (and a few upstream response variants) may instead carry an empty
+    ``urls`` plus detailed ``image_items``. Preserve the artifact in that case by
+    extracting its URLs in z-order; regardless of whether the fallback was needed,
+    remove the verbose implementation metadata before it reaches an agent.
+    """
+    items = result.get("image_items")
+    if not result.get("urls") and isinstance(items, list):
+        indexed_items = [
+            (index, item)
+            for index, item in enumerate(items)
+            if isinstance(item, dict)
+        ]
+        indexed_items.sort(
+            key=lambda pair: (
+                pair[1]["z_index"]
+                if isinstance(pair[1].get("z_index"), int)
+                else pair[0]
+            )
+        )
+        urls = [
+            item["url"]
+            for _, item in indexed_items
+            if isinstance(item.get("url"), str) and item["url"]
+        ]
+        if urls:
+            result["urls"] = urls
+    result.pop("image_items", None)
+    return result
+
+
 def lean_result(result: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     """Build the ``return_metadata=False`` result: the artifact, without the metadata.
 
@@ -1111,6 +1286,7 @@ def lean_result(result: dict[str, Any], payload: dict[str, Any]) -> dict[str, An
     surfaced regardless, matching ``NormalizedResult.to_dict``'s split of artifact vs.
     metadata. Shared by all three generate services so the shape cannot drift per tool.
     """
+    result = normalize_image_items_urls(result)
     lean: dict[str, Any] = {
         "urls": result.get("urls", []),
         "expires_at": result.get("expires_at"),
@@ -1178,6 +1354,8 @@ def stamp_echo(
     the handle along with the rest of the metadata, and adding one back here would make
     ``row_id`` a way to defeat that from a different file.
     """
+    if isinstance(result, dict):
+        normalize_image_items_urls(result)
     if not isinstance(result, dict):
         return result
     if request_id:
@@ -1250,6 +1428,8 @@ _REGISTRY: list[tuple[str, type[BaseModel]]] = [
     ("task_status",     TaskStatusInput),
     ("task_wait",       TaskWaitInput),
     ("list_models",     ListModelsInput),
+    ("list_model_profiles", ListModelProfilesInput),
+    ("list_voice_profiles", ListVoiceProfilesInput),
     ("get_model_card",  GetModelCardInput),
 ]
 

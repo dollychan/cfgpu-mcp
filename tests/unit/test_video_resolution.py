@@ -20,12 +20,12 @@ field over.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import get_args
 
 import pytest
 
 from cfgpu_mcp.adapters.base import _RESOLUTION_ORDER
 from cfgpu_mcp.adapters.registry import AdapterRegistry
+from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.router import ModelRouter
 from cfgpu_mcp.task_manager import validate_request
 from cfgpu_mcp.tool_registry import GenerateVideoInput
@@ -49,9 +49,10 @@ def _video_adapters(registry: AdapterRegistry):
 
 
 def _fleet_enum() -> set[str]:
-    # Optional[Literal[...]] — get_args yields (Literal[...], NoneType).
-    annotation = GenerateVideoInput.model_fields["resolution"].annotation
-    return set(get_args(get_args(annotation)[0]))
+    # Read the published schema — the enum callers actually see — rather than the
+    # annotation, which wraps the Literal in a spelling-folding Annotated.
+    prop = GenerateVideoInput.model_json_schema()["properties"]["resolution"]
+    return {v for branch in prop["anyOf"] for v in branch.get("enum", [])}
 
 
 # ── the enum and the ordering table ──────────────────────────────────────────
@@ -199,3 +200,50 @@ def test_validate_only_reports_no_correction_for_an_omitted_resolution(registry)
         adapter = ModelRouter(registry).resolve(req, for_validation=True)
 
         assert "resolution" not in validate_request(adapter, req)["corrected_args"]
+
+
+# ── Tier spelling: case is folded, not rejected ─────────────────────────────
+
+
+@pytest.mark.parametrize("asked,canonical", [("480P", "480p"), ("2K", "2k"), (" 1080P ", "1080p"), ("4K", "4k")])
+def test_video_resolution_case_is_folded_to_the_canonical_tier(asked, canonical):
+    """MiniMax H3's own card spells ``480P``; a caller copying it must not be refused."""
+    assert GenerateVideoInput(prompt="x", resolution=asked).resolution == canonical
+
+
+@pytest.mark.parametrize("asked,canonical", [("2k", "2K"), ("1.5k", "1.5K"), ("4k", "4K")])
+def test_image_resolution_case_is_folded_to_the_canonical_tier(asked, canonical):
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+
+    assert GenerateImageInput(prompt="x", resolution=asked).resolution == canonical
+
+
+def test_an_unknown_tier_is_still_rejected():
+    with pytest.raises(ValueError):
+        GenerateVideoInput(prompt="x", resolution="360p")
+
+
+def test_upper_case_tier_passes_the_minimax_h3_preflight(registry):
+    """The production report: ``resolution="480P"`` failed validate_only at the schema."""
+    req = GenerateVideoInput(
+        prompt="x", model="MiniMax-H3", aspect_ratio="16:9", resolution="480P", duration_seconds=5
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    result = validate_request(adapter, req)
+
+    assert result["validated"] is True
+    assert result["payload"]["resolution"] == "480P"
+
+
+def test_minimax_h3_480p_four_seconds_fails_preflight(registry):
+    """The request must fail before any task row or upstream POST is possible."""
+    req = GenerateVideoInput(
+        prompt="x", model="MiniMax-H3", aspect_ratio="16:9", resolution="480P", duration_seconds=4
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    with pytest.raises(CFGPUError, match="480p.*最小为 5 秒") as exc:
+        validate_request(adapter, req)
+
+    assert exc.value.error_type == "invalid_params"

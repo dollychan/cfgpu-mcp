@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.adapters.base import (
+    ModelAdapter,
+    _default_expires_at,
+    frames_vs_references_reason,
+    register_python_adapter,
+)
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -23,13 +28,6 @@ if TYPE_CHECKING:
 #: unsupported ratio to its API's 16:9 default); ``validation_corrections``
 #: reports the substitution so a preflight shows what will actually be sent.
 _T2V_DEFAULT_RATIO = "16:9"
-
-_REFERENCE_LIMITS = (
-    ("reference_images", 9),
-    ("reference_videos", 3),
-    ("reference_audios", 3),
-)
-
 
 @register_python_adapter
 class MinimaxH3Adapter(ModelAdapter):
@@ -218,10 +216,19 @@ class MinimaxH3Adapter(ModelAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
 
+        # CFGPU's MiniMax H3 route rejects a four-second 480P submission before it
+        # creates an upstream task ("480P 分辨率 duration 最小为 5"). Keep that
+        # known, tier-specific rule here so validate_only and a billed request agree,
+        # rather than creating a local failed row with no upstream_task_id. Do not
+        # generalize this to 768P / 2K without evidence that those tiers share it.
+        if (
+            self.resolve_resolution(req) == "480p"
+            and self.resolve_duration_seconds(req) < 5
+        ):
+            return False, "MiniMax-H3 在 480p 分辨率下 duration_seconds 最小为 5 秒"
+
         if not req.prompt.strip():
             return False, f"{self.model_name} requires at least one non-empty text prompt"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.model_name} requires an explicit duration from 4 to 15 seconds"
 
         has_frames = bool(req.first_frame or req.last_frame)
         has_references = bool(
@@ -230,14 +237,8 @@ class MinimaxH3Adapter(ModelAdapter):
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
         if has_frames and has_references:
-            return False, (
-                "first_frame / last_frame are mutually exclusive with "
-                "reference_images / reference_videos / reference_audios"
-            )
-        for name, limit in _REFERENCE_LIMITS:
-            values = getattr(req, name)
-            if values and len(values) > limit:
-                return False, f"{self.model_name} accepts at most {limit} {name} (got {len(values)})"
+            return False, frames_vs_references_reason(self.model_name, req)
+        # Reference counts: the base class, from `inputs:` in adapter.yaml.
 
         # No aspect_ratio refusal here: `adaptive` on text-to-video is the schema
         # default, substituted in build_payload rather than rejected. Every other

@@ -7,14 +7,21 @@ endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs: {}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_video
-  - image_to_video
-  - multi_modal_reference
 
 cost_tier: 2
 speed_tier: 3
-resolutions: [720p, 1080p]
+resolutions: [480p, 720p, 1080p]
+default_resolution: 1080p
+min_duration_seconds: 3
 
 poll_config:
   base_interval: 5

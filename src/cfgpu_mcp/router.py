@@ -27,7 +27,7 @@ _QUALITY_RANK_STEP = 11
 
 
 def selection_key(
-    score: int, adapter: "ModelAdapter", quality_tier: str
+    score: int, adapter: "ModelAdapter", routing_tier: str, *, declared_defaults: frozenset[str] | None = None
 ) -> tuple[int, int, int, str]:
     """Ordering for ``model="auto"``: declared default, then score, preference, name.
 
@@ -56,12 +56,12 @@ def selection_key(
     The trailing ``adapter_id`` keeps selection deterministic and independent of
     registry/filesystem iteration order.
 
-    ``quality_tier`` is required rather than defaulted: it now changes the *first*
-    key, and a caller that omitted it would get a silently wrong ordering that
-    still looks like a valid ranking.
+    ``routing_tier`` is either a generation ``quality_tier`` or a vision
+    ``analysis_depth``. ``declared_defaults`` lets the latter use its separate
+    adapter declaration; absent means the generation ``default_for`` declaration.
     """
     return (
-        0 if quality_tier in adapter.default_for else 1,
+        0 if routing_tier in (adapter.default_for if declared_defaults is None else declared_defaults) else 1,
         -score,
         -adapter.auto_priority,
         adapter.adapter_id,
@@ -158,42 +158,48 @@ class ModelRouter:
         candidates: list["ModelAdapter"] = self._registry.list_all(task_type=task_type)
 
         if allowed:
-            allowed_set = set(allowed)
-            known = (
-                {a.model_name for a in candidates}
-                | {a.adapter_id for a in candidates}
-                | {a.cfgpu_model_id for a in candidates}
-            )
-            unknown = allowed_set - known
+            # Resolved through the registry, so a candidate list accepts exactly the
+            # spellings a single `model=` does (including case/space variants).
+            chosen: set[int] = set()
+            unknown: set[str] = set()
+            for name in allowed:
+                try:
+                    adapter = self._registry.get(name)
+                except KeyError:
+                    adapter = None
+                if adapter is None or adapter not in candidates:
+                    unknown.add(name)
+                else:
+                    chosen.add(id(adapter))
             if unknown:
                 raise CFGPUError(
                     error_type="invalid_params",
                     user_message=(
                         f"未知或不支持当前任务类型({task_type})的 model: "
-                        f"{sorted(unknown)}。请使用 list_models 查看可用 model_id。"
+                        f"{sorted(unknown)}。请改用当前可用、task_type 为 {task_type} 的 model_id。"
                     ),
                     original={"model": allowed},
                 )
-            candidates = [
-                a
-                for a in candidates
-                if a.model_name in allowed_set
-                or a.adapter_id in allowed_set
-                or a.cfgpu_model_id in allowed_set
-            ]
+            candidates = [a for a in candidates if id(a) in chosen]
 
         scored: list[tuple[int, "ModelAdapter"]] = []
+        corrected: list[tuple[int, "ModelAdapter"]] = []
         for adapter in candidates:
-            candidate_req = req
-            if for_validation:
+            if adapter.supports(req)[0]:
+                scored.append((self._score(adapter, req), adapter))
+            elif for_validation:
+                # validate_only may route to a model that needs a correction (a lower
+                # resolution, the nearest ratio) — but only when no model takes the
+                # request as written. Otherwise the preflight rewrites the caller's
+                # values while another model would have honoured them, and the billed
+                # call without corrected_args picks that other model.
                 corrections = adapter.validation_corrections(req)
                 if corrections:
                     candidate_req = req.model_copy(update=corrections)
-            ok, _ = adapter.supports(candidate_req)
-            if not ok:
-                continue
-            score = self._score(adapter, candidate_req)
-            scored.append((score, adapter))
+                    if adapter.supports(candidate_req)[0]:
+                        corrected.append((self._score(adapter, candidate_req), adapter))
+        if not scored:
+            scored = corrected
 
         if not scored:
             raise CFGPUError(
@@ -201,10 +207,19 @@ class ModelRouter:
                 user_message="没有可用的模型支持当前请求，请检查参数或手动指定 model。",
                 original={},
             )
-        # A model declared the default for this quality tier wins outright; failing
-        # that, highest score. See selection_key for the full ordering.
-        quality_tier = getattr(req, "quality_tier", "balanced")
-        scored.sort(key=lambda x: selection_key(x[0], x[1], quality_tier))
+        # A declared default wins outright among compatible candidates. Vision uses
+        # its own analysis-depth declarations; generation keeps quality-tier defaults.
+        if isinstance(req, UnderstandVisionInput):
+            analysis_depth = req.analysis_depth
+            scored.sort(
+                key=lambda x: selection_key(
+                    x[0], x[1], analysis_depth,
+                    declared_defaults=x[1].analysis_depth_default_for,
+                )
+            )
+        else:
+            quality_tier = req.quality_tier
+            scored.sort(key=lambda x: selection_key(x[0], x[1], quality_tier))
         return scored[0][1]
 
     def _score(
@@ -232,31 +247,41 @@ class ModelRouter:
         # NOTE: auto_priority is deliberately *not* added here — it is a tie-break
         # applied after the score, see selection_key.
 
-        # Reference media capability bonus
+        # Preferences between models that all passed supports(). They read the declared
+        # tasks and inputs — never a separate capability vocabulary — and only order
+        # candidates: anything a model cannot serve was already filtered out.
         if isinstance(req, GenerateImageInput):
             if req.reference_images and (
-                "multi_image_fusion" in adapter.capabilities
-                or "multi_image_group" in adapter.capabilities
+                "multi_image_fusion" in adapter.tasks or "multi_image_group" in adapter.tasks
             ):
                 score += 3
-            # n > 1 asks for a 组图. A model without the capability does not fail — n is
-            # a compatibility hint it silently ignores and it returns a single image —
-            # so nothing downstream can catch a mismatch here. That makes this a real
-            # preference rather than a tie-break, at the same magnitude as the fusion
-            # bonus. (It matters now that auto_priority pins 5.0 Pro, the one Seedream
-            # *without* the capability, as the default pick.)
-            if req.n > 1 and "multi_image_group" in adapter.capabilities:
+            # n > 1 asks for more than one image. A model that does not honour n does not
+            # fail — n is a compatibility hint it silently ignores and it returns a single
+            # image — so nothing downstream can catch a mismatch here. That makes this a
+            # real preference rather than a tie-break, at the same magnitude as the fusion
+            # bonus. "Honours n" is the 组图 task (Seedream / 万相: a coherent series) or a
+            # declared max_images_per_request above 1 (CF Image 2: independent images,
+            # which is not the multi_image_group task).
+            if req.n > 1 and (
+                "multi_image_group" in adapter.tasks or (adapter.max_images_per_request or 1) > 1
+            ):
                 score += 3
-            # Region editing does not need to be *filtered* for here — supports() already
-            # rejects every model without the capability, so a regions request cannot
-            # reach a model that would ignore it. This is only a tie-break preference,
-            # same magnitude as the fusion bonus above.
-            if req.regions and "region_edit" in adapter.capabilities:
-                score += 3
+            # No region preference: supports() already rejects every model without
+            # region_edit, so every surviving candidate has it and a bonus orders nothing.
         elif isinstance(req, GenerateVideoInput):
-            if req.reference_images and "multi_modal_reference" in adapter.capabilities:
+            if req.reference_images and "reference_to_video" in adapter.tasks:
                 score += 3
-            if (req.reference_videos or req.reference_audios) and "multi_modal_reference" in adapter.capabilities:
+            # A reference video is ambiguous between "material to draw on" and "the video
+            # to edit or continue" (wan2.7-i2v accepts one as its first_clip and extends
+            # it). Without an edit/extend signal the plain reading is reference, so prefer
+            # models whose declared video role is `reference`.
+            videos = (adapter.inputs or {}).get("reference_videos")
+            if req.reference_videos and videos is not None and videos.role == "reference":
+                score += 3
+            # Audio intent (soundtrack vs. material) cannot be read from the request, so this
+            # keeps the reference-family preference the old capability encoded; an agent
+            # that needs the track kept selects an audio_driven_video model explicitly.
+            elif req.reference_audios and "reference_to_video" in adapter.tasks:
                 score += 3
 
         # Chinese prompt preference (image only — seedream is an image family)

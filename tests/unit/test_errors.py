@@ -84,24 +84,27 @@ def test_outcome_unknown_is_absent_unless_explicitly_set():
 
 # ── card.md hint in to_tool_result_dict ──────────────────────────────────────
 
-def test_card_hint_for_invalid_params():
+def test_agent_safe_remedy_for_invalid_params():
     err = CFGPUError(error_type="invalid_params", user_message="参数错误", model_id="wan-2-0")
     d = err.to_tool_result_dict()
-    assert "get_model_card" in d["message"]
-    assert "wan-2-0" in d["message"]
+    assert "重新选择支持该任务的模型" in d["message"]
+    assert "get_model_card" not in d["message"]
+    assert d["model_id"] == "wan-2-0"
     assert d["model_id"] == "wan-2-0"
 
 
-def test_card_hint_for_model_unavailable():
+def test_agent_safe_remedy_for_model_unavailable():
     err = CFGPUError(error_type="model_unavailable", user_message="模型不可用", model_id="gpt-image-2")
     d = err.to_tool_result_dict()
-    assert "get_model_card" in d["message"]
+    assert "重新选择支持该任务的模型" in d["message"]
+    assert "get_model_card" not in d["message"]
 
 
-def test_card_hint_for_content_blocked():
+def test_agent_safe_remedy_for_content_blocked():
     err = CFGPUError(error_type="content_blocked", user_message="内容被拦截", model_id="doubao-seedream-5-0-lite")
     d = err.to_tool_result_dict()
-    assert "get_model_card" in d["message"]
+    assert "重新选择支持该任务的模型" in d["message"]
+    assert "get_model_card" not in d["message"]
 
 
 def test_no_card_hint_for_auth():
@@ -160,12 +163,58 @@ def test_card_hint_suppressed_when_explicitly_disabled():
 
 
 def test_card_hint_defaults_to_error_type_behaviour():
-    """Omitting the flag preserves the existing per-error_type default exactly."""
+    """The default remedy is agent-safe and does not require a model card."""
     err = CFGPUError(error_type="invalid_params", user_message="参数错误", model_id="wan-2-0")
-    assert "get_model_card" in err.to_tool_result_dict()["message"]
+    assert "重新选择支持该任务的模型" in err.to_tool_result_dict()["message"]
+    assert "get_model_card" not in err.to_tool_result_dict()["message"]
 
 
 def test_card_hint_true_does_not_force_hint_on_unhinted_type():
     """The flag can only suppress; it never adds a hint to a type that has none."""
     err = CFGPUError(error_type="auth", user_message="Token 无效", model_id="wan-2-0", card_hint=True)
     assert "get_model_card" not in err.to_tool_result_dict()["message"]
+
+
+def test_runtime_messages_name_no_model_lookup_tool():
+    """Refusals and remedies name the data (a task ID, a field), never a lookup tool.
+
+    Which tools exist is the host's choice (``disabled_tools`` — production disables
+    ``get_model_card``), and Mode B / the CLI have other names or none, so a message
+    sending the caller to a tool by name can point at one that is not there. Scans
+    every string literal outside docstrings in the modules that raise.
+    """
+    import ast
+    from pathlib import Path
+
+    import cfgpu_mcp
+
+    lookup_tools = ("get_model_card", "list_models", "list_model_profiles", "list_voice_profiles")
+    root = Path(cfgpu_mcp.__file__).parent
+    files = [
+        *sorted((root / "adapters").glob("*.py")),
+        root / "router.py",
+        root / "errors.py",
+        root / "task_manager.py",
+        *sorted((root / "service").glob("*.py")),
+        *sorted((root / "client").glob("*.py")),
+    ]
+    offenders = []
+    for path in files:
+        tree = ast.parse(path.read_text())
+        docstrings = {
+            id(node.body[0].value)
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.body
+            and isinstance(node.body[0], ast.Expr)
+            and isinstance(node.body[0].value, ast.Constant)
+        }
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and id(node) not in docstrings
+                and any(tool in node.value for tool in lookup_tools)
+            ):
+                offenders.append(f"{path.relative_to(root)}:{node.lineno}: {node.value[:80]!r}")
+    assert not offenders, "\n".join(offenders)

@@ -4,7 +4,7 @@ Three properties are load-bearing here and each has its own section below.
 
 1. **Coordinates are never invented and never dropped.** A box that goes missing does
    not raise — it produces a whole-image edit that looks plausible and gets billed. So
-   every path that could drop one is pinned: a model without the capability refuses, an
+   every path that could drop one is pinned: a model without the task refuses, an
    unreferenced region falls into the structured suffix, and an ambiguous placeholder
    fails closed rather than guessing an image.
 
@@ -16,13 +16,21 @@ Three properties are load-bearing here and each has its own section below.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
-from cfgpu_mcp.adapters.regions import GRID, format_bbox, render_prompt, to_grid, to_pixels
+from cfgpu_mcp.adapters.regions import (
+    GRID,
+    format_bbox,
+    render_prompt,
+    resolve_image_refs,
+    to_grid,
+    to_pixels,
+)
 from cfgpu_mcp.adapters.seedream import SeedreamAdapter
 from cfgpu_mcp.adapters.vision_chat import QwenVisionAdapter
 from cfgpu_mcp.errors import CFGPUError
@@ -198,11 +206,99 @@ def test_a_token_that_is_both_a_handle_and_a_label_fails_closed():
         render_prompt("改[[m_a1]]", regions, ["m_a1"], include_names=False)
 
 
-def test_an_unmatched_placeholder_is_left_alone():
-    """Zero hits is not an error: the caller may simply not be using placeholders, and
-    the region still reaches the model through the suffix."""
-    out = render_prompt("改[[标记9]]", [_region(label="标记1")], ["m_a1"], include_names=False)
-    assert "[[标记9]]" in out
+def test_an_unmatched_placeholder_fails_closed_listing_what_would_resolve():
+    """``[[...]]`` never occurs in prose, so a leftover one is a handle or label that did
+    not resolve. Sent as-is, the model reads it as literal text and the call is billed."""
+    with pytest.raises(CFGPUError) as exc:
+        render_prompt("改[[标记9]]", [_region(label="标记1")], ["m_a1"], include_names=False)
+    assert exc.value.error_type == "invalid_params"
+    assert "[[m_a1]]" in exc.value.user_message
+    assert "[[标记1]]" in exc.value.user_message
+
+
+def test_a_qualified_placeholder_with_an_unknown_handle_fails_closed():
+    with pytest.raises(CFGPUError, match=r"\[\[m_zz#标记1\]\]"):
+        render_prompt(
+            "改[[m_zz#标记1]]", [_region(label="标记1")], ["m_a1"], include_names=False
+        )
+
+
+# ── whole-image handles without regions, on every model ─────────────────────
+
+
+def _image_models():
+    return _registry().list_all(task_type="image")
+
+
+def test_every_image_model_resolves_handles_without_regions():
+    """The ``image_refs`` contract is per-tool, so it must hold on every model — not only
+    on the three that read regions, and not only when ``regions`` is also passed. This is
+    the case that shipped ``[[own]]`` to cf-image-2 verbatim."""
+    checked = []
+    for adapter in _image_models():
+        req = GenerateImageInput(
+            prompt="以[[own]]的服饰为准，舞姿参照[[pose]]",
+            model=adapter.model_name,
+            reference_images=["https://example.com/a.jpg", "https://example.com/b.jpg"],
+            image_refs=["own", "pose"],
+            validate_only=True,
+        )
+        if not adapter.supports(req)[0]:
+            continue  # e.g. a text-only model; its refusal is not this test's subject
+        payload = validate_request(adapter, req)["payload"]
+        text = json.dumps(payload, ensure_ascii=False)
+        assert "[[" not in text, adapter.model_name
+        assert "以图1的服饰为准，舞姿参照图2" in text, adapter.model_name
+        checked.append(adapter.model_name)
+    assert "cf-image-2" in checked
+
+
+def test_the_same_holds_for_understand_vision():
+    req = UnderstandVisionInput(
+        prompt="比较[[a]]和[[b]]",
+        images=["https://example.com/a.jpg", "https://example.com/b.jpg"],
+        image_refs=["a", "b"],
+    )
+    assert resolve_image_refs(req).prompt == "比较图1和图2"
+
+
+def test_a_handle_without_image_refs_is_refused_before_billing():
+    req = GenerateImageInput(
+        prompt="以[[own]]为准",
+        model="cf-image-2",
+        reference_images=["https://example.com/a.jpg"],
+        validate_only=True,
+    )
+    adapter = ModelRouter(_registry()).resolve(req, for_validation=True)
+    with pytest.raises(CFGPUError, match="image_refs"):
+        validate_request(adapter, req)
+
+
+def test_a_prompt_without_placeholders_is_the_same_object():
+    req = GenerateImageInput(prompt="一只猫", reference_images=["https://example.com/a.jpg"])
+    assert resolve_image_refs(req) is req
+
+
+@pytest.mark.asyncio
+async def test_create_refuses_an_unresolved_handle_before_writing_a_row():
+    from unittest.mock import AsyncMock, MagicMock
+
+    from cfgpu_mcp.task_manager import TaskManager
+
+    repo = MagicMock()
+    repo.insert_task = AsyncMock()
+    client = MagicMock()
+    client.post = AsyncMock()
+    tm = TaskManager(lambda _adapter: client, repo)
+    req = GenerateImageInput(
+        prompt="以[[nope]]为准",
+        reference_images=["https://example.com/a.jpg"],
+        image_refs=["own"],
+    )
+    with pytest.raises(CFGPUError):
+        await tm.create(_registry().get("cf-image-2"), req)
+    repo.insert_task.assert_not_awaited()
+    client.post.assert_not_called()
 
 
 def test_an_unreferenced_region_is_appended_never_dropped():
@@ -316,7 +412,7 @@ def test_no_regions_leaves_the_prompt_byte_identical():
     assert text == "描述这张图"
 
 
-# ── the capability gate ─────────────────────────────────────────────────────
+# ── the task gate ─────────────────────────────────────────────────────────
 
 
 def test_a_model_without_region_edit_refuses():
@@ -360,7 +456,7 @@ def test_seedream_pro_has_no_region_count_ceiling():
     """Explicitly unlimited, not merely unspecified: an invented cap would reject calls
     the model accepts."""
     adapter = _pro()
-    assert adapter.max_regions_per_image is None
+    assert adapter.inputs["regions"].max_per_image is None
     req = GenerateImageInput(
         prompt="x",
         reference_images=["https://example.com/a.jpg"],
@@ -370,8 +466,11 @@ def test_seedream_pro_has_no_region_count_ceiling():
 
 
 def test_a_declared_per_image_ceiling_is_enforced_per_image():
+    from cfgpu_mcp.adapters.inputs import InputSlot
+
     adapter = _pro()
-    adapter.max_regions_per_image = 2
+    original = adapter.inputs
+    adapter.inputs = {**original, "regions": InputSlot(max_per_image=2)}
     try:
         req = GenerateImageInput(
             prompt="x",
@@ -387,16 +486,16 @@ def test_a_declared_per_image_ceiling_is_enforced_per_image():
         assert not ok
         assert "image_index=0" in reason and "3" in reason
     finally:
-        adapter.max_regions_per_image = None
+        adapter.inputs = original
 
 
-def test_vision_uses_its_own_capability_name():
+def test_vision_uses_its_own_task_name():
     """Reading a marked region does not imply being able to edit by one, so a single
-    shared capability would let a reader be routed an editing job."""
-    assert "region_understand" in _qwen().capabilities
-    assert "region_edit" not in _qwen().capabilities
-    assert "region_edit" in _pro().capabilities
-    assert "region_understand" not in _pro().capabilities
+    shared task would let a reader be routed an editing job."""
+    assert "region_understanding" in _qwen().tasks
+    assert "region_edit" not in _qwen().tasks
+    assert "region_edit" in _pro().tasks
+    assert "region_understanding" not in _pro().tasks
 
 
 # ── structural validation (schema layer) ────────────────────────────────────
@@ -469,7 +568,7 @@ def test_auto_routes_a_regions_request_to_a_region_model():
         prompt="改这里", reference_images=["https://example.com/a.jpg"], regions=[_region()]
     )
     adapter = ModelRouter(_registry()).resolve(req)
-    assert "region_edit" in adapter.capabilities
+    assert "region_edit" in adapter.tasks
 
 
 def test_naming_a_model_that_cannot_take_regions_is_a_hard_error():
@@ -520,11 +619,15 @@ def test_regions_and_group_images_are_mutually_exclusive():
     picture being edited.
 
     Unreachable through any shipped model — the only region editor is Pro, and Pro has
-    no 组图 capability, so it ignores n. Exercised here on a hypothetical group-capable
+    no 组图 task, so it ignores n. Exercised here on a hypothetical group-capable
     region model so that combination cannot start passing silently the day one exists.
     """
+    from cfgpu_mcp.adapters.inputs import InputSlot
+
     adapter = _lite()
-    adapter.capabilities = adapter.capabilities | {"region_edit"}
+    original, original_inputs = adapter.tasks, adapter.inputs
+    adapter.tasks = original + ("region_edit",)
+    adapter.inputs = {**original_inputs, "regions": InputSlot()}
     try:
         req = GenerateImageInput(
             prompt="x",
@@ -536,7 +639,7 @@ def test_regions_and_group_images_are_mutually_exclusive():
         assert not ok
         assert "组图" in reason
     finally:
-        adapter.capabilities = adapter.capabilities - {"region_edit"}
+        adapter.tasks, adapter.inputs = original, original_inputs
 
 
 def test_thousandth_coordinates_do_not_drift_a_cell():

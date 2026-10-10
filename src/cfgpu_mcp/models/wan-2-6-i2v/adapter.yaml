@@ -5,13 +5,30 @@ model_name: wan2.6-i2v
 
 task_type: video
 resolutions: [720p, 1080p]
+default_resolution: 1080p
+min_duration_seconds: 2
 endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  first_frame: {}
+  # input.audio_url: the picture follows this track (e.g. a character raps to it).
+  reference_audios: {max: 1, role: driving, standalone: false}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - image_to_video
-  - audio_generate
+  - audio_driven_video
+  - synced_audio_output
+
+# Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): without audio_url the model dubs automatically; `audio: false` is wan2.6-i2v-flash only.
+outputs:
+  audio: always
 
 cost_tier: 3
 speed_tier: 2

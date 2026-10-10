@@ -7,12 +7,17 @@ endpoint: /images/generations
 is_async: false
 poll_endpoint: ~
 
-capabilities:
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_image
   - image_to_image
   - multi_image_fusion
   - multi_image_group
-  - web_search
+
+# Material slots (adapters/inputs.py). Seedream 4.0 / 4.5 inherit these.
+inputs:
+  reference_images: {max: 14}
 
 cost_tier: 2
 speed_tier: 3
@@ -22,3 +27,6 @@ speed_tier: 3
 # extend this file and zero it back out, so the fallback is the newest lite rather
 # than the alphabetically first name.
 auto_priority: 1
+
+# Accepted aspect_ratio values (every family's pixel tables cover these eight; Seedream's whole family inherits them). adaptive is always accepted.
+aspect_ratios: ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"]

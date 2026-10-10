@@ -20,6 +20,7 @@
 | 图像 | `doubao-seedream-4-0` | Doubao Seedream 4.0 |
 | 图像 | `doubao-seedream-4-5` | Doubao Seedream 4.5 |
 | 图像 | `doubao-seedream-5-0-lite` | Doubao Seedream 5.0 lite |
+| 图像 | `doubao-seedream-5-0-flash` | Doubao Seedream 5.0 flash（2K，高速低成本） |
 | 图像 | `gpt-image-2` | GPT Image 2 |
 | 图像 | `nano-banana-2` | Nano Banana 2 |
 | 图像 | `nano-banana-pro` | Nano Banana Pro |
@@ -36,7 +37,7 @@
 | 视频 | `grok-imagine-video` | Grok Imagine Video（xAI Aurora，文生/图生短视频，同步出音频；公开 id `cf-imagine-video`） |
 | 视频 | `grok-imagine-video-1-5` | Grok Imagine Video 1.5（同家族，画质更高、单价更贵；公开 id `cf-imagine-video-1.5`） |
 | 语音 | `seed-tts-2-0` / `minimax-speech-2-8-hd` / `minimax-speech-2-8-turbo` | 豆包语音合成 2.0 / MiniMax 语音 2.8 |
-| 视觉理解 | `qwen-3-6-plus` | Qwen3.6-Plus（图像/视频理解与推理） |
+| 视觉理解 | `qwen-3-6-plus` / `qwen-3-7-flash` / `qwen-3-7-plus` / `qwen-3-8-max` | Qwen3.6-Plus / Qwen3.7-Flash / Qwen3.7-Plus / Qwen3.8-Max（图像/视频理解与推理） |
 
 > 运行 `cfgpu models list` 查看当前实际加载的模型。
 
@@ -72,7 +73,7 @@ pip install "cfgpu-mcp[cli]"
 }
 ```
 
-重启客户端后即可在对话中使用 `generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`list_models`、`get_model_card` 等工具。
+重启客户端后即可在对话中使用 `generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`list_model_profiles`、`list_models`、`get_model_card` 等工具。
 
 > 若已 `pip install`，把 `command` 改为 `cfgpu-mcp`、`args` 置为 `[]` 即可。
 

@@ -1,0 +1,139 @@
+schema_version: 1
+# What agents see as list_model_profiles' catalog_version. Bumped when a task ID is
+# removed or changes meaning, so a cached filter fails loudly instead of matching
+# nothing. 2: dropped web_grounded_generation / tool_calling / visual_agent (no tool
+# parameter could trigger them) and image_reasoning / long_context /
+# long_video_understanding / long_document_understanding (they describe the model, not
+# a request: no argument asks for them, and every vision model declared them alike).
+# An agent picks a model by what the call can do.
+catalog_version: 2
+
+# Agent-facing media task vocabulary.  IDs are stable semantic contracts, not
+# adapter capability names and not provider/API parameter names.
+#
+# `requires` (video only) names the material a task cannot be performed without:
+# `all` slots must all be accepted, `any` needs at least one, and `audio_role`
+# fixes how the model must use the audio track (adapters/inputs.py AUDIO_ROLES).
+# A profile claiming a task its model's `inputs:` cannot carry fails the contract
+# tests, and an `inputs:` declaring a driving track forces `audio_driven_video`.
+tasks:
+  text_to_video:
+    media_type: video
+    name: Text to video
+    description: Create a new video from a text description.
+    prompt_guidance: Describe the subject, action, scene, style, and desired camera movement.
+  image_to_video:
+    media_type: video
+    name: Image to video
+    description: Animate a supplied image as the opening visual of a new video.
+    prompt_guidance: Describe the motion to add while preserving the supplied image's subject and composition.
+    requires: {all: [first_frame]}
+  first_last_frame:
+    media_type: video
+    name: First and last frame video
+    description: Create a video constrained by both an opening image and an ending image.
+    prompt_guidance: Describe the transition and the motion that connects the two supplied frames.
+    requires: {all: [first_frame, last_frame]}
+  reference_to_video:
+    media_type: video
+    name: Reference-guided video
+    description: >-
+      Create a new video guided by supplied reference images or videos. Some models
+      also take reference audio; a model's inputs.reference_audios.role says what it
+      does with it, and only audio_driven_video keeps a supplied track as the soundtrack.
+    prompt_guidance: State which visual, character, or motion qualities to preserve from the references.
+    requires: {any: [reference_images, reference_videos]}
+  video_edit:
+    media_type: video
+    name: Video edit
+    description: Modify an existing source video while retaining the requested parts of it.
+    prompt_guidance: Identify the source-video element to change and explicitly state what must remain unchanged.
+    requires: {all: [reference_videos]}
+  video_extend:
+    media_type: video
+    name: Video extension
+    description: Continue an existing video beyond its current ending.
+    prompt_guidance: Describe the next action, continuity details, and the intended ending.
+    requires: {all: [reference_videos]}
+  synced_audio_output:
+    media_type: video
+    name: Synchronized audio output
+    description: Produce video with model-generated speech, sound effects, or music synchronized to the picture.
+    prompt_guidance: Describe the desired audible events, dialogue, ambience, or music in addition to the visuals.
+  audio_driven_video:
+    media_type: video
+    name: Audio-driven video
+    description: >-
+      Keep a supplied audio track as the video's soundtrack and make the picture follow
+      it — lip movement, timing, rhythm. Use this, not reference_to_video, when the user
+      supplies speech that should be heard in the result.
+    prompt_guidance: Provide the driving audio and describe the visual performer or motion that should follow it.
+    requires: {all: [reference_audios], audio_role: driving}
+
+  text_to_image:
+    media_type: image
+    name: Text to image
+    description: Create a new image from a text description.
+    prompt_guidance: Describe subject, composition, lighting, style, and important details.
+  image_to_image:
+    media_type: image
+    name: Image transformation
+    description: Create an image by transforming one supplied image.
+    prompt_guidance: State the intended change and the visual identity that should be retained.
+  multi_image_fusion:
+    media_type: image
+    name: Multi-image fusion
+    description: Combine information from multiple supplied images into one result.
+    prompt_guidance: State the role each reference plays and how they should be combined.
+  multi_image_group:
+    media_type: image
+    name: Image series
+    description: Create a coherent group or sequence of related images.
+    prompt_guidance: Describe the shared subject and the controlled variation across the set.
+  region_edit:
+    media_type: image
+    name: Region edit
+    description: Edit a selected region of a supplied image while preserving the rest.
+    prompt_guidance: Identify the selected area, the requested replacement, and the surrounding context to preserve.
+  layer_decomposition:
+    media_type: image
+    name: Layer decomposition
+    description: Split one source image into a base image and independently editable transparent layers.
+    prompt_guidance: Provide one source image and optionally name the elements or regions to separate.
+  transparent_background:
+    media_type: image
+    name: Transparent-background edit
+    description: Edit one transparent source image while preserving its alpha channel in PNG output.
+    prompt_guidance: Provide one transparent PNG source image and describe the edit to make.
+
+  text_to_speech:
+    media_type: audio
+    name: Text to speech
+    description: Synthesize spoken audio from text.
+    prompt_guidance: Provide the script, desired language, voice, and delivery style.
+  expressive_speech:
+    media_type: audio
+    name: Expressive speech
+    description: Control the emotion or expressive delivery of synthesized speech.
+    prompt_guidance: Describe the emotion, intensity, pace, and performance style.
+  pronunciation_control:
+    media_type: audio
+    name: Pronunciation control
+    description: Specify pronunciations for words or names in synthesized speech.
+    prompt_guidance: Provide the affected terms and their intended pronunciations.
+
+  image_understanding:
+    media_type: understand
+    name: Image understanding
+    description: Answer questions about, describe, or extract information from images.
+    prompt_guidance: Ask a concrete question and provide the relevant image or images.
+  video_understanding:
+    media_type: understand
+    name: Video understanding
+    description: Answer questions about, summarize, or analyze a video.
+    prompt_guidance: State the event, time range, or question to analyze and provide the video.
+  region_understanding:
+    media_type: understand
+    name: Region understanding
+    description: Answer questions about a selected region of an image.
+    prompt_guidance: Identify the selected region and ask a concrete question about it.

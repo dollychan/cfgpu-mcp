@@ -6,7 +6,7 @@ from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp.errors import tool_error_dict
 from cfgpu_mcp.service import vision as vision_service
-from cfgpu_mcp.tool_registry import RegionSpec, reshape_vision_result, split_structured
+from cfgpu_mcp.tool_registry import AnalysisDepth, RegionSpec, reshape_vision_result, split_structured
 
 
 def register(mcp: FastMCP) -> None:
@@ -14,6 +14,7 @@ def register(mcp: FastMCP) -> None:
     async def understand_vision(
         prompt: str,
         model: str | list[str] = "auto",
+        analysis_depth: AnalysisDepth = "balanced",
         images: Optional[list[str]] = None,
         video: Optional[str] = None,
         regions: Optional[list[RegionSpec]] = None,
@@ -30,6 +31,7 @@ def register(mcp: FastMCP) -> None:
             result = await vision_service.understand_vision(
                 prompt=prompt,
                 model=model,
+                analysis_depth=analysis_depth,
                 images=images,
                 video=video,
                 regions=regions,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import RegionSpec, UnderstandVisionInput
@@ -9,6 +9,7 @@ from cfgpu_mcp.tool_registry import RegionSpec, UnderstandVisionInput
 async def understand_vision(
     prompt: str,
     model: str | list[str] = "auto",
+    analysis_depth: Literal["fast", "balanced", "thorough"] = "balanced",
     images: list[str] | None = None,
     video: str | None = None,
     regions: list[RegionSpec] | list[dict] | None = None,
@@ -27,6 +28,7 @@ async def understand_vision(
     req = UnderstandVisionInput(
         prompt=prompt,
         model=model,
+        analysis_depth=analysis_depth,
         images=images,
         video=video,
         regions=regions,

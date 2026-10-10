@@ -242,11 +242,8 @@ def test_all_three_tiers_are_open(t2v, r2v, res):
 
 def test_declared_resolution_list_rejects_the_new_seedance_4k_tier(t2v):
     """The fleet enum includes Seedance 2.0's 4k, while H3 remains capped at 1080p."""
-    from typing import get_args
-
-    # Optional[Literal[...]] — get_args gives (Literal[...], NoneType), so unwrap.
-    annotation = GenerateVideoInput.model_fields["resolution"].annotation
-    fleet = set(get_args(get_args(annotation)[0]))
+    prop = GenerateVideoInput.model_json_schema()["properties"]["resolution"]
+    fleet = {v for branch in prop["anyOf"] for v in branch.get("enum", [])}
     assert fleet == {"480p", "720p", "768p", "1080p", "2k", "4k"}
     assert set(t2v.resolutions) == {"480p", "720p", "1080p"}
 

@@ -6,7 +6,9 @@ import sys
 
 import click
 
+from cfgpu_mcp.cli.choices import schema_choice
 from cfgpu_mcp.cli.output import print_error, print_result, run_with_progress
+from cfgpu_mcp.tool_registry import UnderstandVisionInput
 
 
 def _parse_model_specific(value: str | None) -> dict | None:
@@ -36,6 +38,9 @@ def _run(coro) -> dict:
 @click.argument("prompt")
 @click.option("--model", "-m", default="auto", show_default=True,
               help="model_name (see `cfgpu models list`), or 'auto'")
+@click.option("--analysis-depth", type=schema_choice(UnderstandVisionInput, "analysis_depth"),
+              default="balanced", show_default=True,
+              help="Auto-routing preference for visual analysis")
 @click.option("--image", "-i", "images", multiple=True, metavar="URL",
               help="Image URL to analyze (repeat for multiple)")
 @click.option("--video", default=None, metavar="URL",
@@ -53,7 +58,7 @@ def _run(coro) -> dict:
 @click.option("--model-specific", default=None, metavar="JSON",
               help='Extra API params as JSON object, e.g. \'{"top_p":0.8}\'')
 def understand(
-    prompt, model, images, video, system_prompt, max_tokens, temperature,
+    prompt, model, analysis_depth, images, video, system_prompt, max_tokens, temperature,
     metadata, json_mode, model_specific,
 ) -> None:
     """Understand/reason over images or video from PROMPT (prints text to stdout)."""
@@ -64,6 +69,7 @@ def understand(
         return await svc.understand_vision(
             prompt=prompt,
             model=model,
+            analysis_depth=analysis_depth,
             images=list(images) or None,
             video=video,
             system_prompt=system_prompt,

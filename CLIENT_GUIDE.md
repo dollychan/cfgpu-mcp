@@ -324,6 +324,24 @@ async def main():
 asyncio.run(main())
 ```
 
+### 在 prompt 里按名字引用图片（`image_refs`）
+
+`generate_image` / `understand_vision` 接受 `image_refs`：与图片列表（`reference_images` /
+`images`）等长、同序，每张图一个调用方自己的句柄。prompt 里写 `[[<句柄>]]`，服务端在发送前
+替换成模型认识的序号（`图1`、`图2`……），对所有模型都成立，不依赖是否传了 `regions`：
+
+```python
+await image_svc.generate_image(
+    prompt="以 [[own]] 的服饰为准，舞姿参照 [[pose]]",   # 上游收到：以 图1 的服饰为准，舞姿参照 图2
+    reference_images=["https://.../a.png", "https://.../b.png"],
+    image_refs=["own", "pose"],
+)
+```
+
+对不上任何句柄或标记名的 `[[...]]` 会以 `invalid_params` 拒绝（错误信息列出可用占位符），
+请求不发送、不计费；`validate_only=True` 预检时同样会报。宿主若有自己的素材 id（如 `m_31b5b08b`），
+直接把它当句柄传进 `image_refs` 即可，不必自己换算序号——素材列表一重排，写死的序号就会悄悄指错图。
+
 ### 轮询异步任务
 
 ```python
@@ -558,9 +576,9 @@ cfgpu generate video "..." \
   --reference-videos https://example.com/ref.mp4 \
   --reference-audios https://example.com/bgm.mp3
 
-# HappyHorse — 多参考图生视频（multi_modal_reference）
+# HappyHorse — 多参考图生视频（reference_to_video）
 cfgpu generate video "身着旗袍的女性，低角度仰拍" \
-  --model happyhorse-1-0-t2v \
+  --model happyhorse-1-0-r2v \
   --reference-images https://example.com/ref1.jpg \
   --reference-images https://example.com/ref2.jpg
 
@@ -580,13 +598,21 @@ cfgpu generate video "跟随参考视频运镜" --model kling-v3-omni -r 1080p \
 #   此时 seconds 不下发，时长跟随源视频
 # 不支持 --reference-audios（请求体没有音频输入槽位）；--last-frame 必须与 --first-frame 同时给出
 
-# 万相 2.7（wan-2-7-t2v）— 文生视频，支持电影级分镜叙事；需显式时长（不支持 -1 智能时长）
+# 万相 2.7（wan-2-7-t2v）— 文生视频，支持电影级分镜叙事；需显式时长（不支持 -1 智能时长）；
+# 可选一条驱动音频（reference_audios → input.audio_url），口型与动作对齐音轨
 cfgpu generate video "侦探追查故事：第1个镜头[0-3秒]雨夜街头...第2个镜头[3-6秒]..." \
   --model wan-2-7-t2v -r 720p -d 5
 
-# 万相 2.7（wan-2-7-i2v）— 仅图生视频，必须提供首帧；需显式时长（不支持 -1 智能时长）
+# 万相 2.7（wan-2-7-i2v）— 图生视频（首帧，可选尾帧/驱动音频）或视频续生（一个源视频，可选尾帧）；需显式 2–15 秒时长
 cfgpu generate video "一只猫在草地上奔跑" \
   --model wan-2-7-i2v --first-frame https://example.com/cat.jpg -r 720p -d 5
+# 音频驱动口型：reference_audios 映射为 driving_audio
+cfgpu generate video "少年跟随说唱音频演唱" \
+  --model wan-2-7-i2v --first-frame https://example.com/rap.png \
+  --reference-audios https://example.com/rap.mp3 --last-frame https://example.com/end.png -d 5
+# 视频续生：唯一的 reference_videos 项映射为 first_clip
+cfgpu generate video "女孩继续向前走出画面" \
+  --model wan-2-7-i2v --reference-videos https://example.com/source.mp4 -d 10
 
 # 万相 2.7（wan-2-7-r2v）— 参考生视频，需 ≥1 个参考视频/图片；提示词可引用「视频1」「图片3」
 cfgpu generate video "视频2抱着图片3在咖啡厅弹民谣，视频1笑着看着视频2" \
@@ -603,7 +629,8 @@ cfgpu generate video "将视频中女孩的衣服替换为图片中的衣服" \
 
 # 万相 2.6 — 与 2.7 的 input 形态不同（扁平字段，非 media 数组），但 CLI 用法一致
 cfgpu generate video "侦探追查故事，电影级分镜..." --model wan-2-6-t2v -r 720p -d 5
-# 2.6 图生视频：首帧 → img_url，可选音频（reference_audios[0]）→ audio_url（如音频驱动 rap）
+# 2.6 图生视频：首帧 → img_url，可选音频（reference_audios[0]）→ audio_url（如音频驱动 rap）；支持 2–15 秒，默认 1080P
+# 多镜头仅在 prompt_extend=true 时生效：model_specific={"parameters":{"shot_type":"multi"}}
 cfgpu generate video "少年说唱 rap" --model wan-2-6-i2v \
   --first-frame https://example.com/rap.png \
   --reference-audios https://example.com/rap.mp3 -r 720p -d 5
@@ -659,23 +686,54 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `seed-tts-2-0` 为异步（提交后轮询 `/voice/tasks/{task_id}`，产物是音频 URL），MiniMax 两款为同步（POST 直接返回结果）。
 > **MiniMax 不返回 URL**：音频以十六进制字符串内联在 `output.data.audio`，服务端解码后放进 `inline_media`（见 §返回值格式），`urls` 为空数组。
 > `--speed/--volume/--pitch/--emotion` 仅 MiniMax 生效，seed-tts 会忽略；音频链接 24 小时内有效。
+
+**选音色：`list_voice_profiles`。** 返回每个音色的 `voice`（原样填进 `generate_audio.voice`）、`label`（仅展示，不能当 voice 传）、`languages`（语言代码，如 `zh` / `yue` / `en-US` / `pt-BR`）、`gender`（`male` / `female` / `neutral` / `unknown`）、`age`（`child` / `young` / `middle_aged` / `senior`）、`tags`（风格特质与适用场景）、`model_ids`（哪些模型接受它），有的还带 `description`（音色描述）和 `accent`（语言代码表达不了的口音），模型默认音色另带 `default: true`。音色数据来自平台的 `model_audio_voices` 导出。筛选参数：
+
+- `language` —— 任意常见写法或代码：`中文`、`English`、`英文`、`粤语`、`ja`。按子标签前缀匹配，`English` 同时覆盖美式/英式英语；粤语是独立的 `yue`，查 `中文` 不会返回粤语音色。写法不认识会直接报错并列出可用语言。
+- `gender` —— `male` / `female` / `neutral`（非人声）。性别尚未核对的音色（`unknown`）照常列出，但不会被任何性别筛选返回。
+- `age` —— `child` / `young`（青年）/ `middle_aged` / `senior`。
+- `query` —— 空格分隔、每个词都须命中音色名、id、标签、描述、口音或语言名（所以 `磁性`、`沙哑` 这类音色特质也能搜到）；`男声` / `女声` / `male` / `female` 这类词按性别筛选处理，而不是子串匹配（否则 `male` 会命中所有 `*_female_*`）。
+- `model_ids` —— 只看某些模型的音色；点名一个没有音色表的模型会报错，而不是返回空列表。
+
+`catalog_version: 4` 起单条音色的 `language`（字符串）改为 `languages`（代码数组），并新增 `gender`；`5` 起新增 `age`、`description`、`accent`。
 > `gpt-image-2`、`nano-banana-2`、`nano-banana-pro` 不支持，传入会被忽略。
 > 若仍在 `model_specific` 中显式传 `watermark`，会覆盖通用参数（合并发生在最后）。
 
-> `n`（组图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。支持 `n>1` 的是带
-> `multi_image_group` 能力的模型：`doubao-seedream-*`（自动设置
+> `n`（出图数量）同样是通用参数（`-n`，service 层 `n=`，1-15）。出**连贯组图**的是 tasks 含
+> `multi_image_group` 的模型：`doubao-seedream-*`（自动设置
 > `sequential_image_generation=auto` + `max_images=n`）与 `wan2.7-image`（自动设置
-> `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。**例外：
-> `doubao-seedream-5-0-pro` 为单图模型，不支持组图，`n>1` 会报错**；`gpt-image-2`、
-> `nano-banana-*` 传 `n>1` 也会被拒绝。
+> `enable_sequential=true` + `n`，**上限 12**，超出在发请求前被拒）。`cf-image-2` 按 `n` 出 1–10 张**互相独立**的图
+> （不是组图任务）。**其余模型（`doubao-seedream-5-0-pro`、`doubao-seedream-5-0-flash`、`nano-banana-*` 等）传 `n>1`
+> 不报错，`n` 被忽略、payload 里不带任何组图字段，只回一张图**（包括 `layer_decomposition` 分层拆解）。
 > 两家的 `n` 都是**上限而不是张数**：出几张由模型决定，少于 `n` 是正常结果，结果回来之前
 > 不要向用户承诺具体张数。`resolution` 现已开放 `1080p`（WAN 2.0 / Seedance 1.5 Pro /
 > HappyHorse 支持，HappyHorse 会自动大写为 `1080P`；**WAN 2.0 Fast 文生视频不支持 1080p，仅 480p/720p，
-> 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示智能时长（仅 WAN 2.0 / Seedance）。
+> 带首帧/参考媒体的 i2v 场景才放行**），`duration_seconds=-1` 表示由模型自选时长，**仅 Seedance 系列（`doubao-seedance-*`、
+> `wan-video`、`wan-video-fast`）接受；其他模型必须写明秒数**，传 `-1` 会被拒绝，报错里给出该模型可用的秒数范围。
 > `duration_seconds` 的 schema 范围是 4–30，但 30 秒**只有 `doubao-seedance-2-5` 支持**；WAN 2.0 /
 > Seedance 2.0 系上限 15 秒，Seedance 1.5 Pro 上限 12 秒，超限由对应模型的 `supports()` 在发请求前拒绝。
 > 分辨率同理是逐模型的：`doubao-seedance-2-5` / `-2-0-fast` / `-2-0-mini` **只支持 480p/720p**，
 > 传 `1080p` 会在发请求前被拒绝（需要 1080p 用 `doubao-seedance-2-0` / `wan-2-0`）。
+
+> **Seedance 2.5 的 `omni_reference_task_type` 由服务端推导，调用方通常无需关心。** 2.5 把全模态参考
+> 任务（带 `reference_images` / `reference_videos` / `reference_audios`）细分为参考生视频、视频编辑、
+> 视频延长：编辑要求 `aspect_ratio="adaptive"` + `duration_seconds=-1`，延长要求 `aspect_ratio="adaptive"`，
+> 两者都要至少一个参考视频。服务端在**正式提交时按最终参数**决定 payload 里发什么：无参考视频或 ratio
+> 非 `adaptive` → `reference`；其余 → `auto`（模型按提示词判定）；文生视频、首帧/首尾帧不发。
+>
+> - **HITL 卡片**：`validate_only` 返回的 `payload.omni_reference_task_type` 只是按当前参数的预览，
+>   **不在 `corrected_args` 里，不要回填**。用户在卡片上改了 ratio/duration，直接用改后的参数提交即可，
+>   服务端会重新推导。
+> - **想明确做编辑/延长**：传 `model_specific={"omni_reference_task_type": "edit"}`（或 `"extend"`），
+>   并按上面的约束设置 ratio/duration。`validate_only` 会在 `corrected_args` 里给出需要改的值；
+>   与最终参数冲突的声明会在发请求前以 `invalid_params` 拒绝。**不要把 preview 里的推导值抄进
+>   `model_specific`** —— 那会把它冻结住，用户随后修改 ratio 时提交就会失败。
+> - 默认参数（`aspect_ratio="adaptive"`、`duration_seconds` 不传 = `-1`）与三种子任务都兼容，是
+>   不确定意图时最稳的写法。
+> - **异步失败**：任务创建后，上游仍可能判定子任务与参数/意图不符，报 `InvalidParameter.TaskTypeConstraint`
+>   或 `InvalidParameter.TaskTypeMismatch`。这两种会以 `error_type: "invalid_params"`（`retryable: false`）
+>   返回，`message` 先给上游原文，再给具体改法。**不要原样重试**，按提示改 ratio/duration 或改写提示词后
+>   用新的 `request_id` 重新提交。
 
 > **视频 `resolution` 的默认值是「不传」（2026-09-07 起）。** 统一枚举现在是
 > `480p / 720p / 768p / 1080p / 2k / 4k`，schema 默认值是 `None` —— 不传时各模型用**自己**的默认档
@@ -692,25 +750,96 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 向不支持某档的模型传该档，正式调用会在发请求前被拒；`validate_only=true` 则不报错，而是在
 > **可灵（`kling-video-o1` / `kling-v3-omni`）的 `with_audio` 永远出现在 `corrected_args` 里**，
 > 无论取值是 true 还是 false。它在这两个模型上映射为真实请求字段 `sound`（万相 2.6/2.7、
-> HappyHorse 压根不发这个字段），而可灵 card 里 `sound` 的上游默认值是「-」—— 没有默认值，
-> 所以统一 Schema 那个静默的 `with_audio=true` 就是全部决定。要向人展示审批卡的宿主，请把
+> HappyHorse 压根不发这个字段）。上游 `sound` 默认 `off`，统一 Schema 却默认 `with_audio=true`
+> 且总会发送，所以起决定作用的是一个与模型自身相反的静默默认值。
+> 源视频原声另由 `video_list[].keep_original_sound` 控制（经 `model_specific`）。要向人展示审批卡的宿主，请把
 > 这一行显示出来，并按 `{**原参数, **corrected_args}` 原样回传：否则卡片上根本没有音频这一
 > 行，人批准的是一条自带配乐的片子。这是**钉住**而不是纠正，值没有被改过。
+
+> **`generate_audio` 不传 `voice` 时，`corrected_args` 会给出实际使用的默认音色**
+> （seed-tts 为 `zh_female_xiaohe_uranus_bigtts`，MiniMax HD / Turbo 为 `male-qn-qingse`；
+> `model="auto"` 时是路由到的那个模型自己的默认音色，与 `model` 一起给出）。审批卡请把它显示
+> 出来，并按 `{**原参数, **corrected_args}` 原样回传，正式调用用的就是被批准的那个声音。
+> 显式传入的 `voice` 不会被替换，只会去掉首尾空格。
 
 > `corrected_args` 里给出**不高于请求值的最近一档**（`768p` → `720p`，`2k` → `1080p`，
 > `doubao-seedance-2-0-fast` 这种没有 1080p 的则 `2k` → `720p`），直接
 > `{**原参数, **corrected_args}` 覆盖后重发即可。反过来，向 `MiniMax-H3` 传它没有的档
 > （720p/1080p）会回退到不高于请求值的最近一档（分别为 `480p` / `768p`）。**不传 `resolution` 时 `corrected_args` 里不会出现它**
 > —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
+>
+> **画幅比例按模型限制（2026-10-09 起）。** `list_models` / `list_model_profiles` 对有限制的模型返回 `aspect_ratios`；
+> 没有这个字段表示接受全部比例，视频模型总是接受 `adaptive`。正式调用向不支持的模型传比例会在发请求前被拒，
+> `model="auto"` 会绕开它；`validate_only` 在 `corrected_args` 里给出该模型**形状最接近**的比例（如 Nano Banana 上
+> `3:2` → `4:3`，Seedream 上 `3:1` → `21:9`）。以前 Seedream 与万相 2.7 图像会把 `9:21` / `3:1` / `1:3` 静默画成正方形，
+> Nano Banana 会把不支持的比例直接发给上游，现在都改为明确拒绝。`model="auto"` 的预检只有在没有任何模型原样接受时，
+> 才会选一个需要纠正的模型。
+>
+> **封闭取值的拼写无所谓（2026-09-30 起）。** 大小写、首尾空格不影响：`480P` / `2K`（视频）、`2k` / `1.5k`（图片）、
+> `Fast`、`MP3`、`Happy`、`Female`、`model="minimax-h3"` 都会折成规范写法；画幅比例的 `16：9`（全角冒号）、`16/9`、
+> `16x9` 也按 `16:9` 处理。`validate_only`、正式调用、Agent SDK 与 CLI 行为一致；只有不在枚举里的值（如 `360p`、
+> `16:10`）仍报参数错误。`voice` 例外：音色 id 必须原样复制。
+
+> **首帧与参考素材不能同时给（MiniMax-H3 / Seedance / HappyHorse）。** 服务端不会替你把 `first_frame`
+> 改成 `reference_images` —— 首帧是视频原样的开场画面，参考图只提供主体、场景由 prompt 重新构图，两者生成的是不同的视频。
+> 报错里会给出两条具体改法，按 prompt 的意图选一条：图片是人物/主体 → 移入 `reference_images`、删 `first_frame`；
+> 图片要原样开场 → 保留 `first_frame`、删掉 `reference_*`（删 `reference_audios` 就没有对口型了）。
+> 当前模型走不了的那条会直接指名要换的模型（如 HappyHorse 的 `happyhorse-1.0-r2v` / `happyhorse-1.0-i2v`）。
+
+> **`reference_audios` 在不同模型上用途不同，选模型前先看 `inputs`（2026-10-09 起）。**
+> `list_model_profiles` 给每个视频模型返回 `inputs`：它接受哪些素材槽、每槽最多几个，以及音频的
+> `role`（图片与理解模型同样返回 `inputs`：参考图上限，读区域的模型另有 `regions.max_per_image`）。不在 `inputs` 里的槽，该模型不接受。音频有三种 `role`：
+>
+> | `role` | 含义 | 模型 |
+> |---|---|---|
+> | `driving` | 这段音频**原样**作为成片音轨，画面（口型、节奏）跟着它走 | `wan2.6-t2v`、`wan2.6-i2v`、`wan2.7-t2v`、`wan2.7-i2v` |
+> | `voice` | 音色样本，绑定到某个参考素材；模型用这个声音说新的台词，不播放原录音 | `wan2.7-r2v` |
+> | `reference` | 由 prompt 决定怎么用（背景音乐、模仿音色、参照节奏），**不保证**原声保留、口型对齐 | Seedance / WAN 2.0 系、`MiniMax-H3` |
+>
+> 用户给的是一段**语音**、要求「让人把这段话说出来」，就用 `required_tasks=["audio_driven_video"]`
+> 找模型 —— 它只返回 `role: driving` 的模型。用 `reference` 模型做这件事也会成功、也会计费，
+> 但得到的是一条口型对不上、甚至听不到原声的视频。只是拿一段音乐当背景，`reference` 模型就够了。
+> `standalone: false` 表示音频不能单独传，至少还要带一张图或一段视频。
+>
+> `reference_to_video` 从此只表示「图像或视频参考」，不再包含音频：Kling、Grok、HappyHorse 等模型
+> 也属于这个任务，但它们根本不收音频。
+>
+> **`reference_videos` 同样有 `role`**：`reference` 表示由 prompt 指挥的参考素材（会编辑、延长的模型上，prompt 也可以
+> 让它成为被编辑的那段）；`source` 表示它**永远**是被编辑或续写的那段视频（`wan2.7-i2v` 把它当作续写起点
+> `first_clip`，`wan2.7-videoedit` / `happyhorse-1.0-video-edit` 把它当作源视频）。想「参考这段视频的运镜重新拍」，
+> 不要选 `source` 模型 —— 它会直接续写或改动你给的那段。`model="auto"` 在只给参考视频时会优先 `reference` 模型。
+
+> **`list_models` 的 `capabilities` 字段已改名为 `tasks`（2026-10-09）**，取值换成与 `list_model_profiles` 相同的
+> canonical task（如 `multi_modal_reference` → `reference_to_video`、`audio_generate` → `synced_audio_output` 或
+> `audio_driven_video`、`region_understand` → `region_understanding`；旧的 `web_search` 已不再对应任何任务，见下），视频模型
+> 另带 `inputs`。按旧字段名解析 `list_models` 的脚本需要跟着改；`list_model_profiles` 的返回结构不变。
+> 拒绝理由里的模型名一律是对外的 `model_id`，不再出现内部目录名。
+>
+> 只描述素材形状的「场景」任务（`text_to_video` / `image_to_video` / `first_last_frame` / `reference_to_video`、
+> `text_to_image` / `image_to_image` / `multi_image_fusion`）与模型的本地校验**严格一致**：声明了就一定接受这种请求，
+> 接受这种请求就一定声明了。按这些任务筛选得到的就是全部可用模型，不会漏。CF Image 2 与 Nano Banana 系列
+> 因此新增了 `multi_image_fusion`（它们一直接受多张参考图）。
+>
+> **`list_models` 与 `list_model_profiles` 的每一行完全相同**，`list_models` 只多一个 `is_async`。`list_models` 是运维/调试
+> 视图，给 agent 选模型请用 `list_model_profiles`（支持按任务过滤，并给出参数模板）。
+>
+> **视频模型新增 `outputs.audio`**（`list_models` / `list_model_profiles` 均返回）：`always` = 成片一定有声，
+> `with_audio=false` 关不掉；`switchable` = `with_audio` 决定有无声音；`never` = 无声；没有这个字段 = 文档未说明
+> （如编辑模型，声音跟随源视频）。`synced_audio_output` 与它严格一致，因此可灵、cfdream H3、Grok、万相 2.6/2.7
+> 的 t2v/i2v/r2v 新增了这个任务。需要无声成片时，应选 `switchable` 或 `never` 的模型。
+>
+> **`list_model_profiles` 的 `catalog_version` 升为 2**：删除了 `web_grounded_generation`、`tool_calling`、`visual_agent`
+> 三个任务（没有任何工具参数能触发，按它们筛出模型也无法在调用里用上），以及 `image_reasoning`、`long_context`、
+> `long_video_understanding`、`long_document_understanding` 四个只描述模型素质的理解类任务（所有视觉模型声明相同，
+> 没有区分度；按深度选模型用 `analysis_depth`）。仍以 `required_tasks` 传这七个 id 会得到参数错误。需要上游联网搜索时，可在支持的模型上通过 `model_specific` 传上游的 `tools` 字段，参数见模型卡。
 
 > **`model="auto"` 现在选谁（图片）**：`balanced` 和 `best` 都是 `cf-image-2`；
-> `fast` 是 `doubao-seedream-5-0-pro`，它被参数排除时（3K/4K、组图 `n>1`、联网搜索这三项
-> 它没有）退到 `doubao-seedream-5-0-lite`；`best` 被排除时退到 `cf-pro`。
+> `fast` 是 `doubao-seedream-5-0-flash`（1K/1.5K/2K、单图），它被参数排除时会按能力与档位继续选型；
+> `best` 被排除时退到 `cf-pro`。
 > 中文 prompt 仍偏向 Seedream 家族，但那是**分数**上的偏向，压不过 `balanced` 的声明默认，
 > 只在声明默认出局后才决定次序。
-> **`balanced` + `n>1` 请注意**：`cf-image-2` 不支持组图，`n` 会被静默忽略、只回一张图。
-> 需要组图请显式传 `model="doubao-seedream-5-0-lite"`（或别的 Seedream），或改用
-> `quality_tier="fast"`。
+> **`cf-image-2` 的多图输出**：支持 `n=1`–`10`，并把它原样传给上游；`n` 是返回张数上限，模型可能少于请求值。
+> Seedream 的 `n` 同样是组图张数上限。
 > **视频**：`balanced` 是 `MiniMax-H3`，`fast` 是 `doubao-seedance-2-0-fast`，
 > `best` 是 `doubao-seedance-2-5`（30 秒单段直出、最多 50 个参考素材、多语种旁白）。
 > 三档各有各的落点：日常请求想要的模型，未必是点名要快时想要的那个。被参数排除时
@@ -732,8 +861,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > （GPT Image 2）只有 1K/2K/4K 三档，传 `3K` 会被上游拒绝；它的 `aspect_ratio` 也没有 `21:9`。
 > 分辨率直接影响计价（`cf-image-2` 三档分别为 0.105 / 0.16 / 0.21 元每张），需要哪档就显式传哪档。
 
-> **Seedream 系列与 `wan2.7-image` 是例外：档位在本地校验，且始终以精确像素上行。** 各家族支持的档位不同
-> （`doubao-seedream-5-0-pro`：1K/1.5K/2K；`5-0-lite` 与 `4.5`：2K/3K/4K；`4.0`：1K/2K/3K/4K），
+> **Seedream 系列与 `wan2.7-image` 是例外：档位在本地校验。** Seedream 5.0 Flash 按上游示例原样上行
+> `size: "2K"`；其余 Seedream 与 `wan2.7-image` 上行精确像素。各家族支持的档位不同
+> （`doubao-seedream-5-0-pro` 与 `5-0-flash`：1K/1.5K/2K；`5-0-lite` 与 `4.5`：2K/3K/4K；`4.0`：1K/2K/3K/4K），
 > 超出的档位由 `supports()` 直接拒绝而不是静默降档——`validate_only` 会在 `corrected_args`
 > 里给出最接近的可用档位，`model="auto"` 则会绕开不支持该档的模型。adapter 把
 > （`resolution`, `aspect_ratio`）查成一个精确的 `宽x高` 送上游，因此 `aspect_ratio` 在
@@ -792,7 +922,7 @@ cfgpu models list
 # 只看视频模型
 cfgpu models list --task-type video
 
-# 输出 JSON（含所有字段）
+# 输出 JSON（含所有字段：tasks、inputs，视频模型另有 outputs）
 cfgpu models list --json
 
 # 查看某个模型的详细说明（markdown）
@@ -996,7 +1126,7 @@ done
 | `status` | 含义 | 你该怎么做 |
 |---|---|---|
 | `submitting` | 请求确定还没发给上游 | 没有计费，**用相同参数重发是安全的** |
-| `dispatching` | 请求可能已发出、回应丢了 | **可能已经计费。不要重发**，继续用同一个 id 查，或提示用户核实 |
+| `dispatching` | 请求已发出、回应还在路上（另一个实例在处理，或调用方断开后本服务仍在等） | **可能已经计费。不要重发**，继续用同一个 id 查。回应一旦确定丢失，这个 id 会变成 `error_type: "submission_lost"`（可重试）的错误，不会一直停在这里 |
 
 两者都是未终态，形状与 `pending` / `running` 完全一致（`{<句柄>, status, elapsed_seconds}`），所以按未终态处理的客户端不需要改代码——只有想要「该不该重发」这个答案时才需要读它们。
 
@@ -1043,13 +1173,15 @@ The request failed because the output video may be related to copyright restrict
 {
   "error": true,
   "error_type": "invalid_params",
-  "message": "请求参数错误：image size must be at least 3686400 pixels 请调用 get_model_card 获取模型 gpt-image-2 的详细参数说明和使用示例。",
+  "message": "请求参数错误：image size must be at least 3686400 pixels 请根据校验原因调整通用参数，或重新选择支持该任务的模型。",
   "retryable": false,
   "model_id": "gpt-image-2"
 }
 ```
 
-当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加 `get_model_card` 提示，`model_id` 字段也会出现在 dict 中。LLM 可直接用 `model_id` 值调用 `get_model_card` 获取该模型的完整参数说明。（`model_id` 即全局唯一的 `model_name`；对外从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`。）
+当 `error_type` 为 `invalid_params`、`model_unavailable` 或 `content_blocked` 时，`message` 会追加一句通用提示（调整参数或换模型），`model_id` 字段也会出现在 dict 中。
+
+**错误文本不会点名任何查询类工具**（`get_model_card` / `list_models` / `list_model_profiles` / `list_voice_profiles`）。哪些工具对外暴露由宿主的 `disabled_tools` 决定，Mode B / CLI 的工具名也不同，所以点名一个工具，可能指向一个不存在的工具。错误文本只写数据：task ID（如「tasks 含 reference_to_video 的模型」）、字段名（如音色目录的 `voice` 字段）、`task_type`。LLM 再用手头有的工具去查这些数据。宿主若改了工具名，不必改写错误文本。（`model_id` 即全局唯一的 `model_name`；对外从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`。）
 
 `error_type` 可取值：`auth` | `rate_limit` | `quota_exceeded` | `content_blocked` | `invalid_params` | `model_unavailable` | `task_failed` | `timeout` | `unknown`
 
@@ -1059,9 +1191,13 @@ The request failed because the output video may be related to copyright restrict
 >
 > **`timeout` 分两种，顶层 `phase` 说明是哪一种，别改错配置项。** `phase: "request"` 是连上了但上游没在 `http_timeout` 内答完；`phase: "connect"` 是 DNS / TCP / TLS 没在 `connect_timeout` 内完成，**上游根本没收到请求** —— 这几乎总是部署机器到该上游的网络不通（内网环境、出口策略、DNS），把 `http_timeout` 调大不会有任何作用。两种都带 `original.elapsed`（实测耗时，不是配置值），拿它和两个配置值一比即可确认。
 >
-> **`outcome_unknown: true` 曾是唯一一种「不知道成没成」的结果。它现在基本不会再出现在提交路径上**：任务行先于 POST 落库，所以「既没拿到 task_id 也没落库」不再成立。提交请求（POST）的 `phase: "request"` 超时现在得到的是——`retryable: false`（重发有重复计费风险，这一点没变）、`request_id`（你自己传的那个值，行主键）、以及一句明确的下一步：**先 `task_status("<request_id>")` 查这次提交的最终状态，不要直接重发**。查到 `dispatching` 就是「可能已计费」，查到 `succeeded` 就直接拿产物。相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
+> **该调哪个配置项不写在 `message` 里。** `message` 的读者是 agent，它改不了服务端的 config.yaml，写进去只会挤掉它真能做的那一步（重试）。配置项的完整路径（按 provider 区分，如 `cfgpu_api.http_timeout` / `providers.<name>.connect_timeout`）在服务端日志的 WARNING 里，Mode B 直接调 service 层的集成方也可从 `CFGPUError.original["setting"]` 读到。
 >
-> 换句话说：**这一类失败从「无法确认」变成了「去查这个 id」。** 前提仍是你在提交时带了 `request_id`。
+> **`outcome_unknown: true` 曾是唯一一种「不知道成没成」的结果。它现在基本不会再出现在提交路径上**：任务行先于 POST 落库，所以「既没拿到 task_id 也没落库」不再成立。提交请求（POST）的 `phase: "request"` 超时、传输层错误、上游 5xx 现在统一得到 `error_type: "submission_lost"`、`retryable: true`（`phase` 仍在顶层）。含义是：**这次请求的结果无法取回，直接重发**。这一次 POST 的回应是结果（同步模型）或上游 task_id（异步模型）唯一的载体，回应丢了就没有第二条路，所以**不要用 `task_status` 去等它**——它查到的是同一个 `submission_lost`，不会再变。`understand_vision` 的文案额外提示：耗时过长导致的，可降低 `analysis_depth`、缩短视频或收窄问题后再调用。
+>
+> 相对地，`phase: "connect"` 的超时上游根本没收到，`retryable` 为 `true`，安全重发。
+>
+> 这类失败要少发生，根本办法是让 `http_timeout` 覆盖模型的真实耗时（`cfgpu_api.http_timeout` 或 `providers.<name>.http_timeout`）。
 
 **Mode B service 层直接调用**：service 函数抛出 `CFGPUError`，需自行捕获：
 

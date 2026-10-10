@@ -131,9 +131,64 @@ async def test_validate_only_resolves_auto_to_a_concrete_model():
 
     assert result["model_used"] != "auto"
     assert result["task_type"] == "video"
-    # Enough to price the approval: whether it returns a handle, and the cost signal.
-    assert isinstance(result["is_async"], bool)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash"])
+async def test_layer_decomposition_preflight_validates_the_strict_schema(model):
+    """A type error must fail before the request reaches a billed endpoint."""
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c, pytest.raises(CFGPUError, match="layer_decomposition") as exc:
+        await image_service.generate_image(
+            prompt="",
+            model=model,
+            reference_images=["https://example.com/source.png"],
+            model_specific={"layer_decomposition": "true"},
+            validate_only=True,
+        )
+    client.post.assert_not_called()
+    assert exc.value.error_type == "invalid_params"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash"])
+async def test_layer_decomposition_preflight_accepts_the_executable_template(model):
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c:
+        result = await image_service.generate_image(
+            prompt="",
+            model=model,
+            reference_images=["https://example.com/source.png"],
+            model_specific={"layer_decomposition": True},
+            validate_only=True,
+        )
+    client.post.assert_not_called()
+    assert result["validated"] is True
+    assert result["payload"]["layer_decomposition"] is True
+    assert result["payload"]["size"] == "2K"
+    # The tiers are the pre-submission cost and latency signals. Upstream transport
+    # details such as adapter.is_async are not part of the MCP task contract.
+    assert "is_async" not in result
     assert isinstance(result["cost_tier"], int)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", ["doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash"])
+async def test_layer_decomposition_preflight_rejects_explicit_pixel_size(model):
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c, pytest.raises(CFGPUError, match="explicit WIDTHxHEIGHT") as exc:
+        await image_service.generate_image(
+            prompt="",
+            model=model,
+            reference_images=["https://example.com/source.png"],
+            model_specific={"layer_decomposition": True, "size": "2048x2048"},
+            validate_only=True,
+        )
+    client.post.assert_not_called()
+    assert exc.value.error_type == "invalid_params"
 
 
 @pytest.mark.asyncio
@@ -238,6 +293,32 @@ async def test_validate_only_returns_the_payload_the_real_call_would_send():
 
 
 @pytest.mark.asyncio
+async def test_wan_i2v_preflight_merges_model_specific_parameters():
+    """Wan controls passed through ``model_specific`` must reach the approval payload."""
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="分镜叙事",
+            model="wan2.6-i2v",
+            first_frame="https://example.com/first-frame.png",
+            duration_seconds=2,
+            model_specific={"parameters": {"seed": 12345, "shot_type": "multi"}},
+            validate_only=True,
+        )
+
+    client.post.assert_not_called()
+    assert result["payload"]["parameters"] == {
+        "resolution": "1080P",
+        "duration": 2,
+        "prompt_extend": True,
+        "watermark": False,
+        "seed": 12345,
+        "shot_type": "multi",
+    }
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("svc", "kwargs", "watermark_path"),
     [
@@ -339,11 +420,11 @@ async def test_media_slot_values_reach_the_payload_untouched(slot):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("count, ok", [(9, True), (10, False)], ids=["at limit", "over limit"])
 async def test_media_slot_count_is_enforced_on_opaque_handles(count, ok):
-    """The other half: `max_reference_images` still bites, and it bites on handles.
+    """The other half: the declared `reference_images` max still bites, and on handles.
 
     Counting needs no knowledge of what a value *is*, which is exactly why this is the
     one media check a preflight can make honestly. `doubao-seedance-2-0` caps at 9
-    (`SeedanceVideoAdapter.supports`, not the base — the ceiling is per-adapter).
+    (its `inputs:` block, enforced by the base `supports()` — the ceiling is per-model).
     """
     refs = [f"m_{i}" for i in range(count)]
     a, b, c = _patched_real_registry(_client(), AsyncMock())
@@ -389,7 +470,7 @@ async def test_validate_only_rejects_what_supports_would_reject():
 async def test_kling_preflight_pins_the_sound_switch(model):
     """`with_audio` reaches corrected_args even when the caller never mentioned it.
 
-    Kling maps it to a real `sound` field and its card documents no upstream default,
+    Kling maps it to a real `sound` field whose upstream default (`off`) disagrees,
     so the schema's silent `True` is the whole decision. A host that shows an approval
     card built from the caller's arguments would otherwise show no audio row at all.
     """
@@ -434,6 +515,40 @@ async def test_validate_only_corrects_an_unsupported_resolution():
 
     assert result["corrected_args"] == {"resolution": "720p"}
     assert result["payload"]["resolution"] == "720p"
+
+
+@pytest.mark.asyncio
+async def test_validate_only_corrects_cf_image_2_intermediate_resolution_downward():
+    """The approval path must carry the tier that the billed API actually accepts."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await image_service.generate_image(
+            prompt="去除字幕",
+            model="cf-image-2",
+            resolution="1.5K",
+            validate_only=True,
+        )
+
+    assert result["validated"] is True
+    assert result["corrected_args"] == {"resolution": "1K"}
+    assert result["payload"]["resolution"] == "1K"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("aspect_ratio", ["21:9", "9:21", "3:1", "1:3"])
+async def test_validate_only_preserves_gpt_image_2_extended_aspect_ratios(aspect_ratio):
+    """The approval payload must retain every GPT Image 2 ratio without a fallback."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await image_service.generate_image(
+            prompt="电影海报",
+            model="cf-image-2",
+            aspect_ratio=aspect_ratio,
+            validate_only=True,
+        )
+
+    assert result["corrected_args"] == {}
+    assert result["payload"]["aspect_ratio"] == aspect_ratio
 
 
 @pytest.mark.asyncio
@@ -485,6 +600,76 @@ async def test_seedance_validate_only_preserves_supported_explicit_ratios(model,
 
     assert "aspect_ratio" not in result["corrected_args"]
     assert result["payload"]["ratio"] == "16:9"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "media,ratio,expected",
+    [
+        ({"reference_videos": ["m_video"]}, "16:9", "reference"),
+        ({"reference_videos": ["m_video"]}, "adaptive", "auto"),
+        ({"reference_images": ["m_image"]}, "adaptive", "reference"),
+    ],
+    ids=["video-concrete-ratio", "video-adaptive", "image-only"],
+)
+async def test_seedance_2_5_preflight_derives_task_type_without_correcting_ratio(
+    media, ratio, expected
+):
+    """The derivation reads the ratio, so the preflight must never rewrite it — and the
+    derived value is shown in the payload, never pinned in corrected_args: it is not a
+    tool argument, and a human who edits the ratio on the card changes it."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(
+            prompt="x",
+            model="doubao-seedance-2-5",
+            aspect_ratio=ratio,
+            validate_only=True,
+            **media,
+        )
+
+    assert result["corrected_args"] == {}
+    assert result["payload"]["ratio"] == ratio
+    assert result["payload"]["omni_reference_task_type"] == expected
+
+
+_STALE_EDIT = dict(
+    prompt="删掉 @视频1 的背景音乐",
+    model="doubao-seedance-2-5",
+    reference_videos=["m_video"],
+    aspect_ratio="16:9",
+    duration_seconds=-1,
+    model_specific={"omni_reference_task_type": "edit"},
+)
+
+
+@pytest.mark.asyncio
+async def test_seedance_2_5_preflight_corrects_ratio_for_a_declared_edit():
+    """A declared edit fixes the geometry to the source video — the same fallback the
+    frame-driven scenes get, reported in corrected_args rather than silently applied."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await video_service.generate_video(**_STALE_EDIT, validate_only=True)
+
+    assert result["corrected_args"] == {"aspect_ratio": "adaptive"}
+    assert result["payload"]["ratio"] == "adaptive"
+    assert result["payload"]["omni_reference_task_type"] == "edit"
+
+
+@pytest.mark.asyncio
+async def test_seedance_2_5_billed_call_rejects_a_contradicted_declared_task_type():
+    """A host that froze the preview's ``edit`` into model_specific, after the human
+    changed the ratio on the card, fails locally before the POST — not asynchronously
+    upstream after the task was created."""
+    client = _client()
+    a, b, c = _patched_real_registry(client, AsyncMock())
+    with a, b, c:
+        with pytest.raises(CFGPUError) as exc:
+            await video_service.generate_video(**_STALE_EDIT)
+
+    assert exc.value.error_type == "invalid_params"
+    assert "requires aspect_ratio=adaptive" in exc.value.user_message
+    client.post.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -544,11 +729,15 @@ async def test_validate_only_runs_build_payload():
         # published ratios are present now, so there is nothing to correct.
         ("doubao-seedream-5-0-lite", "4K", "21:9", {}),
         ("doubao-seedream-5-0-lite", "3K", "3:2", {}),
-        ("cf-image-2", "3K", "21:9", {"resolution": "2K", "aspect_ratio": "1:1"}),
-        ("cf2", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
-        ("cf-pro", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
-        ("cf-pro-official", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
-        ("cf-pro-premium", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "1:1"}),
+        ("cf-image-2", "1.5K", "9:16", {"resolution": "1K"}),
+        ("cf-image-2", "3K", "21:9", {"resolution": "2K"}),
+        ("cf-image-2", "3K", "9:21", {"resolution": "2K"}),
+        ("cf-image-2", "3K", "3:1", {"resolution": "2K"}),
+        ("cf-image-2", "3K", "1:3", {"resolution": "2K"}),
+        ("cf2", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "4:3"}),
+        ("cf-pro", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "4:3"}),
+        ("cf-pro-official", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "4:3"}),
+        ("cf-pro-premium", "3K", "3:2", {"resolution": "2K", "aspect_ratio": "4:3"}),
     ],
 )
 def test_every_image_model_reports_safe_enum_fallbacks(model, resolution, aspect_ratio, expected):
@@ -630,8 +819,18 @@ def test_wan_2_6_and_2_7_fall_back_to_supported_resolution_and_ratio(model, extr
     result = validate_request(adapter, req)
 
     assert result["corrected_args"]["resolution"] == "720p"
-    assert result["corrected_args"]["aspect_ratio"] == "16:9"
-    assert result["payload"]["parameters"]["ratio"] == "16:9"
+    if model == "wan2.6-t2v":
+        assert result["corrected_args"]["aspect_ratio"] == "16:9"
+        assert result["payload"]["parameters"]["size"] == "1280*720"
+    elif model == "wan2.6-r2v":
+        assert result["corrected_args"]["aspect_ratio"] == "16:9"
+        assert result["payload"]["parameters"]["size"] == "1280*720"
+    elif model == "wan2.7-videoedit":
+        assert result["corrected_args"]["aspect_ratio"] == "16:9"
+        assert result["payload"]["parameters"]["ratio"] == "16:9"
+    else:
+        assert result["corrected_args"]["aspect_ratio"] == "16:9"
+        assert result["payload"]["parameters"]["ratio"] == "16:9"
 
 
 @pytest.mark.parametrize("model", ["wan2.6-i2v", "wan2.7-i2v"])
@@ -656,7 +855,7 @@ def test_wan_i2v_ignores_aspect_ratio_because_api_has_no_ratio_parameter(model):
     [
         ("seed-tts-2.0", "zh_female_xiaohe_uranus_bigtts"),
         ("MiniMax/speech-2.8-hd", "male-qn-qingse"),
-        ("MiniMax/speech-2.8-turbo", "Santa_Claus"),
+        ("MiniMax/speech-2.8-turbo", "Spanish_SantaClaus"),
     ],
 )
 @pytest.mark.asyncio
@@ -731,7 +930,7 @@ async def test_audio_validate_only_silently_drops_emotion_for_seed_tts():
     [
         ("seed-tts-2.0", "male-qn-qingse"),
         ("MiniMax/speech-2.8-hd", "zh_female_xiaohe_uranus_bigtts"),
-        ("MiniMax/speech-2.8-turbo", "Santa_Claus_typo"),
+        ("MiniMax/speech-2.8-turbo", "Spanish_SantaClaus_typo"),
     ],
 )
 @pytest.mark.asyncio
@@ -753,13 +952,13 @@ async def test_audio_validate_only_strips_voice_surrounding_whitespace():
         result = await audio_service.generate_audio(
             text="hello",
             model="MiniMax/speech-2.8-turbo",
-            voice=" Santa_Claus ",
+            voice=" Spanish_SantaClaus ",
             validate_only=True,
         )
 
     assert result["validated"] is True
-    assert result["corrected_args"] == {"voice": "Santa_Claus"}
-    assert result["payload"]["input"]["voice_setting"]["voice_id"] == "Santa_Claus"
+    assert result["corrected_args"] == {"voice": "Spanish_SantaClaus"}
+    assert result["payload"]["input"]["voice_setting"]["voice_id"] == "Spanish_SantaClaus"
 
 
 @pytest.mark.parametrize(
@@ -792,8 +991,69 @@ async def test_audio_pcm_falls_back_and_reports_the_effective_format():
             validate_only=True,
         )
 
-    assert result["corrected_args"] == {"audio_format": "mp3"}
+    assert result["corrected_args"] == {"audio_format": "mp3", "voice": "male-qn-qingse"}
     assert result["payload"]["input"]["audio_setting"]["format"] == "mp3"
+
+
+def _sent_voice(payload: dict) -> str:
+    return payload.get("req_params", {}).get("speaker") or payload["input"]["voice_setting"]["voice_id"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "model,default_voice",
+    [
+        ("seed-tts-2.0", "zh_female_xiaohe_uranus_bigtts"),
+        ("MiniMax/speech-2.8-hd", "male-qn-qingse"),
+        ("MiniMax/speech-2.8-turbo", "male-qn-qingse"),
+    ],
+)
+async def test_audio_omitted_voice_is_pinned_to_the_default_actually_sent(model, default_voice):
+    """Omitting voice delegates the choice, like model="auto": the approval card must
+    name the voice the listener will hear, and payload never reaches the model."""
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(text="hello", model=model, validate_only=True)
+
+    assert result["corrected_args"] == {"voice": default_voice}
+    assert _sent_voice(result["payload"]) == default_voice
+
+
+@pytest.mark.asyncio
+async def test_audio_auto_pins_the_routed_models_own_default_voice():
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(text="hello", model="auto", validate_only=True)
+
+    pinned = result["corrected_args"]
+    assert pinned["model"] == result["model_used"]
+    assert pinned["voice"] == _sent_voice(result["payload"])
+
+
+@pytest.mark.asyncio
+async def test_audio_explicit_voice_is_never_rewritten():
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        result = await audio_service.generate_audio(
+            text="hello", model="seed-tts-2.0", voice="zh_male_m191_uranus_bigtts", validate_only=True
+        )
+
+    assert "voice" not in result["corrected_args"]
+
+
+@pytest.mark.asyncio
+async def test_audio_merging_corrected_args_reproduces_the_approved_request():
+    """{**args, **corrected_args} must validate to the same payload with nothing left to pin."""
+    args = {"text": "hello", "model": "auto"}
+    a, b, c = _patched_real_registry(_client(), AsyncMock())
+    with a, b, c:
+        first = await audio_service.generate_audio(**args, validate_only=True)
+        second = await audio_service.generate_audio(
+            **{**args, **first["corrected_args"]}, validate_only=True
+        )
+
+    assert second["corrected_args"] == {}
+    assert second["payload"] == first["payload"]
 
 
 # ── The MCP layer ────────────────────────────────────────────────────────────
@@ -815,7 +1075,6 @@ async def test_mcp_keeps_the_payload_out_of_the_llm_content():
         "validated": True,
         "model_used": "doubao-seedance-2-0",
         "task_type": "video",
-        "is_async": True,
         "cost_tier": 3,
         "speed_tier": 2,
         "corrected_args": {"model": "doubao-seedance-2-0"},
@@ -901,9 +1160,9 @@ async def test_vision_validate_only_reports_the_routed_model_and_the_real_payloa
 
     assert result["validated"] is True
     assert result["task_type"] == "understand"
-    assert result["is_async"] is False
-    assert result["model_used"] == "qwen3.6-plus"
-    assert result["corrected_args"] == {"model": "qwen3.6-plus"}
+    assert "is_async" not in result
+    assert result["model_used"] == "qwen3.7-plus"
+    assert result["corrected_args"] == {"model": "qwen3.7-plus"}
     assert "m_c079468f" in json.dumps(result["payload"], ensure_ascii=False)
 
 
@@ -927,7 +1186,7 @@ async def test_vision_validate_only_rejects_what_the_billed_path_rejects():
         )
 
 
-# ── the description's reader is the model ─────────────────────────────────────
+# ── schema descriptions describe the API, not host orchestration ───────────────
 
 
 @pytest.mark.parametrize(
@@ -935,21 +1194,11 @@ async def test_vision_validate_only_rejects_what_the_billed_path_rejects():
     [GenerateImageInput, GenerateVideoInput],
     ids=["image", "video"],
 )
-def test_the_description_states_ownership_instead_of_prescribing_the_approval_loop(input_model):
-    """Pins a *string*, deliberately — the string is the fix.
-
-    The description used to close with orchestration advice for the integrator ("validate
-    first, show the approval, then call again without this flag"). Its actual reader is the
-    model choosing arguments; one that believes it runs the approval loop follows that
-    advice, announces "I'll preflight this" to the user, and then receives a real, billed
-    generation, because a host that preflights owns this flag and overrides the model's
-    value. Ownership has to be stated where the model reads, or the takeover is a surprise.
-
-    Asserted as two halves so a rewrite of the wording is free but dropping either half is
-    not: the ownership claim, and the consequence that makes it actionable (it may bill).
-    """
+def test_the_description_describes_api_behavior_without_host_orchestration(input_model):
+    """The schema describes this API call, not an agent/host approval workflow."""
     description = input_model.model_fields["validate_only"].description
 
-    assert "belongs to the calling host" in description
-    assert "billed" in description.split("belongs to the calling host", 1)[1]
-    assert "show the approval" not in description, "the orchestration recipe belongs in CLIENT_GUIDE.md, not in a model-facing schema"
+    assert "without sending it" in description
+    assert "nothing is billed" in description
+    assert "calling host" not in description
+    assert "approval" not in description

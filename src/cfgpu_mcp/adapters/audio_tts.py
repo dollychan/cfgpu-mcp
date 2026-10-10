@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import base64
 import difflib
-import re
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import GenerateAudioInput, NormalizedResult
+from cfgpu_mcp.voice_catalog import catalog_for_adapter
 
 if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
@@ -67,40 +66,51 @@ _AUDIO_MIME_BY_FORMAT = {
 }
 
 
-def _voice_ids_from_card(model_dir: str) -> frozenset[str]:
-    """Load the exact system voice ids from a model card's voice table.
+def _system_voice_ids(adapter_id: str, default_voice: str) -> frozenset[str]:
+    """The voice ids this model accepts: its ``voices.yaml`` plus its own default.
 
-    The cards are already shipped runtime data (``get_model_card`` reads the same
-    files).  Keeping one authoritative list avoids copying hundreds of ids into
-    Python. Voice ids are stripped of surrounding whitespace while meaningful
-    characters such as full-width punctuation and letter casing are preserved.
+    The catalog is the one ``list_voice_profiles`` serves, so a voice that tool offers is
+    always one this validation accepts. The default is added because the adapter already
+    sends it whenever ``voice`` is omitted — rejecting it when named explicitly would make
+    the same request fail or succeed depending on spelling — and the catalog export need
+    not list it (MiniMax's ``male-qn-qingse`` is absent). Ids are opaque and kept
+    byte-for-byte: a trailing space, full-width punctuation, and casing can all matter.
     """
-    card = Path(__file__).resolve().parent.parent / "models" / model_dir / "card.md"
-    text = card.read_text(encoding="utf-8")
-    marker = "## 系统音色列表"
-    if marker not in text:
-        raise RuntimeError(f"voice catalog section missing from {card}")
-    section = text.split(marker, 1)[1]
-    section = section.split("\n## ", 1)[0]
-    voices: set[str] = set()
-    for line in section.splitlines():
-        if not line.lstrip().startswith("|"):
-            continue
-        matches = re.findall(r"`([^`]+)`", line)
-        if matches:
-            voice = matches[0].strip()
-            if voice:
-                voices.add(voice)
-    if not voices:
-        raise RuntimeError(f"voice catalog table is empty in {card}")
-    return frozenset(voices)
+    catalog = catalog_for_adapter(adapter_id)
+    if catalog is None:
+        raise RuntimeError(f"no voices.yaml for {adapter_id}")
+    return frozenset({entry.voice for entry in catalog.voices} | {default_voice})
 
 
-_SEED_SYSTEM_VOICES = _voice_ids_from_card("seed-tts-2-0")
-_MINIMAX_SYSTEM_VOICES = _voice_ids_from_card("minimax-speech-2-8-hd")
+_SEED_DEFAULT_VOICE = "zh_female_xiaohe_uranus_bigtts"
+_MINIMAX_DEFAULT_VOICE = "male-qn-qingse"
+_SEED_SYSTEM_VOICES = _system_voice_ids("seed-tts-2-0", _SEED_DEFAULT_VOICE)
+_MINIMAX_SYSTEM_VOICES = _system_voice_ids("minimax-speech-2-8-hd", _MINIMAX_DEFAULT_VOICE)
 _MINIMAX_EMOTIONS = frozenset(
     {"happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent", "whisper"}
 )
+
+
+def _voice_correction(voice: str | None, default_voice: str) -> dict[str, str]:
+    """The ``voice`` a preflight reports in ``corrected_args``.
+
+    An omitted voice is pinned to the default the adapter will actually send. Leaving
+    ``voice`` out delegates the choice, exactly like ``model="auto"``: the voice is still
+    concrete — it is in ``payload`` — but ``payload`` rides structuredContent, so an
+    approval card built from the caller's own arguments has no voice row, and a person
+    approves speech in a voice nobody chose (MiniMax's default is not even in the
+    catalog ``list_voice_profiles`` serves). Pinning names it on the card, and merging
+    ``corrected_args`` makes the billed call use the voice that was approved.
+
+    Unlike an omitted video ``resolution`` — a quality tier, left unpinned — a voice is
+    the thing the listener hears, so the delegated choice is worth surfacing. A supplied
+    voice is only ever stripped of surrounding whitespace, never replaced.
+    """
+    if voice is None:
+        return {"voice": default_voice}
+    if voice != voice.strip():
+        return {"voice": voice.strip()}
+    return {}
 
 
 def _invalid_voice_reason(model_name: str, voice: str, voices: frozenset[str]) -> str:
@@ -163,9 +173,11 @@ def _extract_inline_audio(resp: dict) -> dict | None:
 
 _MINIMAX_VOICE_REMEDY = (
     "该 voice 不在此模型的音色表中。两个语音模型族的音色互不通用："
-    "形如 xxx_uranus_bigtts 或 saturn_xxx 的是 seed-tts 的 speaker，MiniMax 一律不接受。"
-    "音色 id 会去除首尾空格；全角括号、不规则大小写等其他字符仍须准确照抄。"
+    "含 uranus 的（形如 xxx_uranus_bigtts、ICL_uranus_xxx_tob）是 seed-tts 的 speaker，MiniMax 一律不接受。"
+    "音色 id 的首尾空格、全角括号、不规则大小写等字符都须准确照抄，不得自行规范化。"
     "不需要特定音色时省略 voice 即可，默认为 male-qn-qingse。"
+    "需要选择音色时，先按语言或风格关键词查询当前 model_id 的系统音色目录，"
+    "只能逐字使用目录返回的 voice 字段；label 只是展示名称，不能传入。"
 )
 
 _MINIMAX_EMOTION_REMEDY = (
@@ -175,17 +187,17 @@ _MINIMAX_EMOTION_REMEDY = (
 )
 
 # status_msg 里出现的字段名 → 该字段的专用建议；先按字段匹配，命中即用。
-# 第三项是「是否保留 get_model_card 提示」。
+# 第三项仅控制通用 card hint；agent-facing recovery must never need a card.
 _MINIMAX_FIELD_REMEDIES: tuple[tuple[str, str, bool], ...] = (
-    ("emotion", _MINIMAX_EMOTION_REMEDY, True),
-    ("voice", _MINIMAX_VOICE_REMEDY, True),
+    ("emotion", _MINIMAX_EMOTION_REMEDY, False),
+    ("voice", _MINIMAX_VOICE_REMEDY, False),
 )
 
 # 字段名匹配不到时按 status_code 兜底。2013 未点名字段时不给泛化建议——
 # 编一句「请检查参数」既没有信息量，又会挤掉更有用的 card 提示。
 _MINIMAX_CODE_REMEDIES: dict[str, tuple[str, bool]] = {
-    "2013": ("", True),
-    "2054": (_MINIMAX_VOICE_REMEDY, True),
+    "2013": ("", False),
+    "2054": (_MINIMAX_VOICE_REMEDY, False),
 }
 
 # 调用者可自行修正的 code —— 归为 invalid_params 而不是 task_failed。后者读作
@@ -213,15 +225,14 @@ class SeedTTSAdapter(ModelAdapter):
 
     adapter_id = "seed-tts-2-0"
 
-    _DEFAULT_VOICE = "zh_female_xiaohe_uranus_bigtts"
+    _DEFAULT_VOICE = _SEED_DEFAULT_VOICE
     _DEFAULT_SAMPLE_RATE = 24000
 
     def validation_corrections(self, req: "GenerateAudioInput") -> dict[str, Any]:
         corrected: dict[str, Any] = {}
         if req.audio_format == "pcm":
             corrected["audio_format"] = "mp3"
-        if req.voice is not None and req.voice != req.voice.strip():
-            corrected["voice"] = req.voice.strip()
+        corrected.update(_voice_correction(req.voice, self._DEFAULT_VOICE))
         if req.emotion is not None:
             corrected["emotion"] = None
         return corrected
@@ -231,17 +242,17 @@ class SeedTTSAdapter(ModelAdapter):
         if not ok:
             return False, reason
         if not req.text.strip():
-            return False, f"{self.adapter_id} requires non-empty text"
+            return False, f"{self.model_name} requires non-empty text"
         if req.voice is not None and req.voice not in _SEED_SYSTEM_VOICES:
             return False, _invalid_voice_reason(self.model_name, req.voice, _SEED_SYSTEM_VOICES)
         if req.audio_format not in {"mp3", "wav", "flac"}:
-            return False, f"{self.adapter_id} supports audio_format mp3, wav, or flac"
+            return False, f"{self.model_name} supports audio_format mp3, wav, or flac"
         if req.sample_rate is not None and req.sample_rate <= 0:
             return False, "sample_rate must be a positive integer"
         if req.bitrate is not None:
-            return False, f"{self.adapter_id} does not support bitrate"
+            return False, f"{self.model_name} does not support bitrate"
         if req.speed != 1.0 or req.volume != 1.0 or req.pitch != 0 or req.emotion is not None:
-            return False, f"{self.adapter_id} does not support speed, volume, pitch, or emotion"
+            return False, f"{self.model_name} does not support speed, volume, pitch, or emotion"
         return True, ""
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput") -> dict:
@@ -321,7 +332,7 @@ class MiniMaxSpeechAdapter(ModelAdapter):
 
     adapter_id = "minimax-speech-2-8-hd"
 
-    _DEFAULT_VOICE = "male-qn-qingse"
+    _DEFAULT_VOICE = _MINIMAX_DEFAULT_VOICE
     _DEFAULT_SAMPLE_RATE = 32000
     _DEFAULT_BITRATE = 128000
 
@@ -329,8 +340,7 @@ class MiniMaxSpeechAdapter(ModelAdapter):
         corrected: dict[str, Any] = {}
         if req.audio_format == "pcm":
             corrected["audio_format"] = "mp3"
-        if req.voice is not None and req.voice != req.voice.strip():
-            corrected["voice"] = req.voice.strip()
+        corrected.update(_voice_correction(req.voice, self._DEFAULT_VOICE))
         return corrected
 
     def supports(self, req: "GenerateAudioInput") -> tuple[bool, str]:
@@ -338,16 +348,16 @@ class MiniMaxSpeechAdapter(ModelAdapter):
         if not ok:
             return False, reason
         if not req.text.strip():
-            return False, f"{self.adapter_id} requires non-empty text"
+            return False, f"{self.model_name} requires non-empty text"
         if req.voice is not None and req.voice not in _MINIMAX_SYSTEM_VOICES:
             return False, _invalid_voice_reason(self.model_name, req.voice, _MINIMAX_SYSTEM_VOICES)
         if req.emotion is not None and req.emotion not in _MINIMAX_EMOTIONS:
             return False, (
-                f"{self.adapter_id} does not support emotion {req.emotion!r} "
+                f"{self.model_name} does not support emotion {req.emotion!r} "
                 f"(supported: {', '.join(sorted(_MINIMAX_EMOTIONS))})"
             )
         if req.audio_format not in {"mp3", "wav", "flac"}:
-            return False, f"{self.adapter_id} supports audio_format mp3, wav, or flac"
+            return False, f"{self.model_name} supports audio_format mp3, wav, or flac"
         if req.sample_rate is not None and req.sample_rate <= 0:
             return False, "sample_rate must be a positive integer"
         if req.bitrate is not None and req.bitrate <= 0:

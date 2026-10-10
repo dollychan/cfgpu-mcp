@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.adapters.base import (
+    ModelAdapter,
+    _default_expires_at,
+    frames_vs_references_reason,
+    register_python_adapter,
+)
 from cfgpu_mcp.tool_registry import GenerateVideoInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -13,14 +18,18 @@ if TYPE_CHECKING:
 class HappyHorseVideoAdapter(ModelAdapter):
     adapter_id = "happyhorse-1-0-t2v"
 
+    _RATIOS = frozenset({"16:9", "9:16", "1:1", "4:3", "3:4", "4:5", "5:4", "9:21", "21:9"})
+
+    def _uses_ratio(self) -> bool:
+        # I2V follows the source image's ratio and does not accept this parameter.
+        return self.adapter_id in {"happyhorse-1-0-t2v", "happyhorse-1-0-r2v"}
+
     def validation_corrections(
         self, req: "GenerateImageInput | GenerateVideoInput"
     ) -> dict[str, Any]:
         corrected = super().validation_corrections(req)
         assert isinstance(req, GenerateVideoInput)
-        if self.adapter_id != "happyhorse-1-0-video-edit" and req.aspect_ratio not in {
-            "16:9", "9:16", "1:1", "4:3", "3:4"
-        }:
+        if self._uses_ratio() and req.aspect_ratio not in self._RATIOS:
             corrected["aspect_ratio"] = "16:9"
         return corrected
 
@@ -44,7 +53,7 @@ class HappyHorseVideoAdapter(ModelAdapter):
         resolution = self.resolve_resolution(req)
         if resolution and resolution != "adaptive":
             parameters["resolution"] = resolution.upper()  # 720p → 720P
-        if req.aspect_ratio and req.aspect_ratio != "adaptive":
+        if self._uses_ratio() and req.aspect_ratio != "adaptive":
             parameters["ratio"] = req.aspect_ratio
         duration_seconds = self.resolve_duration_seconds(req)
         if duration_seconds:
@@ -58,12 +67,18 @@ class HappyHorseVideoAdapter(ModelAdapter):
         payload: dict = {
             "model": self.cfgpu_model_id,
             "input": inp,
-            "watermark": req.watermark,
         }
+        parameters["watermark"] = req.watermark
         if parameters:
             payload["parameters"] = parameters
         if req.model_specific:
-            payload.update(req.model_specific)
+            overrides = dict(req.model_specific)
+            parameter_overrides = overrides.pop("parameters", None)
+            if isinstance(parameter_overrides, dict):
+                payload["parameters"].update(parameter_overrides)
+            elif parameter_overrides is not None:
+                overrides["parameters"] = parameter_overrides
+            payload.update(overrides)
         return payload
 
     def extract_task_id(self, resp: dict) -> str | None:
@@ -103,32 +118,41 @@ class HappyHorseVideoAdapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateVideoInput)
-        if not req.prompt.strip():
-            return False, f"{self.adapter_id} requires a non-empty prompt"
-        if self.adapter_id == "happyhorse-1-0-i2v":
+        if self.adapter_id != "happyhorse-1-0-i2v" and not req.prompt.strip():
+            return False, f"{self.model_name} requires a non-empty prompt"
+        # Checked before the per-scenario branches: each of those would otherwise
+        # report only half the conflict ("does not support reference_images"), and the
+        # fix for HappyHorse is a different model either way — one per scenario.
+        if req.first_frame and req.reference_images:
+            return False, frames_vs_references_reason(
+                self.model_name,
+                req,
+                reference_model="model=happyhorse-1.0-r2v",
+                frame_model="model=happyhorse-1.0-i2v",
+            )
+        if self.adapter_id == "happyhorse-1-0-t2v":
+            if req.first_frame or req.reference_images:
+                return False, f"{self.model_name} is a text-to-video model (no image media)"
+        elif self.adapter_id == "happyhorse-1-0-i2v":
             if not req.first_frame:
-                return False, f"{self.adapter_id} requires first_frame"
+                return False, f"{self.model_name} requires first_frame"
             if req.reference_images:
-                return False, f"{self.adapter_id} does not support reference_images"
+                return False, f"{self.model_name} does not support reference_images"
         elif self.adapter_id == "happyhorse-1-0-r2v":
             if req.first_frame:
-                return False, f"{self.adapter_id} does not support first_frame"
+                return False, f"{self.model_name} does not support first_frame"
             if not req.reference_images:
-                return False, f"{self.adapter_id} requires at least one reference_image"
+                return False, f"{self.model_name} requires at least one reference_image"
         if req.last_frame:
-            return False, f"{self.adapter_id} does not support last_frame"
+            return False, f"{self.model_name} does not support last_frame"
         if req.reference_videos:
-            return False, f"{self.adapter_id} does not support reference_videos"
+            return False, f"{self.model_name} does not support reference_videos"
         if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
-        if self.resolve_resolution(req) == "480p":
-            return False, f"{self.adapter_id} minimum resolution is 720p"
-        if self.resolve_duration_seconds(req) == -1:
-            return False, f"{self.adapter_id} requires an explicit duration (no -1 smart mode)"
-        if req.first_frame and req.reference_images:
-            return False, "first_frame and reference_images are mutually exclusive"
+            return False, f"{self.model_name} does not support reference_audios"
         if req.reference_images and len(req.reference_images) > 9:
-            return False, f"{self.adapter_id} accepts at most 9 reference_images"
+            return False, f"{self.model_name} accepts at most 9 reference_images"
+        if self._uses_ratio() and req.aspect_ratio != "adaptive" and req.aspect_ratio not in self._RATIOS:
+            return False, f"{self.model_name} does not support aspect_ratio {req.aspect_ratio}"
         return True, ""
 
 
@@ -140,6 +164,9 @@ class HappyHorseVideoEditAdapter(HappyHorseVideoAdapter):
     """
 
     adapter_id = "happyhorse-1-0-video-edit"
+    # Output length follows the source video and no duration is sent, so -1 asks for
+    # nothing this model could refuse.
+    accepts_smart_duration = True
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
@@ -168,17 +195,15 @@ class HappyHorseVideoEditAdapter(HappyHorseVideoAdapter):
             return False, reason
         assert isinstance(req, GenerateVideoInput)
         if not req.prompt.strip():
-            return False, f"{self.adapter_id} requires a non-empty prompt"
+            return False, f"{self.model_name} requires a non-empty prompt"
         if not req.reference_videos:
-            return False, f"{self.adapter_id} requires a source video (reference_videos)"
+            return False, f"{self.model_name} requires a source video (reference_videos)"
         if len(req.reference_videos) > 1:
-            return False, f"{self.adapter_id} accepts a single source video"
+            return False, f"{self.model_name} accepts a single source video"
         if req.reference_images and len(req.reference_images) > 5:
-            return False, f"{self.adapter_id} accepts at most 5 reference_images"
+            return False, f"{self.model_name} accepts at most 5 reference_images"
         if req.first_frame or req.last_frame:
-            return False, f"{self.adapter_id} does not support first_frame/last_frame"
+            return False, f"{self.model_name} does not support first_frame/last_frame"
         if req.reference_audios:
-            return False, f"{self.adapter_id} does not support reference_audios"
-        if self.resolve_resolution(req) == "480p":
-            return False, f"{self.adapter_id} minimum resolution is 720p"
+            return False, f"{self.model_name} does not support reference_audios"
         return True, ""

@@ -7,24 +7,25 @@ task_type: understand
 endpoint: /model/v1/chat/completions
 is_async: false
 
-# region_understand is named apart from region_edit on purpose: being able to *read* a
-# marked region does not imply being able to edit by it, and one capability covering
+# region_understanding is a separate task from region_edit on purpose: being able to *read* a
+# marked region does not imply being able to edit by it, and one task covering
 # both would let a reader be routed an editing job.
-capabilities:
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - image_understanding
-  - image_reasoning
   - video_understanding
-  - long_video
-  - long_document
-  - tool_calling
-  - visual_agent
-  - long_context
-  - region_understand
+  - region_understanding
 
-# No documented ceiling. This is what makes reading the escape hatch for editors that do
-# have one: five regions can be understood in a single call and then edited across
-# however many calls the editing model's own limit requires.
-max_regions_per_image: ~
+# All qwen vision models inherit this. No documented ceiling on images or boxes. The
+# missing region cap is what makes reading the escape hatch for editors that do have
+# one: five regions can be understood in a single call and then edited across however
+# many calls the editing model's own limit requires.
+inputs:
+  images: {}
+  video: {}
+  regions: {}
+
 
 cost_tier: 2
 speed_tier: 4

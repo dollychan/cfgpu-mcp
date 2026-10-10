@@ -7,6 +7,7 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, NamedTuple
 
+from cfgpu_mcp.adapters.regions import resolve_image_refs
 from cfgpu_mcp.client.cfgpu_client import CFGPUClient
 from cfgpu_mcp.client.repository import TaskRepository
 from cfgpu_mcp.errors import CFGPUError
@@ -55,7 +56,7 @@ MAX_CONSECUTIVE_POLL_FAILURES = 5
 #: block: a model whose real latency approaches this still belongs behind
 #: ``force_async: true``, because a blocked call holds a run slot, checkpoints nothing,
 #: and takes the whole super-step down with it if the process dies mid-wait.
-MAX_WAIT_SECONDS = 3000
+MAX_WAIT_SECONDS = 3600
 
 #: Resolves the client for a given adapter's upstream — see ``config.client_for``.
 ClientResolver = Callable[["ModelAdapter"], CFGPUClient]
@@ -101,6 +102,15 @@ _ECHO_PAYLOAD_KEYS = (_REQUEST_ID_KEY, _CAPTION_KEY, _LABEL_KEY)
 # is queue depth on a single serial GPU, which only the gateway can see; a duplicate
 # formula on this side would drift from the one that actually schedules the work.
 _ETA_KEY = "_eta"
+
+# The error_type a failed row must be *reported* with, when it is not the default
+# ``task_failed``. The ``error`` column holds prose only, so without this a
+# ``submission_lost`` raised live would come back from ``task_status`` / a replayed
+# request_id as ``task_failed`` — a class that reads as "generation failed" and invites
+# the one move (resending) that turns one charge into two. Written by this module's
+# terminal-at-submit paths only; ``task_failed_error`` honours it ahead of any adapter
+# translation, since those translate *upstream* verdicts and there was none.
+_FAILURE_TYPE_KEY = "_error_type"
 
 
 def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
@@ -154,16 +164,30 @@ _REFUSAL_ERROR_TYPES = frozenset({
 })
 
 
+def _submission_lost_remedy(adapter: "ModelAdapter") -> str:
+    """The next step after a submission whose answer never came back.
+
+    It must be one the caller can execute. ``task_status`` is not: the answer travelled
+    in the lost response and nothing will ever write it to the row. So the only route to
+    a result is to send the request again, and the message says exactly that — without
+    a billing caveat, which gives the caller nothing to act on and only makes it stall.
+    """
+    if adapter.task_type == "understand":
+        return (
+            "这次请求的回答没能取回，task_status 也查不到，请直接重新调用 understand_vision。"
+            "如果是耗时过长导致的，可以降低 analysis_depth、缩短视频或收窄问题后再调用。"
+        )
+    return "这次请求的结果没能取回，task_status 也查不到，请直接重新发起。"
+
+
 def _upstream_refused(e: CFGPUError) -> bool:
     """Whether this submit failure proves nothing was started upstream.
 
-    The asymmetry is deliberate. Marking a refused submission ``failed`` is safe and
-    useful — it tells a later ``task_status`` "this cost you nothing, fix the argument
-    and go again". Marking an *indeterminate* one failed is the expensive mistake: a
-    request-phase POST timeout, a transport error, an upstream 5xx all leave a job that
-    may be running and billing, and a row that says "failed, safe to retry" is how one
-    generation gets paid for twice. Those stay ``dispatching``, which is this design's
-    word for "cannot prove it wasn't sent".
+    A refused submission keeps the upstream's own error type, which tells the caller
+    what to fix. An *indeterminate* one (request-phase POST timeout, transport error,
+    upstream 5xx) becomes ``submission_lost``: whatever the upstream did, the result
+    travelled in the lost response and cannot be collected, so the next step is simply
+    to send it again. See ``_record_submit_failure``.
     """
     if e.outcome_unknown:
         return False
@@ -306,6 +330,51 @@ def _has_body_error(resp: dict) -> bool:
     return isinstance(err, str) and bool(err.strip())
 
 
+def task_failed_error(
+    task: Any,
+    adapter: "ModelAdapter | None" = None,
+    *,
+    model_id: str | None = None,
+    request_id: str | None = None,
+) -> CFGPUError:
+    """The error raised for a task that failed upstream — one builder for every site.
+
+    ``task_status``, ``task_wait``, ``generate_*(wait=True)`` and a replayed
+    request_id all report the same failed row, so they must report it identically;
+    building it in one place is what keeps the adapter's reclassification
+    (``translate_task_failure``) from reaching only some of them. ``adapter`` is looked
+    up from the row when the caller does not hold it.
+    """
+    message = task.error or "Task failed without error message"
+    if adapter is None:
+        from cfgpu_mcp.config import get_registry
+
+        try:
+            adapter = get_registry().get(task.adapter_id)
+        except Exception:  # an unloadable/disabled model must not mask the failure
+            adapter = None
+    error_type, card_hint = "task_failed", None
+    payload = getattr(task, "payload", None)
+    stored_type = payload.get(_FAILURE_TYPE_KEY) if isinstance(payload, dict) else None
+    translated = None
+    if isinstance(stored_type, str) and stored_type:
+        error_type = stored_type
+    elif adapter is not None:
+        translated = adapter.translate_task_failure(message)
+    # Only a well-formed triple is honoured: a translation hook that returns something
+    # else must not turn a real failure report into a crash of the reporting path.
+    if isinstance(translated, tuple) and len(translated) == 3:
+        error_type, message, card_hint = translated
+    return CFGPUError(
+        error_type=error_type,  # type: ignore[arg-type]
+        user_message=message,
+        original={"task_id": task.id},
+        model_id=model_id,
+        request_id=request_id,
+        card_hint=card_hint,
+    )
+
+
 def _extract_error_message(resp: dict) -> str | None:
     """Best-effort failure reason from a poll response, tolerant of shape.
 
@@ -331,6 +400,12 @@ def _extract_error_message(resp: dict) -> str | None:
         if isinstance(err, dict):
             msg = err.get("message") or err.get("msg")
             if msg:
+                # Keep a symbolic code (Ark's ``InvalidParameter.TaskTypeConstraint``)
+                # for the same reason _dashscope_output_reason does: it is often the only
+                # part that says *why*, and it is what translate_task_failure keys on.
+                code = err.get("code")
+                if isinstance(code, str) and code.strip() and code.strip() not in str(msg):
+                    return f"{code.strip()}: {msg}"
                 return str(msg)
         elif isinstance(err, str) and err.strip():
             return err.strip()
@@ -405,7 +480,7 @@ class Task:
         """
         return {
             k: v for k, v in self.payload.items()
-            if k not in (_ASPECT_RATIO_KEY, *_ECHO_PAYLOAD_KEYS)
+            if k not in (_ASPECT_RATIO_KEY, _FAILURE_TYPE_KEY, *_ECHO_PAYLOAD_KEYS)
         }
 
 
@@ -535,7 +610,9 @@ def validate_request(
             original={"model": req.model},
             model_id=adapter.model_name,
         )
-    payload = adapter.build_payload(effective_req)
+    # The same placeholder resolution create() applies, so the preflight's payload is
+    # the prompt that would really be sent — and an unresolved [[...]] fails here, free.
+    payload = adapter.build_payload(resolve_image_refs(effective_req))
     return {
         "validated": True,
         # The concrete model, so `model="auto"` reports what routing actually picked —
@@ -543,10 +620,9 @@ def validate_request(
         # can weigh. `model_name` is the only public identifier (never adapter_id).
         "model_used": adapter.model_name,
         "task_type": adapter.task_type,
-        # Both carried because they change what approving this means: an async task
-        # returns a handle to poll rather than a result, and the tiers are the closest
-        # thing to a cost signal available before the call.
-        "is_async": adapter.is_async,
+        # ``adapter.is_async`` describes the upstream provider protocol, not the MCP
+        # task contract. Every MCP submission has a task handle, so surfacing that
+        # implementation detail would incorrectly tell an agent how to proceed.
         "cost_tier": adapter.cost_tier,
         "speed_tier": adapter.speed_tier,
         # What to change before submitting for real; empty when nothing needs changing.
@@ -605,7 +681,9 @@ class TaskManager:
         existing row is returned and no second POST is sent, which is what keeps a
         replayed tool call from being billed twice. See request-id-durability.md.
         """
-        payload = adapter.build_payload(req)
+        # Placeholders resolve before the row is written: an unresolved one raises here,
+        # with nothing inserted and nothing sent.
+        payload = adapter.build_payload(resolve_image_refs(req))
         request_id = getattr(req, "request_id", None)
         task_id = request_id or str(uuid.uuid4())
         stored_payload = _stash_internal(payload, req, aspect_ratio=adapter.is_async)
@@ -661,12 +739,7 @@ class TaskManager:
         )
         task = Task(row)
         if task.status == "failed":
-            raise CFGPUError(
-                error_type="task_failed",
-                user_message=task.error or "Task failed without error message",
-                original={"task_id": task_id},
-                request_id=task.payload.get(_REQUEST_ID_KEY),
-            )
+            raise task_failed_error(task, request_id=task.payload.get(_REQUEST_ID_KEY))
         return task
 
     async def _dispatch(
@@ -686,33 +759,54 @@ class TaskManager:
         try:
             resp = await self._client_for(adapter).post(adapter.endpoint, payload)
         except CFGPUError as e:
-            await self._record_submit_failure(task_id, e)
+            await self._record_submit_failure(task_id, adapter, stored_payload, e)
             raise
         if not adapter.is_async:
             return await self._finish_sync(task_id, adapter, req, stored_payload, resp)
         return await self._finish_async(task_id, adapter, stored_payload, resp)
 
-    async def _record_submit_failure(self, task_id: str, e: CFGPUError) -> None:
+    async def _record_submit_failure(
+        self,
+        task_id: str,
+        adapter: "ModelAdapter",
+        stored_payload: dict,
+        e: CFGPUError,
+    ) -> None:
         """Write onto the row what this failure actually proves, and make the error say so.
 
-        ``outcome_unknown`` is cleared here rather than at the raise site because it
-        meant one specific thing — "the upstream may have billed and there is nothing on
-        this side to reconcile against". The second half of that sentence stopped being
-        true the moment the row was written first, and an error still carrying the flag
-        would send a caller looking for a remedy that no longer matches its situation.
-        What replaces it is a next step that can actually be executed: the id to query,
-        which is the caller's own request_id.
+        Both branches are **terminal**, because by the time this runs the POST is over:
+        whatever this submission was going to tell us — a sync model's whole result, an
+        async model's upstream task id — travelled in that one response, and nothing
+        will ever deliver it a second time. What the two branches differ in is what the
+        failure proves about *billing*.
+
+        A refusal (4xx, moderation, connect-phase timeout) proves nothing started, so
+        the row is a plain ``failed`` and resending is safe.
+
+        Anything indeterminate (request-phase POST timeout, transport error, upstream
+        5xx) used to stay ``dispatching`` with a message pointing at ``task_status`` —
+        but ``task_status`` does not re-poll a row with no upstream id, and nothing else
+        ever wrote to it again, so that pointer was a dead end that read as "still in
+        flight, keep polling" forever. It is now ``failed`` with
+        ``error_type="submission_lost"`` stored on the row, so the live error and every
+        later read (``task_status``, ``task_wait``, a replayed request_id) say the same
+        thing: the result is gone, send the request again.
+
+        ``outcome_unknown`` is cleared because its second half ("nothing on this side to
+        reconcile against") is false: the row exists and says exactly this.
         """
         e.original.setdefault("task_id", task_id)
         if _upstream_refused(e):
             await self._repo.update_task(task_id, "failed", error=e.user_message)
             return
-        await self._repo.update_task(task_id, DISPATCHING, error=e.user_message)
-        if e.outcome_unknown:
-            e.outcome_unknown = False
-            e.user_message += (
-                f'用 task_status("{task_id}") 查这次提交的最终状态，不要直接重发同一个任务。'
-            )
+        e.error_type = "submission_lost"
+        e.retryable = True
+        e.outcome_unknown = False
+        e.user_message += _submission_lost_remedy(adapter)
+        await self._repo.update_task(
+            task_id, "failed", error=e.user_message,
+            payload={**stored_payload, _FAILURE_TYPE_KEY: "submission_lost"},
+        )
 
     async def _finish_sync(
         self,
@@ -773,11 +867,14 @@ class TaskManager:
             # nothing at all — the caller was told the submission failed while the job
             # ran on upstream, unreachable and unaccounted for.
             message = (
-                "提交已被上游接受（可能已计费），但没能从响应中解析出上游 task_id，"
-                "这次生成的结果无法取回。请不要直接重发同一个任务，先到上游侧确认。"
+                "没能从上游响应中解析出 task_id，这次请求的结果无法取回，"
+                "task_status 也查不到，请直接重新发起。"
                 f"响应原文（截断）：{_truncate_json(resp)}"
             )
-            await self._repo.update_task(task_id, "failed", error=message)
+            await self._repo.update_task(
+                task_id, "failed", error=message,
+                payload={**stored_payload, _FAILURE_TYPE_KEY: "submission_lost"},
+            )
             raise CFGPUError(
                 error_type="submission_lost",
                 user_message=message,
@@ -1016,11 +1113,7 @@ class TaskManager:
             interval = min(interval * backoff, max_interval)
 
         if task.status == "failed":
-            raise CFGPUError(
-                error_type="task_failed",
-                user_message=task.error or "Task failed without error message",
-                original={"task_id": task.id},
-            )
+            raise task_failed_error(task, adapter)
         return WaitOutcome(task)
 
     # ── Query ────────────────────────────────────────────────────────────────

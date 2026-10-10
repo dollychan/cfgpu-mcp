@@ -1,9 +1,19 @@
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal
+
+from cfgpu_mcp.adapters.inputs import (
+    LEGACY_INPUT_KEYS,
+    InputSlot,
+    check_declared_inputs,
+    parse_inputs,
+    parse_outputs,
+)
+from cfgpu_mcp.task_catalog import parse_tasks
 
 if TYPE_CHECKING:
     from cfgpu_mcp.tool_registry import (
@@ -32,8 +42,8 @@ def get_python_adapters() -> dict[str, type["ModelAdapter"]]:
     return _PYTHON_ADAPTERS
 
 
-def models_with_capability(capability: str) -> list[str]:
-    """Public ``model_name``s carrying ``capability``, or ``[]`` if the registry is unreachable.
+def models_with_task(task: str) -> list[str]:
+    """Public ``model_name``s declaring canonical ``task``, or ``[]`` if the registry is unreachable.
 
     For refusal messages that need to name the alternatives. Read from the registry rather
     than hard-coded so the advice cannot go stale as the fleet changes — and never allowed
@@ -42,9 +52,66 @@ def models_with_capability(capability: str) -> list[str]:
     try:
         from cfgpu_mcp.config import get_registry
 
-        return sorted(a.model_name for a in get_registry().list_all() if capability in a.capabilities)
+        return sorted(a.model_name for a in get_registry().list_all() if task in a.tasks)
     except Exception:  # pragma: no cover - defensive: advice must never break validation
         return []
+
+
+def frames_vs_references_reason(
+    model_name: str,
+    req: Any,
+    *,
+    reference_model: str | None = None,
+    frame_model: str | None = None,
+) -> str:
+    """The refusal for first/last frames mixed with ``reference_*`` media, with both fixes.
+
+    The bare fact ("mutually exclusive") leaves the caller to guess, and the two ways out
+    produce different videos: a frame is the video's literal opening picture, a reference
+    only carries the subject into a newly composed shot. Which one was meant is in the
+    prompt, which only the caller can read — so both routes are spelled out, each with
+    the exact argument moves, and the choice stays with the caller. Converting one into
+    the other here would be a silent substitution: a plausible, billed, different video.
+
+    ``reference_model`` / ``frame_model`` describe the switch for that route when this
+    model cannot take it (HappyHorse ships each scenario as its own model), inserted after
+    "改用" verbatim — e.g. ``"model=happyhorse-1.0-r2v"``; ``None`` means this model takes
+    it. ``req`` is only read.
+    """
+    frames = [n for n in ("first_frame", "last_frame") if getattr(req, n, None)]
+    refs = [
+        n for n in ("reference_images", "reference_videos", "reference_audios")
+        if getattr(req, n, None)
+    ]
+    frame_list = " / ".join(frames)
+    ref_list = " / ".join(refs)
+
+    if reference_model is None:
+        keep_refs = f"，{'、'.join(n for n in refs if n != 'reference_images')} 保留" if any(
+            n != "reference_images" for n in refs
+        ) else ""
+        merge = "（与已有参考图合并）" if "reference_images" in refs else ""
+        route_ref = (
+            f"把 {frame_list} 的图移入 reference_images{merge}，"
+            f"删除 {frame_list}{keep_refs}"
+        )
+    else:
+        route_ref = (
+            f"改用 {reference_model}，把 {frame_list} 的图放入 reference_images，"
+            f"删除 {frame_list}"
+        )
+    if frame_model is None:
+        route_frame = f"保留 {frame_list}，删除 {ref_list}"
+    else:
+        route_frame = f"改用 {frame_model}，保留 {frame_list}，删除 {ref_list}"
+    lost = "（reference_audios 删除后不再驱动配音/对口型）" if "reference_audios" in refs else ""
+
+    return (
+        f"{model_name}: {frame_list} is mutually exclusive with {ref_list}. "
+        f"二者生成的是不同的视频，请按 prompt 的意图二选一："
+        f"① 图片用于确定主体/人物形象，场景与构图由 prompt 重新描述 → {route_ref}；"
+        f"② 图片需原样作为视频开场画面 → {route_frame}{lost}。"
+    )
 
 
 @dataclass
@@ -72,6 +139,11 @@ class PollConfig:
 #: typo in every adapter.yaml that named it.
 _QUALITY_TIERS = frozenset({"fast", "balanced", "best"})
 
+#: ``UnderstandVisionInput.analysis_depth`` has a separate vocabulary from media
+#: generation's quality tier. Keeping its defaults separate prevents an adapter's
+#: generation ``default_for`` declaration from affecting vision routing.
+_ANALYSIS_DEPTHS = frozenset({"fast", "balanced", "thorough"})
+
 #: The fleet video-resolution vocabulary, ordered by output size. Read by
 #: ``validation_corrections`` to pick the nearest supported tier *at or below* the
 #: requested one, so a fallback never silently upgrades a caller into a pricier tier.
@@ -79,6 +151,44 @@ _QUALITY_TIERS = frozenset({"fast", "balanced", "best"})
 #: is not an error but a silently skipped correction, which is why
 #: ``test_resolution_order_covers_the_whole_schema_enum`` pins the two together.
 _RESOLUTION_ORDER = {"480p": 0, "720p": 1, "768p": 2, "1080p": 3, "2k": 4, "4k": 5}
+
+
+def _schema_ratios(task_type: str) -> list[str]:
+    """The tool schema's own aspect_ratio enum — the only values a declaration may name."""
+    from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+
+    model = GenerateImageInput if task_type == "image" else GenerateVideoInput
+    return model.model_json_schema()["properties"]["aspect_ratio"]["enum"]
+
+
+def _parse_aspect_ratios(adapter_id: str, task_type: str, raw: Any) -> tuple[str, ...] | None:
+    """Validate ``aspect_ratios:``. ``None`` = no local restriction.
+
+    ``adaptive`` (the video default) is never listed: it is always accepted and each
+    adapter decides what it means — listing it would make the default itself refusable,
+    which is how MiniMax H3 once became unreachable under a 720p default.
+    """
+    if raw is None:
+        return None
+    if task_type not in ("image", "video"):
+        raise ValueError(f"{adapter_id}: aspect_ratios is declared for image and video models only")
+    allowed = [r for r in _schema_ratios(task_type) if r != "adaptive"]
+    if not isinstance(raw, list) or not raw or any(r not in allowed for r in raw):
+        raise ValueError(
+            f"{adapter_id}: aspect_ratios must be a non-empty list drawn from {allowed} "
+            "(adaptive is always accepted and never listed)"
+        )
+    return tuple(raw)
+
+
+def _nearest_ratio(ratio: str, supported: tuple[str, ...]) -> str:
+    """The supported ratio closest in shape (log of width/height); ties keep orientation."""
+    def value(r: str) -> float:
+        w, h = (int(v) for v in r.split(":"))
+        return math.log(w / h)
+
+    target = value(ratio)
+    return min(supported, key=lambda r: (abs(value(r) - target), (value(r) >= 0) != (target >= 0)))
 
 
 class ModelAdapter(ABC):
@@ -98,7 +208,11 @@ class ModelAdapter(ABC):
     #: timeout, so the caller loses the connection *and* the task_id, and can no
     #: longer reach a job that is running fine. See service/video.py.
     force_async: bool
-    capabilities: set[str]
+    #: Canonical task IDs (``capabilities/media_tasks.yaml``), in display order. The one
+    #: vocabulary for what this model can do: code gates (regions, 组图, layer
+    #: decomposition, transparent background), routing preferences and the agent-facing
+    #: ``list_model_profiles`` all read it. See ``task_catalog.py``.
+    tasks: tuple[str, ...]
     cost_tier: int               # 1-5
     speed_tier: int              # 1-5
     #: Tie-break for ``model="auto"`` (all quality tiers). Without it a tie falls
@@ -134,9 +248,22 @@ class ModelAdapter(ABC):
     #: so it is a preference and not a pin — a model that cannot serve the request
     #: is gone before this is read, and the next-best candidate takes over.
     default_for: frozenset[str]
+    #: Analysis depths for which this vision model is the declared automatic default.
+    #: Only read for ``UnderstandVisionInput``; media tasks use ``default_for`` above.
+    analysis_depth_default_for: frozenset[str]
     max_duration_seconds: int    # video only: longest explicit duration accepted
+    min_duration_seconds: int    # video only: shortest explicit duration accepted
     default_duration_seconds: int
+    #: Whether ``duration_seconds=-1`` ("the model picks the length") is accepted.
+    #:
+    #: A protocol fact, not a per-deployment setting, so it lives on the class: only the
+    #: Seedance request schema has a smart-duration value. Everywhere else ``-1`` is
+    #: refused by the one check in ``supports()`` below, whose message names this
+    #: model's real range — the caller must write the seconds out, because a length
+    #: this server picked would be a billed choice nobody made.
+    accepts_smart_duration: bool = False
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
+    aspect_ratios: tuple[str, ...] | None  # image/video: allowed ratios (adaptive always ok), None = unrestricted
     #: The tier used when the caller omits ``resolution`` (video only).
     #:
     #: The schema default is ``None`` ("you pick") rather than a concrete tier for the
@@ -147,16 +274,18 @@ class ModelAdapter(ABC):
     #: have removed it from every ordinary call — including the plainest one,
     #: ``generate_video(prompt=...)`` — and made naming it explicitly a hard error.
     default_resolution: str
-    #: How many marked regions this model accepts on a single image, or None for no
-    #: local limit. Declarative because it is per-model while the ``regions`` schema is
-    #: per-tool: writing the tightest model's cap into the schema would present one
-    #: model's limit as a universal and reject calls that are legal on the model
-    #: actually selected.
-    max_regions_per_image: int | None
-    max_reference_images: int | None  # video only: per-model reference material limits
-    max_reference_videos: int | None
-    max_reference_audios: int | None
-    allow_audio_only_reference: bool
+    #: Which material slots this model accepts and their counts (``adapters/inputs.py``,
+    #: slots per task_type): video adds how a supplied audio track is used; image and
+    #: understanding models carry ``regions.max_per_image`` — per-model, which is why it
+    #: cannot live in the per-tool ``regions`` schema. ``None`` = undeclared, which a
+    #: test forbids for every video, image and understanding model in the fleet.
+    inputs: "dict[str, InputSlot] | None"
+    #: Video only: what the output carries besides pictures — today only whether it
+    #: has sound (``adapters/inputs.py`` AUDIO_OUTPUTS). ``None`` = undeclared.
+    outputs: dict[str, str] | None
+    #: Maximum number of images that can be requested in one generation call. ``None``
+    #: means the shared request-schema limit is the only local restriction.
+    max_images_per_request: int | None
     poll_config: PollConfig | None
     extends: str | None          # parent adapter_id, or None
     card_base: str | None        # model dir to inherit card.md from; None = no inheritance
@@ -180,7 +309,13 @@ class ModelAdapter(ABC):
         instance.poll_endpoint = config.get("poll_endpoint")
         # Opt-in per model. Absent = previous behaviour (honour the caller's `wait`).
         instance.force_async = bool(config.get("force_async", False))
-        instance.capabilities = set(config.get("capabilities", []))
+        if "capabilities" in config:
+            raise ValueError(
+                f"{instance.adapter_id}: the capabilities: vocabulary was retired — list "
+                f"canonical task IDs under tasks: (task_catalog.py) and material slots under "
+                f"inputs: (adapters/inputs.py)"
+            )
+        instance.tasks = parse_tasks(instance.adapter_id, instance.task_type, config.get("tasks"))
         instance.cost_tier = config.get("cost_tier", 3)
         instance.speed_tier = config.get("speed_tier", 3)
         # Both default to 0 = undeclared, so a model that says nothing routes
@@ -204,12 +339,23 @@ class ModelAdapter(ABC):
                 f"{sorted(unknown)} (valid: {sorted(_QUALITY_TIERS)})"
             )
         instance.default_for = frozenset(default_for)
+        analysis_depth_default_for = config.get("analysis_depth_default_for") or []
+        if isinstance(analysis_depth_default_for, str):
+            analysis_depth_default_for = [analysis_depth_default_for]
+        unknown = set(analysis_depth_default_for) - _ANALYSIS_DEPTHS
+        if unknown:
+            raise ValueError(
+                f"{instance.adapter_id}: analysis_depth_default_for has unknown depths "
+                f"{sorted(unknown)} (valid: {sorted(_ANALYSIS_DEPTHS)})"
+            )
+        instance.analysis_depth_default_for = frozenset(analysis_depth_default_for)
         # GenerateVideoInput's own validator allows the widest range any model in
-        # the fleet accepts (4–30, for Doubao Seedance 2.5). Every narrower model
-        # declares its real ceiling here so supports() can reject locally instead
+        # the fleet accepts (2–30; Wan 2.7 allows 2 seconds). Every model can
+        # declare its real range here so supports() can reject locally instead
         # of letting the POST fail upstream. 15 was the schema-wide cap before
         # 2.5 arrived, so it stays the default and no existing model changes.
         instance.max_duration_seconds = config.get("max_duration_seconds", 15)
+        instance.min_duration_seconds = config.get("min_duration_seconds", 4)
         instance.default_duration_seconds = config.get("default_duration_seconds", 5)
         # Resolution is a per-model value set, not a fleet-wide one: asking a model
         # for a resolution it does not offer fails upstream as "the parameter
@@ -217,17 +363,29 @@ class ModelAdapter(ABC):
         # Models that have documented their set list it here; None means "no local
         # restriction", which is what every model did before this existed.
         instance.resolutions = config.get("resolutions")
+        # Ratio is per-model the same way resolution is. Without it, an unsupported
+        # ratio was refused only by validate_only's corrections while the billed path
+        # sent it on — and Seedream / 万相 2.7 图像 silently rendered it square.
+        instance.aspect_ratios = _parse_aspect_ratios(
+            instance.adapter_id, instance.task_type, config.get("aspect_ratios")
+        )
         # 720p was the schema-wide default before `resolution` became optional, so it
         # stays the default here and no existing model's behaviour changes. A model
         # whose set excludes it (MiniMax H3) must declare its own.
         instance.default_resolution = config.get("default_resolution", "720p")
-        instance.max_regions_per_image = config.get("max_regions_per_image")
-        instance.max_reference_images = config.get("max_reference_images")
-        instance.max_reference_videos = config.get("max_reference_videos")
-        instance.max_reference_audios = config.get("max_reference_audios")
-        instance.allow_audio_only_reference = bool(
-            config.get("allow_audio_only_reference", False)
+        legacy = [key for key in LEGACY_INPUT_KEYS if key in config]
+        if legacy:
+            raise ValueError(
+                f"{instance.adapter_id}: {legacy} moved into the inputs: block "
+                f"(see adapters/inputs.py)"
+            )
+        instance.inputs = parse_inputs(
+            instance.adapter_id, config.get("inputs"), instance.task_type
         )
+        instance.outputs = parse_outputs(instance.adapter_id, config.get("outputs"))
+        if instance.outputs is not None and instance.task_type != "video":
+            raise ValueError(f"{instance.adapter_id}: outputs: is declared for video models only")
+        instance.max_images_per_request = config.get("max_images_per_request")
         pc = config.get("poll_config")
         instance.poll_config = PollConfig.from_dict(pc) if pc else None
         instance.extends = config.get("extends")
@@ -267,7 +425,7 @@ class ModelAdapter(ABC):
         }
         for cls, tt in expected.items():
             if isinstance(req, cls) and self.task_type != tt:
-                return False, f"{self.adapter_id} is a {self.task_type} model, not a {tt} model"
+                return False, f"{self.model_name} is a {self.task_type} model, not a {tt} model"
         # Regions are checked here, for every adapter, rather than in the two adapters
         # that accept them — the gate exists precisely for the models that do *not*, and
         # one left unguarded silently drops the coordinates and bills for the wrong
@@ -275,6 +433,24 @@ class ModelAdapter(ABC):
         ok, reason = check_regions(self, req)
         if not ok:
             return False, reason
+        # Video runs this further down, after its own checks; for image and
+        # understanding models the declaration is the whole slot contract.
+        if self.inputs is not None and not isinstance(req, (GenerateVideoInput, GenerateAudioInput)):
+            ok, reason = check_declared_inputs(self.model_name, self.inputs, req, refuse_undeclared=True)
+            if not ok:
+                return False, reason
+        if isinstance(req, (GenerateImageInput, GenerateVideoInput)):
+            ok, reason = self._check_aspect_ratio(req)
+            if not ok:
+                return False, reason
+        if isinstance(req, GenerateImageInput) and (
+            self.max_images_per_request is not None
+            and req.n > self.max_images_per_request
+        ):
+            return False, (
+                f"{self.model_name} supports n values from 1 to "
+                f"{self.max_images_per_request} (got {req.n})"
+            )
         if isinstance(req, GenerateVideoInput):
             if not req.prompt.strip() and not (
                 req.first_frame
@@ -285,19 +461,58 @@ class ModelAdapter(ABC):
             ):
                 return False, "text-to-video requires a non-empty prompt"
             duration_seconds = self.resolve_duration_seconds(req)
-            if duration_seconds != -1 and duration_seconds > self.max_duration_seconds:
+            if duration_seconds == -1 and not self.accepts_smart_duration:
                 return False, (
-                    f"{self.adapter_id} supports explicit durations of "
-                    f"4–{self.max_duration_seconds} seconds "
-                    f"(or -1 for a model-chosen smart duration)"
+                    f"{self.model_name} requires an explicit duration: set duration_seconds "
+                    f"to {self.min_duration_seconds}–{self.max_duration_seconds} seconds (-1, a model-chosen duration, "
+                    f"is accepted only by the Seedance family)"
                 )
+            if duration_seconds != -1 and duration_seconds < self.min_duration_seconds:
+                return False, (
+                    f"{self.model_name} supports explicit durations of "
+                    f"{self.min_duration_seconds}–{self.max_duration_seconds} seconds"
+                )
+            if duration_seconds != -1 and duration_seconds > self.max_duration_seconds:
+                # Offer -1 only where it is accepted: suggesting it to every model sent
+                # callers from one refusal straight into the next.
+                smart = " (or -1 for a model-chosen duration)" if self.accepts_smart_duration else ""
+                return False, (
+                    f"{self.model_name} supports explicit durations of "
+                    f"{self.min_duration_seconds}–{self.max_duration_seconds} seconds{smart}"
+                )
+            if self.inputs is not None:
+                ok, reason = check_declared_inputs(self.model_name, self.inputs, req)
+                if not ok:
+                    return False, reason
             resolution = self.resolve_resolution(req)
             if self.resolutions is not None and resolution not in self.resolutions:
                 return False, (
-                    f"{self.adapter_id} does not support resolution "
+                    f"{self.model_name} does not support resolution "
                     f"{resolution} (supported: {', '.join(self.resolutions)})"
                 )
         return True, ""
+
+    def _check_aspect_ratio(self, req: Any) -> tuple[bool, str]:
+        if self.aspect_ratios is None or req.aspect_ratio == "adaptive":
+            return True, ""
+        if req.aspect_ratio in self.aspect_ratios:
+            return True, ""
+        return False, (
+            f"{self.model_name} does not support aspect_ratio {req.aspect_ratio} "
+            f"(supported: {', '.join(self.aspect_ratios)})"
+        )
+
+    def translate_task_failure(self, error: str) -> tuple[str, str, bool | None] | None:
+        """Reclassify an asynchronous task failure the caller can fix.
+
+        ``error`` is the stored reason (upstream code + message, as ``poll`` recorded
+        it). Return ``(error_type, user_message, card_hint)`` to replace the default
+        ``task_failed`` — which reads as "generation failed" and invites a retry that
+        can never succeed when the cause is the request itself — or ``None`` to keep
+        it. The upstream wording must stay first in ``user_message`` so a report
+        remains joinable with the provider's own logs; the stored row is not rewritten.
+        """
+        return None
 
     def validation_corrections(
         self,
@@ -305,33 +520,37 @@ class ModelAdapter(ABC):
     ) -> dict[str, Any]:
         """Safe tool-argument fallbacks used by ``validate_only``.
 
-        Corrections are deliberately limited to ordered output tiers.  Dropping a
-        reference, inventing a missing frame, or changing a voice would alter the
-        caller's creative intent, so those remain hard validation errors.  A resolution
-        fallback is different: adapters already have a concrete supported tier to use,
-        and reporting it in ``corrected_args`` makes that previously silent choice
-        explicit and reproducible on the billed call.
+        Corrections are deliberately limited to output shape: an ordered resolution
+        tier and the aspect ratio.  Dropping a reference, inventing a missing frame, or
+        changing a voice would alter the caller's creative intent, so those remain hard
+        validation errors.  A shape fallback is different: the model has a concrete
+        supported value near the requested one, and reporting it in ``corrected_args``
+        makes the choice explicit and reproducible on the billed call.
         """
-        from cfgpu_mcp.tool_registry import GenerateVideoInput
+        from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
 
+        corrected: dict[str, Any] = {}
+        if isinstance(req, (GenerateImageInput, GenerateVideoInput)) and not self._check_aspect_ratio(req)[0]:
+            corrected["aspect_ratio"] = _nearest_ratio(req.aspect_ratio, self.aspect_ratios)
         if not isinstance(req, GenerateVideoInput):
-            return {}
+            return corrected
         # An omitted resolution is already this model's own tier, so there is nothing to
         # correct — and writing the resolved value into corrected_args would turn a
         # delegated choice into a pin the caller never asked for.
         if req.resolution is None:
-            return {}
+            return corrected
         if self.resolutions is None or req.resolution in self.resolutions:
-            return {}
+            return corrected
 
         order = _RESOLUTION_ORDER
         supported = [value for value in self.resolutions if value in order]
         if not supported:
-            return {}
+            return corrected
         requested_rank = order[req.resolution]
         lower = [value for value in supported if order[value] <= requested_rank]
         fallback = max(lower, key=order.__getitem__) if lower else min(supported, key=order.__getitem__)
-        return {"resolution": fallback}
+        corrected["resolution"] = fallback
+        return corrected
 
     def resolve_resolution(self, req: "GenerateVideoInput") -> str:
         """Resolve an omitted unified resolution to this model's own default tier."""

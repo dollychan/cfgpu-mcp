@@ -27,9 +27,11 @@ def register(mcp: FastMCP) -> None:
 
         - `submitting` — the request has provably not been sent. Nothing was charged;
           submitting the same job again is safe.
-        - `dispatching` — the request may have been sent and its answer lost. It may
-          already have been charged. Do **not** resubmit the same job; keep querying
-          this id, or tell the user it needs checking.
+        - `dispatching` — the request has been sent and its answer is still on its
+          way. It may already have been charged. Do **not** resubmit the same job;
+          keep querying this id. If the answer is lost the task becomes an error
+          with `error_type: "submission_lost"`, and the error message says what to
+          do next.
         """
         try:
             return split_structured(

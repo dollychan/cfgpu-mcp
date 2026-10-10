@@ -7,6 +7,7 @@ import pytest
 from cfgpu_mcp.adapters.audio_tts import (
     MiniMaxSpeechAdapter,
     SeedTTSAdapter,
+    _MINIMAX_SYSTEM_VOICES,
     _extract_audio_url,
     _extract_inline_audio,
 )
@@ -23,7 +24,7 @@ def _seed_adapter() -> SeedTTSAdapter:
         "endpoint": "/voice/generations",
         "is_async": True,
         "poll_endpoint": "/voice/tasks/{task_id}",
-        "capabilities": {"text_to_speech"},
+        "tasks": ["text_to_speech"],
         "cost_tier": 3,
         "speed_tier": 3,
         "poll_config": {"base_interval": 3, "max_interval": 15, "backoff_factor": 1.3, "default_timeout": 300},
@@ -39,7 +40,7 @@ def _minimax_adapter(cfgpu_model_id: str = "MiniMax/speech-2.8-hd") -> MiniMaxSp
         "task_type": "audio",
         "endpoint": "/voice/generations",
         "is_async": False,
-        "capabilities": {"text_to_speech", "emotion"},
+        "tasks": ["text_to_speech", "expressive_speech"],
         "cost_tier": 2,
         "speed_tier": 3,
     }
@@ -180,6 +181,10 @@ def test_minimax_voice_speed_overrides():
     assert inp["audio_setting"]["bitrate"] == 64000
 
 
+def test_minimax_voice_catalog_preserves_mixed_width_punctuation():
+    assert "Cantonese_ProfessionalHost（F)" in _MINIMAX_SYSTEM_VOICES
+
+
 def test_minimax_is_sync_no_task_id():
     adapter = _minimax_adapter()
     assert adapter.is_async is False
@@ -317,21 +322,21 @@ def test_emotion_rejection_names_the_actionable_fix():
     assert "(laughs)" in error.user_message
 
 
-def test_emotion_rejection_keeps_the_card_hint_for_the_documented_enum():
+def test_emotion_rejection_is_self_contained_without_a_card_hint():
     error = _minimax_error(2013, "invalid params, invalid params: voice_setting emotion")
     error.model_id = "MiniMax/speech-2.8-hd"
     message = error.to_tool_result_dict()["message"]
 
-    assert "get_model_card" in message
+    assert "get_model_card" not in message
 
 
-def test_generic_2013_without_emotion_stays_actionable_but_keeps_card_hint():
-    """A 2013 about some other field has no special remedy; the card may well help."""
+def test_generic_2013_without_emotion_stays_actionable_without_a_card_hint():
+    """A 2013 about another field must not direct the agent to a hidden model card."""
     error = _minimax_error(2013, "invalid params: audio_setting sample_rate")
     error.model_id = "MiniMax/speech-2.8-hd"
 
     assert error.error_type == "invalid_params"
-    assert "get_model_card" in error.to_tool_result_dict()["message"]
+    assert "get_model_card" not in error.to_tool_result_dict()["message"]
 
 
 def test_voice_rejection_explains_cross_family_reuse():
@@ -348,12 +353,15 @@ def test_voice_rejection_offers_the_documented_default():
     assert "male-qn-qingse" in error.user_message
 
 
-def test_voice_rejection_keeps_the_card_hint():
-    """Unlike emotion, the card really does carry the full 系统音色列表."""
+def test_voice_rejection_points_to_the_agent_facing_voice_catalog():
     error = _minimax_error(2054, "voice id not exist")
     error.model_id = "MiniMax/speech-2.8-hd"
 
-    assert "get_model_card" in error.to_tool_result_dict()["message"]
+    message = error.to_tool_result_dict()["message"]
+    assert "系统音色目录" in message and "voice 字段" in message
+    # The data, not a tool: tool names are the host's choice (disabled_tools).
+    assert "list_voice_profiles" not in message
+    assert "get_model_card" not in message
 
 
 def test_unknown_status_code_keeps_generic_failure_classification():

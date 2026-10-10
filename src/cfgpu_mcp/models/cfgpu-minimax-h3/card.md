@@ -6,7 +6,7 @@
 |---|---|
 | 模型名（`model` 参数） | `MiniMax-H3` |
 | 任务类型 | video |
-| 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference, audio_generate |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, synced_audio_output |
 | 成本档位 | 1/5 |
 | 速度档位 | 3/5 |
 
@@ -31,12 +31,12 @@
 | 参数 | 取值 | 说明 |
 |---|---|---|
 | `prompt` | 必填，非空 | 单条最多 7000 字符 |
-| `duration_seconds` | 4–15 整数 | 省略时为 5 |
+| `duration_seconds` | 4–15 整数 | 省略时为 5；`480p` 最小为 5 秒 |
 | `resolution` | `480p` \| `768p` \| `2k` | 省略时为 `768p`；`720p` / `1080p` 不支持 |
 | `aspect_ratio` | `adaptive`、`21:9`、`16:9`、`4:3`、`1:1`、`3:4`、`9:16` | 见下 |
 | `watermark` | 布尔，默认 `false` | AIGC 标识水印 |
 
-模型固定生成原生音频（`audio_generate`）；`with_audio` 不属于本模型的接口参数，
+模型固定生成原生音频（`synced_audio_output`）；`with_audio` 不属于本模型的接口参数，
 传入 `false` 也无法关闭音频。`prompt_extend` 同样不属于接口参数，传了不会生效。
 
 `480p` / `768p` / `2k` 就是上游 MiniMax 的原生档位（`480P` / `768P` / `2K`），本适配器只做大写，不做换算。

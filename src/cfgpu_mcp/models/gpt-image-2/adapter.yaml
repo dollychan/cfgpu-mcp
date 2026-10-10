@@ -8,9 +8,21 @@ endpoint: /images/generations
 is_async: true
 poll_endpoint: /images/tasks/{task_id}
 
-capabilities:
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_image
   - image_to_image
+  # The whole reference_images array goes upstream as-is; the card documents no count
+  # limit, so none is declared.
+  - multi_image_fusion
+
+# No documented reference limit; the Nano Banana subtree inherits this.
+inputs:
+  reference_images: {}
+
+# GPT Image 2 accepts an upper bound of ten images in one call.
+max_images_per_request: 10
 
 cost_tier: 2
 speed_tier: 3
@@ -38,15 +50,9 @@ quality_rank: 3
 # quality_rank 3, which is a separate declaration and stays separate.
 #
 # Not a pin: supports() runs first, so a request this model cannot serve (a
-# `regions` edit — no region_edit capability) drops it before this key is read
+# `regions` edit — no region_edit task) drops it before this key is read
 # and the runner-up takes over normally.
 #
-# Known cost, accepted 2026-09-09: `n > 1` degrades. The +3 组图 bonus lives in
-# the score, which this key outranks, and GptImage2Adapter.build_payload never
-# sends `n` — so a balanced group request returns one image, silently, the way
-# `n` is ignored on every model without multi_image_group. Callers who need a
-# real 组图 name a Seedream. Pinned by
-# test_declared_default_outranks_the_group_bonus_and_n_degrades.
 default_for: [balanced]
 
 poll_config:
@@ -54,3 +60,6 @@ poll_config:
   max_interval: 15
   backoff_factor: 1.3
   default_timeout: 600
+
+# Accepted aspect_ratio values (all of the schema's ratios). adaptive is always accepted.
+aspect_ratios: ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3"]

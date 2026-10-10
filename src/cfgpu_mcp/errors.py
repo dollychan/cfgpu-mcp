@@ -10,17 +10,18 @@ ErrorType = Literal[
     "invalid_params",
     "model_unavailable",
     "task_failed",
-    # The upstream accepted (and therefore likely billed) the submission, but the handle
-    # needed to collect its result did not survive. Deliberately not "task_failed": the
-    # task did not fail, and it is deliberately not retryable — resending is precisely
-    # the move that turns one charge into two.
+    # A submission whose result can no longer be collected: its response was lost, or
+    # came back without the handle needed to poll. Deliberately not "task_failed": the
+    # task did not fail. Retryable, because nothing on this side can ever produce this
+    # request's result again, so resending is the caller's only route to one — warning
+    # about a possible upstream charge would only stall a caller that has no other move.
     "submission_lost",
     "auth",
     "timeout",
     "unknown",
 ]
 
-_RETRYABLE: set[ErrorType] = {"rate_limit", "model_unavailable", "unknown"}
+_RETRYABLE: set[ErrorType] = {"rate_limit", "model_unavailable", "unknown", "submission_lost"}
 
 _CARD_HINT_TYPES: set[ErrorType] = {"invalid_params", "model_unavailable", "content_blocked"}
 
@@ -81,19 +82,21 @@ class CFGPUError(Exception):
         self.retryable: bool = retryable if retryable is not None else error_type in _RETRYABLE
         # Agent-facing model identifier (the public model_name, exposed as
         # ``model_id``). Never the internal adapter_id / cfgpu_model_id — see
-        # get_model_card hint.
+        # model-selection hint.
         self.model_id: str | None = model_id
         # Caller-supplied correlation handle (see tool_registry.stamp_echo), echoed on
         # the error result so a failure can be joined back to the request. Deliberately
         # the only echo field carried here: the sibling ``caption`` labels an artifact,
         # and a failed call produced none.
         self.request_id: str | None = request_id
-        # Opt-out for the generic "call get_model_card" sentence. ``None`` (the
+        # Opt-out for the generic "adjust or reselect" sentence. ``None`` (the
         # default) keeps the per-error_type behaviour; ``False`` suppresses it.
         #
-        # The hint assumes the card can answer the question, which is not always
-        # true for opaque upstream-only fields. A raiser that already knows the
-        # concrete remedy may set this to False and state it instead.
+        # The hint is generic, and a generic step displaces a concrete one. A raiser
+        # that already knows the concrete remedy sets this to False and states it.
+        # Neither the hint nor any remedy names a tool: which tools exist is the
+        # host's config (``disabled_tools``), and Mode B / the CLI have other names
+        # or none — so messages name the data instead (a task ID, a field).
         #
         # It can only ever suppress: a type that has no hint never gains one.
         self.card_hint: bool | None = card_hint
@@ -105,9 +108,9 @@ class CFGPUError(Exception):
         # ``TaskManager.create`` POSTed *before* writing the task row: no task_id came
         # back and no row existed, so the question had no answer anywhere. Rows are now
         # written before the POST (see request-id-durability.md I1), so that case has a
-        # row — one sitting in ``dispatching``, which says "may have been sent" far more
-        # precisely than a boolean can — and ``TaskManager._record_submit_failure``
-        # clears the flag as it hands back the id to query.
+        # row, and ``TaskManager._record_submit_failure`` converges it to
+        # ``submission_lost`` — a type that says "may have been billed, unrecoverable"
+        # far more precisely than a boolean can — and clears the flag.
         #
         # What is left for it is the residual hole: the row write itself failing. Do not
         # widen it back out. Every other error answers "did this take effect?"
@@ -166,7 +169,7 @@ class CFGPUError(Exception):
     def to_tool_result_dict(self) -> dict:
         message = self.user_message
         if self.card_hint is not False and self.model_id and self.error_type in _CARD_HINT_TYPES:
-            message += f" 请调用 get_model_card 获取模型 {self.model_id} 的详细参数说明和使用示例。"
+            message += " 请根据校验原因调整通用参数，或重新选择支持该任务的模型。"
         result: dict = {
             "error": True,
             "error_type": self.error_type,

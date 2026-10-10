@@ -1,0 +1,160 @@
+schema_version: 1
+
+# Closed language vocabulary for voices.yaml. Codes are BCP 47-style; Chinese dialects
+# use a `zh-<name>` subtag of our own. A caller's `language` argument resolves to a code
+# through `name` / `aliases` (case-insensitive), so "English", "英文" and "英语" all reach
+# `en` — provider cards spell these differently (MiniMax 英文, seed-tts 美式英语) and a
+# substring match over their spellings is what made `language="English"` return nothing.
+#
+# Matching is by subtag prefix: `en` matches `en-US`, `zh` matches `zh-sichuan`.
+# Cantonese is `yue`, not `zh-*`, so a 中文 request does not return Cantonese voices.
+# Every alias must be unique across all codes; the loader rejects collisions.
+# Quote a code YAML would read as a boolean (`"no"` is Norwegian, not false).
+languages:
+  zh:
+    name: 中文（普通话）
+    aliases: [中文, 汉语, 普通话, 国语, Chinese, Mandarin]
+  zh-sichuan:
+    name: 四川话
+    aliases: [四川话]
+  zh-shaanxi:
+    name: 陕西话
+    aliases: [陕西话]
+  zh-northeast:
+    name: 东北话
+    aliases: [东北话]
+  yue:
+    name: 粤语
+    aliases: [广东话, 白话, Cantonese]
+  en:
+    name: 英语
+    aliases: [英文, English]
+  en-US:
+    name: 美式英语
+    aliases: [美音, American English]
+  en-GB:
+    name: 英式英语
+    aliases: [英音, British English]
+  en-AU:
+    name: 澳洲英语
+    aliases: [Australian English]
+  en-IN:
+    name: 印度英语
+    aliases: [Indian English]
+  ja:
+    name: 日语
+    aliases: [日文, Japanese]
+  ko:
+    name: 韩语
+    aliases: [韩文, 朝鲜语, Korean]
+  es:
+    name: 西班牙语
+    aliases: [西班牙文, Spanish]
+  es-MX:
+    name: 墨西哥西班牙语
+    aliases: [墨西哥西语, Mexican Spanish]
+  pt:
+    name: 葡萄牙语
+    aliases: [葡萄牙文, Portuguese]
+  pt-BR:
+    name: 巴西葡萄牙语
+    aliases: [Brazilian Portuguese]
+  fr:
+    name: 法语
+    aliases: [法文, French]
+  de:
+    name: 德语
+    aliases: [德文, German]
+  it:
+    name: 意大利语
+    aliases: [意大利文, Italian]
+  ru:
+    name: 俄语
+    aliases: [俄文, Russian]
+  uk:
+    name: 乌克兰语
+    aliases: [乌克兰文, Ukrainian]
+  nl:
+    name: 荷兰语
+    aliases: [荷兰文, Dutch]
+  pl:
+    name: 波兰语
+    aliases: [波兰文, Polish]
+  ro:
+    name: 罗马尼亚语
+    aliases: [罗马尼亚文, Romanian]
+  el:
+    name: 希腊语
+    aliases: [希腊文, Greek]
+  cs:
+    name: 捷克语
+    aliases: [捷克文, Czech]
+  fi:
+    name: 芬兰语
+    aliases: [芬兰文, Finnish]
+  tr:
+    name: 土耳其语
+    aliases: [土耳其文, Turkish]
+  ar:
+    name: 阿拉伯语
+    aliases: [阿拉伯文, Arabic]
+  hi:
+    name: 印地语
+    aliases: [印地文, Hindi]
+  id:
+    name: 印尼语
+    aliases: [印尼文, 印度尼西亚语, 印尼, Indonesian]
+  vi:
+    name: 越南语
+    aliases: [越南文, Vietnamese]
+  th:
+    name: 泰语
+    aliases: [泰文, Thai]
+  ms:
+    name: 马来语
+    aliases: [马来文, Malay]
+  fil:
+    name: 菲律宾语
+    aliases: [菲律宾文, Filipino, Tagalog]
+  ta:
+    name: 泰米尔语
+    aliases: [泰米尔, Tamil]
+  fa:
+    name: 波斯语
+    aliases: [波斯文, Persian, Farsi]
+  he:
+    name: 希伯来语
+    aliases: [希伯来文, Hebrew]
+  af:
+    name: 阿非利卡语
+    aliases: [南非荷兰语, Afrikaans]
+  bg:
+    name: 保加利亚语
+    aliases: [保加利亚文, Bulgarian]
+  hr:
+    name: 克罗地亚语
+    aliases: [克罗地亚文, Croatian]
+  sk:
+    name: 斯洛伐克语
+    aliases: [斯洛伐克文, Slovak]
+  sl:
+    name: 斯洛文尼亚语
+    aliases: [斯洛文尼亚文, Slovenian]
+  hu:
+    name: 匈牙利语
+    aliases: [匈牙利文, Hungarian]
+  da:
+    name: 丹麦语
+    aliases: [丹麦文, Danish]
+  sv:
+    name: 瑞典语
+    aliases: [瑞典文, Swedish]
+  "no":
+    name: 挪威语
+    aliases: [挪威文, Norwegian]
+  nn:
+    name: 新挪威语
+    aliases: [尼诺斯克, Nynorsk]
+  ca:
+    name: 加泰罗尼亚语
+    aliases: [加泰罗尼亚文, Catalan]

@@ -2,9 +2,44 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+import yaml
+
+from cfgpu_mcp.adapters.inputs import describe_inputs
+from cfgpu_mcp.voice_catalog import (
+    AGE_GROUPS,
+    FILTERABLE_GENDERS,
+    VoiceEntry,
+    catalog_for_adapter,
+    language_matches,
+    load_language_vocabulary,
+)
+
+if TYPE_CHECKING:
+    from cfgpu_mcp.adapters.base import ModelAdapter
 
 _MODELS_DIR = Path(__file__).parent.parent / "models"
+_TASK_PARAMETERS_PATH = Path(__file__).parent.parent / "capabilities" / "task_parameters.yaml"
+_TASK_TYPES = frozenset({"image", "video", "audio", "understand"})
+# 4: voices come from models/*/voices.yaml; `language` became `languages` (codes) and
+# `gender` became an explicit field instead of a tag inferred from provider wording.
+# 5: catalogs are generated from the model_audio_voices export; rows gained `age`,
+# `description` and `accent`.
+_VOICE_CATALOG_VERSION = 5
+
+# Query terms that are a gender, not a keyword. Matched as whole terms only, and turned
+# into the same filter as ``gender`` — a substring match would let "male" hit every
+# ``zh_female_*`` id, which is how the old catalog answered "male" with female voices.
+_GENDER_QUERY_TERMS = {
+    "男声": "male", "男": "male", "male": "male", "man": "male",
+    "女声": "female", "女": "female", "female": "female", "woman": "female",
+}
+
+
+def _query_terms(query: str) -> list[str]:
+    """Split an intent query while preserving ordinary no-space keyword searches."""
+    return [term for term in re.split(r"\s+", query.casefold().strip()) if term]
 
 
 def _split_sections(markdown: str) -> dict[str, str]:
@@ -50,22 +85,305 @@ def _merge_cards(base_md: str, variant_md: str) -> str:
     return "".join(merged.values())
 
 
+def _profile_row(adapter: "ModelAdapter") -> dict[str, Any]:
+    """One model's agent-facing description, shared by both catalogs.
+
+    ``list_models`` and ``list_model_profiles`` used to build this twice, so every new
+    declared field (inputs, outputs, aspect_ratios) had to be added in two places and a
+    miss would make the two views disagree about the same model.
+    """
+    row: dict[str, Any] = {
+        "model_id": adapter.model_name,
+        "display_name": adapter.display_name,
+        "task_type": adapter.task_type,
+        "tasks": list(adapter.tasks),
+        "cost_tier": adapter.cost_tier,
+        "speed_tier": adapter.speed_tier,
+    }
+    if adapter.inputs is not None:
+        # Per-model, so it can say what the per-tool schema cannot: how many items a
+        # slot takes here, and (video) what this model does with a supplied audio track.
+        row["inputs"] = describe_inputs(adapter.inputs)
+    if adapter.outputs:
+        # Whether with_audio means anything here: always / switchable / never.
+        row["outputs"] = dict(adapter.outputs)
+    if adapter.aspect_ratios:
+        # Absent = every schema ratio; video models always also take adaptive.
+        row["aspect_ratios"] = list(adapter.aspect_ratios)
+    return row
+
+
 async def list_models(task_type: str | None = None) -> list[dict[str, Any]]:
+    """Operations / debugging view: every model's profile row plus ``is_async``.
+
+    Agents choose models with ``list_model_profiles`` (task filters, parameter
+    templates); production configs typically disable this tool.
+    """
     from cfgpu_mcp.config import get_registry
+    from cfgpu_mcp.tool_registry import fold_choice
+
     registry = get_registry()
-    adapters = registry.list_all(task_type=task_type)
-    return [
-        {
-            "model_id":       a.model_name,
-            "display_name":   a.display_name,
-            "task_type":      a.task_type,
-            "capabilities":   sorted(a.capabilities),
-            "cost_tier":      a.cost_tier,
-            "speed_tier":     a.speed_tier,
-            "is_async":       a.is_async,
+    adapters = registry.list_all(task_type=fold_choice(task_type, _TASK_TYPES))
+    return [{**_profile_row(a), "is_async": a.is_async} for a in adapters]
+
+
+def _load_task_catalog() -> tuple[int, dict[str, dict[str, Any]]]:
+    from cfgpu_mcp.task_catalog import load_task_catalog
+
+    return load_task_catalog()
+
+
+def _load_task_parameter_contracts(
+    task_catalog: dict[str, dict[str, str]],
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Load executable task templates keyed by public model ID and canonical task.
+
+    A profile answers *which* model can perform a task. This adjacent contract answers
+    *how to invoke it*, so an agent does not infer a billed request from card prose.
+    """
+    raw = yaml.safe_load(_TASK_PARAMETERS_PATH.read_text())
+    if not isinstance(raw, dict) or raw.get("schema_version") != 1:
+        raise ValueError("task_parameters.yaml must declare schema_version: 1")
+    models = raw.get("models")
+    if not isinstance(models, dict):
+        raise ValueError("task_parameters.yaml must contain a models mapping")
+    for model_id, contracts in models.items():
+        if not isinstance(model_id, str) or not isinstance(contracts, dict):
+            raise ValueError("task_parameters.yaml contains an invalid model entry")
+        unknown = set(contracts) - set(task_catalog)
+        if unknown:
+            raise ValueError(
+                f"task_parameters.yaml model {model_id!r} references unknown tasks: {sorted(unknown)}"
+            )
+        if any(not isinstance(contract, dict) for contract in contracts.values()):
+            raise ValueError(f"task_parameters.yaml model {model_id!r} has an invalid task contract")
+    return models
+
+
+async def list_model_profiles(
+    media_type: str | None = None,
+    required_tasks: list[str] | None = None,
+    match: str = "all",
+) -> dict[str, Any]:
+    """List the agent-facing model catalog with canonical tasks only.
+
+    This is intentionally separate from ``list_models``: the latter remains an
+    operations/debugging API (with ``is_async`` and the unfiltered list). When callers request
+    canonical tasks, matching models additionally expose compact ``task_parameters``
+    templates, preventing agents from guessing model-specific API switches from card
+    prose.
+    """
+    from cfgpu_mcp.tool_registry import fold_choice
+
+    # Mode B / CLI reach here without the schema, so fold spelling here too.
+    media_type = fold_choice(media_type, _TASK_TYPES)
+    match = fold_choice(match, ("all", "any"))
+    if media_type is not None and media_type not in _TASK_TYPES:
+        raise ValueError(f"unknown media_type {media_type!r}; expected one of {sorted(_TASK_TYPES)}")
+    if match not in {"all", "any"}:
+        raise ValueError("match must be 'all' or 'any'")
+
+    catalog_version, task_catalog = _load_task_catalog()
+    parameter_contracts = _load_task_parameter_contracts(task_catalog)
+    requested_tasks = set(required_tasks or [])
+    unknown = requested_tasks - set(task_catalog)
+    if unknown:
+        raise ValueError(f"unknown canonical task IDs: {sorted(unknown)}")
+
+    from cfgpu_mcp.config import get_registry
+
+    models: list[dict[str, Any]] = []
+    for adapter in sorted(get_registry().list_all(task_type=media_type), key=lambda item: item.model_name):
+        supported_tasks = set(adapter.tasks)
+        if requested_tasks and (
+            not requested_tasks.issubset(supported_tasks)
+            if match == "all"
+            else not requested_tasks & supported_tasks
+        ):
+            continue
+        model = _profile_row(adapter)
+        if requested_tasks:
+            contracts = parameter_contracts.get(adapter.model_name, {})
+            matched_contracts = {
+                task_id: contracts[task_id]
+                for task_id in sorted(requested_tasks & set(contracts))
+            }
+            if matched_contracts:
+                model["task_parameters"] = matched_contracts
+        models.append(model)
+
+    visible_task_ids = (
+        requested_tasks
+        if requested_tasks
+        else {profile_task for model in models for profile_task in model["tasks"]}
+    )
+    return {
+        "catalog_version": catalog_version,
+        "task_catalog": {
+            canonical_task: task_catalog[canonical_task]
+            for canonical_task in sorted(visible_task_ids)
+        },
+        "models": models,
+    }
+
+
+async def list_voice_profiles(
+    model_ids: list[str] | None = None,
+    language: str | None = None,
+    query: str | None = None,
+    limit: int = 20,
+    cursor: int = 0,
+    gender: str | None = None,
+    age: str | None = None,
+) -> dict[str, Any]:
+    """List compact selectable system voices from each model's ``voices.yaml``.
+
+    The ``voice`` value is intentionally returned verbatim: copy it directly into
+    ``generate_audio(voice=...)``. ``label`` is display-only and is never a valid
+    value for that parameter.
+
+    ``language``, ``gender`` and ``age`` are exact filters over declared fields:
+    ``language`` accepts any spelling in ``capabilities/voice_languages.yaml`` and matches
+    by subtag prefix (``English`` → ``en`` covers ``en-US``); a voice whose gender is
+    ``unknown`` never satisfies a gender filter. ``query`` is space-separated terms that
+    must all match the handle, label, tags, description, accent, or language names; a term
+    that is a gender word (``男声`` / ``female``) acts as the gender filter instead.
+    """
+    if not 1 <= limit <= 100:
+        raise ValueError("limit must be between 1 and 100")
+    if cursor < 0:
+        raise ValueError("cursor must be >= 0")
+    from cfgpu_mcp.tool_registry import fold_choice
+
+    # Mode B / CLI reach here without the schema, so fold spelling here too.
+    gender = fold_choice(gender, FILTERABLE_GENDERS)
+    age = fold_choice(age, AGE_GROUPS)
+    if gender is not None and gender not in FILTERABLE_GENDERS:
+        raise ValueError(f"gender must be one of {list(FILTERABLE_GENDERS)}")
+    if age is not None and age not in AGE_GROUPS:
+        raise ValueError(f"age must be one of {list(AGE_GROUPS)}")
+
+    vocabulary = load_language_vocabulary()
+    language_code: str | None = None
+    if language:
+        language_code = vocabulary.resolve(language)
+        if language_code is None:
+            known = ", ".join(entry.name for entry in vocabulary.languages.values())
+            raise ValueError(f"unknown language {language!r}; use a name or code such as: {known}")
+
+    text_terms: list[str] = []
+    for term in _query_terms(query) if query else []:
+        term_gender = _GENDER_QUERY_TERMS.get(term)
+        if term_gender is None:
+            text_terms.append(term)
+        elif gender not in (None, term_gender):
+            raise ValueError(f"query term {term!r} contradicts gender={gender!r}")
+        else:
+            gender = term_gender
+
+    from cfgpu_mcp.config import get_registry
+
+    registry = get_registry()
+    audio_adapters = sorted(registry.list_all(task_type="audio"), key=lambda item: item.model_name)
+    by_model_id = {adapter.model_name: adapter for adapter in audio_adapters}
+    requested_model_ids: set[str] = set()
+    for model_id in model_ids or by_model_id:
+        try:
+            requested_model_ids.add(registry.get(model_id).model_name)
+        except KeyError:
+            requested_model_ids.add(model_id)  # reported as unknown just below
+    unknown_models = requested_model_ids - set(by_model_id)
+    if unknown_models:
+        raise ValueError(f"unknown audio model_ids: {sorted(unknown_models)}")
+
+    # One row per voice handle, listing every model that accepts it (MiniMax HD and
+    # Turbo share one catalog through ``extends``).
+    grouped: dict[str, dict[str, Any]] = {}
+    without_catalog: list[str] = []
+    for adapter in audio_adapters:
+        if adapter.model_name not in requested_model_ids:
+            continue
+        catalog = catalog_for_adapter(adapter.adapter_id)
+        if catalog is None:
+            without_catalog.append(adapter.model_name)
+            continue
+        for entry in catalog.voices:
+            row = grouped.setdefault(entry.voice, {"entry": entry, "model_ids": []})
+            row["model_ids"].append(adapter.model_name)
+    if model_ids and without_catalog:
+        # Named explicitly, an empty answer would read as "no voice matched".
+        raise ValueError(
+            f"audio model_ids without a system voice catalog: {without_catalog}; "
+            "omit voice when calling generate_audio with them"
+        )
+
+    def language_spellings(codes: list[str]) -> list[str]:
+        return [
+            spelling
+            for code in codes
+            for spelling in (vocabulary.languages[code].name, *vocabulary.languages[code].aliases)
+        ]
+
+    def matches(entry: VoiceEntry) -> bool:
+        if language_code and not language_matches(entry.languages, language_code):
+            return False
+        if gender and entry.gender != gender:
+            return False
+        if age and entry.age != age:
+            return False
+        if not text_terms:
+            return True
+        searchable = " ".join(
+            [
+                entry.voice,
+                entry.label,
+                *entry.tags,
+                entry.description or "",
+                entry.accent or "",
+                *language_spellings(entry.languages),
+            ]
+        ).casefold()
+        return all(term in searchable for term in text_terms)
+
+    # Round-robin across compatibility groups so one large catalog (MiniMax lists 327
+    # voices) cannot fill every first page; each group keeps its catalog's own order.
+    voice_groups: dict[tuple[str, ...], list[dict[str, Any]]] = {}
+    for row in grouped.values():
+        entry: VoiceEntry = row["entry"]
+        if not matches(entry):
+            continue
+        voice = {
+            "voice": entry.voice,
+            "label": entry.label,
+            "languages": entry.languages,
+            "gender": entry.gender,
+            "age": entry.age,
+            "tags": entry.tags,
+            "model_ids": row["model_ids"],
         }
-        for a in adapters
-    ]
+        # Present only when the catalog has them, so rows stay compact.
+        if entry.accent:
+            voice["accent"] = entry.accent
+        if entry.description:
+            voice["description"] = entry.description
+        if entry.default:
+            voice["default"] = True
+        voice_groups.setdefault(tuple(row["model_ids"]), []).append(voice)
+
+    voices: list[dict[str, Any]] = []
+    for position in range(max((len(group) for group in voice_groups.values()), default=0)):
+        for signature in sorted(voice_groups):
+            group = voice_groups[signature]
+            if position < len(group):
+                voices.append(group[position])
+    page = voices[cursor : cursor + limit]
+    next_cursor = cursor + limit if cursor + limit < len(voices) else None
+    return {
+        "catalog_version": _VOICE_CATALOG_VERSION,
+        "voices": page,
+        "total": len(voices),
+        "next_cursor": next_cursor,
+    }
 
 
 async def get_model_card(model_name: str) -> str:

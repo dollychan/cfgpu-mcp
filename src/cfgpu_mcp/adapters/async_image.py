@@ -53,7 +53,7 @@ class _AsyncImageBase(ModelAdapter):
             return False, reason
         assert isinstance(req, GenerateImageInput)
         if not req.prompt.strip():
-            return False, f"{self.adapter_id} requires a non-empty prompt"
+            return False, f"{self.model_name} requires a non-empty prompt"
         return True, ""
 
     def validation_corrections(
@@ -61,15 +61,15 @@ class _AsyncImageBase(ModelAdapter):
     ) -> dict[str, Any]:
         assert isinstance(req, GenerateImageInput)
         corrected: dict[str, Any] = {}
-        if req.resolution == "3K":
+        # This API family accepts the discrete 1K / 2K / 4K tiers.  Keep the
+        # correction at or below the caller's requested tier: validation must
+        # never turn an unsupported request into a more expensive generation.
+        if req.resolution == "1.5K":
+            corrected["resolution"] = "1K"
+        elif req.resolution == "3K":
             corrected["resolution"] = "2K"
-        allowed_ratios = (
-            {"1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"}
-            if self.adapter_id == "gpt-image-2"
-            else {"1:1", "3:4", "4:3", "9:16", "16:9", "21:9"}
-        )
-        if req.aspect_ratio not in allowed_ratios:
-            corrected["aspect_ratio"] = "1:1"
+        # Ratio: the base corrects to the nearest of adapter.yaml's aspect_ratios.
+        corrected.update(super().validation_corrections(req))
         return corrected
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
@@ -80,11 +80,11 @@ class _AsyncImageBase(ModelAdapter):
 class GptImage2Adapter(_AsyncImageBase):
     """Adapter for GPT Image 2.
 
-    Payload: model + prompt + aspect_ratio + resolution + quality +
+    Payload: model + prompt + aspect_ratio + resolution + quality + n +
     reference_images (optional). ``quality_tier`` maps to the API's
     ``low`` / ``medium`` / ``high`` quality.
-    Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16 — the unified
-    schema also offers 21:9, which goes up verbatim and is rejected upstream.
+    Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9, 9:21,
+    3:1, 1:3.
     """
 
     adapter_id = "gpt-image-2"
@@ -101,6 +101,9 @@ class GptImage2Adapter(_AsyncImageBase):
                 # up verbatim. 3K has no counterpart and is rejected upstream.
                 "resolution": req.resolution,
                 "quality": _QUALITY_MAP.get(req.quality_tier, "medium"),
+                # GPT Image 2 accepts an output-count ceiling (1–10); the API may
+                # return fewer images.
+                "n": req.n,
             },
             req,
         )

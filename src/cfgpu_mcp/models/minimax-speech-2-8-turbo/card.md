@@ -10,7 +10,7 @@ inherits: minimax-speech-2-8-hd
 |------|-----|
 | 任务类型 | audio (语音合成 / text-to-speech) |
 | CFGPU 模型 ID | `MiniMax/speech-2.8-turbo` |
-| 能力标签 | text_to_speech, emotion, pronunciation_dict |
+| 任务（tasks） | text_to_speech, expressive_speech, pronunciation_control |
 | 调用方式 | 同步（POST 直接返回结果） |
 | 成本档位 | 1/5 |
 | 速度档位 | 4/5 |

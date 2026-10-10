@@ -13,7 +13,7 @@ def _make_adapter() -> GrokVideoAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {"text_to_video", "image_to_video", "multi_modal_reference"},
+        "tasks": ["text_to_video", "image_to_video", "reference_to_video"],
         "cost_tier": 3,
         "speed_tier": 3,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 600},
@@ -303,7 +303,7 @@ def test_base_model_reuses_the_same_class_via_extends():
     assert base.adapter_id == "grok-imagine-video"
     assert base.cfgpu_model_id == "grok-imagine-video"
     # Inherited from the parent YAML
-    assert base.capabilities == v15.capabilities
+    assert base.tasks == v15.tasks and base.inputs == v15.inputs
     assert base.task_type == "video" and base.is_async
     assert base.endpoint == v15.endpoint and base.poll_endpoint == v15.poll_endpoint
     assert base.poll_config.default_timeout == v15.poll_config.default_timeout

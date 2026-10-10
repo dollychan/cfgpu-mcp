@@ -12,7 +12,7 @@ def _make_adapter(cfgpu_model_id: str = "wan-video") -> SeedanceVideoAdapter:
         "endpoint": "/v1/video/tasks",
         "is_async": True,
         "poll_endpoint": "/v1/video/tasks/{task_id}",
-        "capabilities": {"text_to_video", "image_to_video", "first_last_frame", "multi_modal_reference"},
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video"],
         "cost_tier": 3,
         "speed_tier": 2,
         "poll_config": {"base_interval": 5, "max_interval": 20, "backoff_factor": 1.3, "default_timeout": 600},
@@ -190,7 +190,7 @@ def test_supports_rejects_mixed_first_frame_and_reference_images():
 
 
 def _make_no_reference_adapter() -> SeedanceVideoAdapter:
-    """Adapter like Doubao Seedance 1.5 Pro: no multi_modal_reference."""
+    """Adapter like Doubao Seedance 1.5 Pro: no reference inputs."""
     config = {
         "adapter_id": "doubao-seedance-1-5-pro",
         "display_name": "Doubao Seedance 1.5 Pro",
@@ -199,37 +199,39 @@ def _make_no_reference_adapter() -> SeedanceVideoAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {"text_to_video", "image_to_video", "first_last_frame"},
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame"],
+        "inputs": {"first_frame": {}, "last_frame": {}},
         "cost_tier": 2,
         "speed_tier": 3,
     }
     return SeedanceVideoAdapter.from_config(config)
 
 
-def test_supports_rejects_reference_videos_without_capability():
+def test_supports_rejects_reference_videos_the_inputs_do_not_declare():
     adapter = _make_no_reference_adapter()
     req = GenerateVideoInput(prompt="x", reference_videos=["https://example.com/v.mp4"])
     ok, reason = adapter.supports(req)
     assert ok is False
-    assert "multi_modal_reference" in reason
+    assert reason == "doubao-seedance-1-5-pro does not accept reference_videos"
 
 
-def test_supports_rejects_reference_images_without_capability():
+def test_supports_rejects_reference_images_the_inputs_do_not_declare():
     adapter = _make_no_reference_adapter()
     req = GenerateVideoInput(prompt="x", reference_images=["https://example.com/r.jpg"])
     ok, reason = adapter.supports(req)
     assert ok is False
-    assert "multi_modal_reference" in reason
+    assert "does not accept reference_images" in reason
+    assert "capabilit" not in reason
 
 
-def test_supports_allows_first_frame_without_reference_capability():
+def test_supports_allows_first_frame_without_reference_inputs():
     adapter = _make_no_reference_adapter()
     req = GenerateVideoInput(prompt="x", first_frame="https://example.com/f.jpg")
     ok, _ = adapter.supports(req)
     assert ok is True
 
 
-def test_supports_allows_reference_videos_with_capability():
+def test_supports_allows_declared_reference_videos():
     adapter = _make_adapter()
     req = GenerateVideoInput(prompt="x", reference_videos=["https://example.com/v.mp4"])
     ok, _ = adapter.supports(req)
@@ -275,7 +277,7 @@ def test_seedance_rejects_duration_over_12():
         "endpoint": "/v1/video/tasks",
         "is_async": True,
         "poll_endpoint": "/v1/video/tasks/{task_id}",
-        "capabilities": {"text_to_video"},
+        "tasks": ["text_to_video"],
         "cost_tier": 2,
         "speed_tier": 3,
         "max_duration_seconds": 12,
@@ -296,19 +298,19 @@ def _make_2_5_adapter() -> SeedanceVideoAdapter:
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {
-            "text_to_video", "image_to_video", "first_last_frame",
-            "multi_modal_reference", "video_edit", "video_extend", "audio_generate",
-        },
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video", "video_edit", "video_extend", "synced_audio_output"],
         "cost_tier": 4,
         "speed_tier": 2,
         "max_duration_seconds": 30,
         "default_duration_seconds": -1,
         "resolutions": ["480p", "720p", "1080p"],
-        "max_reference_images": 30,
-        "max_reference_videos": 10,
-        "max_reference_audios": 10,
-        "allow_audio_only_reference": True,
+        "inputs": {
+            "first_frame": {},
+            "last_frame": {},
+            "reference_images": {"max": 30},
+            "reference_videos": {"max": 10, "role": "reference"},
+            "reference_audios": {"max": 10, "role": "reference", "standalone": True},
+        },
     }
     return SeedanceVideoAdapter.from_config(config)
 
@@ -350,15 +352,15 @@ def _make_seedance_2_0_adapter(
         "endpoint": "/video/generations",
         "is_async": True,
         "poll_endpoint": "/video/tasks/{task_id}",
-        "capabilities": {
-            "text_to_video", "image_to_video", "first_last_frame",
-            "multi_modal_reference", "video_edit", "video_extend", "audio_generate",
-        },
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video", "video_edit", "video_extend", "synced_audio_output"],
         "resolutions": resolutions or ["480p", "720p", "1080p", "4k"],
-        "max_reference_images": 9,
-        "max_reference_videos": 3,
-        "max_reference_audios": 3,
-        "allow_audio_only_reference": False,
+        "inputs": {
+            "first_frame": {},
+            "last_frame": {},
+            "reference_images": {"max": 9},
+            "reference_videos": {"max": 3, "role": "reference"},
+            "reference_audios": {"max": 3, "role": "reference", "standalone": False},
+        },
     }
     return SeedanceVideoAdapter.from_config(config)
 
@@ -564,7 +566,7 @@ def _make_fast_adapter() -> SeedanceVideoAdapter:
         "endpoint": "/v1/video/tasks",
         "is_async": True,
         "poll_endpoint": "/v1/video/tasks/{task_id}",
-        "capabilities": {"text_to_video", "image_to_video", "first_last_frame", "multi_modal_reference"},
+        "tasks": ["text_to_video", "image_to_video", "first_last_frame", "reference_to_video"],
         "cost_tier": 2,
         "speed_tier": 4,
     }
@@ -606,10 +608,136 @@ def test_seedance_accepts_smart_duration():
         "endpoint": "/v1/video/tasks",
         "is_async": True,
         "poll_endpoint": "/v1/video/tasks/{task_id}",
-        "capabilities": {"text_to_video"},
+        "tasks": ["text_to_video"],
         "cost_tier": 2,
         "speed_tier": 3,
     }
     adapter = SeedanceVideoAdapter.from_config(config)
     ok, _ = adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=-1))
     assert ok is True
+
+
+# ── Seedance 2.5 omni_reference_task_type ─────────────────────────────────────
+
+_IMG = "https://example.com/r.jpg"
+_VID = "https://example.com/r.mp4"
+_AUD = "https://example.com/r.mp3"
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        ({"prompt": "x"}, None),
+        ({"prompt": "x", "first_frame": _IMG}, None),
+        ({"prompt": "x", "first_frame": _IMG, "last_frame": _IMG}, None),
+        ({"prompt": "x", "reference_images": [_IMG]}, "reference"),
+        ({"prompt": "x", "reference_images": [_IMG], "aspect_ratio": "adaptive"}, "reference"),
+        ({"reference_audios": [_AUD]}, "reference"),
+        ({"prompt": "x", "reference_videos": [_VID], "aspect_ratio": "16:9"}, "reference"),
+        ({"prompt": "x", "reference_videos": [_VID], "aspect_ratio": "16:9", "duration_seconds": -1}, "reference"),
+        ({"prompt": "x", "reference_videos": [_VID], "duration_seconds": 10}, "auto"),
+        ({"prompt": "x", "reference_videos": [_VID]}, "auto"),
+        ({"prompt": "x", "reference_videos": [_VID], "duration_seconds": -1}, "auto"),
+    ],
+    ids=[
+        "t2v", "first-frame", "first-last-frame",
+        "image-only", "image-only-adaptive", "audio-only",
+        "video-concrete-ratio", "video-concrete-ratio-auto-duration",
+        "video-adaptive-concrete-duration", "video-defaults", "video-adaptive-minus-1",
+    ],
+)
+def test_seedance_2_5_derives_omni_reference_task_type(args, expected):
+    payload = _make_2_5_adapter().build_payload(GenerateVideoInput(**args))
+    assert payload.get("omni_reference_task_type") == expected
+    if expected is None:
+        assert "omni_reference_task_type" not in payload
+
+
+def test_seedance_2_5_task_type_follows_the_final_arguments():
+    # The approval card shows the preflight's derivation; a human then changes the
+    # ratio. The submitted payload must reflect the edited arguments, not the preview.
+    adapter = _make_2_5_adapter()
+    previewed = GenerateVideoInput(prompt="x", reference_videos=[_VID], aspect_ratio="16:9")
+    assert adapter.build_payload(previewed)["omni_reference_task_type"] == "reference"
+
+    edited = previewed.model_copy(update={"aspect_ratio": "adaptive"})
+    assert adapter.build_payload(edited)["omni_reference_task_type"] == "auto"
+
+
+def test_earlier_seedance_versions_never_send_omni_reference_task_type():
+    req = GenerateVideoInput(prompt="x", reference_videos=[_VID], aspect_ratio="16:9")
+    assert "omni_reference_task_type" not in _make_seedance_2_0_adapter().build_payload(req)
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        {"reference_videos": [_VID], "model_specific": {"omni_reference_task_type": "edit"}},
+        {"reference_videos": [_VID], "duration_seconds": 10,
+         "model_specific": {"omni_reference_task_type": "extend"}},
+        {"reference_videos": [_VID], "aspect_ratio": "16:9", "duration_seconds": 12,
+         "model_specific": {"omni_reference_task_type": "reference"}},
+        {"reference_videos": [_VID], "aspect_ratio": "16:9",
+         "model_specific": {"omni_reference_task_type": "auto"}},
+    ],
+    ids=["edit", "extend", "reference", "auto"],
+)
+def test_seedance_2_5_accepts_a_consistent_declared_task_type(args):
+    adapter = _make_2_5_adapter()
+    req = GenerateVideoInput(prompt="x", **args)
+    assert adapter.supports(req) == (True, "")
+    assert adapter.build_payload(req)["omni_reference_task_type"] == (
+        args["model_specific"]["omni_reference_task_type"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("args", "fragment"),
+    [
+        ({"reference_videos": [_VID], "aspect_ratio": "16:9",
+          "model_specific": {"omni_reference_task_type": "edit"}}, "requires aspect_ratio=adaptive"),
+        ({"reference_videos": [_VID], "duration_seconds": 10,
+          "model_specific": {"omni_reference_task_type": "edit"}}, "requires duration_seconds=-1"),
+        ({"reference_videos": [_VID], "aspect_ratio": "9:16",
+          "model_specific": {"omni_reference_task_type": "extend"}}, "requires aspect_ratio=adaptive"),
+        ({"reference_images": [_IMG],
+          "model_specific": {"omni_reference_task_type": "extend"}}, "requires at least one reference_video"),
+        ({"model_specific": {"omni_reference_task_type": "auto"}}, "only applies to multimodal reference"),
+        ({"first_frame": _IMG, "aspect_ratio": "adaptive",
+          "model_specific": {"omni_reference_task_type": "reference"}}, "only applies to multimodal reference"),
+        ({"reference_videos": [_VID],
+          "model_specific": {"omni_reference_task_type": "r2v"}}, "is not valid"),
+    ],
+    ids=[
+        "edit-concrete-ratio", "edit-concrete-duration", "extend-concrete-ratio",
+        "extend-without-video", "t2v", "first-frame", "unknown-value",
+    ],
+)
+def test_seedance_2_5_rejects_a_declared_task_type_the_arguments_contradict(args, fragment):
+    ok, reason = _make_2_5_adapter().supports(GenerateVideoInput(prompt="x", **args))
+    assert ok is False
+    assert fragment in reason
+
+
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        ({"aspect_ratio": "16:9", "duration_seconds": 10,
+          "model_specific": {"omni_reference_task_type": "edit"}},
+         {"aspect_ratio": "adaptive", "duration_seconds": -1}),
+        ({"aspect_ratio": "16:9", "duration_seconds": 10,
+          "model_specific": {"omni_reference_task_type": "extend"}},
+         {"aspect_ratio": "adaptive"}),
+        ({"aspect_ratio": "16:9", "duration_seconds": 10}, {}),
+        ({"aspect_ratio": "16:9", "model_specific": {"omni_reference_task_type": "reference"}}, {}),
+    ],
+    ids=["declared-edit", "declared-extend", "derived", "declared-reference"],
+)
+def test_seedance_2_5_corrections_touch_ratio_only_for_a_declared_edit_or_extend(args, expected):
+    # A derived task type is never a reason to rewrite the caller's ratio: the ratio is
+    # what the derivation reads. Only an explicit edit/extend fixes the geometry.
+    adapter = _make_2_5_adapter()
+    req = GenerateVideoInput(prompt="x", reference_videos=[_VID], **args)
+    corrections = adapter.validation_corrections(req)
+    assert corrections == expected
+    assert adapter.supports(req.model_copy(update=corrections))[0] is True

@@ -100,6 +100,151 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 `list_models()` 返回 `model_id`（即 `model_name`）+ `display_name`，**不回传 `adapter_id` 或 `cfgpu_model_id`**。新开发者最常见的错误：在 `build_payload()` 以外的地方使用 `cfgpu_model_id`，或者把 `adapter_id` 传给调用方/写进对外可见的结果。`registry.get()` 依次按 `model_name` → `adapter_id` → `cfgpu_model_id` → `display_name` 解析，因此旧调用方传 `adapter_id`/`cfgpu_model_id` 仍能命中，但工具 schema 的 `model` 枚举、`list_models`、`model_used`、错误 `model_id` 只会**出现** `model_name` 的取值。
 
+#### Agent-facing media task profiles
+
+`capabilities/media_tasks.yaml` is the single vocabulary of stable, user-facing
+media tasks — the **only** vocabulary for what a model can do (2026-10-09; see the
+next section for the adapter-internal `capabilities` list it replaced). Each
+`models/<adapter_id>/adapter.yaml` lists its IDs under `tasks:` (inherited through
+`extends`, validated by `task_catalog.parse_tasks` at load: known ID, matching
+`task_type`). The list holds task IDs only — no
+payload field names, no parameter ranges. In particular, `reference_to_video` and
+`video_edit` are distinct tasks even when a provider transports both through a
+reference-video field.
+
+`list_model_profiles(media_type?, required_tasks?, match=all)` returns this catalog and is the only model-selection
+tool an agent should receive. Task lists are selection metadata *and* the code's
+gates; `adapter.yaml`, `tool_param_constraints.json`, and adapter validation remain
+the authoritative control-plane definitions of actual parameters and legal values.
+
+#### 视频输入契约 `inputs:` 与任务的 `requires`（2026-10-09）
+
+**问题。** 同一个事实「这个模型收什么素材」原来有三份互不相干的副本：各 adapter `supports()`
+里的手写检查、只有部分模型声明的 `max_reference_*` / `allow_audio_only_reference`、以及手写的
+`profile.yaml`。三者各自漂移：`reference_to_video` 的描述写着「images, videos, or audio」，可
+Kling / Grok / HappyHorse / 万相 2.6 r2v 都标了它却一个音频都不收；`wan2.6-t2v` 能收驱动音频，
+profile 里却没有 `audio_driven_video`；适配器层的 `audio_generate` 在 Seedance 上是「输出带声音」，
+在万相上是「可以传驱动音频」。agent 用 `required_tasks` 找「能用音频的模型」，返回的一半根本不收音频。
+
+**音频按用途分，而不是按槽位分。** 同一个 `reference_audios` 槽有三种互不相同的契约，区别在于对
+**输出**承诺了什么：`driving`（原样作为成片音轨，画面跟随，只有它保证原声可闻、口型对齐）、`voice`
+（绑定到某个视觉参考的音色样本，模型用该音色说新台词，`wan2.7-r2v` 的 `reference_voice`）、`reference`
+（由 prompt 指挥的素材，Seedance 卡片示例是背景音乐，MiniMax-H3 官方示例是音色参考，不保证原声保留）。
+「根据这段语音生成视频」只该路由到 `driving`：用 `reference` 模型也会成功、也会计费，结果却是一条
+口型对不上的视频 —— 正是本项目反复避免的「看起来合理、照样计费、却不是要的那条」。所以 role 是
+必填枚举而不是布尔值，`parse_inputs` 拒绝缺省。
+
+**单一来源。** 每个视频模型在 `adapter.yaml` 声明 `inputs:`（`adapters/inputs.py`）：槽 → `{max?}`，
+音频槽另带 `role` 与 `standalone`（能否不带任何图/视频单独传）。缺席的槽 = 不接受；`inputs: {}` = 不收任何素材；
+变体用 `slot: null` 去掉从 `extends` 继承来的槽（`_merge_extends` 对 dict 字段是一层合并，正好逐槽覆盖）。
+旧键 `max_reference_*` / `allow_audio_only_reference` 在 `from_config` 直接报错而不是被忽略 —— 一个被静默丢掉
+的上限就是一个不再执行、也没人知道的上限。三个读者：
+
+- **`ModelAdapter.supports()`** 执行数量上限与 `standalone` 规则（`check_declared_inputs`），替代了 Seedance 的
+  上限循环、MiniMax-H3 的 `_REFERENCE_LIMITS` 和 cfdream r2v 的 `MAX_REFERENCE_*`。顺带补上了 `wan-video` /
+  `wan-video-fast` 此前完全没有的 9/3/3 上限。
+- **`list_model_profiles`** 给每个视频模型加 `inputs` 字段（新增字段，向后兼容）。这是逐模型的列表，所以能写
+  逐模型的上限，不违背 `x-cfgpu-media`「schema 只写宽松事实」的原则。
+
+**图片与理解模型也声明 `inputs`（2026-10-09）。** 槽集合按工具区分（`INPUT_SLOTS`）：图片 `reference_images` / `regions`，
+理解 `images` / `video` / `regions`；`regions` 的上限是 `max_per_image`。参考图上限以前写死在代码里
+（`seedream.py` 的 `max_refs` —— Pro 10、其余 14；`wan_image.py` 的 `_MAX_IMAGES = 9`），区域上限是单独的
+`max_regions_per_image` 键，agent 都看不见；现在都在 `inputs`，旧键加载即报错。这两类模型由基类 `supports()` 拒绝
+未声明的槽（视频仍由 adapter 自己拒，好让拒绝理由点名兄弟模型）；区域上限仍由 `regions.check_regions` 执行，因为它的
+拒绝理由要告诉调用方怎么拆分。`test_image_tasks.py` 要求参考图上限与 `supports()` 一致、`regions` 槽 ⟺ 区域任务
+（图片 `region_edit` / 理解 `region_understanding`）。纯内部迁移：上限值不变，450 个请求的路由矩阵无变化。
+
+**两个目录共用一个行构造（2026-10-09）。** `list_models` 与 `list_model_profiles` 以前各自拼每个模型的字典，`inputs` /
+`outputs` / `aspect_ratios` 每加一个字段都要改两处，漏一处两个视图就对同一个模型说法不一。现在都调用
+`service/model._profile_row`；`list_models` 只多一个 `is_async`，定位为运维/调试视图（生产 `config.yaml` 禁用它），
+agent 选模型用 `list_model_profiles`（任务过滤 + 参数模板）。`test_list_models_rows_are_the_profile_rows_plus_is_async`
+钉住两者逐行相等。
+- **测试**（`tests/unit/test_video_inputs.py`）对每个视频模型枚举素材槽 × 数量（0、1、max、max+1）组合，
+  调 `supports()`，双向核对：被接受的请求不得用到未声明的槽、不得超过上限、未声明 `standalone` 不得纯音频；
+  每个声明的槽和上限都必须有被接受的请求真正用到。
+
+**未声明的槽仍由各 adapter 自己拒绝**，而不是由基类统一拒绝。原因是拒绝理由：HappyHorse 的「首帧和参考图冲突」
+要指名 `happyhorse-1.0-i2v` / `-r2v`，`frames_vs_references_reason` 要给出两条改法 —— 基类先拦下来只能说
+「不接受 first_frame」，补救信息就丢了。代价是声明与代码各有一份，由上面的探测测试锁成一份。组合规则
+（首帧与参考互斥、驱动音频只配首帧、每个视觉参考最多一段音色）同理留在 adapter 里。
+
+**任务声明自己需要什么输入。** `media_tasks.yaml` 的视频任务可带 `requires: {all?, any?, audio_role?}`，原样随
+`task_catalog` 发布给 agent。`reference_to_video` 收窄为 `any: [reference_images, reference_videos]`，描述里不再
+承诺音频；`audio_driven_video` 为 `all: [reference_audios], audio_role: driving`。测试要求 profile 声明的每个任务都被
+`inputs` 结构上覆盖，且 `supports()` 至少接受一个携带这些输入的请求；`audio_driven_video` 与 `role: driving` 双向蕴含，
+因为它是唯一完全由输入事实决定的任务。**测试证明不了语义能力**：MiniMax-H3 收参考视频，所以 `video_edit` 能过结构检查，
+但它是否真的编辑得好仍只有卡片和实测能回答。
+
+**场景任务与 `supports()` 双向一致（2026-10-09）。** 有七个任务只描述素材的形状，因此是否具备完全由 `supports()`
+决定：视频的 `text_to_video`（无素材）、`image_to_video`（只有首帧）、`first_last_frame`（首尾帧）、`reference_to_video`
+（参考图和/或 `role: reference` 的参考视频，无帧、无音频；带 `source` 视频的请求一律算编辑）；图片的 `text_to_image` /
+`image_to_image` / `multi_image_fusion`（0 / 1 / 2 张参考图）。上面的检查只有一个方向（声明的必须可达），漏掉的正是
+最隐蔽的一种漂移：模型做得了却没声明，按任务筛选的 agent 就看不见它，而且没有任何请求会失败把它暴露出来。
+`test_video_inputs.py::test_scenario_tasks_are_claimed_exactly_when_supports_accepts_them` 与
+`test_image_tasks.py` 用探针请求逐一比对，要求「声明 ⟺ 接受」；`role: source` 的视频槽必须配 `video_edit` 或
+`video_extend`。上线时视频侧零差异；图片侧查出 CF Image 2 与四个 Nano Banana 一直把整组参考图原样下发却没声明
+`multi_image_fusion`，已补上。`auto` 路由在 144 个图片请求矩阵上无变化（这些请求本来就选 CF Image 2）。
+
+**`outputs.audio`：输出有没有声音（2026-10-09）。** 视频 adapter.yaml 新增 `outputs: {audio: always | switchable | never}`
+（`adapters/inputs.py` 的 `AUDIO_OUTPUTS`；缺省 = 文档未说明，例如声音跟随源视频的编辑模型）。这个事实以前写了两遍：
+`synced_audio_output` 任务（给 agent）和各 adapter 是否下发 `with_audio`（代码），前者漂移了——可灵、cfdream H3 两个都
+受开关控制，Grok 与万相 2.6/2.7 恒出声（万相不给驱动音频时自动配音），却都没声明。现在测试要求双向一致：
+`synced_audio_output` ⟺ `always`/`switchable`；`switchable` ⟺ `with_audio` 改变 payload（对每个 adapter 实际构造
+两份 payload 比较）。声明：`wan-2-0`（Seedance 全族继承）、可灵、cfdream H3 为 `switchable`；`MiniMax-H3`、Grok、万相
+2.6/2.7 的 t2v/i2v/r2v 为 `always`；`wan2.7-videoedit` 与 HappyHorse 不声明（编辑模型的声音跟随源视频，HappyHorse
+文生/图生/参考的文档未说明）。`list_models` / `list_model_profiles` 以 `outputs` 发布。路由不读这个任务，`auto` 不变。
+钉住 `with_audio` 仍只在可灵上做（见下文），`switchable` 只说明开关有效，不改变这一范围。
+
+任务 id 没有改名，`catalog_version` 不变。按音频用途拆出新任务仍是后续一步。
+
+**`catalog_version: 2`：删除没有调用开关的任务（2026-10-09）。** `web_grounded_generation`（Seedance 全族、Seedream
+4.0/4.5/5.0 lite）与 `tool_calling` / `visual_agent`（qwen 全族）从词表删除。三者都没有任何工具参数能触发 —— agent
+按它们筛出模型，却无法在调用里要求这件事；qwen 四个模型声明完全相同，也没有区分度。agent 选模型看的是这次调用能做
+什么，而不是模型背后还有什么本事。`web_grounded_generation` 是唯一的 `cross_media` 任务，这个媒体类型随之删除。
+`catalog_version` 现在由 `media_tasks.yaml` 顶层的 `catalog_version` 单独给出（以前直接取 `schema_version`）：删除或改义
+任务 id 就加一，缓存了旧筛选条件的 agent 会得到参数错误，而不是静默的空结果。上游联网搜索本身没有被禁：经
+`model_specific` 传的 `tools` 照旧原样下发，卡片里的上游参数说明也保留。路由与代码门槛都不读这三个任务，`auto` 不变。
+卡片词表测试把三个 id 加入退役词，防止回流。
+
+同一版本 2 里还删了 `image_reasoning` / `long_context` / `long_video_understanding` / `long_document_understanding`：它们描述的是
+模型素质而不是请求，没有任何参数能要求它们，四个 qwen 模型的声明也完全相同（`understand_vision` 甚至不收文档）。分支尚未发布，
+所以两批删除并在一个版本里，对外只有一次不兼容变更。理解类词表剩 `image_understanding` / `video_understanding` /
+`region_understanding`，都只由请求携带的素材决定，`test_image_tasks.py` 用探针要求它们与 `supports()` 双向一致。
+qwen 四个模型之间的区别本来就由 `analysis_depth_default_for`（fast / balanced / thorough）与成本、速度档位表达。
+
+#### 废弃适配器内部的 `capabilities` 词表；`tasks:` 并入 adapter.yaml；视频也分用途（2026-10-09）
+
+**问题。** 每个模型原来有两份「能做什么」：`adapter.yaml` 的 `capabilities`（30 个词，给代码用）和 `profile.yaml`
+的 canonical task（给 agent 用）。逐词核查后，只有 7 个词真被代码读：视频场景检查（Seedance / Kling 把请求映射成
+`text_to_video` / `image_to_video` / `first_last_frame` / `multi_modal_reference` 再查表）、区域门控、组图门控、两个
+Seedream 功能开关、router 加分；其余 23 个（`video_edit`、`video_extend`、`audio_generate`、`web_search`、`sample_mode`、qwen
+那一组……）没有任何代码读，只是一份会漂移的副本。`audio_generate` 一词两义正是这样来的。
+
+**做法。**
+
+- **`tasks:` 并入 adapter.yaml，`profile.yaml` 删除。** 每个模型一个文件；变体经 `extends` 继承 task，原来 19 个与父级一字不差
+  的手抄 profile 随之消失。`from_config` 遇到 `capabilities` 键直接报错（与 `max_reference_*` 同理：被静默丢掉的声明就是不再
+  生效、也没人知道的声明）。
+- **代码门控改读 `tasks` 或 `inputs`。** 区域（`region_edit` / `region_understanding`）、组图（`multi_image_group`）、
+  `layer_decomposition`、`transparent_background` 读 `adapter.tasks`；Seedance / Kling 的「推断场景 → 查能力」换成
+  「请求用到的槽是否在 `inputs:` 里」，拒绝理由从 `does not support multi_modal_reference (capabilities: …)` 变为
+  `<model_name> does not accept reference_images`。`models_with_capability` → `models_with_task`。
+- **`reference_videos` 也有 `role`**：`reference`（由 prompt 指挥的素材；会编辑/延长的模型上，prompt 也可以让它成为被编辑的
+  对象）或 `source`（永远是被编辑/续写的那段：万相 2.7 i2v 的 `first_clip`、万相 / HappyHorse 编辑模型的源视频）。与音频一样是
+  必填枚举。Kling 的 `refer_type=base` 只能经 `model_specific` 触达，所以声明为 `reference`。
+- **「能出几张图」不是任务。** gpt-image-2 的 `multi_image_group` 能力是 10/08 为「按 `n` 出多张」加的，但它出的是互相独立的
+  图，不是 canonical 任务描述的「连贯组图」，profile 也没声明它。现在由 `max_images_per_request` 表达「按 `n` 出图，上限 N」，
+  `None` 表示忽略 `n`。由此发现并修掉一个已有 bug：nano-banana 全系经 `extends` 继承了 gpt-image-2 的组图能力和上限 10，
+  `NanoBananaAdapter` 却从不发 `n` —— router 为 `n>1` 偏好它，结果静默只出一张。`nano-banana-2` 现在显式 `max_images_per_request: ~`。
+- **router 加分逐条重判**（见 §路由打分）：区域 +3 删除（`supports()` 已排除所有不具备 `region_edit` 的模型，幸存者都有，加分不排序
+  任何东西）；视频参考视频的 +3 改为「`reference_videos.role == reference`」—— 这条不是摆设：单传一个参考视频时万相 2.7 i2v 会
+  当作续写源接受，是这条加分让参考生视频模型排在前面。在 120 组 `quality_tier × 素材组合 × 分辨率 / 中英文 prompt` 的
+  `model="auto"` 请求上对比改动前后，选中模型 0 处变化。
+- **card 的「能力标签」行改为 `任务（tasks）` 行**，测试要求它与 `tasks:` 逐项相等，并禁止退役词出现在 card 里（`tools.type:
+  web_search` 这类上游字段除外）。`list_models` 的 `capabilities` 字段换成 `tasks`（视频模型另带 `inputs`）。
+- **拒绝理由只用 `model_name`**：adapter 里 85 处 `f"{self.adapter_id} …"` 改为 `model_name`，`test_video_inputs.py` 枚举所有
+  `adapter_id != model_name` 的视频模型的拒绝理由，断言既不含 `adapter_id` 也不含 `capabilit`。
+
 **四种 `task_type`**：`image` / `video` / `audio` 三类都是**媒体生成**（返回 `urls`），而 `understand`（视觉理解 / 图像推理 / 视频理解，如 Qwen3-VL）是**返回文本**的对话类任务——走 OpenAI 兼容的 `/model/v1/chat/completions`，结果落在 `NormalizedResult.message`（assistant 消息 `{role, content[, reasoning_content]}`，回答是 `content`、Thinking 模型的推理过程是 `reasoning_content`）与 `response_id`，`urls` 为空。其工具返回 chat-completion 结构 `{id, model, message, payload[, usage]}`（`usage` 受 `return_metadata` 控制）。路由、`supports()`、`select_model()` 都按 `task_type` 隔离，understand 请求永远不会选中媒体模型，反之亦然。
 
 ### 3.2 同步模型 vs 异步模型
@@ -126,7 +271,7 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 | id 列表（list[str]） | `["wan-2-0", "wan-2-0-fast"]` | `select_model(allowed=...)` 仅在该候选范围内打分选最优 |
 | `"auto"`（str，默认） | `"auto"` | `select_model()` 在全部模型中打分选最优 |
 
-列表与 `"auto"` 都只产出**一个** task / 一个结果，区别仅是候选池大小；列表里若含未知或与当前任务类型不符的 id，`select_model()` 抛 `invalid_params`。**单个 id 的精确路径同样会过 `supports(req)`**：auto/列表路径靠 `supports()` 过滤候选，但直接点名的模型若与任务类型 / 能力不符，否则会让 `build_payload()` 里的 `assert` 泄漏成裸 `AssertionError`——因此 `resolve()` 在此也校验，不通过则抛带 `model_id` 的 `invalid_params`（触发 `get_model_card` 提示）。
+列表与 `"auto"` 都只产出**一个** task / 一个结果，区别仅是候选池大小；列表里若含未知或与当前任务类型不符的 id，`select_model()` 抛 `invalid_params`。**单个 id 的精确路径同样会过 `supports(req)`**：auto/列表路径靠 `supports()` 过滤候选，但直接点名的模型若与任务类型 / 能力不符，否则会让 `build_payload()` 里的 `assert` 泄漏成裸 `AssertionError`——因此 `resolve()` 在此也校验，不通过则抛带 `model_id` 的 `invalid_params`（追加通用的「调整参数或换模型」提示）。
 
 `ModelRouter.select_model()` 对候选模型打分，最高分获选：
 
@@ -137,10 +282,11 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
   balanced → speed_tier - cost_tier
 
 加分项:
-  图像请求有 reference_images 且模型支持 multi_image_fusion/multi_image_group → +3
-  图像请求 n > 1 且模型支持 multi_image_group → +3
-  图像请求有 regions 且模型支持 region_edit → +3
-  视频请求有 reference_images/videos/audios 且模型支持 multi_modal_reference → +3
+  图像请求有 reference_images 且 tasks 含 multi_image_fusion/multi_image_group → +3
+  图像请求 n > 1 且模型按 n 出图（tasks 含 multi_image_group，或 max_images_per_request > 1）→ +3
+  视频请求有 reference_images 且 tasks 含 reference_to_video → +3
+  视频请求有 reference_videos 且 inputs.reference_videos.role == reference → +3
+    （否则）有 reference_audios 且 tasks 含 reference_to_video → +3
   中文 prompt 且模型是 doubao-seedream-* → +2
 
 同分时依次比 auto_priority、adapter_id 字母序（后者是确定性兜底，不依赖文件系统遍历顺序）
@@ -148,7 +294,7 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 **`auto_priority` / `quality_rank` —— 把「谁是默认」写出来，而不是让字母表决定。** 打分只看 `speed_tier` / `cost_tier` 两个 1-5 的粗档，而十个图像模型里八个都是 `speed=3, cost=2`，于是整族同分、真正的选择器变成了 `sorted(adapter_id)`：`doubao-seedream-4-0` < `4-5` < `5-0-lite` < `5-0-pro`，`model="auto"` 每一次都把请求交给**最老**的那个，而这件事在任何一份配置里都写不出来也读不出来。两个字段各修一半：
 
-- **`auto_priority`（缺省 0）**：同分时的显式偏好。当前 `doubao-seedream-5-0-pro: 2`（图像默认落点）、`doubao-seedream-5-0-lite: 1`（Pro 被 `supports()` 排除时的兜底 —— 3K/4K、组图 `n>1`、联网搜索都是 Pro 没有的能力）、`doubao-seedance-2-0-fast: 2`（视频 fast 档的默认落点）。**它是排序的第二关键字，不是加分项**（`router.selection_key`）：加进总分就会压过真实的分差 —— 视频默认落点的 priority 2 会在 best 档反超 `kling-v3-omni` 高一分的旗舰代理，把一次 best 请求交给一个因为「快」才被选中的模型。作为第二关键字，它只在第一关键字沉默时开口。
+- **`auto_priority`（缺省 0）**：同分时的显式偏好。当前 `doubao-seedream-5-0-pro: 2`（图像默认落点）、`doubao-seedream-5-0-lite: 1`（Pro 被 `supports()` 排除时的兜底 —— 3K/4K、联网搜索都是 Pro 没有的能力；组图 `n>1` 不排除 Pro，靠 `n>1` 的 +3 加分让位）、`doubao-seedance-2-0-fast: 2`（视频 fast 档的默认落点）。**它是排序的第二关键字，不是加分项**（`router.selection_key`）：加进总分就会压过真实的分差 —— 视频默认落点的 priority 2 会在 best 档反超 `kling-v3-omni` 高一分的旗舰代理，把一次 best 请求交给一个因为「快」才被选中的模型。作为第二关键字，它只在第一关键字沉默时开口。
 - **`quality_rank`（缺省 0，仅 best 档生效）**：显式的旗舰声明。此前 best 用 `cost_tier` 当质量代理（「越贵≈越优」），排的其实是**计费档**而非产出质量 —— 于是同一个模型的 premium 服务档（`cost_tier=4`）能压过真正的新旗舰。当前 `gpt-image-2: 3`（图像 best 首选）、`nano-banana-pro: 2`（首选被 `supports()` 排除时接替）、`doubao-seedance-2-5: 3`（视频 best 首选 —— 30 秒单段直出、50 个参考素材、多语种旁白，`cost_tier` 却比 `kling-v3-omni` 低一档，代理排不出来）。**代理并未废除**，仍作用于未声明 rank 的模型，两个 rank 都被 `supports()` 排除时次序照旧（视频仍回到 `kling-v3-omni`）。一个 rank 步长记 11 分，高于 `cost_tier + speed_tier` 的理论最大值 10，故任何已声明的 rank 必定压过未声明者，rank 之间的次序也绝不会被价格差翻转。
 
 - **`default_for`（缺省空集，按 quality_tier 分档）**：**显式声明的默认落点**，是 `selection_key` 的**第一关键字**，压过分数。当前 `cfgpu-minimax-h3: [balanced]`（视频）、`gpt-image-2: [balanced]`（图像）。
@@ -157,9 +303,9 @@ CLI 的核心设计原则：**stdout = 纯 URL（可 pipe），stderr = 进度 +
 
 `MiniMax-H3` 就是这么来的：它诚实的 speed 3 / cost 1（480P 输出 0.1 元/秒、默认 768P 输出 0.2、2K 输出 0.5）在 balanced 档记 2 分，与 `doubao-seedance-2-0-fast` / `cf-imagine-video` / `wan-video-fast` **打平而非胜出**，平局再落到 `auto_priority`，那里 `doubao-seedance-2-0-fast` 已经声明了 2。也就是说启发式无论如何都不会自己落到这里，于是路由决定写成路由决定。**反过来说，`cost_tier` 也不是这条路由的机关**：它只是当前价格声明，输入视频与图片另按相同分辨率档位计费。
 
-`gpt-image-2` 是第二例（2026-09-09），理由不同：它在 balanced 档记 1 分，与整个 Seedream 家族**四路打平**，平局本来是 `auto_priority` 能解的。解不了的是中文 —— `_score` 给每个 `doubao-seedream` 加 2 分，于是中文 prompt 下 5.0 Pro 记 3 分、直接在**分数**这一关就赢了，`auto_priority` 作为第三关键字根本轮不到开口。一个英文成立、中文翻盘的默认不是默认。同样只声明 `balanced`：`fast` 留给 `doubao-seedream-5-0-pro`（同一个平局，但调用方点名要快时不该给这个模型），`best` 本就由 `quality_rank: 3` 落在这里，是另一个字段的另一次声明，两者互不代表。
+`gpt-image-2` 是第二例（2026-09-09），理由不同：它在 balanced 档记 1 分，与整个 Seedream 家族的旧成员打平，平局本来是 `auto_priority` 能解的。解不了的是中文 —— `_score` 给每个 `doubao-seedream` 加 2 分，于是中文 prompt 下 5.0 Pro 记 3 分、直接在**分数**这一关就赢了，`auto_priority` 作为第三关键字根本轮不到开口。一个英文成立、中文翻盘的默认不是默认。同样只声明 `balanced`：`fast` 现在由速度 5、成本 1 的 `doubao-seedream-5-0-flash` 自然胜出；`best` 本就由 `quality_rank: 3` 落在这里，是另一个字段的另一次声明，两者互不代表。
 
-**它有一处已知的、接受了的退化：`n > 1`。** 组图的 +3 加分在**分数**里，而 `default_for` 是分数**之上**的一关，所以 balanced 档的组图请求照样落到 `gpt-image-2` —— 它没有 `multi_image_group`，`GptImage2Adapter.build_payload` 从不发送 `n`，调用方会**静默地**拿到一张图。这不是漏洞而是声明默认的标价：允许运营决定压过启发式正是把它写下来的全部意义，而 `n` 在全队的策略本就是「无能力的模型静默忽略」，下游没有任何信号能捕获这次错配。需要真组图的调用方显式点名 Seedream。`test_declared_default_outranks_the_group_bonus_and_n_degrades` 把这次退化钉成**记录在案的决定**而不是意外。`reference_images` 是同一条路的轻症：`gpt-image-2` 有 `image_to_image` 且 `_finalize_payload` 确实把参考图发上去了，缺的只是 `multi_image_fusion`，属于「由一个非专精的模型来做」而不是「被丢掉」。
+**`n > 1` 不再是例外。** `gpt-image-2` 声明 `max_images_per_request: 10`（独立多张，不是组图，所以不声明 `multi_image_group`），接受 `n=1`–`10`，且 `GptImage2Adapter.build_payload` 将这个值原样上送；`n` 是输出张数上限，模型可能少于请求值。Seedream 的同名参数也是组图的张数上限。`reference_images` 则是另一个维度：`gpt-image-2` 有 `image_to_image` 且 `_finalize_payload` 确实把参考图发上去了，多张参考图同样原样下发，因此声明了 `multi_image_fusion`（Nano Banana 继承同一声明）。
 
 **按档划分是它的安全属性，不是装饰。** 「谁是默认」对不同的问法本就有不同答案：日常请求想要的模型，未必是调用方点名要快时想要的那个。`MiniMax-H3` 只声明 `balanced`，所以 `fast` 仍归 `doubao-seedance-2-0-fast`（6 分，确实更快），`best` 仍归 `doubao-seedance-2-5`（`quality_rank`，39 比 6）。**也不是钉死**：它只在 `supports()` 已经放行的候选里生效，720p/1080p 或超过 15 秒会让 H3 在读到这个字段之前就出局，兜底自然接手。`selection_key` 的 `quality_tier` 参数**没有缺省值** —— 它现在决定第一关键字，漏传会得到一个看起来仍然合法、实际排错了的次序。
 
@@ -242,7 +388,8 @@ service/image.py::generate_image()
     ▼
 TaskManager.create(adapter, req)
     │
-    ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式
+    ├─ resolve_image_refs(req)         [[句柄]] → 图N（无 regions 时，所有模型）；未解析的 [[...]] 直接报错
+    ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式（有 regions 时由区域 adapter 一并渲染）
     │
     ├─ insert_task(request_id or uuid4, "submitting")   ← ★ 行先落，POST 后发
     │      └─ 主键冲突 = 重复投递 → 直接返回既有行，不再 POST（不二次计费）
@@ -261,6 +408,20 @@ TaskManager.wait(task, adapter, req)
     ▼
 service 返回 dict → 访问层格式化 → 用户
 ```
+
+**prompt 占位符在 `build_payload` 之前统一解析。** `image_refs` 的字段说明对所有模型承诺
+`[[<句柄>]]` 会被渲染成该图的序号，但过去只有区域渲染（`render_prompt`）在兑现，而它只在
+三个读区域的 adapter 里、且仅当同时传了 `regions` 时才运行——其余情况句柄原样上行，模型看到
+的是字面 `[[own]]`，照常出图、照常计费（曾在 cf-image-2 上发生）。现在 `TaskManager` 的两个
+入口（`create()` 与 `validate_request()`）都先调 `regions.resolve_image_refs(req)`，没有
+adapter 需要自己记得。带 `regions` 的请求原样放行：`supports()` 已把它限定在区域 adapter，
+那里句柄与标记必须一次性渲染，因为「既是句柄又是标记名」的歧义只有两者同时可见才能发现。
+
+未解析的 `[[...]]` **fail closed**（`invalid_params`，列出本次可用的占位符）。`[[...]]` 不会
+出现在正常行文里，剩下的必然是写错的句柄/标记；原样发出只会得到一张看似合理、已计费的错图。
+在 `create()` 里它发生在写行之前，所以既不落行也不 POST；`validate_only` 同样能免费拦下。
+测试：`tests/unit/test_regions.py`（`test_every_image_model_resolves_handles_without_regions`
+逐个模型断言 payload 中不再含 `[[`）。
 
 ### 单例资源（`config.py`）
 
@@ -416,7 +577,7 @@ submitting ──► dispatching ──┬─[is_async=false]─► succeeded / 
 | 状态 | 对调用方意味着什么 |
 |---|---|
 | `submitting` | 行已落、POST 确定未发出。上游没有计费，**重发是安全的** |
-| `dispatching` | POST 已派发或其响应已丢失。上游**可能已计费**，不要直接重发，先 `task_status` |
+| `dispatching` | POST 已派发、响应还在路上。上游**可能已计费**，不要直接重发，继续 `task_status`。响应一旦确定丢失（超时、传输错误、5xx），行立刻收敛为 `failed` + `submission_lost`（可重试），不会一直停在这里 |
 
 代价是同步路径多一次本地 UPDATE，被一次 10–60s 的上游调用完全淹没。
 
@@ -574,7 +735,9 @@ CFGPUError.from_http_response(status, body)
 
 因此新增 `CFGPUError.outcome_unknown`，`to_tool_result_dict()` 只在为真时输出；`phase`（`connect` / `request`）也从 `original` 抬进了结果顶层——判断要不要重发的依据不该靠读散文。测试：`test_submit_timeout_is_not_retryable_and_says_the_outcome_is_unknown` / `test_poll_timeout_stays_retryable` / `test_connect_phase_timeout_is_retryable_even_on_a_submit`。
 
-**这条已经收窄。** 行现在先于 POST 落库，所以「没有可对账的东西」不再成立：`TaskManager._record_submit_failure` 在提交路径上接住这类错误，按它**证明了什么**分流——上游明确拒收的（4xx / connect 阶段超时 / 内容审核）把行收敛成 `failed`，因为那既没执行也没计费，说成「可能已计费」是把可重试的事说死了；证明不了的（request 阶段超时、传输层错误、上游 5xx）把行留在 `dispatching`，清掉 `outcome_unknown`，并在文案末尾补上真能执行的下一步：`task_status("<request_id>")`。`CFGPUClient` 那一层仍然照旧置位——它只看得见传输事实，看不见有没有落库；两层的分工就是这条收窄的实现方式。`outcome_unknown` 剩下的适用面只有「落库本身失败」。
+**这条已经收窄。** 行现在先于 POST 落库，所以「没有可对账的东西」不再成立：`TaskManager._record_submit_failure` 在提交路径上接住这类错误，按它**证明了什么**分流——上游明确拒收的（4xx / connect 阶段超时 / 内容审核）把行收敛成 `failed`，因为那既没执行也没计费，说成「可能已计费」是把可重试的事说死了；证明不了的（request 阶段超时、传输层错误、上游 5xx）把行收敛成 `failed`，`error_type` 改成 `submission_lost`（**可重试**），清掉 `outcome_unknown`，并在文案末尾补上下一步：结果没能取回、`task_status` 也查不到，请直接重新发起（`understand` 额外提示降低 `analysis_depth`、缩短视频或收窄问题）。
+
+**为什么不再留在 `dispatching` 并指向 `task_status`（2026-09-29）。** 这次 POST 在本进程里已经结束，而它要带回的东西——同步模型的整个结果、异步模型的上游 task_id——只在那一个响应里，之后没有任何路径会再写这一行。`get_status` 对没有上游 id 的行不 re-poll，`wait()` 只重读行，于是 `task_status` 永远返回 `status: "dispatching"`，按结果契约读就是「还在跑，继续轮询」——一条死路（生产上 `understand_vision` 调 qwen3.8-max 分析视频 180s 超时后撞上）。当初不写 `failed` 是怕它被读成「可以安全重发」，但这个顾虑对调用方没有可执行的意义：这次请求的结果无论如何都拿不回来了，重发是拿到结果的唯一途径，提示「可能已计费」只会让 agent 卡住。所以 `submission_lost` 是 `retryable: true`，文案也不提计费。`error_type` 存在行 payload 的保留键 `_error_type` 里（`public_payload()` 剥掉），`task_failed_error` 优先用它，因此 `task_status` / `task_wait` / 重放同一 `request_id` 报出的都是同一个 `submission_lost`，而不是被读回成 `task_failed`。超时文案本身也只写事实和 agent 能做的一步：该调的配置项（`http_timeout` / `connect_timeout` 的完整路径）只进服务端 WARNING 日志和 `original["setting"]`，因为 agent 改不了 config.yaml。`CFGPUClient` 那一层仍然照旧置位——它只看得见传输事实，看不见有没有落库；两层的分工就是这条收窄的实现方式。`outcome_unknown` 剩下的适用面只有「落库本身失败」。
 
 ### 失效 / 无权限端点：快速失败（非重试）
 
@@ -589,7 +752,7 @@ CFGPUError.from_http_response(status, body)
 
 ### card.md 提示机制
 
-当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.model_name` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加提示：`"请调用 get_model_card 获取模型 {model_id} 的详细参数说明和使用示例。"`, 同时在 dict 中添加 `model_id` 字段，方便 LLM 直接用该值调用 `get_model_card`。**agent 侧只见 `model_id`（全局唯一的 `model_name`），从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`**——`registry.get()` 同时按 `model_name` 解析，故 agent 拿 `model_id` 即可命中。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
+当错误属于 `invalid_params`、`model_unavailable` 或 `content_blocked` 类型时，service 层（`image.py` / `video.py` / `audio.py` / `vision.py` / `task.py`）会把 `adapter.model_name` 写入 `CFGPUError.model_id`。`to_tool_result_dict()` 在 `message` 中追加「根据校验原因调整通用参数，或重新选择支持该任务的模型」；同时在 dict 中添加 `model_id`，方便可信调用方关联实际模型。它**不会**引导 LLM 去读 `get_model_card`：agent 应以 `list_model_profiles` 的 canonical task 选型，具体参数合法性仍由 MCP preflight / adapter 校验决定。**所有运行时错误文本都不点名查询类工具**（`get_model_card` / `list_models` / `list_model_profiles` / `list_voice_profiles`），只写数据：task ID、字段名、`task_type`。原因是工具是否暴露由 `disabled_tools` 决定（生产配置就禁用了 `get_model_card`），Mode B / CLI 的工具名也不同。`test_errors.py::test_runtime_messages_name_no_model_lookup_tool` 用 AST 扫描 adapters / router / errors / task_manager / service / client 里的字符串字面量（docstring 除外），守住这条规则。**agent 侧只见 `model_id`（全局唯一的 `model_name`），从不暴露 MCP 内部的 `adapter_id` / `cfgpu_model_id`**。其他错误类型（`auth`、`rate_limit`、`timeout` 等）不追加提示。
 
 ### 错误在各层的展示方式
 
@@ -622,6 +785,14 @@ MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在�
 
 **`inline_media`（无 URL 的内联产物）**：部分模型不给下载链接，直接把媒体内容返回 —— 目前只有 MiniMax 语音（十六进制字符串在 `output.data.audio`，`MiniMaxSpeechAdapter` 解码后转 base64 存进 `NormalizedResult.inline_media`，每项 `{data, mime_type, filename}`）。对这类模型 **`inline_media` 就是产物本身**，因此凡是判断"有没有产物"的地方都必须是 `urls` **或** `inline_media`：`annotate_artifact()`（打 `artifact` 标记）、`TaskManager.create()` / `poll()` 的"成功但无产物 → 失败"守卫、`_present()`（`task_status` / `task_wait` 的成功分支）、`tool_registry.lean_result()`（`return_metadata=False` 的精简输出，三个 generate service 共用同一个 helper，避免各写一份而漂移）。同步 guard 只适用于 `image` / `video` / `audio`，文本型 `understand` 明确豁免。MiniMax 还会检查 HTTP 200 内的 `output.base_resp.status_code`，例如 `2054 / voice id not exist` 会直接返回 `invalid_params`，而不是落成空成功结果。`return_metadata` 屏蔽的是**元数据**（`task_id` / `model_used` / `aspect_ratio` / `seed` / `usage`），从不屏蔽产物 —— 少了这条，MiniMax 的精简结果就是一个 `urls: []` 的空壳。同步模型也会经由 `generate_audio(wait=False)` → `task_status` 走到 `_present()`，故那一处同样必须认 `inline_media`。MCP 工具层则把它划入 `structured_keys`（`generate_audio` 与 `tools/tasks.py` 的两个工具都是），base64 数据只进 `structuredContent`，绝不进模型上下文。测试见 `tests/unit/test_inline_media_result.py`。
 
+**系统音色目录（`voices.yaml`）**：每个 TTS 模型的可选音色存在 `models/<adapter_id>/voices.yaml`，schema 在 `voice_catalog.py`，语言代码表在 `capabilities/voice_languages.yaml`。它同时是 `list_voice_profiles` 的数据源和 `audio_tts.py` 本地 voice 校验的数据源 —— 一份列表，所以工具列出的音色必定能通过校验（`test_tts_validation_accepts_exactly_the_listed_voices`）。没有自己 `voices.yaml` 的模型沿 `adapter.yaml` 的 `extends` 链继承（MiniMax Turbo 读 HD 的），整份替换、不做逐条合并；查找走原始 YAML 而非 registry，父模型被 `disabled_models` 禁用时子模型仍能找到。
+
+之前这两处都在运行时解析 `card.md` 的表格，再用正则从供应商措辞里猜性别、用子串匹配语言：MiniMax 两百多个外语音色叫 `Lady` / `Queen` / `Woman`，id 里没有 `female`，性别筛选几乎全漏；卡片写 `英文` / `美式英语`，于是 `language="English"` 一条都没有。现在性别和语言都是显式字段：`gender` 取 `male` / `female` / `neutral`（非人声）/ `unknown`，`unknown` 是"还没人听过"的显式状态 —— 照常列出，但不进入任何性别筛选，因为放到哪一边都是把猜测当事实；`languages` 是代码表里的代码，调用方的任意写法（`English` / `英文` / `英语` / `en`）经别名解析到同一个代码，按子标签前缀匹配（`en` 覆盖 `en-US`，`zh` 覆盖 `zh-sichuan`，粤语是独立的 `yue`）。`voice` 字段从不 strip 或规范化，理由同 2054 的 remedy。
+
+**数据来源是平台的 `model_audio_voices` 导出，`voices.yaml` 是生成物，不手改。** `scripts/migrate_voice_catalogs.py EXPORT.json --force` 重新生成（`--check` 校验全部 `voices.yaml`），厂商映射为 `minimax → minimax-speech-2-8-hd`、`volcengine → seed-tts-2-0`，只收 `is_delete=0`、`is_custom=0` 的系统音色，按导出的 `sort` 排序。性别、年龄段（`age`：`child` / `young` / `middle_aged` / `senior`）、描述都直接取导出，不再从名字推断 —— 曾经试过按名字猜，24 条里错了 4 条（`Portuguese_Rudolph` 是女声）。语言由导出的 `language` 加上口音或变体标签细化成子标签（`英语` + `英语-美音` → `en-US`，`葡萄牙语` + `巴西葡萄牙语` 标签 → `pt-BR`），其余口音（`中国台湾口音` 等）留作 `accent` 展示文本；标签只保留风格特质（取自名字的 ` - ` 之后）和场景，重复字段内容的、平台"同款"、`通用场景` 都丢弃。重新生成前脚本会列出新增和删除的音色 id —— 被删的 id 从此过不了 `generate_audio` 的本地校验，值得看一眼；同一厂商下同名同语言的多个 id 会标 `# NOTE`（导出里 `zh_male_sophie` / `zh_female_sophie` 就是一例）。
+
+本地校验接受"目录 ∪ 适配器 `_DEFAULT_VOICE`"：适配器在省略 `voice` 时本来就发送默认音色，而导出未必收录它（MiniMax 的 `male-qn-qingse` 就不在），显式写出默认音色却被拒绝，会让同一请求因为写法不同而成败不同。卡片里的音色表已删除，改为指向 `list_voice_profiles`，免得 `get_model_card` 展示一份会过时的副本（`test_cards_point_to_the_catalog_instead_of_listing_voices`）。
+
 `tool_registry.annotate_artifact(result)` 是单一实现：当 `result` 含非空 `urls` 或非空 `inline_media`（顶层；并保留对嵌套结果的兼容判断作兜底，两个分支的判据一致，都认 `urls` 或 `inline_media`）时打标记；无产物的结果（`wait=False` 的 pending、轮询中的 running、error dict）原样返回。`tools/generate.py`、`tools/tasks.py` 在各工具 `return` 处包一层调用。该标记只在 MCP 工具层加，service / dispatcher / CLI 的原始返回不受影响。
 
 ### 统一的结果契约：`error` / `artifact` / `status`
@@ -635,6 +806,8 @@ MCP 工具（Mode A）在成功返回包含已生成媒体的结果时，会在�
 | 终态·失败 | `error: true` | `error_type` / `message` / `retryable`（+ `model_id` / `task_id` / `phase` / `outcome_unknown`） |
 
 **失败仍然走 error 而不是 `status: "failed"`**，是刻意的：`_raise_if_failed` 存在的理由就是让三类工具的失败形状一致，而 `error_type` / `retryable` / `card_hint` 才是携带补救措施的地方——换成一个枚举值等于把一整套可执行的诊断降级成一个词。于是 `status` 的取值实际只用到 `succeeded` / `running` / `pending`，`failed` 是个空成员，调用方不必等它。
+
+**异步失败的错误类型由 adapter 决定，且只在一处构建。** 同一个失败行会经由 `task_status`、`task_wait`、`generate_*(wait=True)` 和重放同一 request_id（`_existing`）四条路径报告，四处原本各自 `raise CFGPUError("task_failed", task.error)`；现在统一走 `task_manager.task_failed_error()`，它调用 `ModelAdapter.translate_task_failure(error)`，adapter 可返回 `(error_type, user_message, card_hint)` 改写默认的 `task_failed`。只建一处，是为了让改写不会只覆盖其中一部分路径。库里存的 `error` 列保持上游原文，改写只发生在报告时；`user_message` 必须以上游原文开头，便于和供应商日志对账。为了让 adapter 有稳定的键可匹配，`_extract_error_message` 现在对 `error: {code, message}` 形态保留符号化的 code（`CODE: message`，与 DashScope 的 `output.code` 同一做法；message 已含 code 时不重复）——这也改变了 MiniMax H3 等同形态上游的失败文本，前面多了 code。首个使用者是 Seedance 2.5：`InvalidParameter.TaskTypeConstraint`（`auto` 下被判为编辑/延长但 ratio/duration 不兼容）与 `InvalidParameter.TaskTypeMismatch`（声明的子任务与提示词意图不符）改判为 `invalid_params`，并附上具体的参数修改建议（CFGPU 中转实测会去掉 code，只留 Ark 的英文原文，所以 Constraint 也按原文里的 `identified your task as` 匹配，排在 code 匹配之后）；两者都是请求本身导致的，原样重试永远不会成功。card 已写明子任务约束表，所以保留 `card_hint`。测试见 `tests/unit/test_seedance_task_failures.py`。
 
 **`status` 是机器枚举，不再兼放散文。** `annotate_artifact()` 此前把 `"Success. URLs already generated; …"` 直接写进 `status`，于是同一个键上同时住着 `"running"` 和一句英文——最自然的写法 `status == "succeeded"` 永远为假，而唯一能用的写法是解析散文做控制流；更糟的是调用方必须**先知道自己拿到的是哪种形状**，才能正确读那个本该用来判断形状的键。现在 `status` 只放枚举（`TASK_STATUS_VALUES`），散文挪到 `note`。
 
@@ -680,9 +853,12 @@ src/cfgpu_mcp/
 │   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立；id 键名同理三种拼法一起读（`task_id` / CFGPU 实际应答的 `taskId` / 信封内的 `id`，见 _TASK_ID_KEYS）
 │   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3、minimax_h3 触发注册
 │
+├── capabilities/
+│   └── media_tasks.yaml        唯一的任务词典（task_catalog.py 加载校验）；不含 API 参数规则
+│
 ├── models/
 │   ├── wan-2-0/
-│   │   ├── adapter.yaml        完整配置
+│   │   ├── adapter.yaml        完整配置（含 tasks: 与 inputs:）
 │   │   └── card.md             模型说明
 │   ├── wan-2-0-fast/
 │   │   ├── adapter.yaml        只写差异，extends: wan-2-0
@@ -707,6 +883,9 @@ src/cfgpu_mcp/
 │   │   └── card.md
 │   ├── doubao-seedream-5-0-pro/
 │   │   ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~（单图、1K/2K，不支持组图/联网搜索）
+│   │   └── card.md
+│   ├── doubao-seedream-5-0-flash/
+│   │   ├── adapter.yaml        extends: doubao-seedream-5-0-pro（同步单图、1K/1.5K/2K、低成本高速）
 │   │   └── card.md
 │   ├── doubao-seedream-4-5/
 │   │   ├── adapter.yaml        extends: doubao-seedream-5-0-lite, card_base: ~
@@ -736,10 +915,10 @@ src/cfgpu_mcp/
 │   │   ├── adapter.yaml        万相 2.7 图生视频，独立 WanVideoAdapter（仅 image_to_video）
 │   │   └── card.md
 │   ├── wan-2-7-r2v/
-│   │   ├── adapter.yaml        万相 2.7 参考生视频，WanVideoR2VAdapter（multi_modal_reference）
+│   │   ├── adapter.yaml        万相 2.7 参考生视频，WanVideoR2VAdapter（reference_to_video）
 │   │   └── card.md
 │   ├── wan-2-7-t2v/
-│   │   ├── adapter.yaml        万相 2.7 文生视频，WanVideoT2VAdapter（text_to_video，无 media）
+│   │   ├── adapter.yaml        万相 2.7 文生视频，WanVideoT2VAdapter（text_to_video；可选驱动音频走扁平 input.audio_url，无 media）
 │   │   └── card.md
 │   ├── wan-2-7-videoedit/
 │   │   ├── adapter.yaml        万相 2.7 视频编辑，WanVideoEditAdapter（video_edit，源视频+参考图）
@@ -796,7 +975,7 @@ src/cfgpu_mcp/
 │   ├── audio.py                generate_audio()（语音合成 / TTS）
 │   ├── vision.py               understand_vision()（视觉理解 / 图像推理 / 视频理解，返回文本）
 │   ├── task.py                 get_status() / wait_for_task()
-│   └── model.py                list_models() / get_model_card()
+│   └── model.py                list_model_profiles() / list_models() / get_model_card()
 │
 ├── tools/                      Mode A：FastMCP 工具注册（参数重声明层）
 │   ├── generate.py
@@ -951,18 +1130,41 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
 - `with_audio`：视频音频开关，`SeedanceVideoAdapter` 映射为 `generate_audio`。
 - `watermark`：水印开关，类型为 `bool`，**默认 `false`**。Agent / MCP / service 三层的默认值保持一致；即使 caller 未传值，支持水印字段的 adapter 也会显式写入上游 payload。不同 API 形状分开处理：`seedream`、`seedance_video` 和 `happyhorse` 使用顶层 `payload["watermark"]`，WAN 2.6/2.7 使用 `payload["parameters"]["watermark"]`。它们都在 `model_specific` 合并之前写入，因此显式的模型私有值仍可覆盖。`MiniMax-H3` 的该字段叫 `aigc_watermark`（AIGC 标识水印），同样每次显式写入。上游没有该请求字段的 adapter（GPT Image / Nano Banana、Grok、Kling、以及走 comfy-gateway 的 `cfdream/minimax-h3*`）继续忽略它，避免传入未知字段。
-- `n`：图片组图数量（1-15），默认 1。声明了 `multi_image_group` 能力的模型才认 `n>1`，且各家 API 的写法不同：Seedream 系写成 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`wan2.7-image` 写成 `parameters.enable_sequential=true` + `parameters.n`（上限 12，超出由 `supports()` 在发请求前拒绝），**两个键永远一起下发**——只发 `enable_sequential` 时上游的 `n` 默认值是 12，那是 12 张的账单。不支持该能力的图像模型（包括 Seedream 5.0 Pro、gpt-image-2、nano-banana）静默忽略 `n`，继续发送其他参数并生成单张图片。两家的 `n` 都是上限而非张数。
+- `n`：图片数量参数（全局 1-15），默认 1。声明了 `multi_image_group` 能力的模型才认 `n>1`，且都是**上限**：`gpt-image-2` 接受 **1-10**，以顶层 `n` 原样下发；Seedream 系写成 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`wan2.7-image` 写成 `parameters.enable_sequential=true` + `parameters.n`（上限 12，超出由 `supports()` 在发请求前拒绝），**两个键永远一起下发**——只发 `enable_sequential` 时上游的 `n` 默认值是 12，那是 12 张的账单。模型可返回少于请求值的图片。不支持该能力的图像模型（包括 Seedream 5.0 Pro / Flash、nano-banana）静默忽略 `n`（2026-09-30 起 Pro / Flash 也不再报错——d8aaf37 曾给 Pro 单独加过 `n must be 1`，分层拆解也曾拒绝 `n>1`，两处都与这条规则矛盾，已删除），继续发送其他参数并生成单张图片。
 - `resolution`（视频）：统一枚举是 `480p / 720p / 768p / 1080p / 2k / 4k`，**默认值是 `None`，不是某一档**。**分辨率是逐模型的取值集合**：能查到官方取值范围的模型在 `adapter.yaml` 用 `resolutions: [...]` 声明（Seedance 2.5 / 2.0 fast / 2.0 mini 均为 `[480p, 720p]`，Seedance 2.0 为 `[480p, 720p, 1080p, 4k]`，MiniMax-H3 为 `[480p, 768p, 2k]`），由 `ModelAdapter.supports()` 统一校验；未声明（`None`）= 不做本地限制，即该字段引入前的行为。否则上游会回 `the parameter resolution specified in the request is not valid for model X in i2v`。`1080p` 由 WAN 2.0 / Doubao Seedance 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**另一例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
 
-- `with_audio`：统一开关，但**只有四个族真的会发它** —— 可灵（`sound: on/off`）、Seedance（`generate_audio`）、`cfdream/minimax-h3*`（`with_audio`）；万相 2.6/2.7 与 HappyHorse 压根不发，Grok 与 `MiniMax-H3` 恒出音频、没有开关。**可灵额外把它钉进 `corrected_args`**（`KlingVideoAdapter.validation_corrections`，2026-09-07）：它的 card 里 `sound` 的默认值写的是「-」，即上游没有默认值，于是统一 Schema 那个 `with_audio: bool = True` 就是全部决定 —— 而它是静默的。按调用方原始参数生成的审批卡上没有音频这一行，人却批准了一条自带配乐的片子。所以这是**钉住（pin）而非回退**，与 `model="auto"` 解析后回钉具体模型同形、同理由：审批只有在指明「到底会跑什么」时才有意义。**无条件钉**，因为它必须无条件：`with_audio` 是带具体默认值的裸 `bool`，传了 `True` 的调用方和什么都没传的调用方到这里完全一样，「只在缺省时补」根本不可表达，而猜错的那一半恰恰是唯一需要补的那一半。范围也是刻意只给可灵的 —— Seedance 同样认这个字段，要不要一并钉是逐个 card 该做的判断，不是改一个 adapter 的副作用（`test_only_kling_pins_with_audio` 钉住这条边界）。
+- `with_audio`：统一开关，但**只有四个族真的会发它** —— 可灵（`sound: on/off`）、Seedance（`generate_audio`）、`cfdream/minimax-h3*`（`with_audio`）；万相 2.6/2.7 与 HappyHorse 压根不发，Grok 与 `MiniMax-H3` 恒出音频、没有开关。**可灵额外把它钉进 `corrected_args`**（`KlingVideoAdapter.validation_corrections`，2026-09-07）：上游 `sound` 默认 `off`，而统一 Schema 的 `with_audio: bool = True` 总会发送，起决定作用的是一个与模型自身相反的默认值 —— 而它是静默的。按调用方原始参数生成的审批卡上没有音频这一行，人却批准了一条自带配乐的片子。所以这是**钉住（pin）而非回退**，与 `model="auto"` 解析后回钉具体模型同形、同理由：审批只有在指明「到底会跑什么」时才有意义。**无条件钉**，因为它必须无条件：`with_audio` 是带具体默认值的裸 `bool`，传了 `True` 的调用方和什么都没传的调用方到这里完全一样，「只在缺省时补」根本不可表达，而猜错的那一半恰恰是唯一需要补的那一半。范围也是刻意只给可灵的 —— Seedance 同样认这个字段，要不要一并钉是逐个 card 该做的判断，不是改一个 adapter 的副作用（`test_only_kling_pins_with_audio` 钉住这条边界）。`with_audio` 原样映射为 `sound`，带参考视频时也不改写：上游参数说明称此时只能 `off`，但未经验证，且价格表列有「有视频输入的有声视频」一档，由上游裁决。可灵 `seconds` 取值 3–15，故声明 `min_duration_seconds: 3`。
+- `voice`（`generate_audio`）：**缺省时也被钉进 `corrected_args`**（`audio_tts._voice_correction`）。不传 `voice` 等于把选择交给服务端，和 `model="auto"` 同形：适配器实际发送的默认音色只在 `payload` 里，而 `payload` 走 structuredContent，模型看不到，按调用方原始参数生成的审批卡也就没有音色这一行 —— 人批准的是一段谁都没选过的声音，MiniMax 的默认音色 `male-qn-qingse` 甚至不在 `list_voice_profiles` 的目录里。与 `with_audio` 不同，这里「只在缺省时补」是可表达的（`voice` 是 `Optional`，`None` 即委托），所以显式传入的音色从不改写，只去首尾空格。它有意偏离「缺省 `resolution` 不钉」的先例：分辨率是质量档位，音色是听众直接听到的东西。`model="auto"` 时每个候选都按**自己的**默认音色修正，而各适配器的本地校验都接受自己的默认音色，所以路由结果不变。
 
   **默认值为什么是 `None`（`default_resolution`，2026-09-07）。** `resolution` 是 `supports()` 会读的字段，所以一个写死的全队默认值等于「每个模型都必须支持这一档，否则会被一个调用方根本没提的参数挤出 `model="auto"`」。MiniMax-H3 恰好是这种模型：它有 480P / 768P / 2K 三档，却没有 720p。于是统一 Schema 的默认值改成 `None`（= 「你来定」），真实档位落在 `adapter.yaml` 的 `default_resolution`（缺省 `720p`，与改动前完全一致，只有 MiniMax-H3 写 `768p`），由 `ModelAdapter.resolve_resolution(req)` 解析 —— 与 `duration_seconds` → `default_duration_seconds` 完全同构。**所有 adapter 读的都是 `self.resolve_resolution(req)`，不是 `req.resolution`。** 不这么做的代价不是抽象缺失，而是最朴素的一次调用 `generate_video(prompt=...)` 会绕开 `MiniMax-H3` 的 `default_for: [balanced]` 声明，而显式点名 `model="MiniMax-H3"` 又会直接报「不支持 720p」—— 和 `_T2V_DEFAULT_RATIO` 当初躲开的是同一个坑。相应地 `validation_corrections` 对 `resolution is None` 返回 `{}`：那已经是该模型自己的档位，把它写进 `corrected_args` 等于把一个「交给模型决定」钉成调用方从没做过的选择。
 
+  **`aspect_ratios`：画幅比例与分辨率同样按模型声明（2026-10-09）。** 图片与视频 `adapter.yaml` 可声明
+  `aspect_ratios: [...]`，基类 `supports()` 统一检查，`None` 表示接受 schema 的全部比例；`adaptive` 永不列出、总是放行，
+  其含义由各 adapter 决定（否则默认值本身就可能被拒）。`validate_only` 回退到声明中**形状最接近**的比例（宽高比取对数比较，
+  平局时正方形归横向），不再一律回退 `1:1`。以前比例集合散在 8 处代码里，其中 CF Image 2 / Nano Banana、Seedream、
+  万相 2.7 图像只在 `validation_corrections` 里检查：预检会纠正，正式调用却原样发出 —— Nano Banana 把不支持的比例发给
+  上游，Seedream 与万相 2.7 图像把 `9:21` / `3:1` / `1:3` 静默画成正方形（2048x2048）。声明：Seedream 全族与万相 2.7 图像 8 种、
+  CF Image 2 11 种、Nano Banana 6 种、万相 2.7 t2v/r2v/videoedit 5 种、万相 2.6 t2v 仅 16:9、万相 2.6 r2v 3 种、可灵 3 种
+  （16:9 / 9:16 / 1:1，见 `kling-v3-omni/reference`）；其余模型未声明。`list_models` / `list_model_profiles` 发布该字段。
+  `test_aspect_ratios.py` 对每个图片、视频 adapter 双向探针。
+
+  **预检路由按原始请求打分。** `model="auto"` 的 `validate_only` 以前先对每个候选套用它的 corrections 再打分，而 corrections
+  里含「钉住」（`adaptive` → `16:9`、可灵的 `with_audio`）与改值（Seedance 2.5 首帧时改成 `adaptive`），于是预检与正式调用
+  在 450 个请求的矩阵里有 102 个选了不同模型。现在候选一律按原始请求打分；只有没有任何候选原样接受时，才退而选需要纠正的
+  候选。改后两条路径在全部 450 个请求上选中同一模型。正式调用的路由变化 27 处：图片 `9:21` / `3:1` / `1:3` 从 Seedream 5.0
+  Flash 改到 CF Image 2，带首帧、`best` 的视频 `4:3` / `3:4` / `21:9` 从可灵改到 Seedance 2.0 Fast 或 Grok。
+
   **`480p` / `768p` / `2k` 是 MiniMax-H3 的一等原生取值，不是别名。** `768p` / `2k` 从前是靠「声明 720p/1080p，再在 `build_payload` 里翻译成 768P/2K」实现的，结果是：要 720p 的调用方被静默按 768P 出片和计费，而这个模型的原生档位反而没有拼法。现在 adapter 只做 `.upper()`，翻译表已删除。其他模型**不**接受 `768p` / `2k` —— `supports()` 拒绝，`validate_only` 通过 `validation_corrections` 回退到「不高于请求值的最近一档」（`768p` → `720p`，`2k` → `1080p`，Seedance 2.0 fast 这种没有 1080p 的则 `2k` → `720p`）。档位次序表是 `adapters/base.py` 的 `_RESOLUTION_ORDER`，**必须与统一枚举逐一对应**：漏一个不会报错，只会让那一档静默跳过回退，`validate_only` 于是放行一个正式调用必然拒绝的请求（`test_resolution_order_covers_the_whole_schema_enum` 钉住这一点）。
+
+  **封闭取值的拼写一律纠正而不报错（2026-09-30）。** 一个只在大小写、首尾空格（画幅比例还有分隔符）上与某个成员不同的值，指向的就是那个成员，没有第二种解读 —— 拒绝它只会让调用方多花一轮（在宿主的预检后面，就是一张作废的审批卡）去学一种拼写。起因是 `resolution="480P"`：图片档位大写（`2K`）、视频档位小写（`480p`），而 MiniMax-H3 的模型卡写的是 `480P`。实现是 `tool_registry.Folded(*choices, ratio=False)`：`Annotated[Literal[choices], BeforeValidator(...)]`，发布出去的 `enum` 不变，匹配不上任何成员的值照旧报 `literal_error`。覆盖 `resolution`（图/视频）、`aspect_ratio`（图/视频；`16：9`、`16/9`、`16x9`、`16×9`、`16 : 9` 都折成 `16:9`）、`quality_tier`、`audio_format`、`emotion`、`analysis_depth`、`list_models.task_type`、`list_model_profiles.media_type` / `match`、`list_voice_profiles.gender` / `age`。**每个入口都要折一次**，因为它们不经过同一处校验：schema（Mode B 与 `generate_*` 服务）；FastMCP 签名（Mode A 在服务之前按签名校验，所以 `understand_vision` / `list_voice_profiles` 的签名改用同一组别名）；接收裸字符串的服务函数（`list_models` / `list_model_profiles` / `list_voice_profiles`，Mode B 与 CLI 绕过 schema，用公开的 `fold_choice`）；CLI（`cli/choices.schema_choice` 从 schema 读取取值并 `case_sensitive=False`，顺带补齐了手抄列表漏掉的 `1K` / `1.5K`、`3:2` / `2:3` / `21:9`、`audio` / `understand`）。**模型名同理**：`AdapterRegistry.get` 在精确匹配之后按「去空格 + casefold」回退（`_by_folded`），两个模型折叠后撞名时该键记为 `None` —— 撞名只会退回报错，绝不会解析到错的模型；候选列表与 `list_voice_profiles(model_ids=…)` 都经 `registry.get` 解析。**不折叠的**：`voice`（有的音色 id 合法地只差大小写或尾部空格）和 `CanonicalTaskId`（本就全小写蛇形，且契约测试按 `get_args` 读它）。测试：`tests/unit/test_spelling_folding.py`。
+- `first_frame` / `last_frame` 与 `reference_*` 互斥（MiniMax-H3、Seedance 家族、HappyHorse）：拒绝理由统一由 `adapters/base.py` 的 `frames_vs_references_reason()` 生成（2026-09-30）。**两者不能互相替换**：首帧是视频原样的开场画面，参考图只把主体带进一个重新构图的新镜头，意图写在 prompt 里，只有调用方看得到 —— 服务端替它选一个，就是又一次「看起来合理、照样计费、却不是要的那条视频」的静默替换（`validation_corrections` 的注释明确把这类改动留作硬错误）。但光说 mutually exclusive 等于让调用方去猜，猜错一次就多一轮。所以理由里把两条路都写成具体的参数改法：① 图片是主体 → 移入 `reference_images`、删首尾帧、其余 `reference_*` 保留；② 图片是开场画面 → 保留首尾帧、删全部 `reference_*`，删的是 `reference_audios` 时点明「不再驱动配音/对口型」。本模型走不了的那条路改为指名换模型：HappyHorse 按场景分成独立模型，两条路分别指向 `happyhorse-1.0-r2v` / `happyhorse-1.0-i2v`（且这个检查提前到分场景判断之前，i2v / r2v 原先只报一半冲突）；Seedance 1.5 Pro 的 `inputs:` 不收参考素材，路线 ① 从注册表取一个同系列、声明 `reference_to_video` 的模型举例，不写死、不列全表。测试：`tests/unit/test_frames_vs_references.py`。
 - `quality_tier`：**双重身份**——既是 `model="auto"` 的路由打分输入（`router.py`），也被部分 adapter 映射进 payload，**选定模型后仍然生效**：`KlingVideoAdapter` → `mode`（`best` → `pro`，其余 `std`），`GptImage2Adapter` → `quality`（`fast`/`balanced`/`best` → `low`/`medium`/`high`），`WanImageAdapter` → `parameters.thinking_mode`（`fast` → `false`，其余 `true`；且只在纯文生图场景下发，那是上游唯一承认它生效的场景）。三档与这些 API 自身的档位一一对应，故复用该参数而不新增一个近义的 `quality` 工具参数。其余 adapter 不读取它，选定模型后即为纯路由偏好。两处映射都写在 `payload.update(req.model_specific)` **之前**，故 `model_specific` 仍可覆盖。
 - `resolution`（图片）：**必须在 `build_payload` 里显式下发**——图片 API 按分辨率档位分段计价（GPT Image 2：1K/2K/4K 三档），adapter 漏读该字段不会报错，只会让每次调用都静默落到模型自身的默认档，且账单与预期不符。`SeedreamAdapter` 映射为像素 `size`，`WanImageAdapter` 同样映射为像素 `size`（分隔符是 `*`，且档位表是按每档总像素预算算出来的，不是抄来的），`NanoBananaAdapter` 映射为 `image_size`，`GptImage2Adapter` 原样下发 `resolution`（三档都是字面量 `1K` / `2K` / `4K`，空串会被上游判参数错误——早期版本把 `1K` 翻成 `""`，上游回的正是 `resolution 参数必须为 '1K'、'2K' 或 '4K'`）。注意 `ModelAdapter.supports()` 里的 `resolutions` 声明式校验**只对视频生效**（`isinstance(req, GenerateVideoInput)` 分支内），图片侧默认不做本地取值拦截（`SeedreamAdapter` 与 `WanImageAdapter` 在各自的 `supports()` 里自行拦截，见下）：统一 Schema 比单个模型宽（`3K` 之于 GPT Image 2、`21:9` 之于 GPT Image 2 / nano-banana），这些值原样上行、**由上游拒绝**。
-- `duration_seconds`（视频）：允许 `-1`（智能时长，`SeedanceVideoAdapter` 直接透传）。Pydantic 校验器只卡**全机队最宽**的范围 4–30（来自 `doubao-seedance-2-5`，单段 30 秒直出）；**每个模型真实的上限写在各自 `adapter.yaml` 的 `max_duration_seconds`**（缺省 15 = 2.5 之前的全局上限，故其余模型行为不变；`doubao-seedance-1-5-pro` 为 12），由 `ModelAdapter.supports()` 统一拒绝。这样超限在本地报错而不是被上游 POST 拒绝，且 `model="auto"` 能绕开时长不够的模型。`happyhorse` 另外拒绝 `-1`。
-- **能力校验（视频）**：CFGPU 上游 API 会**按 `content` 数组形态在服务端推导 `task_type`**（如带 `reference_video` → `r2v`），客户端从不传 `task_type`。`SeedanceVideoAdapter.supports()` 据此把场景映射成能力名（首帧+尾帧→`first_last_frame`、仅首帧→`image_to_video`、reference_images/videos/audios→`multi_modal_reference`、纯文本→`text_to_video`），若该能力不在模型 `capabilities` 内则本地直接拒绝（如 `doubao-seedance-1-5-pro` 无 `multi_modal_reference`，传 `reference_videos` 会得到清晰报错，而非上游 `the specified task_type r2v does not support model ...`）。这也让 `model="auto"` 路由跳过不支持该场景的模型。
+- `duration_seconds`（视频）：允许 `-1`（智能时长，`SeedanceVideoAdapter` 直接透传）。Pydantic 校验器只卡**全机队最宽**的范围 4–30（来自 `doubao-seedance-2-5`，单段 30 秒直出）；**每个模型真实的上限写在各自 `adapter.yaml` 的 `max_duration_seconds`**（缺省 15 = 2.5 之前的全局上限，故其余模型行为不变；`doubao-seedance-1-5-pro` 为 12），由 `ModelAdapter.supports()` 统一拒绝。这样超限在本地报错而不是被上游 POST 拒绝，且 `model="auto"` 能绕开时长不够的模型。**`-1` 只有 Seedance 系列接受**（`ModelAdapter.accepts_smart_duration`，类属性，`SeedanceVideoAdapter` 为 True；`happyhorse-1.0-video-edit` 也为 True，因为它的时长跟随源视频、根本不下发）。其余模型由基类 `supports()` 一处统一拒绝，理由里写明「必须显式给出 4–{max} 秒」—— 服务端不替调用方挑一个计费时长，所以理由要携带能直接照做的范围。此前这条检查散落在 8 个适配器里、各用内部 `adapter_id` 报错，而超上限的理由对所有模型都建议「或传 -1」，把不支持的模型从一个拒绝引向下一个；现在只对接受 `-1` 的模型提它。测试：`tests/unit/test_video_duration.py`。
+- **输入校验（视频）**：CFGPU 上游 API 会**按 `content` 数组形态在服务端推导 `task_type`**（如带 `reference_video` → `r2v`），客户端从不传 `task_type`。所以 `SeedanceVideoAdapter.supports()` 在本地检查请求用到的每个素材槽是否在模型的 `inputs:` 里，不在则直接拒绝（如 `doubao-seedance-1-5-pro` 不收参考素材，传 `reference_videos` 得到 `doubao-seedance-1-5-pro does not accept reference_videos`，而非上游 `the specified task_type r2v does not support model ...`）。这也让 `model="auto"` 路由跳过不支持该场景的模型。（2026-10-09 之前这里是「把场景映射成能力名再查 `capabilities`」，见 §3.1。）
+- **`omni_reference_task_type`（仅 Seedance 2.5）**：2.5 把全模态参考任务再细分为 reference / edit / extend 三个子任务，后两者约束 ratio/duration（extend 要 `ratio=adaptive`，edit 还要 `duration=-1`，且都要求至少一个参考视频）。**不是工具参数**，由 `SeedanceVideoAdapter._omni_reference_task_type()` 在 `build_payload` 里**按最终参数推导**：非全模态（文生、首帧/首尾帧）不发该字段 —— 它只为全模态任务定义；无参考视频或 `aspect_ratio` ≠ `adaptive` → `reference`（此时 edit/extend 必然不成立，声明它零成本）；其余 → `auto`，交给模型按提示词判定。**ratio/duration 只能证明 `reference`，永远证明不了 edit/extend**：`adaptive` / `-1` 同时也是这个模型的默认值，对 reference 同样合法，把它们映射成 `edit` 等于把每个没指定比例的普通参考调用都声明成编辑，然后吃 `TaskTypeMismatch`。edit/extend 的意图在提示词里，只能由调用方经 `model_specific={"omni_reference_task_type": ...}` 显式声明（覆盖推导值）。
+  - **推导发生在真实提交那一刻，不是 preflight 时**。`build_payload` 在 preflight 和正式提交各跑一次、各用当时的 req；preflight 的值只出现在 `payload` 里供 HITL 卡片展示，**不进 `corrected_args`**（它不是工具参数）—— 用户在卡片上改了 ratio，提交时就重新推导。反过来，推导读的就是 ratio，所以 `validation_corrections` **永远不会因为推导去改 ratio**（`test_seedance_2_5_corrections_touch_ratio_only_for_a_declared_edit_or_extend`）。
+  - **显式声明按最终参数校验**（`supports()` 中的 `_check_declared_omni_task_type`）：未知取值、非全模态场景、edit/extend 无参考视频或 ratio 非 `adaptive`、edit 的 duration 非 `-1` 都本地拒绝。这防的是 host 把 preview 里的 `edit` 冻结进 `model_specific`、随后用户在卡片上改了 ratio —— 否则它会在任务创建后异步失败。preflight 对**合法的**显式 edit/extend 给出 `corrected_args`（`aspect_ratio: adaptive`，edit 另加 `duration_seconds: -1`），与首帧场景同一套回退；正式提交拿原始参数则直接拒绝，同样在 POST 之前。早期 Seedance 版本不发、也不校验该字段。
 
 > 前端 HITL 的参数取值范围以 `tool_param_constraints.json` 描述：按 `工具→模型→args` 列出每个通用参数对应该模型的真实取值范围；`watermark`、`n` 作为通用参数列在支持模型的顶层 args（`n` 只列在带 `multi_image_group` 能力的模型上——seedream 系与 `wan2.7-image`，且上限逐模型不同：seedream 15、`wan2.7-image` 12；gpt/nano 均不列），`model_specific.fields` 仅保留模型私有子字段（如 `seed`、`sample_mode`、`response_format` 等；`wan2.7-image` 的私有字段挂在嵌套的 `parameters` 下，故写成 `parameters.seed` 这样的点号键）。新增模型或调整参数时同步该文件——每条 args 的取值都应能用对应 adapter 的 `supports()` 复核。
 

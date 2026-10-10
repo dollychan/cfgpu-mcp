@@ -6,19 +6,27 @@ display_name: "Doubao Seedream 5.0 Pro"
 cfgpu_model_id: doubao-seedream-5-0-pro
 model_name: doubao-seedream-5-0-pro
 
-# Pro drops 组图 (multi_image_group) and 联网搜索 (web_search); n is ignored.
+# Pro drops 组图 (multi_image_group); `n` is ignored (one image).
 # It is so far the only image model that can edit a *named region*: the coordinates ride
 # inside the prompt as <bbox> tags, so neither the endpoint nor the response changes.
-capabilities:
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_image
   - image_to_image
   - multi_image_fusion
   - region_edit
+  - layer_decomposition
+  - transparent_background
 
-# No documented ceiling on how many regions one image may carry, so none is enforced
+# Pro takes fewer references than lite and reads regions; Flash inherits both. No
+# documented ceiling on how many regions one image may carry, so none is enforced
 # locally. Left absent rather than guessed: an invented cap would reject calls the model
 # accepts, which is the one failure a local check must never add.
-max_regions_per_image: ~
+inputs:
+  reference_images: {max: 10}
+  regions: {}
+
 
 # cost_tier / speed_tier inherited from doubao-seedream-5-0-lite (2 / 3).
 

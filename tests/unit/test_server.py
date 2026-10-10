@@ -54,6 +54,13 @@ def test_understand_model_enum_lists_only_model_names():
     assert array_branch["items"]["enum"] == expected_ids
 
 
+def test_understand_analysis_depth_schema_is_closed_and_defaults_to_balanced():
+    tool = next(t for t in server.mcp._tool_manager.list_tools() if t.name == "understand_vision")
+    prop = tool.parameters["properties"]["analysis_depth"]
+    assert prop["enum"] == ["fast", "balanced", "thorough"]
+    assert prop["default"] == "balanced"
+
+
 def test_model_enum_never_exposes_internal_ids():
     """Only the canonical model_name is advertised; the internal adapter_id /
     cfgpu_model_id (e.g. 'gpt-image-2' / 'gpt-image-2' vs model_name 'cf-image-2')
@@ -84,6 +91,18 @@ def test_hallucinated_model_id_is_rejected_by_enum():
     prop = _model_schema("understand_vision")
     string_branch = next(b for b in prop["anyOf"] if b.get("type") == "string")
     assert "qwen-3-vl-plus" not in string_branch["enum"]
+
+
+def test_profile_catalog_uses_distinct_closed_filter_enums():
+    tool = next(tool for tool in server.mcp._tool_manager.list_tools() if tool.name == "list_model_profiles")
+    props = tool.parameters["properties"]
+    media_type = next(branch for branch in props["media_type"]["anyOf"] if "enum" in branch)
+    task_items = props["required_tasks"]["anyOf"][0]["items"]
+
+    assert media_type["enum"] == ["image", "video", "audio", "understand"]
+    assert "video_edit" in task_items["enum"]
+    assert "video_edit" not in media_type["enum"]
+    assert props["match"]["default"] == "all"
 
 
 # ── ③ disabled_tools (config.yaml trims the exposed MCP surface) ─────────────

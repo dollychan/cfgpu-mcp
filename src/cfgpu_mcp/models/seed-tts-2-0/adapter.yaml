@@ -8,7 +8,9 @@ endpoint: /voice/generations
 is_async: true
 poll_endpoint: /voice/tasks/{task_id}
 
-capabilities:
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - text_to_speech
 
 cost_tier: 3

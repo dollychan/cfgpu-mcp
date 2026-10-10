@@ -5,11 +5,25 @@ model_name: wan2.7-videoedit
 
 task_type: video
 resolutions: [720p, 1080p]
+# Accepted aspect_ratio values (parameters.ratio; adaptive keeps the source video's ratio). adaptive is always accepted.
+aspect_ratios: ["16:9", "9:16", "1:1", "4:3", "3:4"]
+default_resolution: 1080p
+min_duration_seconds: 2
+max_duration_seconds: 10
 endpoint: /video/generations
 is_async: true
 poll_endpoint: /video/tasks/{task_id}
 
-capabilities:
+# Material slots this model accepts — the single source for supports(), the
+# profile catalog and the consistency tests (adapters/inputs.py). An absent slot
+# is not accepted.
+inputs:
+  reference_videos: {max: 1, role: source}   # the source video
+  reference_images: {max: 4}
+
+# Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
+# both the code gates and the agent-facing profile catalog.
+tasks:
   - video_edit
 
 cost_tier: 3

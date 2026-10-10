@@ -239,6 +239,18 @@ sweeper（Phase 2）扫到卡住的非终态行时，只做一件事：**把它�
 （在此之前这两句都写不出来：没有 `list_tasks`，没有 task_id，模型唯一能执行的动作是重新
 提交。这正是 BUG-105 / BUG-111 那条判据说的循环——「错误文案是按照着做能不能成来打分的」。）
 
+⚠️ **2026-09-29 修订**：第二句按本条自己的判据不及格。对**进程内已知**回应丢失的提交
+（request 阶段超时 / 传输错误 / 5xx，见 §7.1 判据表），`task_status` 查不出任何东西：那一个
+回应是同步结果、异步上游 id 的唯一载体，之后没有任何路径再写这一行，`get_status` 不 re-poll
+无上游 id 的行，于是它永远报 `dispatching`——按结果契约就是「继续轮询」。现网：
+`understand_vision` 调 qwen3.8-max 分析视频 180s 超时，模型照文案轮询一个永不变化的行。
+修正后这类行**当场**收敛为 `failed` + `submission_lost`（即本条 sweeper 对 `dispatching`
+的处理，提前到进程内已知的那一刻），文案给出真能执行的下一步：结果没能取回，直接重新发起。
+**不再提「可能已计费、别直接重发」**，`submission_lost` 也改为可重试：这次请求的结果无论
+如何都拿不回来，重发是 agent 拿到结果的唯一途径，计费提示对它没有可执行的意义，只会让它
+卡住。上面 D7 表中清道夫对 `dispatching` 的文案应随之改写。`dispatching` 留给真正还在路上的
+提交（另一实例、shield 中）以及进程崩溃遗留的行，后者仍待 Phase 2 清道夫。
+
 ### D9 — `outcome_unknown` 的适用面收窄
 
 `errors.py:106` 现在的定义是「submit POST 请求期超时，没有 task_id，**也没有写过任务行**，
@@ -476,10 +488,11 @@ async def create(self, adapter, req):
 |---|---|---|
 | 4xx / 内容审核 / 配额 / 鉴权 / 模型不可用 | 上游答了并拒收，没执行没计费 | `failed`（照实说，可修可重发） |
 | connect 阶段超时 | DNS/TCP/TLS 没走完，一个字节都没出去 | `failed` |
-| request 阶段 POST 超时 / 传输层错误 / 上游 5xx | **证明不了任何事** | 留 `dispatching`，清掉 `outcome_unknown`，文案补上 `task_status("<request_id>")` |
+| request 阶段 POST 超时 / 传输层错误 / 上游 5xx | **证明不了有没有计费**，但证明了结果再也拿不回来 | `failed` + `submission_lost`（可重试），清掉 `outcome_unknown`，文案：结果没能取回，直接重新发起（2026-09-29 修订，见 D8；原为留 `dispatching` 并指向 `task_status`，是死路） |
 
-不对称是刻意的：把「拒收」标成 `dispatching` 只是让人多查一次；把「不确定」标成 `failed` 会
-让人放心重发一个正在跑的任务。
+两类都收敛为 `failed`，区别在 `error_type`：拒收保留上游给的类型（告诉调用方改什么），
+不确定的用 `submission_lost`（告诉调用方结果已丢、直接重发），并由行 payload 的保留键
+`_error_type` 带到之后每一次读取。
 
 ### 7.2 agent 侧中断（BUG-115 的现网场景）
 

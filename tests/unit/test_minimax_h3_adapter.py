@@ -42,9 +42,9 @@ def test_model_and_endpoints_are_wired(adapter):
     assert adapter.cfgpu_model_id == "MiniMax-H3"
     assert adapter.endpoint == "/video/generations"
     assert adapter.poll_endpoint == "/video/tasks/{task_id}"
-    # This is an output capability, not a request control: MiniMax H3 always
-    # emits native audio and its API has no `with_audio` switch.
-    assert "audio_generate" in adapter.capabilities
+    # An output task, not a request control: MiniMax H3 always emits native audio
+    # and its API has no `with_audio` switch.
+    assert "synced_audio_output" in adapter.tasks
 
 
 @pytest.mark.parametrize(
@@ -109,6 +109,22 @@ def test_watermark_maps_to_aigc_watermark(adapter):
     """The unified flag has a home on this API, unlike with_audio/prompt_extend."""
     payload = adapter.build_payload(_req(watermark=True))
     assert payload["aigc_watermark"] is True
+
+
+def test_480p_four_seconds_is_rejected_before_submission(adapter):
+    """CFGPU rejects this combination without creating an upstream task."""
+    ok, reason = adapter.supports(_req(resolution="480p", duration_seconds=4))
+
+    assert not ok
+    assert "480p" in reason
+    assert "最小为 5 秒" in reason
+
+
+def test_four_seconds_is_not_locally_refused_on_other_minimax_tiers(adapter):
+    """Only the observed 480P constraint is enforced locally."""
+    for resolution in ("768p", "2k"):
+        ok, reason = adapter.supports(_req(resolution=resolution, duration_seconds=4))
+        assert ok, reason
 
 
 def test_reference_content_uses_minimax_roles(adapter):
@@ -232,7 +248,8 @@ def test_nested_task_error_message_is_preserved(adapter):
         }
     }
     assert adapter.extract_status(response) == "failed"
-    assert _extract_error_message(response) == "Generation failed after retries"
+    # The symbolic code rides in front, as on the DashScope path; the message is intact.
+    assert _extract_error_message(response) == "GENERATION_FAILED: Generation failed after retries"
 
 
 @pytest.mark.parametrize("kwargs,needle", [

@@ -31,9 +31,9 @@ from __future__ import annotations
 
 import math
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.adapters.base import models_with_capability
+from cfgpu_mcp.adapters.base import models_with_task
 from cfgpu_mcp.errors import CFGPUError
 
 if TYPE_CHECKING:
@@ -50,8 +50,9 @@ GRID = 1000
 #: unbalanced string degrades to "no match" rather than swallowing the rest of the line.
 _PLACEHOLDER = re.compile(r"\[\[([^\[\]]{1,200})\]\]")
 
-_CAP_EDIT = "region_edit"
-_CAP_UNDERSTAND = "region_understand"
+#: The canonical tasks that gate regions (``tasks:`` in adapter.yaml).
+_TASK_EDIT = "region_edit"
+_TASK_UNDERSTAND = "region_understanding"
 
 
 def to_pixels(box: list[float], image_size: "list[int] | tuple[int, int]") -> tuple[int, int, int, int]:
@@ -191,6 +192,69 @@ def regions_missing_size(regions: list["RegionSpec"]) -> list[int]:
     return sorted({r.image_index for r in regions if r.image_size is None})
 
 
+def _unresolved(token: str, refs: list[str], regions: list["RegionSpec"]) -> CFGPUError:
+    """A ``[[...]]`` that names nothing in this call — refused rather than sent verbatim.
+
+    The message lists every placeholder that *would* resolve, so the fix is a lookup,
+    not a guess. With no ``image_refs`` at all it says so: the likeliest cause is a
+    handle written into the prompt without the list that gives it a meaning.
+    """
+    valid = [f"[[{ref}]]" for ref in refs if ref]
+    labels: dict[str, int] = {}
+    for r in regions:
+        if r.label:
+            labels[r.label] = labels.get(r.label, 0) + 1
+    for r in regions:
+        if not r.label:
+            continue
+        if labels[r.label] == 1:
+            valid.append(f"[[{r.label}]]")
+        elif r.image_index < len(refs) and refs[r.image_index]:
+            valid.append(f"[[{refs[r.image_index]}#{r.label}]]")
+    valid = list(dict.fromkeys(valid))
+    if valid:
+        hint = f"本次可用的占位符：{', '.join(valid)}。"
+    else:
+        hint = (
+            "本次请求没有 image_refs，也没有带名字的 regions，因此没有任何占位符可解析；"
+            "要按名字指代整张图，请传 image_refs（与图片列表等长、同序）。"
+        )
+    return CFGPUError(
+        error_type="invalid_params",
+        user_message=(
+            f"prompt 里的占位符 [[{token}]] 不对应任何图片句柄或标记名。{hint}"
+            f"未解析的 [[...]] 会被当作字面文字发给模型，本次请求未发送。"
+        ),
+        original={"placeholder": token, "candidates": valid},
+        # Same reason as _ambiguous: the message already lists the exact alternatives.
+        card_hint=False,
+    )
+
+
+def resolve_image_refs(req: Any) -> Any:
+    """Resolve whole-image ``[[<handle>]]`` placeholders for a request carrying no regions.
+
+    ``image_refs`` promises, on every image-bearing tool and for every model, that
+    ``[[<handle>]]`` becomes that image's ordinal. Region rendering used to be the only
+    code keeping that promise, so it held only when ``regions`` was also passed *and* the
+    model was one of the three that read regions — everywhere else the handle went
+    upstream verbatim. ``TaskManager`` calls this before every ``build_payload``, the
+    preflight included, so no adapter has to remember to.
+
+    A request *with* regions is returned untouched: ``supports()`` has already confined
+    it to a region-capable adapter, whose ``build_payload`` renders handles and regions
+    in one pass — it must, because a token that is both a handle and a label can only
+    be caught as ambiguous with both in view. Returns ``req`` itself when nothing
+    changes, and a copy with the rendered prompt otherwise; raises for a placeholder
+    that resolves to nothing.
+    """
+    if getattr(req, "regions", None) or "image_refs" not in type(req).model_fields:
+        return req
+    prompt = req.prompt
+    rendered = render_prompt(prompt, None, req.image_refs, include_names=False)
+    return req if rendered == prompt else req.model_copy(update={"prompt": rendered})
+
+
 def _ambiguous(token: str, candidates: list[str], *, kind: str) -> CFGPUError:
     return CFGPUError(
         error_type="invalid_params",
@@ -225,9 +289,13 @@ def render_prompt(
     image restarts at 标记1). So a bare ``[[标记1]]`` with two images in play is a
     genuine ambiguity, and it **fails closed**. Picking the first would edit the wrong
     image: an outcome that produces a picture, costs money, and looks reasonable — the
-    worst failure mode available. An unmatched placeholder, by contrast, is left alone
-    and its region falls through to the suffix: the caller may simply not be using
-    placeholders, and being wrong about that costs precision, not correctness.
+    worst failure mode available. An unmatched placeholder **fails closed too**. It used
+    to be left alone on the theory that the caller might not be using placeholders, but
+    ``[[...]]`` never occurs in prose (see ``_PLACEHOLDER``), so a leftover one is always
+    a handle or label that did not resolve — and left alone it reaches the model as
+    literal text: a request that names an image the model cannot see, billed anyway.
+    Regions a caller simply did not mention are a different case and still fall through
+    to the suffix.
 
     ``structured=True`` is for a model with its own ``bbox_list`` field. Placeholders
     resolve to neutral wording instead of coordinates, and there is **no trailing
@@ -276,11 +344,12 @@ def render_prompt(
         if "#" in token:
             ref, _, label = token.partition("#")
             idx = ref_index.get(ref)
-            if idx is None:
-                return match.group(0)  # unknown handle → leave it, region falls to suffix
-            hits = [i for i in by_label.get(label, []) if regions[i].image_index == idx]
+            hits = (
+                [] if idx is None
+                else [i for i in by_label.get(label, []) if regions[i].image_index == idx]
+            )
             if len(hits) != 1:
-                return match.group(0)
+                raise _unresolved(token, refs, regions)
             used.add(hits[0])
             return render_one(hits[0])
 
@@ -301,7 +370,7 @@ def render_prompt(
             return render_one(hits[0])
         if is_ref:
             return _ordinal(ref_index[token])
-        return match.group(0)
+        raise _unresolved(token, refs, regions)
 
     rendered = _PLACEHOLDER.sub(substitute, prompt)
 
@@ -353,22 +422,22 @@ def unsupported_reason(model_name: str, *, understand: bool) -> str:
     the regions just make the description accurate.
     """
     if understand:
-        alternatives = models_with_capability(_CAP_UNDERSTAND)
+        alternatives = models_with_task(_TASK_UNDERSTAND)
         tail = (
             f"请改用支持的模型：{' / '.join(alternatives)}。"
             if alternatives
             else "当前没有支持区域理解的模型可用。"
         )
-        return f"{model_name} 不支持按区域理解图片（缺 {_CAP_UNDERSTAND} 能力）。{tail}"
+        return f"{model_name} 不支持按区域理解图片（不具备 {_TASK_UNDERSTAND} 任务）。{tail}"
 
-    alternatives = models_with_capability(_CAP_EDIT)
+    alternatives = models_with_task(_TASK_EDIT)
     first = (
         f"(1) 换用支持的模型：{' / '.join(alternatives)}；"
         if alternatives
         else "(1) 当前没有支持区域编辑的模型可用；"
     )
     return (
-        f"{model_name} 不支持区域编辑（缺 {_CAP_EDIT} 能力），且区域绝不会被静默忽略"
+        f"{model_name} 不支持区域编辑（不具备 {_TASK_EDIT} 任务），且区域绝不会被静默忽略"
         f"——那会产出一张整图重绘、看着合理、还要计费的图。两种做法："
         f"{first}"
         f"(2) 保持当前模型，改走语义描述：先调 understand_vision(images=[…], regions=[…]) "
@@ -392,10 +461,11 @@ def check_regions(adapter: "ModelAdapter", req) -> tuple[bool, str]:
     if not regions:
         return True, ""
     understand = isinstance(req, UnderstandVisionInput)
-    capability = _CAP_UNDERSTAND if understand else _CAP_EDIT
-    if capability not in adapter.capabilities:
+    task = _TASK_UNDERSTAND if understand else _TASK_EDIT
+    if task not in adapter.tasks:
         return False, unsupported_reason(adapter.model_name, understand=understand)
-    cap = adapter.max_regions_per_image
+    slot = (adapter.inputs or {}).get("regions")
+    cap = slot.max_per_image if slot else None
     if cap is not None:
         counts: dict[int, int] = {}
         for r in regions:

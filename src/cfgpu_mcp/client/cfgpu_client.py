@@ -135,6 +135,10 @@ class CFGPUClient:
         not reach the daily host at all; the log gap was exactly
         ``connect_timeout``.) Same discipline as ``_timeout_setting_path``.
 
+        That knob is named in the operator's log and in ``original["setting"]``, never
+        in ``user_message``: the message reaches an agent, which cannot edit
+        config.yaml, and a step it cannot take only displaces one it can.
+
         ``elapsed`` is measured, not read off the config — it is the one number
         that distinguishes the two cases without trusting this classification.
 
@@ -153,35 +157,47 @@ class CFGPUClient:
         It also sets ``outcome_unknown``. This layer knows only the transport facts and
         cannot see whether anything was recorded, so it reports the honest worst case;
         ``TaskManager._record_submit_failure`` — which does know a row was written
-        before the POST — clears the flag and names the id to query. Keeping the two
-        apart is why the sentence below no longer claims there is nothing to reconcile:
-        on a submit path there now always is.
+        before the POST — reclassifies it as a retryable ``submission_lost``, clears
+        the flag and appends the next step.
         """
         connect_phase = isinstance(exc, aiohttp.ConnectionTimeoutError)
         budget = self._timeout.connect if connect_phase else self._timeout.total
         field = "connect_timeout" if connect_phase else "http_timeout"
+        setting = self._timeout_setting_path(field)
+        # A submit whose response was lost is the only case that can have left
+        # billed work behind under a task_id nobody will ever see.
+        indeterminate = not connect_phase and method.upper() == "POST"
+
+        # Two readers, two channels. The message reaches the *agent*, which cannot edit
+        # config.yaml, so it carries only the facts and a step the agent can take.
+        # The knob to turn goes to the operator's log, and rides ``original["setting"]``
+        # for integrators calling the service layer directly.
         if connect_phase:
             detail = (
                 f"{elapsed:.1f}s 内没能与 provider {self._provider!r} 建立连接"
-                f"（DNS / TCP / TLS 都在这一步，上游还没收到任何请求）。"
-                "这通常是这台机器到该上游的网络不通，而不是上游慢 —— "
-                f"增大 {self._timeout_setting_path()} 不会有任何作用。"
-                f"请先确认本机能否访问 {self._base_url}，再考虑在 config.yaml 增大 "
-                f"{self._timeout_setting_path(field)}。"
+                "（上游还没收到任何请求），通常是服务端到上游的网络不通。"
+                "可以稍后重试；如果持续失败，请告诉用户服务端网络需要检查。"
+            )
+            logger.warning(
+                "connect timeout after %.1fs to provider %r (%s): DNS/TCP/TLS did not "
+                "complete, the upstream received nothing. Usually this host cannot reach "
+                "the upstream — raising %s will not help. Check that this host can reach "
+                "%s before raising %s.",
+                elapsed, self._provider, url, self._timeout_setting_path(),
+                self._base_url, setting,
             )
         else:
             detail = (
                 f"请求超时（已耗时 {elapsed:.1f}s，上限 {budget}s，"
-                f"provider {self._provider!r}），请稍后重试或在 config.yaml 增大 "
-                f"{self._timeout_setting_path(field)}。"
+                f"provider {self._provider!r}）。"
             )
-        # A submit whose response was lost is the only case that can have left
-        # billed work behind under a task_id nobody will ever see.
-        indeterminate = not connect_phase and method.upper() == "POST"
-        if indeterminate:
-            detail += (
-                "（请求已经发出但没等到回应，上游可能已经受理并开始计费，"
-                "本服务没有拿到 task_id。重发有重复计费的风险。）"
+            # For a submit the next step is appended by
+            # TaskManager._record_submit_failure, which knows the task type.
+            detail += "请求已经发出但没等到回应。" if indeterminate else "请稍后重试。"
+            logger.warning(
+                "%s request timed out after %.1fs (budget %ss) on provider %r (%s). "
+                "If this model routinely runs longer, raise %s in config.yaml.",
+                method.upper(), elapsed, budget, self._provider, url, setting,
             )
         return CFGPUError(
             error_type="timeout",
@@ -192,6 +208,7 @@ class CFGPUClient:
                 "method": method.upper(),
                 "elapsed": round(elapsed, 1),
                 "timeout": budget,
+                "setting": setting,
                 "provider": self._provider,
             },
             retryable=not indeterminate,

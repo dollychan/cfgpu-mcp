@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import re
+from typing import TYPE_CHECKING, Any, Literal
+
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from cfgpu_mcp.adapters.base import (
     ModelAdapter,
@@ -17,8 +20,10 @@ if TYPE_CHECKING:
 #
 # The API takes `size` two ways and they cannot be mixed: an exact `WxH` pixel pair, or
 # a tier name ("2K") whose geometry the model then infers from the prompt. Our unified
-# schema always has an explicit `aspect_ratio`, and only pixels honour it, so every
-# family/tier here emits pixels — the tier name is never sent.
+# schema always has an explicit `aspect_ratio`, and only pixels honour it, so image
+# generation emits pixels. Seedream 5.0 Pro / Flash layer decomposition is the
+# documented exception: it rejects explicit `WIDTHxHEIGHT` and accepts only a preset
+# or `auto`.
 #
 # The tables are per-family, not shared. That is not redundancy: Seedream 5.0 Pro and
 # the Lite/4.x line publish *different* pixel values for the same tier and ratio (2K
@@ -32,6 +37,7 @@ if TYPE_CHECKING:
 #   Pro        [921600, 4624220]     → 1K / 1.5K / 2K   (3K and 4K exceed the ceiling)
 #   Lite, 4.5  [3686400, 16777216]   → 2K / 3K / 4K     (1K is under the floor)
 #   4.0        [921600, 16777216]    → 1K / 2K / 3K / 4K
+#   Flash      [921600, 4624220]     → 1K / 1.5K / 2K (same output range as Pro)
 
 _RATIOS = ("1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9")
 
@@ -95,15 +101,58 @@ _ALLOWED_TIERS: dict[str, tuple[str, ...]] = {
 #: pricier image than they requested.
 _TIER_RANK = {"1K": 0, "1.5K": 1, "2K": 2, "3K": 3, "4K": 4}
 
-#: 组图 (sequential image generation) is declared, not inferred from the adapter_id. Pro
-#: is the only family member without it today, but "not pro" is the wrong question to ask:
-#: a future variant that also lacks it would silently be sent
+#: 组图 (sequential image generation) is the declared canonical task, not inferred from the
+#: adapter_id. Pro is the only family member without it today, but "not pro" is the wrong
+#: question to ask: a future variant that also lacks it would silently be sent
 #: ``sequential_image_generation: auto`` and generate — and bill for — images nobody
 #: asked for.
-_GROUP_CAPABILITY = "multi_image_group"
+_GROUP_TASK = "multi_image_group"
 
 #: 输入的参考图数量 + 最终生成的图片数量 ≤ 15, for the models that do 组图 at all.
 _GROUP_TOTAL_CAP = 15
+
+
+class _PromptOptimizeOptions(BaseModel):
+    """The only nested object accepted by Pro / Flash's model_specific schema."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    mode: Literal["standard", "fast"]
+
+
+class _Seedream5ModelSpecific(BaseModel):
+    """Strict upstream controls shared by Seedream 5.0 Pro and Flash.
+
+    ``model_specific`` is intentionally free-form for the older Seedream variants.
+    Pro / Flash have a documented, closed control surface, so silently accepting an
+    unknown key there turns a preflight into false reassurance about a billed call.
+    """
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    response_format: Literal["url", "b64_json"] | None = None
+    output_format: Literal["png", "jpeg"] | None = None
+    background: Literal["opaque", "transparent"] | None = None
+    layer_decomposition: bool | None = None
+    # `resolution` is the portable MCP control. `size` is deliberately retained as a
+    # strictly checked escape hatch for the upstream-only `auto` mode and explicit
+    # pixel dimensions documented by Seedream 5.0.
+    size: str | None = None
+    optimize_prompt_options: _PromptOptimizeOptions | None = None
+
+
+_STRICT_SEEDREAM_5_ADAPTERS = frozenset({
+    "doubao-seedream-5-0-pro",
+    "doubao-seedream-5-0-flash",
+})
+
+_SEEDREAM_5_SIZE_PRESETS = frozenset({"1K", "1.5K", "2K"})
+_SEEDREAM_5_LAYER_SIZES = _SEEDREAM_5_SIZE_PRESETS | {"auto"}
+_SEEDREAM_5_EXPLICIT_SIZE = re.compile(r"^([1-9][0-9]*)x([1-9][0-9]*)$")
+_SEEDREAM_5_MIN_PIXELS = 1280 * 720
+_SEEDREAM_5_MAX_PIXELS = int(2048 * 2048 * 1.1025)
+_SEEDREAM_5_MIN_RATIO = 1 / 16
+_SEEDREAM_5_MAX_RATIO = 16
 
 
 @register_python_adapter
@@ -111,7 +160,8 @@ class SeedreamAdapter(ModelAdapter):
     """Python Adapter for Doubao Seedream (synchronous image models).
 
     Base for doubao-seedream-5-0-lite; also reused (via the `extends` chain) by the
-    4.0/4.5 variants and doubao-seedream-5-0-pro. The families differ in three ways that
+    4.0/4.5 variants, doubao-seedream-5-0-pro, and doubao-seedream-5-0-flash. The
+    families differ in three ways that
     matter here — supported resolution tiers, the pixel table behind each tier, and
     whether 组图 (n>1) exists at all — so nearly every method branches on ``_family``.
     """
@@ -120,7 +170,10 @@ class SeedreamAdapter(ModelAdapter):
 
     @property
     def _family(self) -> str:
-        if self.adapter_id == "doubao-seedream-5-0-pro":
+        if self.adapter_id in {
+            "doubao-seedream-5-0-pro",
+            "doubao-seedream-5-0-flash",
+        }:
             return "pro"
         if self.adapter_id == "doubao-seedream-4-0":
             return "4-0"
@@ -132,13 +185,64 @@ class SeedreamAdapter(ModelAdapter):
         # change the price band without saying so.
         return table.get((resolution, aspect_ratio)) or table.get((resolution, "1:1"), "2048x2048")
 
+    def _model_specific_error(self, req: "GenerateImageInput") -> str | None:
+        """Return a stable, preflight-safe error for Seedream 5.0 private controls."""
+        if self.adapter_id not in _STRICT_SEEDREAM_5_ADAPTERS:
+            return None
+        try:
+            parsed = _Seedream5ModelSpecific.model_validate(req.model_specific or {})
+        except ValidationError as exc:
+            details = "; ".join(
+                f"model_specific.{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+                for error in exc.errors()
+            )
+            return f"{self.model_name} has invalid model-specific parameters: {details}"
+        if (
+            self.adapter_id == "doubao-seedream-5-0-flash"
+            and parsed.optimize_prompt_options is not None
+            and parsed.optimize_prompt_options.mode != "standard"
+        ):
+            return (
+                "doubao-seedream-5-0-flash only supports "
+                "model_specific.optimize_prompt_options.mode='standard'"
+            )
+        if parsed.size is not None:
+            if parsed.layer_decomposition:
+                if parsed.size not in _SEEDREAM_5_LAYER_SIZES:
+                    return (
+                        f"{self.model_name} layer_decomposition only supports "
+                        "model_specific.size='auto', '1K', '1.5K', or '2K'; "
+                        "explicit WIDTHxHEIGHT is not supported"
+                    )
+            elif parsed.size not in _SEEDREAM_5_SIZE_PRESETS:
+                match = _SEEDREAM_5_EXPLICIT_SIZE.fullmatch(parsed.size)
+                if match is None:
+                    return (
+                        f"{self.model_name} model_specific.size must be a supported "
+                        "preset ('1K', '1.5K', '2K') or WIDTHxHEIGHT"
+                    )
+                width, height = (int(value) for value in match.groups())
+                pixels = width * height
+                ratio = width / height
+                if not (_SEEDREAM_5_MIN_PIXELS <= pixels <= _SEEDREAM_5_MAX_PIXELS):
+                    return (
+                        f"{self.model_name} explicit model_specific.size must contain "
+                        f"{_SEEDREAM_5_MIN_PIXELS}-{_SEEDREAM_5_MAX_PIXELS} pixels"
+                    )
+                if not (_SEEDREAM_5_MIN_RATIO <= ratio <= _SEEDREAM_5_MAX_RATIO):
+                    return (
+                        f"{self.model_name} explicit model_specific.size must have a "
+                        "width/height ratio between 1/16 and 16"
+                    )
+        return None
+
     def validation_corrections(
         self, req: "GenerateImageInput | GenerateVideoInput"
     ) -> dict[str, Any]:
         assert isinstance(req, GenerateImageInput)
         family = self._family
         allowed = _ALLOWED_TIERS[family]
-        corrected: dict[str, Any] = {}
+        corrected: dict[str, Any] = super().validation_corrections(req)   # aspect_ratio
 
         resolution = req.resolution
         if resolution not in allowed:
@@ -149,12 +253,6 @@ class SeedreamAdapter(ModelAdapter):
                 else min(allowed, key=_TIER_RANK.__getitem__)
             )
             corrected["resolution"] = resolution
-
-        # Defensive only: every published table covers all eight ratios, so this cannot
-        # fire today. It stays so that adding a tier with partial rows degrades to a
-        # reported correction rather than to silently unreported geometry.
-        if (resolution, req.aspect_ratio) not in _TIER_TABLE[family]:
-            corrected["aspect_ratio"] = "1:1"
         return corrected
 
     def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
@@ -162,8 +260,12 @@ class SeedreamAdapter(ModelAdapter):
         if not ok:
             return False, reason
         assert isinstance(req, GenerateImageInput)
-        if not req.prompt.strip():
-            return False, f"{self.adapter_id} requires a non-empty prompt"
+        model_specific_error = self._model_specific_error(req)
+        if model_specific_error:
+            return False, model_specific_error
+        layer_decomposition = (req.model_specific or {}).get("layer_decomposition") is True
+        if not req.prompt.strip() and not layer_decomposition:
+            return False, f"{self.model_name} requires a non-empty prompt"
 
         family = self._family
         # Checked here, not only in validation_corrections, so the *billed* path rejects
@@ -175,21 +277,43 @@ class SeedreamAdapter(ModelAdapter):
         allowed = _ALLOWED_TIERS[family]
         if req.resolution not in allowed:
             return False, (
-                f"{self.adapter_id} does not support resolution {req.resolution} "
+                f"{self.model_name} does not support resolution {req.resolution} "
                 f"(supported: {', '.join(allowed)})"
             )
 
-        # The reference ceiling is a per-model fact (Pro takes 10, the rest 14), unlike
-        # 组图 below, which is a declared capability.
-        max_refs = 10 if family == "pro" else 14
+        # The reference ceiling (Pro 10, the rest 14) is adapter.yaml inputs, checked by the base.
         reference_count = len(req.reference_images or [])
-        if reference_count > max_refs:
-            return False, f"{self.adapter_id} accepts at most {max_refs} reference_images"
 
-        does_groups = _GROUP_CAPABILITY in self.capabilities
+        if layer_decomposition:
+            if "layer_decomposition" not in self.tasks:
+                return False, f"{self.model_name} does not support layer_decomposition"
+            if reference_count != 1:
+                return False, (
+                    f"{self.model_name} layer_decomposition requires exactly one "
+                    "reference_images item"
+                )
+
+        # No refusal for n>1 on a model without 组图: `n` is a ceiling, and on such a
+        # model it is ignored — build_payload() sends no group field and one image comes
+        # back (the n schema description promises exactly that).
+
+        # Whether a source URL actually has an alpha channel cannot be established
+        # locally; enforce the deterministic portions and let upstream inspect it.
+        if (req.model_specific or {}).get("background") == "transparent":
+            if "transparent_background" not in self.tasks:
+                return False, f"{self.model_name} does not support transparent backgrounds"
+            if reference_count != 1:
+                return False, (
+                    f"{self.model_name} transparent background requires exactly one "
+                    "reference_images item"
+                )
+            if (req.model_specific or {}).get("output_format") == "jpeg":
+                return False, "transparent background requires PNG output, not jpeg"
+
+        does_groups = _GROUP_TASK in self.tasks
         if does_groups and reference_count + req.n > _GROUP_TOTAL_CAP:
             return False, (
-                f"{self.adapter_id} requires reference_images count + n <= "
+                f"{self.model_name} requires reference_images count + n <= "
                 f"{_GROUP_TOTAL_CAP} (got {reference_count} + {req.n})"
             )
         # Region editing and 组图 are mutually exclusive in shape: a group is several
@@ -198,7 +322,7 @@ class SeedreamAdapter(ModelAdapter):
         # today — it exists so a future group-capable region model cannot pass silently.
         if does_groups and req.regions and req.n > 1:
             return False, (
-                f"{self.adapter_id}: regions (区域编辑) cannot be combined with n>1 "
+                f"{self.model_name}: regions (区域编辑) cannot be combined with n>1 "
                 f"(组图) — a group is several independent images, a region marks one "
                 f"place on the image being edited. Call once per image."
             )
@@ -207,13 +331,20 @@ class SeedreamAdapter(ModelAdapter):
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)
 
+        # TaskManager always calls supports() first, but build_payload is intentionally
+        # safe for direct callers too.  Otherwise a unit test or future integration
+        # could bypass the preflight schema and forward a typo to a billed endpoint.
+        model_specific_error = self._model_specific_error(req)
+        if model_specific_error:
+            raise ValueError(model_specific_error)
+
         # supports() is the gate, but build_payload is also reachable directly (tests,
-        # and any future caller). A region that reached a model without the capability
+        # and any future caller). A region that reached a model without the region_edit task
         # must stop here rather than be quietly dropped into an ordinary whole-image
         # edit that generates a picture and bills for it.
-        if req.regions and "region_edit" not in self.capabilities:
+        if req.regions and "region_edit" not in self.tasks:
             raise ValueError(
-                f"{self.adapter_id} does not support region editing (regions=), and "
+                f"{self.model_name} does not support region editing (regions=), and "
                 f"regions are never silently ignored."
             )
 
@@ -227,10 +358,18 @@ class SeedreamAdapter(ModelAdapter):
                 prompt, req.regions, req.image_refs, include_names=False
             )
 
+        layer_decomposition = (req.model_specific or {}).get("layer_decomposition") is True
         payload: dict = {
             "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
             "prompt": prompt,
-            "size": self._resolve_size(req.resolution, req.aspect_ratio),
+            # Pro / Flash layer decomposition rejects explicit `WIDTHxHEIGHT`; its
+            # API instead accepts one of the preset tiers. A caller can select the
+            # documented default with model_specific.size='auto'.
+            "size": (
+                req.resolution
+                if layer_decomposition and self.adapter_id in _STRICT_SEEDREAM_5_ADAPTERS
+                else self._resolve_size(req.resolution, req.aspect_ratio)
+            ),
             "response_format": "url",
             "watermark": req.watermark,
         }
@@ -241,7 +380,7 @@ class SeedreamAdapter(ModelAdapter):
                 if len(req.reference_images) == 1
                 else req.reference_images
             )
-        if req.n and req.n > 1 and _GROUP_CAPABILITY in self.capabilities:
+        if req.n and req.n > 1 and _GROUP_TASK in self.tasks:
             # 组图. Note "auto" does not mean "give me exactly n": the model decides both
             # *whether* to return a group and how many images it contains, and max_images
             # only caps it — so n is a ceiling, and fewer is a normal outcome, not a
@@ -258,6 +397,22 @@ class SeedreamAdapter(ModelAdapter):
         # Synchronous: response contains results directly
         data = resp.get("data") or []
         urls = [item["url"] for item in data if "url" in item]
+        # A few compatible response envelopes carry layer entries separately. The
+        # public result stays compact, but must not discard those artifacts merely
+        # because their top-level data list is empty.
+        if not urls and isinstance(resp.get("image_items"), list):
+            image_items = [
+                item for item in resp["image_items"] if isinstance(item, dict)
+            ]
+            image_items.sort(
+                key=lambda item: item["z_index"]
+                if isinstance(item.get("z_index"), int)
+                else 0
+            )
+            urls = [
+                item["url"] for item in image_items
+                if isinstance(item.get("url"), str) and item["url"]
+            ]
         # In a 组图 response each slot may carry its own error instead of a url, and the
         # request as a whole still returns HTTP 200. Reporting only the urls would hand
         # back two images for a request that asked for four with nothing saying why —

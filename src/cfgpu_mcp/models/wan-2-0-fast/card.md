@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan-video-fast` | 
-| 能力标签 | text_to_video, image_to_video, first_last_frame, multi_modal_reference, video_edit, video_extend, audio_generate, web_search |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output |
 | 成本档位 | 2/5 |
 | 速度档位 | 4/5 |
 
@@ -43,17 +43,16 @@
 | **text_to_video** | 纯文本生成视频 |
 | **image_to_video** | 单张首帧图片 + 文本生成视频 |
 | **first_last_frame** | 首帧 + 尾帧图片 + 文本生成视频（精准控制起止画面） |
-| **multi_modal_reference** | 多模态参考生视频：图片(0-9) + 视频(0-3) + 音频(0-3) + 文本 |
+| **reference_to_video** | 多模态参考生视频：图片(0-9) + 视频(0-3) + 音频(0-3) + 文本 |
 | **video_edit** | 基于参考视频进行编辑（替换元素、修改内容） |
 | **video_extend** | 延长已有视频时长 |
-| **audio_generate** | 生成与画面同步的有声视频（人声、音效、背景音乐） |
-| **web_search** | 联网搜索增强（仅文生视频支持） |
+| **synced_audio_output** | 生成与画面同步的有声视频（人声、音效、背景音乐） |
 
 ## 参数说明
 
 **参数与 `wan-video` 完全一致。**
 
-详细参数说明请参考 `wan-video` 的模型卡（可调用 get_model_card 获取）。
+详细参数说明请参考 `wan-video` 的模型卡。
 
 ## 示例
 
@@ -160,7 +159,7 @@
 
 ## 约束与限制
 
-与 `wan-video` 一致，详见 `wan-video` 的模型卡（可调用 get_model_card 获取）。
+与 `wan-video` 一致，详见 `wan-video` 的模型卡。
 
 ## 响应结构
 
@@ -203,4 +202,4 @@
 
 ## 与统一 Schema 的映射
 
-与 `wan-video` 映射一致，详见 `wan-video` 的模型卡（可调用 get_model_card 获取）。
+与 `wan-video` 映射一致，详见 `wan-video` 的模型卡。
