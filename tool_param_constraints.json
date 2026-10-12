@@ -6,6 +6,7 @@
       "modelId": "auto",
       "modelName": "auto",
       "displayName": "Auto (router selects a video model)",
+      "sort": 0,
       "note": "Unified tool schema from GenerateVideoInput. Model not yet fixed; ranges are the union enum/limits of the unified schema, not a specific model. Once a model is chosen, switch to that model's entry for the real per-model ranges.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
@@ -33,7 +34,8 @@
       "adapterId": "wan-2-0",
       "modelId": "wan-video",
       "modelName": "wan-video",
-      "displayName": "WAN 2.0",
+      "sort": 16,
+      "displayName": "Wan 2.0",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan-video", "writable": "false" },
@@ -63,7 +65,8 @@
       "adapterId": "wan-2-0-fast",
       "modelId": "wan-video-fast",
       "modelName": "wan-video-fast",
-      "displayName": "WAN 2.0 Fast",
+      "sort": 17,
+      "displayName": "Wan 2.0 Fast",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan-video-fast", "writable": "false" },
@@ -93,6 +96,7 @@
       "adapterId": "doubao-seedance-1-5-pro",
       "modelId": "doubao-seedance-1-5-pro-251215",
       "modelName": "doubao-seedance-1-5-pro",
+      "sort": 18,
       "displayName": "Doubao Seedance 1.5 Pro",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
@@ -119,7 +123,9 @@
       "adapterId": "happyhorse-1-0-t2v",
       "modelId": "happyhorse-1.0-t2v",
       "modelName": "happyhorse-1.0-t2v",
-      "displayName": "happyhorse-1.0-t2v",
+      "sort": 12,
+      "displayName": "Happyhorse 1.0 t2v",
+      "note": "支持文生视频",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1.0-t2v", "writable": "false" },
@@ -143,8 +149,9 @@
       "adapterId": "wan-2-7-t2v",
       "modelId": "wan2.7-t2v",
       "modelName": "wan2.7-t2v",
-      "displayName": "万相 2.7 (文生视频)",
-      "note": "Text-to-video. Nested input envelope: input={prompt}, no media. aspect_ratio / watermark / prompt_extend map into parameters; with_audio is unused.",
+      "sort": 8,
+      "displayName": "Wan 2.7 t2v",
+      "note": "万相2.7文生视频",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.7-t2v", "writable": "false" },
@@ -164,8 +171,9 @@
       "adapterId": "wan-2-7-i2v",
       "modelId": "wan2.7-i2v",
       "modelName": "wan2.7-i2v",
-      "displayName": "万相 2.7 (图生视频)",
-      "note": "Image-to-video and continuation. Supply exactly one first_frame or one reference_videos item (mapped to first_clip); optional last_frame, and one reference_audios item (mapped to driving_audio) only with first_frame. aspect_ratio / with_audio are unused.",
+      "sort": 10,
+      "displayName": "Wan 2.7 i2v",
+      "note": "万相2.7图生视频",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.7-i2v", "writable": "false" },
@@ -188,8 +196,9 @@
       "adapterId": "wan-2-7-r2v",
       "modelId": "wan2.7-r2v",
       "modelName": "wan2.7-r2v",
-      "displayName": "万相 2.7 (参考生视频)",
-      "note": "Reference-to-video; requires >=1 reference_video or reference_image. An optional first_frame is sent as media type=first_frame; media count is at most 5. A request containing reference video is limited to 2-10 seconds.",
+      "sort": 9,
+      "displayName": "Wan 2.7 r2v",
+      "note": "万相2.7参考生视频",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.7-r2v", "writable": "false" },
@@ -213,8 +222,9 @@
       "adapterId": "wan-2-7-videoedit",
       "modelId": "wan2.7-videoedit",
       "modelName": "wan2.7-videoedit",
-      "displayName": "万相 2.7 (视频编辑)",
-      "note": "Video edit; requires exactly 1 source video plus at most 4 reference images. Omitted aspect_ratio preserves the source ratio; omitted duration preserves the complete source clip.",
+      "sort": 11,
+      "displayName": "Wan 2.7 video-edit",
+      "note": "万相2.7视频编辑",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "edit instruction, e.g. 将视频中女孩的衣服替换为图片中的衣服" },
         "model": { "type": "string", "value": "wan2.7-videoedit", "writable": "false" },
@@ -236,7 +246,8 @@
       "adapterId": "wan-2-6-t2v",
       "modelId": "wan2.6-t2v",
       "modelName": "wan2.6-t2v",
-      "displayName": "万相 2.6 (文生视频)",
+      "sort": 23,
+      "displayName": "Wan 2.6 t2v",
       "note": "Text-to-video. input={prompt, audio_url?}; resolution maps to parameters.size. No media array.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
@@ -258,7 +269,8 @@
       "adapterId": "wan-2-6-i2v",
       "modelId": "wan2.6-i2v",
       "modelName": "wan2.6-i2v",
-      "displayName": "万相 2.6 (图生视频)",
+      "sort": 24,
+      "displayName": "Wan 2.6 i2v",
       "note": "Image-to-video; first_frame required. Flat input uses input.img_url, optional input.audio_url, and optional input.negative_prompt. aspect_ratio / with_audio / last_frame / reference_images / reference_videos are unused; parameters.audio is Flash-only and is not sent for this model.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
@@ -280,7 +292,8 @@
       "adapterId": "wan-2-6-r2v",
       "modelId": "wan2.6-r2v",
       "modelName": "wan2.6-r2v",
-      "displayName": "万相 2.6 (参考生视频)",
+      "sort": 25,
+      "displayName": "Wan 2.6 r2v",
       "note": "Reference-to-video; 1-5 total reference URLs (at most 3 videos) merge into input.reference_urls. resolution plus aspect_ratio map to parameters.size.",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "may refer to reference subjects as character1, etc." },
@@ -301,8 +314,9 @@
       "adapterId": "doubao-seedance-2-0",
       "modelId": "doubao-seedance-2-0-260128",
       "modelName": "doubao-seedance-2-0",
+      "sort": 2,
       "displayName": "Doubao Seedance 2.0",
-      "note": "Full Seedance 2.0 capability set incl. first/last frame, multimodal reference, video edit/extend, audio. Audio cannot be the only reference input.",
+      "note": "多模态专业视频创作模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-2-0", "writable": "false" },
@@ -332,8 +346,9 @@
       "adapterId": "doubao-seedance-2-0-fast",
       "modelId": "doubao-seedance-2-0-fast-260128",
       "modelName": "doubao-seedance-2-0-fast",
-      "displayName": "Doubao Seedance 2.0 fast",
-      "note": "Seedance 2.0 fast; faster/cheaper, resolution fixed to 480p/720p (default 720p). Audio cannot be the only reference input.",
+      "sort": 3,
+      "displayName": "Doubao Seedance 2.0 Fast",
+      "note": "快速多模态视频生成模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-2-0-fast", "writable": "false" },
@@ -363,8 +378,9 @@
       "adapterId": "doubao-seedance-2-0-mini",
       "modelId": "Doubao-Seedance-2.0-mini",
       "modelName": "doubao-seedance-2-0-mini",
-      "displayName": "Doubao Seedance 2.0 mini",
-      "note": "Seedance 2.0 mini; high-cost-performance tier with 480p/720p output (default 720p). Full capability set; audio cannot be the only reference input.",
+      "sort": 4,
+      "displayName": "Doubao Seedance 2.0 Mini",
+      "note": "Seedance2.0mini",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-2-0-mini", "writable": "false" },
@@ -394,8 +410,9 @@
       "adapterId": "doubao-seedance-2-5",
       "modelId": "doubao-seedance-2-5",
       "modelName": "doubao-seedance-2-5",
+      "sort": 1,
       "displayName": "Doubao Seedance 2.5",
-      "note": "Seedance 2.5: single-shot up to 30s, up to 50 reference materials (30 images + 10 videos + 10 audios), and audio-only reference input is allowed. For a video-edit task, duration_seconds must be -1 and the source video must be 4-30s.",
+      "note": "多模态专业视频创作模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-2-5", "writable": "false" },
@@ -425,8 +442,9 @@
       "adapterId": "happyhorse-1-0-i2v",
       "modelId": "happyhorse-1.0-i2v",
       "modelName": "happyhorse-1.0-i2v",
-      "displayName": "happyhorse-1.0-i2v",
-      "note": "Image-to-video: exactly one first_frame. Prompt is optional and output ratio follows the input image.",
+      "sort": 13,
+      "displayName": "Happyhorse 1.0 i2v",
+      "note": "支持图生视频",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1.0-i2v", "writable": "false" },
@@ -450,8 +468,9 @@
       "adapterId": "happyhorse-1-0-r2v",
       "modelId": "happyhorse-1.0-r2v",
       "modelName": "happyhorse-1.0-r2v",
-      "displayName": "happyhorse-1.0-r2v",
-      "note": "Reference-to-video: prompt plus 1-9 reference images; image/video inputs use a dedicated model.",
+      "sort": 14,
+      "displayName": "Happyhorse 1.0 r2v",
+      "note": "支持参考图生视频",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1.0-r2v", "writable": "false" },
@@ -476,8 +495,9 @@
       "adapterId": "happyhorse-1-0-video-edit",
       "modelId": "happyhorse-1.0-video-edit",
       "modelName": "happyhorse-1.0-video-edit",
-      "displayName": "happyhorse-1.0-video-edit",
-      "note": "Natural-language video editing: 1 source video (reference_videos) + up to 5 reference_images. Output duration/ratio follow the source video, so duration_seconds and aspect_ratio are NOT sent.",
+      "sort": 15,
+      "displayName": "Happyhorse 1.0 video-edit",
+      "note": "支持自然语言视频编辑",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "edit instruction" },
         "model": { "type": "string", "value": "happyhorse-1.0-video-edit", "writable": "false" },
@@ -501,8 +521,9 @@
       "adapterId": "kling-video-o1",
       "modelId": "kling-video-o1",
       "modelName": "kling-video-o1",
-      "displayName": "Kling Video O1 (可灵 O1)",
-      "note": "Text-to-video, image-to-video, first/last frame, multimodal reference and video edit. resolution + aspect_ratio are mapped to a pixel size (adaptive -> 16:9); quality_tier maps to Kling mode (best -> pro, else std) and IS meaningful here. Media rides image_list (first_frame / end_frame / untyped reference) and video_list (refer_type feature | base). Does not use reference_audios / watermark.",
+      "sort": 6,
+      "displayName": "Kling Video O1",
+      "note": "可灵O1多模态视频模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "kling-video-o1", "writable": "false" },
@@ -526,8 +547,9 @@
       "adapterId": "kling-v3-omni",
       "modelId": "kling-v3-omni",
       "modelName": "kling-v3-omni",
-      "displayName": "Kling V3 Omni (可灵 V3 全能版)",
-      "note": "Text-to-video only (shares KlingVideoAdapter with O1). resolution + aspect_ratio map to a pixel size (adaptive -> 16:9); quality_tier maps to Kling mode (best -> pro, else std). Does not use with_audio / watermark / reference media.",
+      "sort": 7,
+      "displayName": "Kling V3 Omni",
+      "note": "可灵V3全能多模态模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "kling-v3-omni", "writable": "false" },
@@ -551,6 +573,7 @@
       "adapterId": "grok-imagine-video",
       "modelId": "grok-imagine-video",
       "modelName": "cf-imagine-video",
+      "sort": 19,
       "displayName": "CF Imagine Video",
       "note": "xAI Aurora text-to-video / image-to-video, a few seconds of 720p with synchronized audio. Flat snake_case request: prompt / aspect_ratio / video_length (STRING seconds) / resolution_name (lowercase tier) / refer_images[]. first_frame and reference_images share the single refer_images array (first_frame listed first). Does not use last_frame / reference_videos / reference_audios / with_audio / watermark / quality_tier. Billed per second in two tiers (<=480P 0.275, >480P 0.385 元/秒); cheaper than cf-imagine-video-1.5, same request shape.",
       "args": {
@@ -572,6 +595,7 @@
       "adapterId": "grok-imagine-video-1-5",
       "modelId": "grok-imagine-video-1.5",
       "modelName": "cf-imagine-video-1.5",
+      "sort": 20,
       "displayName": "CF Imagine Video 1.5",
       "note": "Same family and identical request shape as cf-imagine-video (shares GrokVideoAdapter); higher-quality tier at roughly double the price, billed per second in three tiers (<=480P 0.44, <=720P 0.77, >720P 1.32 元/秒).",
       "args": {
@@ -593,6 +617,7 @@
       "adapterId": "cfdream-minimax-h3",
       "modelId": "cfdream/minimax-h3",
       "modelName": "cfdream/minimax-h3",
+      "sort": 21,
       "displayName": "MiniMax H3 t2v & i2v",
       "note": "Local MiniMax H3 fl2va weights: text-to-video, first-frame image-to-video, or first+last-frame video. Only 480p is currently calibrated. Does not accept reference_images / reference_videos / reference_audios; use cfdream/minimax-h3-r2v for reference-driven generation. quality_tier and watermark have no gateway implementation.",
       "args": {
@@ -622,6 +647,7 @@
       "adapterId": "cfdream-minimax-h3-r2v",
       "modelId": "cfdream/minimax-h3-r2v",
       "modelName": "cfdream/minimax-h3-r2v",
+      "sort": 22,
       "displayName": "MiniMax H3 r2v",
       "note": "Local MiniMax H3 ref2va weights for reference-driven generation. Requires at least one reference_images / reference_videos / reference_audios and does not accept first_frame / last_frame. Every supplied material should be referenced in prompt with its 1-based <Picture N> / <Video N> / <Audio N> tag. Only 480p is currently calibrated; quality_tier and watermark have no gateway implementation.",
       "args": {
@@ -653,8 +679,9 @@
       "adapterId": "cfgpu-minimax-h3",
       "modelId": "MiniMax-H3",
       "modelName": "MiniMax-H3",
+      "sort": 5,
       "displayName": "MiniMax H3",
-      "note": "MiniMax H3 through the CFGPU video API (test-phase provider cfgpu-daily). Supports text-to-video, first/last-frame generation, or multimodal reference generation. first_frame / last_frame are mutually exclusive with all reference_* inputs; last_frame requires first_frame. Image-to-video infers geometry from the input image and sends no ratio at all; reference generation may use adaptive. This is the declared default landing spot for quality_tier=balanced, so an auto video call with no other arguments resolves here. with_audio is not sent to this API; watermark is, as aigc_watermark.",
+      "note": "MiniMax H3视频",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "must contain non-whitespace text; max 7000 characters" },
         "model": { "type": "string", "value": "MiniMax-H3", "writable": "false" },
@@ -680,6 +707,7 @@
       "modelId": "auto",
       "modelName": "auto",
       "displayName": "Auto (router selects an image model)",
+      "sort": 0,
       "note": "Unified tool schema from GenerateImageInput. Model not yet fixed; ranges are the union enum/limits of the unified schema, not a specific model. Once a model is chosen, switch to that model's entry for the real per-model ranges.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
@@ -702,7 +730,8 @@
       "adapterId": "wan-2-7-image",
       "modelId": "wan2.7-image",
       "modelName": "wan2.7-image",
-      "displayName": "万相 2.7 (图像生成与编辑)",
+      "sort": 9,
+      "displayName": "Wan 2.7 Image",
       "note": "万相2.7图像生成与编辑",
       "args": {
         "prompt": { "type": "text", "maxLength": 5000, "writable": "true", "note": "over 5000 characters is truncated upstream, not rejected" },
@@ -734,7 +763,8 @@
       "adapterId": "doubao-seedream-5-0-lite",
       "modelId": "doubao-seedream-5-0-260128",
       "modelName": "doubao-seedream-5-0-lite",
-      "displayName": "Doubao Seedream 5.0 lite",
+      "sort": 7,
+      "displayName": "Doubao Seedream 5.0 Lite",
       "note": "支持联网检索的图像创作模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
@@ -763,6 +793,7 @@
       "adapterId": "doubao-seedream-5-0-pro",
       "modelId": "doubao-seedream-5-0-pro",
       "modelName": "doubao-seedream-5-0-pro",
+      "sort": 8,
       "displayName": "Doubao Seedream 5.0 Pro",
       "note": "高精度图像创作模型",
       "args": {
@@ -795,7 +826,8 @@
       "adapterId": "doubao-seedream-5-0-flash",
       "modelId": "doubao-seedream-5-0-flash-260915",
       "modelName": "doubao-seedream-5-0-flash",
-      "displayName": "Doubao Seedream 5.0 flash",
+      "sort": 6,
+      "displayName": "Doubao Seedream 5.0 Flash",
       "note": "字节极速影像模型，秒级高效出图",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "required except when model_specific.layer_decomposition=true" },
@@ -826,6 +858,7 @@
       "adapterId": "doubao-seedream-4-0",
       "modelId": "doubao-seedream-4-0-250828",
       "modelName": "doubao-seedream-4-0",
+      "sort": 11,
       "displayName": "Doubao Seedream 4.0",
       "note": "SOTA级多模态图像创作模型",
       "args": {
@@ -855,6 +888,7 @@
       "adapterId": "doubao-seedream-4-5",
       "modelId": "doubao-seedream-4-5-251128",
       "modelName": "doubao-seedream-4-5",
+      "sort": 10,
       "displayName": "Doubao Seedream 4.5",
       "note": "文生图图生图多模态模型",
       "args": {
@@ -884,6 +918,7 @@
       "adapterId": "gpt-image-2",
       "modelId": "gpt-image-2",
       "modelName": "cf-image-2",
+      "sort": 1,
       "displayName": "CF Image 2",
       "note": "CF Image 2 生图模型",
       "args": {
@@ -904,6 +939,7 @@
       "adapterId": "nano-banana-2",
       "modelId": "nano2",
       "modelName": "cf-banana-2",
+      "sort": 3,
       "displayName": "CF Banana 2",
       "note": "CF Flash图像",
       "args": {
@@ -922,6 +958,7 @@
       "adapterId": "nano-banana-pro",
       "modelId": "nano-pro",
       "modelName": "cf-banana-pro",
+      "sort": 2,
       "displayName": "CF Banana Pro",
       "note": "CF Pro 图像预览",
       "args": {
@@ -940,6 +977,7 @@
       "adapterId": "nano-banana-pro-official",
       "modelId": "nano-pro-official",
       "modelName": "cf-banana-pro-official",
+      "sort": 4,
       "displayName": "CF Banana Pro (official)",
       "note": "CF Pro官方通道",
       "args": {
@@ -958,6 +996,7 @@
       "adapterId": "nano-banana-pro-premium",
       "modelId": "nano-pro-premium",
       "modelName": "cf-banana-pro-premium",
+      "sort": 5,
       "displayName": "CF Banana Pro (premium)",
       "note": "CF Pro高级通道",
       "args": {
@@ -1002,7 +1041,7 @@
       "adapterId": "minimax-speech-2-8-hd",
       "modelId": "MiniMax/speech-2.8-hd",
       "modelName": "MiniMax/speech-2.8-hd",
-      "displayName": "MiniMax 语音 2.8 HD",
+      "displayName": "MiniMax Speech 2.8 HD",
       "note": "Synchronous text-to-speech, high-fidelity tier. Supports the full MiniMax voice-control set (speed/volume/pitch/emotion/bitrate) within the ranges below; out-of-range values are a local error, never clamped. Billed per character; text length is left to upstream.",
       "args": {
         "text": { "type": "text", "writable": "true", "note": "maps to input.text (required; length checked upstream); supports interjection tags: (laughs) (chuckle) (coughs) (clear-throat) (groans) (breath) (pant) (inhale) (exhale) (gasps) (sniffs) (sighs) (snorts) (burps) (lip-smacking) (humming) (hissing) (emm) (whistles) (sneezes) (crying) (applause)" },
@@ -1051,7 +1090,7 @@
       "adapterId": "minimax-speech-2-8-turbo",
       "modelId": "MiniMax/speech-2.8-turbo",
       "modelName": "MiniMax/speech-2.8-turbo",
-      "displayName": "MiniMax 语音 2.8 Turbo",
+      "displayName": "MiniMax Speech 2.8 Turbo",
       "note": "Synchronous text-to-speech; faster/cheaper Turbo tier. Inherits minimax-speech-2-8-hd: identical parameters, ranges and request structure, only the model id differs.",
       "args": {
         "text": { "type": "text", "writable": "true", "note": "maps to input.text (required; length checked upstream); supports interjection tags: (laughs) (chuckle) (coughs) (clear-throat) (groans) (breath) (pant) (inhale) (exhale) (gasps) (sniffs) (sighs) (snorts) (burps) (lip-smacking) (humming) (hissing) (emm) (whistles) (sneezes) (crying) (applause)" },
@@ -1100,7 +1139,7 @@
       "adapterId": "seed-tts-2-0",
       "modelId": "seed-tts-2.0",
       "modelName": "seed-tts-2.0",
-      "displayName": "豆包语音合成 2.0 (Seed-TTS 2.0)",
+      "displayName": "Seed-TTS 2.0",
       "note": "Asynchronous text-to-speech (submit then poll). 122 expressive Chinese system voices (角色扮演/有声阅读/客服/视频配音); expressiveness comes from the voice itself (情感变化/ASMR voices), not from an emotion parameter. Text up to 100,000 characters. speed/volume/pitch/bitrate are honoured within the ranges below (out-of-range is a local error, never clamped); emotion is not supported and is rejected.",
       "args": {
         "text": { "type": "text", "writable": "true", "note": "maps to req_params.text (required)" },
