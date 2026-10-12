@@ -97,7 +97,7 @@ def test_audio_models_cannot_declare_ratios():
         _parse_aspect_ratios("m", "audio", ["1:1"])
 
 
-@pytest.mark.parametrize("model", ["doubao-seedream-5-0-lite", "wan2.7-image", "cf-pro"])
+@pytest.mark.parametrize("model", ["doubao-seedream-5-0-lite", "wan2.7-image", "cf-banana-pro"])
 def test_the_billed_path_now_refuses_what_used_to_be_squared_or_passed_on(model):
     registry = AdapterRegistry(MODELS_DIR)
     registry.load()
