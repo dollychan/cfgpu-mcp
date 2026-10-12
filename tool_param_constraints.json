@@ -513,7 +513,7 @@
         "reference_audios": { "type": "url[]", "writable": "false", "note": "NOT supported (no audio input slot in the request body); adapter rejects" },
         "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive treated as 16:9; mapped with resolution to a pixel size" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped with aspect_ratio to a pixel size string" },
-        "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects)" },
+        "duration_seconds": { "type": "enum", "options": [3, 4, 5, 6, 7, 8, 9, 10], "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects)" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off" },
         "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }], "default": "balanced", "writable": "true", "note": "maps to Kling mode: best -> pro, fast/balanced -> std" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
@@ -683,7 +683,7 @@
       "note": "Unified tool schema from GenerateImageInput. Model not yet fixed; ranges are the union enum/limits of the unified schema, not a specific model. Once a model is chosen, switch to that model's entry for the real per-model ranges.",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
-        "model": { "type": "enum", "options": ["auto", "doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash", "doubao-seedream-5-0-lite", "doubao-seedream-4-0", "doubao-seedream-4-5", "wan2.7-image", "cf-image-2", "cf-banana-2", "cf-banana-pro", "cf-banana-pro-official", "cf-banana-pro-premium"], "default": "auto", "writable": "true" },
+        "model": { "type": "enum", "options": ["auto", "cf-image-2", "cf-banana-pro", "cf-banana-2", "cf-banana-pro-official", "cf-banana-pro-premium", "doubao-seedream-5-0-flash", "doubao-seedream-5-0-lite", "doubao-seedream-5-0-pro", "wan2.7-image", "doubao-seedream-4-5", "doubao-seedream-4-0"], "default": "auto", "writable": "true" },
         "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3"], "default": "1:1", "writable": "true" },
         "resolution": { "type": "enum", "options": ["1K", "1.5K", "2K", "3K", "4K"], "default": "2K", "writable": "true", "note": "union of every image model's tiers; Seedream 5.0 Pro / Flash each support 1K/1.5K/2K, 5-0-lite and 4.5 support 2K/3K/4K, and 4.0 supports 1K/2K/3K/4K. An unsupported tier is rejected, not silently downgraded" },
         "reference_images": { "type": "url_array", "writable": "true" },
@@ -703,7 +703,7 @@
       "modelId": "wan2.7-image",
       "modelName": "wan2.7-image",
       "displayName": "万相 2.7 (图像生成与编辑)",
-      "note": "Synchronous image model (no task_id, no polling) on the DashScope-shaped envelope {model, input.messages[0].content[], parameters}: content carries exactly one text part plus 0-9 image parts, and an image's position in that array IS its 图N ordinal — the same index bbox_list is aligned to. Covers text-to-image, image sets, multi-image editing/fusion, and interactive (box) editing.",
+      "note": "万相2.7图像生成与编辑",
       "args": {
         "prompt": { "type": "text", "maxLength": 5000, "writable": "true", "note": "over 5000 characters is truncated upstream, not rejected" },
         "model": { "type": "string", "value": "wan2.7-image", "writable": "false" },
@@ -735,6 +735,7 @@
       "modelId": "doubao-seedream-5-0-260128",
       "modelName": "doubao-seedream-5-0-lite",
       "displayName": "Doubao Seedream 5.0 lite",
+      "note": "支持联网检索的图像创作模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedream-5-0-lite", "writable": "false" },
@@ -763,6 +764,7 @@
       "modelId": "doubao-seedream-5-0-pro",
       "modelName": "doubao-seedream-5-0-pro",
       "displayName": "Doubao Seedream 5.0 Pro",
+      "note": "高精度图像创作模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedream-5-0-pro", "writable": "false" },
@@ -794,7 +796,7 @@
       "modelId": "doubao-seedream-5-0-flash-260915",
       "modelName": "doubao-seedream-5-0-flash",
       "displayName": "Doubao Seedream 5.0 flash",
-      "note": "Synchronous 5.0 image-creation and editing model. It has the same text/image/multi-image, positional-editing, layer-decomposition and transparent-background features as Pro, optimized for lower latency and cost.",
+      "note": "字节极速影像模型，秒级高效出图",
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "required except when model_specific.layer_decomposition=true" },
         "model": { "type": "string", "value": "doubao-seedream-5-0-flash", "writable": "false" },
@@ -825,6 +827,7 @@
       "modelId": "doubao-seedream-4-0-250828",
       "modelName": "doubao-seedream-4-0",
       "displayName": "Doubao Seedream 4.0",
+      "note": "SOTA级多模态图像创作模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedream-4-0", "writable": "false" },
@@ -853,6 +856,7 @@
       "modelId": "doubao-seedream-4-5-251128",
       "modelName": "doubao-seedream-4-5",
       "displayName": "Doubao Seedream 4.5",
+      "note": "文生图图生图多模态模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedream-4-5", "writable": "false" },
@@ -881,6 +885,7 @@
       "modelId": "gpt-image-2",
       "modelName": "cf-image-2",
       "displayName": "CF Image 2",
+      "note": "CF Image 2 生图模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-image-2", "writable": "false" },
@@ -900,6 +905,7 @@
       "modelId": "nano2",
       "modelName": "cf-banana-2",
       "displayName": "CF Banana 2",
+      "note": "CF Flash图像",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-banana-2", "writable": "false" },
@@ -917,6 +923,7 @@
       "modelId": "nano-pro",
       "modelName": "cf-banana-pro",
       "displayName": "CF Banana Pro",
+      "note": "CF Pro 图像预览",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-banana-pro", "writable": "false" },
@@ -934,7 +941,7 @@
       "modelId": "nano-pro-official",
       "modelName": "cf-banana-pro-official",
       "displayName": "CF Banana Pro (official)",
-      "note": "Shares NanoBanana adapter with cf-banana-pro; same parameters, official channel.",
+      "note": "CF Pro官方通道",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-banana-pro-official", "writable": "false" },
@@ -952,7 +959,7 @@
       "modelId": "nano-pro-premium",
       "modelName": "cf-banana-pro-premium",
       "displayName": "CF Banana Pro (premium)",
-      "note": "Shares NanoBanana adapter with cf-banana-pro; same parameters, premium channel.",
+      "note": "CF Pro高级通道",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-banana-pro-premium", "writable": "false" },
