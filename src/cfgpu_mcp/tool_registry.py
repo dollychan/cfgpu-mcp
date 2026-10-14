@@ -986,6 +986,7 @@ CanonicalTaskId = Literal[
     "video_extend",
     "synced_audio_output",
     "audio_driven_video",
+    "voice_reference_video",
     "text_to_image",
     "image_to_image",
     "multi_image_fusion",

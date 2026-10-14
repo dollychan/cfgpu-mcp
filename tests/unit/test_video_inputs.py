@@ -216,7 +216,8 @@ def test_declared_tasks_are_carried_by_the_declared_inputs(adapter):
             )
         if requires.get("audio_role"):
             role = adapter.inputs["reference_audios"].role
-            assert role == requires["audio_role"], (
+            roles = requires["audio_role"]
+            assert role in (roles if isinstance(roles, list) else [roles]), (
                 f"{adapter.adapter_id} claims {task}, which needs audio role "
                 f"{requires['audio_role']!r}, but its audio role is {role!r}"
             )
@@ -250,6 +251,32 @@ def test_a_driving_audio_track_and_audio_driven_video_imply_each_other(adapter):
         f"{adapter.adapter_id}: audio role {audio.role if audio else None!r} "
         f"but audio_driven_video {'claimed' if claims else 'not claimed'}"
     )
+
+
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=lambda a: a.adapter_id)
+def test_voice_reference_video_speaks_in_the_output(adapter):
+    """Checked one way only: a `voice` or `reference` slot does not by itself prove the
+    model can imitate a voice (a `reference` track may only steer music or rhythm), so
+    each model opts in after it is verified. What a claim must not lack is the speech
+    it promises — the clip has to have sound."""
+    if "voice_reference_video" not in adapter.tasks:
+        return
+    assert "synced_audio_output" in adapter.tasks, (
+        f"{adapter.adapter_id} claims voice_reference_video but not synced_audio_output"
+    )
+
+
+def test_soundtrack_and_voice_sample_tasks_take_disjoint_audio_roles():
+    """A driving model plays the sample itself — the exact failure voice_reference_video
+    exists to rule out — so no model may qualify for both."""
+    catalog = _task_catalog()
+
+    def roles(task):
+        role = catalog[task]["requires"]["audio_role"]
+        return set(role if isinstance(role, list) else [role])
+
+    assert roles("audio_driven_video") == {"driving"}
+    assert roles("voice_reference_video") == {"voice", "reference"}
 
 
 def test_reference_to_video_no_longer_promises_audio():
@@ -388,3 +415,22 @@ def test_malformed_outputs_are_rejected(raw, message):
 
     with pytest.raises(ValueError, match=message):
         parse_outputs("m", raw)
+
+
+@pytest.mark.parametrize("audio_role", ["driving", ["voice", "reference"]])
+def test_task_audio_role_takes_one_role_or_a_list(audio_role):
+    from cfgpu_mcp.task_catalog import _validate_task_requires
+
+    _validate_task_requires("t", {"media_type": "video", "requires": {
+        "all": ["reference_audios"], "audio_role": audio_role,
+    }})
+
+
+@pytest.mark.parametrize("audio_role", ["speech", [], ["voice", "speech"]])
+def test_task_audio_role_rejects_unknown_or_empty_roles(audio_role):
+    from cfgpu_mcp.task_catalog import _validate_task_requires
+
+    with pytest.raises(ValueError, match="audio_role"):
+        _validate_task_requires("t", {"media_type": "video", "requires": {
+            "all": ["reference_audios"], "audio_role": audio_role,
+        }})

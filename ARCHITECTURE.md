@@ -172,7 +172,9 @@ agent 选模型用 `list_model_profiles`（任务过滤 + 参数模板）。`tes
 `task_catalog` 发布给 agent。`reference_to_video` 收窄为 `any: [reference_images, reference_videos]`，描述里不再
 承诺音频；`audio_driven_video` 为 `all: [reference_audios], audio_role: driving`。测试要求 profile 声明的每个任务都被
 `inputs` 结构上覆盖，且 `supports()` 至少接受一个携带这些输入的请求；`audio_driven_video` 与 `role: driving` 双向蕴含，
-因为它是唯一完全由输入事实决定的任务。**测试证明不了语义能力**：MiniMax-H3 收参考视频，所以 `video_edit` 能过结构检查，
+因为它是唯一完全由输入事实决定的任务。`voice_reference_video`（2026-10-14，用样本的音色说 prompt 里的新台词）的
+`audio_role` 是列表 `[voice, reference]`，只**单向**检查：声明它 ⟹ 槽 role 在列表内且声明了 `synced_audio_output`。
+反方向不成立——`reference` 槽可能只用来带背景音乐或节奏——所以逐模型实测后 opt-in，目前只有 `wan2.7-r2v`。**测试证明不了语义能力**：MiniMax-H3 收参考视频，所以 `video_edit` 能过结构检查，
 但它是否真的编辑得好仍只有卡片和实测能回答。
 
 **场景任务与 `supports()` 双向一致（2026-10-09）。** 有七个任务只描述素材的形状，因此是否具备完全由 `supports()`

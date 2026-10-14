@@ -485,6 +485,21 @@ async def test_audio_driven_search_returns_only_driving_models(_full_registry):
         assert model["inputs"]["reference_audios"]["role"] == "driving"
 
 
+@pytest.mark.asyncio
+async def test_voice_reference_search_never_returns_a_driving_model(_full_registry):
+    """"Say this script in that voice" must not land on a model that plays the sample."""
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_model_profiles(required_tasks=["voice_reference_video"])
+    by_id = {model["model_id"]: model for model in catalog["models"]}
+    assert "wan2.7-r2v" in by_id
+    for model in by_id.values():
+        assert model["inputs"]["reference_audios"]["role"] in {"voice", "reference"}
+    assert catalog["task_catalog"]["voice_reference_video"]["requires"] == {
+        "all": ["reference_audios"], "audio_role": ["voice", "reference"],
+    }
+
+
 _RETIRED = re.compile(
     r"multi_modal_reference|audio_generate|\*\*web_search\*\*|region_understand\b|能力标签"
     r"|web_grounded_generation|tool_calling|visual_agent"

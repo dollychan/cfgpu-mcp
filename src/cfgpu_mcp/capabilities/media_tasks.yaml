@@ -13,7 +13,8 @@ catalog_version: 2
 #
 # `requires` (video only) names the material a task cannot be performed without:
 # `all` slots must all be accepted, `any` needs at least one, and `audio_role`
-# fixes how the model must use the audio track (adapters/inputs.py AUDIO_ROLES).
+# fixes how the model must use the audio track (adapters/inputs.py AUDIO_ROLES) —
+# one role, or a list of the roles that qualify.
 # A profile claiming a task its model's `inputs:` cannot carry fails the contract
 # tests, and an `inputs:` declaring a driving track forces `audio_driven_video`.
 tasks:
@@ -41,6 +42,7 @@ tasks:
       Create a new video guided by supplied reference images or videos. Some models
       also take reference audio; a model's inputs.reference_audios.role says what it
       does with it, and only audio_driven_video keeps a supplied track as the soundtrack.
+      To have a character speak a new script in a supplied voice, use voice_reference_video.
     prompt_guidance: State which visual, character, or motion qualities to preserve from the references.
     requires: {any: [reference_images, reference_videos]}
   video_edit:
@@ -69,6 +71,17 @@ tasks:
       supplies speech that should be heard in the result.
     prompt_guidance: Provide the driving audio and describe the visual performer or motion that should follow it.
     requires: {all: [reference_audios], audio_role: driving}
+  voice_reference_video:
+    media_type: video
+    name: Voice-referenced video
+    description: >-
+      Speak the script given in the prompt in the voice of a supplied audio sample; the
+      sample's own words are not heard. Use this, not audio_driven_video, when the
+      supplied audio is a voice to imitate rather than the soundtrack to keep.
+    prompt_guidance: >-
+      Quote the script as dialogue, name the on-screen character who speaks it, and pair
+      each voice sample with that character's reference image or video in the same order.
+    requires: {all: [reference_audios], audio_role: [voice, reference]}
 
   text_to_image:
     media_type: image

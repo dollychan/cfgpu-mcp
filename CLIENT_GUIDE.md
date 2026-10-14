@@ -812,6 +812,10 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 用户给的是一段**语音**、要求「让人把这段话说出来」，就用 `required_tasks=["audio_driven_video"]`
 > 找模型 —— 它只返回 `role: driving` 的模型。用 `reference` 模型做这件事也会成功、也会计费，
 > 但得到的是一条口型对不上、甚至听不到原声的视频。只是拿一段音乐当背景，`reference` 模型就够了。
+>
+> 用户给的语音只是**音色样本**、台词另有脚本（「小姚的声音用这个，台词是……」），就用
+> `required_tasks=["voice_reference_video"]` —— 它绝不会返回 `driving` 模型（那会把样本原样播出来）。
+> 台词写进 `prompt`，样本放 `reference_audios`，与说话角色的参考图同序。
 > `standalone: false` 表示音频不能单独传，至少还要带一张图或一段视频。
 >
 > `reference_to_video` 从此只表示「图像或视频参考」，不再包含音频：Kling、Grok、HappyHorse 等模型
