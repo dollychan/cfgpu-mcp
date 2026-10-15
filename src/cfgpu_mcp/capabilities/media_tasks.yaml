@@ -122,7 +122,9 @@ tasks:
   text_to_speech:
     media_type: audio
     name: Text to speech
-    description: Synthesize spoken audio from text.
+    description: >-
+      Synthesize spoken audio from text in a catalog voice. A supplied voice sample is
+      not an input; to speak in a supplied voice, see voice_reference_video.
     prompt_guidance: Provide the script, desired language, voice, and delivery style.
   expressive_speech:
     media_type: audio

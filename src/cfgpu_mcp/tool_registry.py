@@ -755,7 +755,14 @@ class GenerateVideoInput(BaseModel):
 
 
 class GenerateAudioInput(BaseModel):
-    """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
+    """Generate speech audio from text (text-to-speech) using CFGPU voice models.
+
+    Speaks only in a catalog voice from `list_voice_profiles`. It takes no audio sample
+    and cannot clone a voice from a supplied clip. When the user supplies a clip as the
+    voice, do not substitute a catalog voice and present it as theirs. For video, use
+    `generate_video` with a model from `required_tasks=["voice_reference_video"]`; for
+    audio alone, tell the user voice cloning is not available.
+    """
 
     text: str = Field(description="Text to synthesize into speech")
     model: str | list[str] = Field(
@@ -767,7 +774,8 @@ class GenerateAudioInput(BaseModel):
     voice: Optional[str] = Field(
         default=None,
         description="Voice/speaker id supported by the selected model, copied verbatim from "
-        "the `voice` field of list_voice_profiles. None uses that model's default voice.",
+        "the `voice` field of list_voice_profiles. None uses that model's default voice. "
+        "Must be a catalog voice id: a material id, URL or uploaded clip is not a voice.",
     )
     audio_format: Folded("mp3", "wav", "pcm", "flac", "ogg_opus") = Field(
         default="mp3",

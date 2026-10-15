@@ -485,6 +485,15 @@ async def test_audio_driven_search_returns_only_driving_models(_full_registry):
         assert model["inputs"]["reference_audios"]["role"] == "driving"
 
 
+def test_text_to_speech_points_a_supplied_voice_to_video():
+    """No TTS model takes a sample, so the task itself must say where one goes."""
+    from cfgpu_mcp.task_catalog import load_task_catalog
+
+    description = load_task_catalog()[1]["text_to_speech"]["description"]
+    assert "supplied voice sample is not an input" in description
+    assert "voice_reference_video" in description
+
+
 @pytest.mark.asyncio
 async def test_voice_reference_search_never_returns_a_driving_model(_full_registry):
     """"Say this script in that voice" must not land on a model that plays the sample."""
