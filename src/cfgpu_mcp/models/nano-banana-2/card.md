@@ -46,6 +46,9 @@
 
 响应结构与 `gpt-image-2` 一致，详见 [gpt-image-2/card.md](../gpt-image-2/card.md)。参数支持范围以本卡为准。
 
+```json
+{"code":200,"data":{"result":{"images":["https://smccc"],"source_images":["https://smartml-xxx"],"proxy_images":["https://smartml-xxx"]},"updated_at":"2026-10-13T18:03:57.000Z","created_at":"2026-10-13T18:02:08.000Z","task_id":"e5996064-c41e-41dc-99ea-bb3f3e20ae73","task_type":"nano_generation","status":"completed"},"model":"nano2","message":"success"}
+```
 
 ## 约束与限制
 

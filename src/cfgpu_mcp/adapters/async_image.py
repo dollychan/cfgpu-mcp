@@ -32,19 +32,14 @@ class _AsyncImageBase(ModelAdapter):
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         data = resp.get("data") or {}
-        result = data.get("result") or {}
-        images: list[str] = result.get("images") or []
+        images: list[str] = (data.get("result") or {}).get("images") or []
         return NormalizedResult(
             urls=images,
             expires_at=_default_expires_at(),
             task_id=data.get("task_id"),
             model_used=None,
             seed=None,
-            # This family reports no top-level `usage`: the token count rides the
-            # task record as data.result.tokenUsage ({textInputTokens,
-            # imageInputTokens, imageOutputTokens, totalTokens}), passed through
-            # as-is like every other adapter's usage.
-            usage=resp.get("usage") or result.get("tokenUsage"),
+            usage=resp.get("usage"),
         )
 
     def _finalize_payload(self, payload: dict, req: GenerateImageInput) -> dict:
@@ -106,6 +101,16 @@ class ImageGPTAdapter(_AsyncImageBase):
         instance._sends_n = bool(config.get("sends_n", True))
         instance._default_background = config.get("default_background")
         return instance
+
+    def parse_response(self, resp: dict) -> NormalizedResult:
+        result = super().parse_response(resp)
+        # The GPT Image task record reports no top-level `usage`: the token count
+        # rides data.result.tokenUsage ({textInputTokens, imageInputTokens,
+        # imageOutputTokens, totalTokens}), passed through as-is like every other
+        # adapter's usage. Nano Banana's record carries no usage at all.
+        if result.usage is None:
+            result.usage = ((resp.get("data") or {}).get("result") or {}).get("tokenUsage")
+        return result
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)

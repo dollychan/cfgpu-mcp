@@ -231,3 +231,25 @@ def test_usage_is_none_when_the_task_reports_none():
     resp = _completed_task("gpt-image-2")
     del resp["data"]["result"]["tokenUsage"]
     assert _gpt().parse_response(resp).usage is None
+
+
+def test_nano_banana_reports_no_usage():
+    # GET /images/tasks/{id} for nano2 (2026-10-13): no tokenUsage, no billing.
+    resp = {
+        "code": 200,
+        "data": {
+            "result": {
+                "images": ["https://cdn/a.png"],
+                "source_images": ["https://cdn/a.png"],
+                "proxy_images": ["https://cdn/a.png"],
+            },
+            "task_id": "t-2",
+            "task_type": "nano_generation",
+            "status": "completed",
+        },
+        "model": "nano2",
+        "message": "success",
+    }
+    result = _nano().parse_response(resp)
+    assert result.urls == ["https://cdn/a.png"]
+    assert result.usage is None
