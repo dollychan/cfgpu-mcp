@@ -11,7 +11,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "enum", "options": ["auto", "wan-video", "wan-video-fast", "doubao-seedance-1-5-pro", "doubao-seedance-2-0", "doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini","doubao-seedance-2-5", "happyhorse-1.0-t2v", "happyhorse-1.0-i2v", "happyhorse-1.0-r2v", "happyhorse-1.0-video-edit", "kling-video-o1", "kling-v3-omni", "wan2.7-t2v", "wan2.7-i2v", "wan2.7-r2v", "wan2.7-videoedit", "wan2.6-t2v", "wan2.6-i2v", "wan2.6-r2v", "cf-imagine-video", "cf-imagine-video-1.5","cfdream/minimax-h3","cfdream/minimax-h3-r2v","MiniMax-H3"], "default": "auto", "writable": "true" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive"], "default": "adaptive", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "768p", "1080p", "2k", "4k"], "default": null, "writable": "true", "note": "null uses the resolved model default (typically 720p; wan2.6-i2v and wan2.7-i2v default to 1080p, MiniMax-H3 to 768p); this is the union of every model's tiers, so a value here also narrows routing — only Doubao Seedance 2.0 offers 4k and only MiniMax-H3 offers 768p/2k" },
         "duration_seconds": { "type": "enum", "options": [-1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30], "default": null, "writable": "true", "note": "null uses the resolved model default; -1 = smart/auto duration (WAN 2.0 / Doubao Seedance); 2s is currently supported by wan2.6-i2v and wan2.7-i2v, 30s only by Doubao Seedance 2.5; each model validates its own range" },
         "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "supported by selected video models; see the fixed-model entry for its upstream mapping" },
@@ -39,7 +39,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan-video", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true" },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "-1 = smart/auto duration" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
@@ -70,7 +70,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan-video-fast", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true" },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12], "default": 5, "writable": "true", "note": "-1 = smart/auto duration" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
@@ -101,7 +101,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-1-5-pro", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true" },
         "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "default": 5, "writable": "true", "note": "-1 = smart/auto duration" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
@@ -129,7 +129,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1.0-t2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio; adaptive uses the API default 16:9" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio; adaptive uses the API default 16:9" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "1080p", "writable": "true", "note": "uppercased for the API" },
         "duration_seconds": { "type": "enum", "options": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 3-15 only; -1 is unsupported" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark (upstream default is true only when omitted)" },
@@ -155,7 +155,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.7-t2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:4", "4:3", "9:16", "16:9"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
         "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
         "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 2-15 only; -1 is unsupported" },
         "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to input.negative_prompt" },
@@ -202,7 +202,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "wan2.7-r2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:4", "4:3", "9:16", "16:9"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio" },
         "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
         "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "2-15 for image references; 2-10 when a reference video is supplied" },
         "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to input.negative_prompt" },
@@ -228,7 +228,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "edit instruction, e.g. 将视频中女孩的衣服替换为图片中的衣服" },
         "model": { "type": "string", "value": "wan2.7-videoedit", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4"], "default": "adaptive", "writable": "true", "note": "only explicit values map to parameters.ratio; adaptive preserves the source ratio" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9"], "default": "adaptive", "writable": "true", "note": "only explicit values map to parameters.ratio; adaptive preserves the source ratio" },
         "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "1080p", "writable": "true", "note": "value is uppercased to 720P/1080P for the API" },
         "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10], "writable": "true", "note": "omitted = preserve full source video; explicit 2-10 = truncate" },
         "negative_prompt": { "type": "text", "maxLength": 500, "writable": "true", "note": "mapped to input.negative_prompt" },
@@ -298,7 +298,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "may refer to reference subjects as character1, etc." },
         "model": { "type": "string", "value": "wan2.6-r2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1"], "default": "16:9", "writable": "true", "note": "maps with resolution to parameters.size" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "9:16", "16:9"], "default": "16:9", "writable": "true", "note": "maps with resolution to parameters.size" },
         "resolution": { "type": "enum", "options": ["720p", "1080p"], "default": "720p", "writable": "true", "note": "maps with ratio to parameters.size" },
         "duration_seconds": { "type": "enum", "options": [2, 3, 4, 5, 6, 7, 8, 9, 10], "default": 5, "writable": "true", "note": "explicit 2-10 only; -1 is unsupported" },
         "watermark": { "type": "boolean", "default": false, "writable": "true", "note": "mapped to parameters.watermark" },
@@ -320,7 +320,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-2-0", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p", "4k"], "default": "720p", "writable": "true" },
         "duration_seconds": { "type": "enum", "options": [-1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "-1 = smart/auto duration" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
@@ -352,7 +352,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-2-0-fast", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p"], "default": "720p", "writable": "true" },
         "duration_seconds": { "type": "enum", "options": [-1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "-1 = smart/auto duration" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
@@ -384,7 +384,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-2-0-mini", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p"], "default": "720p", "writable": "true" },
         "duration_seconds": { "type": "enum", "options": [-1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "-1 = smart/auto duration" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
@@ -416,7 +416,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedance-2-5", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true" },
         "duration_seconds": { "type": "enum", "options": [-1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30], "default": -1, "writable": "true", "note": "-1 = smart/auto duration and is the only allowed value for video-edit tasks; source video duration must be 4-30s" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true" },
@@ -474,7 +474,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "happyhorse-1.0-r2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio; adaptive uses 16:9" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "16:9", "writable": "true", "note": "mapped to parameters.ratio; adaptive uses 16:9" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "1080p", "writable": "true", "note": "uppercased for the API" },
         "duration_seconds": { "type": "enum", "options": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 3-15 only; -1 is unsupported" },
         "reference_images": { "type": "url_array", "maxItems": 9, "writable": "true" },
@@ -532,7 +532,7 @@
         "reference_images": { "type": "url[]", "writable": "true", "note": "-> image_list[{image}] with no type; may be mixed with first_frame / last_frame" },
         "reference_videos": { "type": "url[]", "writable": "true", "note": "-> video_list[{video_url, refer_type: feature}]; for an edit override video_list via model_specific with refer_type: base" },
         "reference_audios": { "type": "url[]", "writable": "false", "note": "NOT supported (no audio input slot in the request body); adapter rejects" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive treated as 16:9; mapped with resolution to a pixel size" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive treated as 16:9; mapped with resolution to a pixel size" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped with aspect_ratio to a pixel size string" },
         "duration_seconds": { "type": "enum", "options": [3, 4, 5, 6, 7, 8, 9, 10], "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects)" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off" },
@@ -558,7 +558,7 @@
         "reference_images": { "type": "url[]", "writable": "true", "note": "-> image_list[{image}] with no type; may be mixed with first_frame / last_frame" },
         "reference_videos": { "type": "url[]", "writable": "true", "note": "-> video_list[{video_url, refer_type: feature}]; for an edit override video_list via model_specific with refer_type: base" },
         "reference_audios": { "type": "url[]", "writable": "false", "note": "NOT supported (no audio input slot in the request body); adapter rejects" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive treated as 16:9; mapped with resolution to a pixel size" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive treated as 16:9; mapped with resolution to a pixel size" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped with aspect_ratio to a pixel size string" },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects)" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off" },
@@ -579,7 +579,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-imagine-video", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive is sent as 16:9 (the request body has no adaptive value)" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive is sent as 16:9 (the request body has no adaptive value)" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "passed through as resolution_name, kept LOWERCASE (not uppercased like 万相)" },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "sent as the STRING video_length; explicit only, -1 (smart) NOT supported (adapter rejects). No documented ceiling — 15 is the fleet default" },
         "first_frame": { "type": "url", "writable": "true", "note": "-> refer_images[0]" },
@@ -601,7 +601,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-imagine-video-1.5", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive is sent as 16:9 (the request body has no adaptive value)" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive is sent as 16:9 (the request body has no adaptive value)" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "passed through as resolution_name, kept LOWERCASE (not uppercased like 万相)" },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "sent as the STRING video_length; explicit only, -1 (smart) NOT supported (adapter rejects). No documented ceiling — 15 is the fleet default" },
         "first_frame": { "type": "url", "writable": "true", "note": "-> refer_images[0]" },
@@ -623,7 +623,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cfdream/minimax-h3", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive is equivalent to 16:9" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive is equivalent to 16:9" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "all three tiers accepted since 2026-08-14 (the earlier 480p-only list was a calibration state, not a capability limit); run time scales with pixel count, so 1080p/15s is far slower than 480p/5s (~96s measured)" },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) is not supported. Actual duration is quantized to 24fps frame counts and may be up to about 0.68s longer" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "native stereo audio; false disables it" },
@@ -653,7 +653,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "reference each supplied material with its 1-based <Picture N>, <Video N>, or <Audio N> tag; missing tags silently weaken or remove the reference effect" },
         "model": { "type": "string", "value": "cfdream/minimax-h3-r2v", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive is equivalent to 16:9" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true", "note": "adaptive is equivalent to 16:9" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "all three tiers accepted since 2026-08-14 (the earlier 480p-only list was a calibration state, not a capability limit); run time scales with pixel count, so 1080p/15s is far slower than 480p/5s (~96s measured)" },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) is not supported. Actual duration is quantized to 24fps frame counts and may be up to about 0.68s longer" },
         "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "native stereo audio; false disables it" },
@@ -685,7 +685,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "must contain non-whitespace text; max 7000 characters" },
         "model": { "type": "string", "value": "MiniMax-H3", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], "default": "adaptive", "writable": "true", "note": "upstream rejects adaptive for text-to-video, but the request is NOT refused: adaptive is the schema default meaning 'you pick', so it is substituted with 16:9 and the substitution is reported in validate_only's corrected_args. Ignored for first/last-frame generation because geometry is inferred from the image. Reference generation sends adaptive as-is (it is the upstream default there), so no substitution happens once any reference_* input is present" },
+        "aspect_ratio": { "type": "enum", "options": ["adaptive", "1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "adaptive", "writable": "true", "note": "upstream rejects adaptive for text-to-video, but the request is NOT refused: adaptive is the schema default meaning 'you pick', so it is substituted with 16:9 and the substitution is reported in validate_only's corrected_args. Ignored for first/last-frame generation because geometry is inferred from the image. Reference generation sends adaptive as-is (it is the upstream default there), so no substitution happens once any reference_* input is present" },
         "resolution": { "type": "enum", "options": ["480p", "768p", "2k"], "default": "768p", "writable": "true", "note": "MiniMax's three native tiers, sent as-is (upper-cased to 480P / 768P / 2K). An explicit 720p / 1080p is REJECTED rather than substituted, and omitting the field resolves to 768p (which is what keeps this model reachable by an auto call that names no tier). Billing: input video / output video are 0.1 / 0.2 / 0.5 CNY/s at 480P / 768P / 2K; input images are 0.04 / 0.08 / 0.1 CNY each respectively (first 5 free)." },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit 4-15 only; -1 (smart) is not supported. Billed per second, so this field is the direct cost multiplier" },
         "first_frame": { "type": "url", "writable": "true", "note": "optional; mutually exclusive with all reference_* inputs" },
@@ -712,7 +712,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "enum", "options": ["auto", "cf-image-2", "cf-image-2.5-sunburst", "cf-image-2.5-flare", "cf-banana-pro", "cf-banana-2", "cf-banana-pro-official", "cf-banana-pro-premium", "doubao-seedream-5-0-flash", "doubao-seedream-5-0-lite", "doubao-seedream-5-0-pro", "wan2.7-image", "doubao-seedream-4-5", "doubao-seedream-4-0"], "default": "auto", "writable": "true" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2"], "default": "1:1", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "1:2", "1:3", "2:1", "2:3", "3:1", "3:2", "3:4", "4:3", "9:16", "9:21", "16:9", "21:9"], "default": "1:1", "writable": "true" },
         "resolution": { "type": "enum", "options": ["1K", "1.5K", "2K", "3K", "4K"], "default": "2K", "writable": "true", "note": "union of every image model's tiers; Seedream 5.0 Pro / Flash each support 1K/1.5K/2K, 5-0-lite and 4.5 support 2K/3K/4K, and 4.0 supports 1K/2K/3K/4K. An unsupported tier is rejected, not silently downgraded" },
         "reference_images": { "type": "url_array", "writable": "true" },
         "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas, and a typed-in coordinate is exactly the transcription this parameter exists to avoid. Only models with the region_edit capability accept it; passing it to another model is a hard error, never a silent whole-image edit" },
@@ -736,7 +736,7 @@
       "args": {
         "prompt": { "type": "text", "maxLength": 5000, "writable": "true", "note": "over 5000 characters is truncated upstream, not rejected" },
         "model": { "type": "string", "value": "wan2.7-image", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"], "default": "1:1", "writable": "true", "note": "mapped to an exact pixel pair (width*height — a star, not seedream's x) computed inside the tier's total-pixel budget, so the emitted ratio is exact. Because pixels go up rather than a tier name, aspect_ratio governs even when reference_images are present; with a tier name upstream would instead scale the output to the LAST input image's ratio. To hand framing back to the model, set model_specific.parameters.size to 1K or 2K" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "1:1", "writable": "true", "note": "mapped to an exact pixel pair (width*height — a star, not seedream's x) computed inside the tier's total-pixel budget, so the emitted ratio is exact. Because pixels go up rather than a tier name, aspect_ratio governs even when reference_images are present; with a tier name upstream would instead scale the output to the LAST input image's ratio. To hand framing back to the model, set model_specific.parameters.size to 1K or 2K" },
         "resolution": { "type": "enum", "options": ["1K", "2K"], "default": "2K", "writable": "true", "note": "tier names are total-pixel budgets (1K = 1024x1024, 2K = 2048x2048) inside an all-scenario range of [768x768, 2048x2048]; 4K exists only on wan2.7-image-pro. 1.5K / 3K / 4K are rejected before the request is sent, not silently downgraded — validate_only reports the nearest tier at or below in corrected_args, and model=auto routes such a request elsewhere" },
         "reference_images": { "type": "url_array", "maxItems": 9, "writable": "true", "note": "0-9 images; array order is the 图N ordinal the prompt and bbox_list refer to. JPEG / JPG / PNG (no alpha) / BMP / WEBP, each side 240-8000 px, ratio within [1:8, 8:1], <= 20 MB" },
         "regions": { "type": "object_array", "maxItems": 2, "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas, and a typed-in coordinate is exactly the transcription this parameter exists to avoid. On this model they map to parameters.bbox_list in ABSOLUTE pixels of the original image, so every region MUST carry image_size ([width, height] of the original, not of the display canvas) — a request without it is refused, never guessed, because a wrong size does not fail, it edits a plausible billed rectangle elsewhere. maxItems is per image (2), and regions cannot be combined with n>1" },
@@ -769,7 +769,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedream-5-0-lite", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
         "resolution": { "type": "enum", "options": ["2K", "3K", "4K"], "default": "2K", "writable": "true" },
         "reference_images": { "type": "url_array", "maxItems": 14, "writable": "true" },
         "n": { "type": "integer", "min": 1, "max": 15, "default": 1, "writable": "true", "note": "CEILING on the group size (组图), not an exact count — the model decides how many it returns and max_images only caps it, so fewer than n is a normal outcome. Drives sequential_image_generation=auto; at n=1 the key is not sent at all (disabled is already the upstream default). Input ref images + generated <= 15. A group can also fail per-slot: partial_errors on the result says which and why" },
@@ -799,7 +799,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedream-5-0-pro", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint (2K table); 1K tier is model-judged; output ratio range [1/16, 16]" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint (2K table); 1K tier is model-judged; output ratio range [1/16, 16]" },
         "resolution": { "type": "enum", "options": ["1K", "1.5K", "2K"], "default": "2K", "writable": "true", "note": "1K/1.5K pass the tier name through (方式1, the model judges the ratio from the prompt, so aspect_ratio is advisory there) — 1.5K is billed at the 1K rate and looks better, so prefer it over 1K; 2K maps to exact pixels from pro's OWN table, which differs from lite's (2K 16:9 = 2816x1584, not 2848x1600). Total pixel range [921600, 4624220], so 3K/4K are rejected" },
         "reference_images": { "type": "url_array", "maxItems": 10, "writable": "true", "note": "multi-image fusion needs 2–10 refs; single output only" },
         "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions [{image_index, box:[x1,y1,x2,y2] normalised to [0,1], label?, note?, image_size?}]. Not hand-editable: a box comes from what the user marked on the canvas, and a typed-in coordinate is exactly the transcription this parameter exists to avoid. Only models with the region_edit capability accept it; passing it to another model is a hard error, never a silent whole-image edit" },
@@ -832,7 +832,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true", "note": "required except when model_specific.layer_decomposition=true" },
         "model": { "type": "string", "value": "doubao-seedream-5-0-flash", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "3:2", "2:3", "21:9"], "default": "1:1", "writable": "true", "note": "combined with resolution and emitted as an exact Seedream 5.0 pixel pair" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "1:1", "writable": "true", "note": "combined with resolution and emitted as an exact Seedream 5.0 pixel pair" },
         "resolution": { "type": "enum", "options": ["1K", "1.5K", "2K"], "default": "2K", "writable": "true", "note": "Flash supports the same 1K / 1.5K / 2K output range as Pro; 2K output costs 0.12 CNY per image" },
         "reference_images": { "type": "url_array", "maxItems": 10, "writable": "true", "note": "one image for image-to-image or layer decomposition; 2-10 for multi-image fusion" },
         "regions": { "type": "object_array", "writable": "false", "note": "user-drawn regions; rendered into prompt bbox coordinates for precise editing" },
@@ -864,7 +864,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedream-4-0", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
         "resolution": { "type": "enum", "options": ["1K", "2K", "3K", "4K"], "default": "2K", "writable": "true", "note": "4.0's pixel floor is 921600 (exactly its own 1K 16:9), so it is the only seedream reaching 1K; 5-0-lite and 4.5 floor at 3686400 and reject that tier" },
         "reference_images": { "type": "url_array", "maxItems": 14, "writable": "true" },
         "n": { "type": "integer", "min": 1, "max": 15, "default": 1, "writable": "true", "note": "CEILING on the group size (组图), not an exact count — the model decides how many it returns and max_images only caps it, so fewer than n is a normal outcome. Drives sequential_image_generation=auto; at n=1 the key is not sent at all (disabled is already the upstream default). Input ref images + generated <= 15. A group can also fail per-slot: partial_errors on the result says which and why" },
@@ -894,7 +894,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "doubao-seedream-4-5", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9"], "default": "1:1", "writable": "true", "note": "maps to size hint; output ratio range [1/16, 16]" },
         "resolution": { "type": "enum", "options": ["2K", "3K", "4K"], "default": "2K", "writable": "true" },
         "reference_images": { "type": "url_array", "maxItems": 14, "writable": "true" },
         "n": { "type": "integer", "min": 1, "max": 15, "default": 1, "writable": "true", "note": "CEILING on the group size (组图), not an exact count — the model decides how many it returns and max_images only caps it, so fewer than n is a normal outcome. Drives sequential_image_generation=auto; at n=1 the key is not sent at all (disabled is already the upstream default). Input ref images + generated <= 15. A group can also fail per-slot: partial_errors on the result says which and why" },
@@ -924,7 +924,7 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-image-2", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2"], "default": "1:1", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "1:2", "1:3", "2:1", "2:3", "3:1", "3:2", "3:4", "4:3", "9:16", "9:21", "16:9", "21:9"], "default": "1:1", "writable": "true" },
         "resolution": { "type": "enum", "options": ["1K", "2K", "4K"], "default": "2K", "writable": "true", "note": "The API receives 1K / 2K / 4K verbatim; the unified schema's 3K has no counterpart here and is rejected upstream" },
         "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }], "default": "balanced", "writable": "true", "note": "maps to the API's quality: fast -> low, balanced -> medium, best -> high; IS meaningful here, not just routing" },
         "reference_images": { "type": "url_array", "writable": "true", "note": "presence switches to image-edit mode" },
@@ -939,15 +939,15 @@
       "adapterId": "gpt-image-2-5-sunburst",
       "modelId": "gpt-image-2.5-sunburst",
       "modelName": "cf-image-2.5-sunburst",
-      "sort": 12,
+      "sort": 1,
       "displayName": "CF Image 2.5 Sunburst",
       "note": "CFGPU GPT Image 2.5 Sunburst 异步图像生成模型",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-image-2.5-sunburst", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2"], "default": "1:1", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "1:2", "1:3", "2:1", "2:3", "3:1", "3:2", "3:4", "4:3", "9:16", "9:21", "16:9", "21:9"], "default": "1:1", "writable": "true" },
         "resolution": { "type": "enum", "options": ["1K", "2K", "4K"], "default": "1K", "writable": "true" },
-        "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }, { "label": "超高", "value": "xhigh" }, { "label": "最高", "value": "max" }, { "label": "自动", "value": "auto" }], "default": "balanced", "writable": "true", "note": "maps to the API's quality: fast -> low, balanced -> medium, best -> high; xhigh / max / auto go up verbatim (auto is estimated as medium and billed on actual usage)" },
+        "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }, { "label": "超高", "value": "xhigh" }, { "label": "极高", "value": "max" }, { "label": "自动", "value": "auto" }], "default": "balanced", "writable": "true", "note": "maps to the API's quality: fast -> low, balanced -> medium, best -> high; xhigh / max / auto go up verbatim (auto is estimated as medium and billed on actual usage)" },
         "reference_images": { "type": "url_array", "writable": "true", "note": "reference image URL array" },
         "n": { "type": "integer", "min": 1, "max": 1, "default": 1, "writable": "true", "note": "the API documents no multi-image output parameter" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
@@ -960,15 +960,15 @@
       "adapterId": "gpt-image-2-5-flare",
       "modelId": "gpt-image-2.5-flare",
       "modelName": "cf-image-2.5-flare",
-      "sort": 13,
+      "sort": 1,
       "displayName": "CF Image 2.5 Flare",
       "note": "CFGPU GPT Image 2.5 Flare 异步图像生成模型；参数范围与 Sunburst 相同",
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "cf-image-2.5-flare", "writable": "false" },
-        "aspect_ratio": { "type": "enum", "options": ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2"], "default": "1:1", "writable": "true" },
+        "aspect_ratio": { "type": "enum", "options": ["1:1", "1:2", "1:3", "2:1", "2:3", "3:1", "3:2", "3:4", "4:3", "9:16", "9:21", "16:9", "21:9"], "default": "1:1", "writable": "true" },
         "resolution": { "type": "enum", "options": ["1K", "2K", "4K"], "default": "1K", "writable": "true" },
-        "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }, { "label": "超高", "value": "xhigh" }, { "label": "最高", "value": "max" }, { "label": "自动", "value": "auto" }], "default": "balanced", "writable": "true", "note": "maps to the API's quality: fast -> low, balanced -> medium, best -> high; xhigh / max / auto go up verbatim (auto is estimated as medium and billed on actual usage)" },
+        "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }, { "label": "超高", "value": "xhigh" }, { "label": "极高", "value": "max" }, { "label": "自动", "value": "auto" }], "default": "balanced", "writable": "true", "note": "maps to the API's quality: fast -> low, balanced -> medium, best -> high; xhigh / max / auto go up verbatim (auto is estimated as medium and billed on actual usage)" },
         "reference_images": { "type": "url_array", "writable": "true", "note": "reference image URL array" },
         "n": { "type": "integer", "min": 1, "max": 1, "default": 1, "writable": "true", "note": "the API documents no multi-image output parameter" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },

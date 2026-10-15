@@ -77,7 +77,8 @@ def test_image_aspect_ratio_constraints_match_the_schema_and_gpt_image_2(constra
     image_entries = constraints["generate_image"]
     auto = next(entry for entry in image_entries if entry["modelName"] == "auto")
     schema_ratios = GenerateImageInput.model_json_schema()["properties"]["aspect_ratio"]["enum"]
-    assert auto["args"]["aspect_ratio"]["options"] == schema_ratios
+    # The file lists ratios sorted by width (x of x:y); the schema keeps its own order.
+    assert sorted(auto["args"]["aspect_ratio"]["options"]) == sorted(schema_ratios)
 
     gpt = next(entry for entry in image_entries if entry["modelName"] == "cf-image-2")
     gpt_ratios = gpt["args"]["aspect_ratio"]["options"]
