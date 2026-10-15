@@ -1075,6 +1075,8 @@ class MyModelAdapter(ModelAdapter):
 
 > **`usage` 与计费口径**：`usage` 默认**原样透传**上游的 `usage` 对象（`resp.get("usage")`），因为各 API 的计费结构差异过大，归一化只会丢信息。按 token 计费的模型（Seedance / 万相 2.0 家族）读 `usage.totalTokens`；按秒计费的模型（万相 2.6 / 2.7、HappyHorse）读 `usage.duration` + `usage.sr`（分辨率短边），上游都已回传。
 >
+> **CF Image 2 / 2.5 Sunburst / 2.5 Flare**（`_AsyncImageBase`）按 token 计费，但任务查询响应**没有顶层 `usage`**——用量在 `data.result.tokenUsage`（`{textInputTokens, imageInputTokens, imageOutputTokens, totalTokens}`，2026-10-15 对 gpt-image-2 与 gpt-image-2.5-flare 实测）。`parse_response` 先取顶层 `usage`，缺失时原样取 `tokenUsage`；此前只读顶层，三个模型的 `usage` 一直是 `null`。同一记录里的积分结算（`tokenBillingSettlement` / `data.token_billing_settlement`）不进 `usage`。
+>
 > 唯一的例外是**可灵**（`KlingVideoAdapter`）：它同样按秒 × 分辨率档位计费，但任务响应里**根本没有 `usage` 对象**——计费数值散落在顶层 `seconds`（字符串 `"5"`）与 `size`（`"1920x1080"`）中。因此 `_build_usage()` 把它们组装成与按秒计费同族一致的 `{duration, sr, ratio}`：`duration` 转为数字，缺失时（视频编辑任务时长跟随源视频，payload 不带 `seconds`）退回 `taskResult.videos[0].duration`；`sr` 取 `size` 的**短边**（档位按短边划分）；`ratio` 由 `_RATIO_BY_SIZE`（`_SIZE_MAP` 的反表）查得，未收录的 size 才退回 gcd 约分——直接 gcd 会把 `854x480` 算成 `427:240` 而非 `16:9`。三项全为 `None` 时返回 `None`，避免产出一条全空的计费记录。这也是可灵唯一能拿到解析后 `ratio` 的来源（响应只有像素 `size`），故 `aspect_ratio` 也复用它。
 
 > **`aspect_ratio` 回传**：`aspect_ratio` 是回传给客户端的宽高比元数据，取值**优先用上游响应实际返回的 `ratio`**——部分 API（如 WAN，响应里带 `"ratio": "9:16"`）会回传解析后的真实宽高比，这在请求传 `adaptive` 时尤其有意义。各 adapter 的 `parse_response()` 在响应含 `ratio` 时即填入 `result.aspect_ratio`；仅当响应未回传时，才由 `TaskManager` 兜底为**请求**的 `aspect_ratio`（`if not result.aspect_ratio: ...`——这里是真正的"缺省才兜底"，与上面 `model_used` 的无条件覆盖不同）。

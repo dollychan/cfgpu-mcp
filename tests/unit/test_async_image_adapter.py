@@ -187,3 +187,47 @@ def test_quality_tiers_key_rejects_unknown_tier():
             "adapter_id": "x", "cfgpu_model_id": "x", "task_type": "image",
             "endpoint": "/i", "quality_tiers": ["ultra"],
         })
+
+
+def _completed_task(model: str) -> dict:
+    # Shape of GET /images/tasks/{id} for a finished task (verified 2026-10-15 on
+    # gpt-image-2 and gpt-image-2.5-flare): no top-level `usage`, the token count
+    # sits under data.result.tokenUsage.
+    return {
+        "code": 200,
+        "data": {
+            "result": {
+                "images": ["https://cdn/a.png"],
+                "tokenUsage": {
+                    "imageInputTokens": 0,
+                    "textInputTokens": 987,
+                    "totalTokens": 3689,
+                    "imageOutputTokens": 2702,
+                },
+                "tokenBillingSettlement": {"actualPoints": 40, "channel": "official"},
+            },
+            "task_id": "t-1",
+            "task_type": "gpt_image_generation",
+            "status": "completed",
+        },
+        "model": model,
+        "message": "success",
+    }
+
+
+@pytest.mark.parametrize("adapter", [_gpt(), _gpt_25()])
+def test_usage_is_read_from_result_token_usage(adapter):
+    result = adapter.parse_response(_completed_task(adapter.cfgpu_model_id))
+    assert result.urls == ["https://cdn/a.png"]
+    assert result.usage == {
+        "imageInputTokens": 0,
+        "textInputTokens": 987,
+        "totalTokens": 3689,
+        "imageOutputTokens": 2702,
+    }
+
+
+def test_usage_is_none_when_the_task_reports_none():
+    resp = _completed_task("gpt-image-2")
+    del resp["data"]["result"]["tokenUsage"]
+    assert _gpt().parse_response(resp).usage is None

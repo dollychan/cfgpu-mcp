@@ -32,14 +32,19 @@ class _AsyncImageBase(ModelAdapter):
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         data = resp.get("data") or {}
-        images: list[str] = (data.get("result") or {}).get("images") or []
+        result = data.get("result") or {}
+        images: list[str] = result.get("images") or []
         return NormalizedResult(
             urls=images,
             expires_at=_default_expires_at(),
             task_id=data.get("task_id"),
             model_used=None,
             seed=None,
-            usage=resp.get("usage"),
+            # This family reports no top-level `usage`: the token count rides the
+            # task record as data.result.tokenUsage ({textInputTokens,
+            # imageInputTokens, imageOutputTokens, totalTokens}), passed through
+            # as-is like every other adapter's usage.
+            usage=resp.get("usage") or result.get("tokenUsage"),
         )
 
     def _finalize_payload(self, payload: dict, req: GenerateImageInput) -> dict:

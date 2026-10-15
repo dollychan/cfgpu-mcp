@@ -980,7 +980,7 @@ done
 | `model_used` | `str \| null` | | 实际使用的模型公开标识（`model_name`，与 `list_models()`/`model` 参数同一套 id 空间；从不是内部的 `cfgpu_model_id`）。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
-| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null`。**例外：可灵（`kling-video-o1` / `kling-v3-omni`）与 Grok（`cf-imagine-video` / `cf-imagine-video-1.5`）按秒计费但响应里没有 `usage` 对象**，计费数值散落在可灵的顶层 `seconds` / `size`、Grok 的 `data.videoLength` / `data.resolutionName`，故由 adapter 组装为 `{duration, sr, ratio}`（与万相 / HappyHorse 的按秒计费字段同形）—— 详见下方说明 |
+| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null`。**例外：可灵（`kling-video-o1` / `kling-v3-omni`）与 Grok（`cf-imagine-video` / `cf-imagine-video-1.5`）按秒计费但响应里没有 `usage` 对象**，计费数值散落在可灵的顶层 `seconds` / `size`、Grok 的 `data.videoLength` / `data.resolutionName`，故由 adapter 组装为 `{duration, sr, ratio}`（与万相 / HappyHorse 的按秒计费字段同形）；**CF Image 2 / 2.5 Sunburst / 2.5 Flare** 的用量在上游 `data.result.tokenUsage`，原样作为 `usage` 返回（`{textInputTokens, imageInputTokens, imageOutputTokens, totalTokens}`）—— 详见下方说明 |
 | `payload` | `object` | ✓ | **真实发送给该模型专属 API 的请求体**（即 `adapter.build_payload(req)` 的产物，而非通用工具入参）。便于 agent 看到底层 API 实际收到的字段（含 `cfgpu_model_id`、各模型私有字段等）。**始终返回，不受 `return_metadata` 影响**。内部用于异步轮询回显的 `_requested_aspect_ratio` 键不会出现在此 |
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
