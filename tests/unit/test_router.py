@@ -334,11 +334,25 @@ def test_quality_tier_vocabulary_matches_the_schema():
     the other way. A tier added to the schema but not here would be refused as a
     typo by every adapter.yaml that tried to declare it.
     """
-    from cfgpu_mcp.adapters.base import _QUALITY_TIERS
+    from cfgpu_mcp.adapters.base import _IMAGE_EXTRA_QUALITY_TIERS, _QUALITY_TIERS
+    from cfgpu_mcp.tool_registry import IMAGE_EXTRA_QUALITY_TIERS
 
-    for model in (GenerateImageInput, GenerateVideoInput):
-        enum = model.model_json_schema()["properties"]["quality_tier"]["enum"]
-        assert set(enum) == _QUALITY_TIERS, model.__name__
+    video_enum = GenerateVideoInput.model_json_schema()["properties"]["quality_tier"]["enum"]
+    assert set(video_enum) == _QUALITY_TIERS
+    image_enum = GenerateImageInput.model_json_schema()["properties"]["quality_tier"]["enum"]
+    assert set(image_enum) == _QUALITY_TIERS | _IMAGE_EXTRA_QUALITY_TIERS
+    assert set(IMAGE_EXTRA_QUALITY_TIERS) == _IMAGE_EXTRA_QUALITY_TIERS
+
+
+@pytest.mark.parametrize("tier", ["xhigh", "max", "auto"])
+def test_image_extra_quality_tier_routes_only_to_models_declaring_it(tier):
+    router = _router()
+    req = GenerateImageInput(prompt="a cat", quality_tier=tier)
+    chosen = router.select_model(req)
+    assert tier in chosen.extra_quality_tiers
+    ok, reason = router._registry.get("cf-image-2").supports(req)
+    assert ok is False
+    assert f"quality_tier {tier}" in reason
 
 
 def test_default_for_is_undeclared_by_default():

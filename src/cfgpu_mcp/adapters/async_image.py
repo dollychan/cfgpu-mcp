@@ -12,7 +12,9 @@ if TYPE_CHECKING:
 # Unified quality_tier → GPT Image 2's generation quality. The three tiers line
 # up one-to-one, so the tier the caller already sets steers the model instead of
 # a second near-synonymous parameter. Same shape as Kling's _MODE_MAP.
-_QUALITY_MAP = {"fast": "low", "balanced": "medium", "best": "high"}
+# The image-only extra tiers (xhigh / max / auto) are the API's own words and go
+# up verbatim; base.supports() admits them only on models declaring quality_tiers.
+_QUALITY_MAP = {"fast": "low", "balanced": "medium", "best": "high", "xhigh": "xhigh", "max": "max", "auto": "auto"}
 
 
 class _AsyncImageBase(ModelAdapter):
@@ -77,36 +79,48 @@ class _AsyncImageBase(ModelAdapter):
 
 
 @register_python_adapter
-class GptImage2Adapter(_AsyncImageBase):
-    """Adapter for GPT Image 2.
+class ImageGPTAdapter(_AsyncImageBase):
+    """Adapter for CFGPU's GPT Image family.
 
     Payload: model + prompt + aspect_ratio + resolution + quality + n +
     reference_images (optional). ``quality_tier`` maps to the API's
-    ``low`` / ``medium`` / ``high`` quality.
-    Supported aspect ratios: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9, 9:21,
-    3:1, 1:3.
+    ``low`` / ``medium`` / ``high`` quality. Output dimensions always come from
+    aspect_ratio + resolution; the 2.5 variants' custom ``image_size`` is not
+    exposed, so the upstream maps the pair itself.
+
+    adapter.yaml keys for the 2.5 variants: ``sends_n: false`` (no output-count
+    parameter upstream) and ``default_background`` (sent as ``background``;
+    ``model_specific.background`` overrides it).
     """
 
     adapter_id = "gpt-image-2"
 
+    @classmethod
+    def from_config(cls, config: dict) -> "ImageGPTAdapter":
+        instance: ImageGPTAdapter = super().from_config(config)  # type: ignore[assignment]
+        instance._sends_n = bool(config.get("sends_n", True))
+        instance._default_background = config.get("default_background")
+        return instance
+
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateImageInput)
-        return self._finalize_payload(
-            {
-                "model": self.cfgpu_model_id,
-                "prompt": req.prompt,
-                "aspect_ratio": req.aspect_ratio,
-                # The API names all three tiers literally (1K / 2K / 4K) and
-                # rejects anything else, empty string included, so the tier goes
-                # up verbatim. 3K has no counterpart and is rejected upstream.
-                "resolution": req.resolution,
-                "quality": _QUALITY_MAP.get(req.quality_tier, "medium"),
-                # GPT Image 2 accepts an output-count ceiling (1–10); the API may
-                # return fewer images.
-                "n": req.n,
-            },
-            req,
-        )
+        payload = {
+            "model": self.cfgpu_model_id,
+            "prompt": req.prompt,
+            "aspect_ratio": req.aspect_ratio,
+            # The API names all three tiers literally (1K / 2K / 4K) and
+            # rejects anything else, empty string included, so the tier goes
+            # up verbatim. 3K has no counterpart and is rejected upstream.
+            "resolution": req.resolution,
+            "quality": _QUALITY_MAP.get(req.quality_tier, "medium"),
+        }
+        if self._sends_n:
+            # GPT Image 2 accepts an output-count ceiling (1–10); the API may
+            # return fewer images.
+            payload["n"] = req.n
+        if self._default_background is not None:
+            payload["background"] = self._default_background
+        return self._finalize_payload(payload, req)
 
 
 @register_python_adapter
@@ -126,3 +140,6 @@ class NanoBananaAdapter(_AsyncImageBase):
             {"model": self.cfgpu_model_id, "prompt": req.prompt, "image_size": req.resolution, "aspect_ratio": req.aspect_ratio},
             req,
         )
+
+
+__all__ = ["ImageGPTAdapter", "NanoBananaAdapter"]

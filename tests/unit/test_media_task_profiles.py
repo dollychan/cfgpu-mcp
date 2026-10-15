@@ -124,6 +124,23 @@ async def test_profile_catalog_lists_all_qwen_vision_models(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_profile_rows_list_quality_tiers_only_where_extended(monkeypatch):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
+
+    catalog = await model_service.list_model_profiles(media_type="image")
+    rows = {model["model_id"]: model for model in catalog["models"]}
+    full = ["fast", "balanced", "best", "xhigh", "max", "auto"]
+    assert rows["cf-image-2.5-sunburst"]["quality_tiers"] == full
+    assert rows["cf-image-2.5-flare"]["quality_tiers"] == full
+    assert "quality_tiers" not in rows["cf-image-2"]
+
+
+@pytest.mark.asyncio
 async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     from cfgpu_mcp.adapters.registry import AdapterRegistry
     from cfgpu_mcp.service import model as model_service

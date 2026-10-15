@@ -3,7 +3,7 @@ from pathlib import Path
 from cfgpu_mcp.adapters.registry import AdapterRegistry
 from cfgpu_mcp.adapters.seedance_video import SeedanceVideoAdapter
 from cfgpu_mcp.adapters.seedream import SeedreamAdapter
-from cfgpu_mcp.adapters.async_image import NanoBananaAdapter
+from cfgpu_mcp.adapters.async_image import ImageGPTAdapter, NanoBananaAdapter
 from cfgpu_mcp.tool_registry import GenerateImageInput
 
 MODELS_DIR = Path(__file__).parent.parent.parent / "src" / "cfgpu_mcp" / "models"
@@ -47,6 +47,15 @@ def test_lookup_by_model_name():
     registry = _load()
     adapter = registry.get("cf-image-2")
     assert adapter.adapter_id == "gpt-image-2"
+
+
+@pytest.mark.parametrize("model_name", ["cf-image-2.5-sunburst", "cf-image-2.5-flare"])
+def test_gpt_image_25_reuses_image_gpt_adapter(model_name):
+    registry = _load()
+    adapter = registry.get(model_name)
+    assert isinstance(adapter, ImageGPTAdapter)
+    assert adapter._sends_n is False
+    assert adapter._default_background == "auto"
 
 
 def test_lookup_by_display_name():

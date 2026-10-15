@@ -22,6 +22,8 @@
 | 图像 | `doubao-seedream-5-0-lite` | Doubao Seedream 5.0 lite |
 | 图像 | `doubao-seedream-5-0-flash` | Doubao Seedream 5.0 flash（2K，高速低成本） |
 | 图像 | `gpt-image-2` | GPT Image 2 |
+| 图像 | `cf-image-2.5-sunburst` | CF Image 2.5 Sunburst |
+| 图像 | `cf-image-2.5-flare` | CF Image 2.5 Flare |
 | 图像 | `cf-banana-2` | CF Banana 2 |
 | 图像 | `cf-banana-pro` | CF Banana Pro |
 | 视频 | `wan-2-0` | WAN 2.0 (Seedance 2.0) |

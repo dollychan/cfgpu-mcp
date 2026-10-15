@@ -139,6 +139,11 @@ class PollConfig:
 #: typo in every adapter.yaml that named it.
 _QUALITY_TIERS = frozenset({"fast", "balanced", "best"})
 
+#: Image-only tiers a model must opt into via ``quality_tiers:`` (hand-copy of
+#: ``tool_registry.IMAGE_EXTRA_QUALITY_TIERS``, pinned by the same test). They are
+#: not valid ``default_for`` names: a routing default belongs to the shared three.
+_IMAGE_EXTRA_QUALITY_TIERS = frozenset({"xhigh", "max", "auto"})
+
 #: ``UnderstandVisionInput.analysis_depth`` has a separate vocabulary from media
 #: generation's quality tier. Keeping its defaults separate prevents an adapter's
 #: generation ``default_for`` declaration from affecting vision routing.
@@ -227,6 +232,9 @@ class ModelAdapter(ABC):
     #: older model outranked a newer flagship. The proxy remains for models that
     #: declare no rank. Default 0 = undeclared.
     quality_rank: int
+    #: Image-only extra quality tiers (``_IMAGE_EXTRA_QUALITY_TIERS``) this model
+    #: accepts. Empty = only fast / balanced / best.
+    extra_quality_tiers: frozenset[str]
     #: Quality tiers this model is the declared default landing spot for, e.g.
     #: ``["balanced"]``. Empty = undeclared, which is what every model did before
     #: this existed.
@@ -339,6 +347,16 @@ class ModelAdapter(ABC):
                 f"{sorted(unknown)} (valid: {sorted(_QUALITY_TIERS)})"
             )
         instance.default_for = frozenset(default_for)
+        extra_quality_tiers = config.get("quality_tiers") or []
+        unknown = set(extra_quality_tiers) - _IMAGE_EXTRA_QUALITY_TIERS
+        if unknown:
+            raise ValueError(
+                f"{instance.adapter_id}: quality_tiers has unknown tiers {sorted(unknown)} "
+                f"(valid: {sorted(_IMAGE_EXTRA_QUALITY_TIERS)}; fast/balanced/best are implicit)"
+            )
+        if extra_quality_tiers and instance.task_type != "image":
+            raise ValueError(f"{instance.adapter_id}: quality_tiers is declared for image models only")
+        instance.extra_quality_tiers = frozenset(extra_quality_tiers)
         analysis_depth_default_for = config.get("analysis_depth_default_for") or []
         if isinstance(analysis_depth_default_for, str):
             analysis_depth_default_for = [analysis_depth_default_for]
@@ -443,6 +461,17 @@ class ModelAdapter(ABC):
             ok, reason = self._check_aspect_ratio(req)
             if not ok:
                 return False, reason
+        if (
+            isinstance(req, GenerateImageInput)
+            and req.quality_tier in _IMAGE_EXTRA_QUALITY_TIERS
+            and req.quality_tier not in self.extra_quality_tiers
+        ):
+            return False, (
+                f"{self.model_name} does not support quality_tier {req.quality_tier} "
+                f"(supported: fast, balanced, best"
+                + "".join(f", {t}" for t in sorted(self.extra_quality_tiers))
+                + ")"
+            )
         if isinstance(req, GenerateImageInput) and (
             self.max_images_per_request is not None
             and req.n > self.max_images_per_request

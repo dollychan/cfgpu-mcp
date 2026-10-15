@@ -1,0 +1,7 @@
+extends: gpt-image-2-5-sunburst
+card_base: ~
+adapter_id: gpt-image-2-5-flare
+display_name: "CF Image 2.5 Flare"
+cfgpu_model_id: gpt-image-2.5-flare
+model_name: cf-image-2.5-flare
+provider: cfgpu

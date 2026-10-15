@@ -1,10 +1,10 @@
 import pytest
-from cfgpu_mcp.adapters.async_image import GptImage2Adapter, NanoBananaAdapter
+from cfgpu_mcp.adapters.async_image import ImageGPTAdapter, NanoBananaAdapter
 from cfgpu_mcp.tool_registry import GenerateImageInput
 
 
-def _gpt() -> GptImage2Adapter:
-    return GptImage2Adapter.from_config({
+def _gpt() -> ImageGPTAdapter:
+    return ImageGPTAdapter.from_config({
         "adapter_id": "gpt-image-2",
         "display_name": "GPT Image 2",
         "cfgpu_model_id": "gpt-image-2",
@@ -31,6 +31,25 @@ def _nano() -> NanoBananaAdapter:
         "tasks": ["text_to_image", "image_to_image"],
         "cost_tier": 4,
         "speed_tier": 3,
+    })
+
+
+def _gpt_25() -> ImageGPTAdapter:
+    return ImageGPTAdapter.from_config({
+        "adapter_id": "gpt-image-2-5-sunburst",
+        "display_name": "CF Image 2.5 Sunburst",
+        "cfgpu_model_id": "gpt-image-2.5-sunburst",
+        "task_type": "image",
+        "endpoint": "/v1/images/generations",
+        "is_async": True,
+        "poll_endpoint": "/v1/images/tasks/{task_id}",
+        "tasks": ["text_to_image", "image_to_image"],
+        "cost_tier": 3,
+        "speed_tier": 3,
+        "max_images_per_request": 1,
+        "sends_n": False,
+        "default_background": "auto",
+        "quality_tiers": ["xhigh", "max", "auto"],
     })
 
 
@@ -114,7 +133,57 @@ def test_nano_banana_has_no_quality():
     assert "quality" not in payload
 
 
-@pytest.mark.parametrize("aspect_ratio", ["21:9", "9:21", "3:1", "1:3"])
+@pytest.mark.parametrize("aspect_ratio", ["21:9", "9:21", "3:1", "1:3", "2:1", "1:2"])
 def test_gpt_image_2_passes_new_aspect_ratios_through(aspect_ratio):
     payload = _gpt().build_payload(GenerateImageInput(prompt="x", aspect_ratio=aspect_ratio))
     assert payload["aspect_ratio"] == aspect_ratio
+
+
+def test_gpt_image_25_sizes_by_ratio_and_resolution_without_n():
+    payload = _gpt_25().build_payload(
+        GenerateImageInput(prompt="x", aspect_ratio="2:1", resolution="4K", quality_tier="best")
+    )
+    # No image_size: the upstream maps aspect_ratio + resolution itself, the
+    # same way GPT Image 2 is sized.  No n: the API has no output-count field.
+    assert payload == {
+        "model": "gpt-image-2.5-sunburst",
+        "prompt": "x",
+        "aspect_ratio": "2:1",
+        "resolution": "4K",
+        "quality": "high",
+        "background": "auto",
+    }
+
+
+def test_gpt_image_25_model_specific_overrides_background_and_quality():
+    payload = _gpt_25().build_payload(
+        GenerateImageInput(prompt="x", model_specific={"background": "transparent", "quality": "xhigh"})
+    )
+    assert payload["background"] == "transparent"
+    assert payload["quality"] == "xhigh"
+
+
+def test_gpt_image_25_refuses_more_than_one_image():
+    ok, reason = _gpt_25().supports(GenerateImageInput(prompt="x", n=2))
+    assert ok is False
+    assert "1 to 1" in reason
+
+
+def test_gpt_image_2_payload_has_no_background():
+    assert "background" not in _gpt().build_payload(GenerateImageInput(prompt="x"))
+
+
+@pytest.mark.parametrize("tier", ["xhigh", "max", "auto"])
+def test_gpt_image_25_sends_extra_quality_tiers_verbatim(tier):
+    adapter = _gpt_25()
+    req = GenerateImageInput(prompt="x", quality_tier=tier)
+    assert adapter.supports(req) == (True, "")
+    assert adapter.build_payload(req)["quality"] == tier
+
+
+def test_quality_tiers_key_rejects_unknown_tier():
+    with pytest.raises(ValueError, match="quality_tiers has unknown tiers"):
+        ImageGPTAdapter.from_config({
+            "adapter_id": "x", "cfgpu_model_id": "x", "task_type": "image",
+            "endpoint": "/i", "quality_tiers": ["ultra"],
+        })

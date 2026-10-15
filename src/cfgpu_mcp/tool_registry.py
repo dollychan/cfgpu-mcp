@@ -435,6 +435,12 @@ def Folded(*choices: str, ratio: bool = False) -> Any:
 _IMAGE_RESOLUTIONS = ("1K", "1.5K", "2K", "3K", "4K")
 _VIDEO_RESOLUTIONS = ("480p", "720p", "768p", "1080p", "2k", "4k")
 QualityTier = Folded("fast", "balanced", "best")
+# Image-only tiers past "best". They name upstream quality levels only some models
+# have (CF Image 2.5: quality=xhigh/max/auto), so a model must declare them in
+# adapter.yaml ``quality_tiers`` — every other model refuses them rather than
+# silently downgrading, the same policy as an unsupported resolution tier.
+IMAGE_EXTRA_QUALITY_TIERS = ("xhigh", "max", "auto")
+ImageQualityTier = Folded("fast", "balanced", "best", *IMAGE_EXTRA_QUALITY_TIERS)
 AnalysisDepth = Folded("fast", "balanced", "thorough")
 VoiceGender = Folded("male", "female", "neutral")
 VoiceAge = Folded("child", "young", "middle_aged", "senior")
@@ -511,7 +517,7 @@ class GenerateImageInput(BaseModel):
         "a list of model_ids to restrict automatic selection to those candidates "
         "or 'auto' to choose from all available models",
     )
-    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", ratio=True) = Field(default="1:1")
+    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2", ratio=True) = Field(default="1:1")
     resolution: Folded(*_IMAGE_RESOLUTIONS) = Field(
         default="2K",
         description="Output resolution tier. Each model supports a subset of these "
@@ -565,7 +571,13 @@ class GenerateImageInput(BaseModel):
                 f"n={v} is out of range. Image group size must be between 1 and 15."
             )
         return v
-    quality_tier: QualityTier = Field(default="balanced")
+    quality_tier: ImageQualityTier = Field(
+        default="balanced",
+        description="Output quality. fast / balanced / best work on every model (and steer "
+        "model='auto'). xhigh / max (above best) and auto (the model decides) exist only "
+        "on models whose list_model_profiles row includes them in quality_tiers "
+        "(currently CF Image 2.5 Sunburst / Flare); other models reject them.",
+    )
     watermark: bool = Field(
         default=False,
         description="Add an 'AI generated' watermark. Defaults to false and is sent "
@@ -1015,7 +1027,9 @@ class ListModelProfilesInput(BaseModel):
     """Find models by canonical capabilities and return agent-facing profiles only.
 
     Video models also list ``inputs``: the material slots they accept, item limits,
-    and how they use a supplied audio track (``role``).
+    and how they use a supplied audio track (``role``). Image models that accept
+    quality_tier values beyond fast / balanced / best list them all in
+    ``quality_tiers``; a model without that field takes fast / balanced / best only.
     """
 
     media_type: Optional[MediaType] = Field(

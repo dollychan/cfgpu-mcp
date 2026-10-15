@@ -110,6 +110,14 @@ def _profile_row(adapter: "ModelAdapter") -> dict[str, Any]:
     if adapter.aspect_ratios:
         # Absent = every schema ratio; video models always also take adaptive.
         row["aspect_ratios"] = list(adapter.aspect_ratios)
+    if adapter.extra_quality_tiers:
+        # Absent = fast / balanced / best only. Listed in full rather than as the
+        # extras alone, so the row reads as "these are this model's tiers".
+        from cfgpu_mcp.tool_registry import IMAGE_EXTRA_QUALITY_TIERS
+
+        row["quality_tiers"] = ["fast", "balanced", "best"] + [
+            tier for tier in IMAGE_EXTRA_QUALITY_TIERS if tier in adapter.extra_quality_tiers
+        ]
     return row
 
 

@@ -231,6 +231,9 @@ class ModelRouter:
 
         # understand requests carry no quality_tier; treat them as "balanced".
         quality_tier = getattr(req, "quality_tier", "balanced")
+        # Image-only extra tiers score like their nearest shared tier; supports()
+        # has already narrowed the candidates to models that declare them.
+        quality_tier = {"xhigh": "best", "max": "best", "auto": "balanced"}.get(quality_tier, quality_tier)
         if quality_tier == "fast":
             score += adapter.speed_tier * 2 - adapter.cost_tier
         elif quality_tier == "best":
