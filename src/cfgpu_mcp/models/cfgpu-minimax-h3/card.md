@@ -6,7 +6,7 @@
 |---|---|
 | 模型名（`model` 参数） | `MiniMax-H3` |
 | 任务类型 | video |
-| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, synced_audio_output |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, synced_audio_output, voice_reference_video |
 | 成本档位 | 1/5 |
 | 速度档位 | 3/5 |
 
@@ -56,7 +56,7 @@
 - `first_frame`、`last_frame` 各最多 1 张，且 `last_frame` 必须与 `first_frame` 一起使用。
 - `reference_images` 最多 9 张。
 - `reference_videos` 最多 3 个，单段 2–15 秒、总时长不超过 15 秒。
-- `reference_audios` 最多 3 个，单段 2–15 秒、总时长不超过 15 秒。
+- `reference_audios` 最多 3 个，单段 2–15 秒、总时长不超过 15 秒。**参考音频可用于音色克隆与锁定**：上传目标人物的一段语音作为参考，锁定视频中生成角色的音色，让角色用这个声音说 prompt 里的新台词（`voice_reference_video`）。
 - 首尾帧输入与所有 `reference_*` 输入互斥。
 - 参考视频、音频的总时长无法从 URL 本地判断，超过 15 秒时由上游返回参数错误。
 

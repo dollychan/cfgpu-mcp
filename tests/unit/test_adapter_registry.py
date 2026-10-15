@@ -197,7 +197,9 @@ def test_seedance_2_5_inherits_the_wan_chain_and_raises_its_duration_cap():
     adapter = registry.get("doubao-seedance-2-5")
     assert isinstance(adapter, SeedanceVideoAdapter)
     assert adapter.cfgpu_model_id == "doubao-seedance-2-5"
-    assert registry.get("wan-2-0").tasks == adapter.tasks
+    # Tasks come from 2.0, which adds voice_reference_video to the wan-2-0 set.
+    assert registry.get("doubao-seedance-2-0").tasks == adapter.tasks
+    assert set(adapter.tasks) - set(registry.get("wan-2-0").tasks) == {"voice_reference_video"}
     assert registry.get("wan-2-0").inputs["first_frame"] == adapter.inputs["first_frame"]
     assert adapter.max_duration_seconds == 30
     assert registry.get("doubao-seedance-2-0").max_duration_seconds == 15

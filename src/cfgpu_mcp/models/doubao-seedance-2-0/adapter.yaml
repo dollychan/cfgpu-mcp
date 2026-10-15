@@ -7,7 +7,21 @@ cfgpu_model_id: doubao-seedance-2-0-260128
 model_name: doubao-seedance-2-0
 
 # Capabilities, endpoint, poll_config etc. are identical to WAN 2.0 and inherited
-# from the wan-2-0 base; only the identifiers and tiers differ.
+# from the wan-2-0 base; only the identifiers, tiers and tasks differ.
+
+# wan-2-0's tasks plus voice_reference_video: Seedance's reference audio covers native
+# audio-visual sync, rhythm, and voice/speech cloning — the prompt can have a character
+# speak a new script in the sample's voice. Declared here rather than on wan-2-0 so
+# WAN 2.0 does not inherit a claim made for Seedance; fast / mini / 2.5 inherit it.
+tasks:
+  - text_to_video
+  - image_to_video
+  - first_last_frame
+  - reference_to_video
+  - video_edit
+  - video_extend
+  - synced_audio_output
+  - voice_reference_video
 
 cost_tier: 3
 speed_tier: 2

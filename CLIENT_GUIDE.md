@@ -814,7 +814,7 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 但得到的是一条口型对不上、甚至听不到原声的视频。只是拿一段音乐当背景，`reference` 模型就够了。
 >
 > 用户给的语音只是**音色样本**、台词另有脚本（「小姚的声音用这个，台词是……」），就用
-> `required_tasks=["voice_reference_video"]` —— 它绝不会返回 `driving` 模型（那会把样本原样播出来）。
+> `required_tasks=["voice_reference_video"]`（`wan2.7-r2v`、Seedance 2.0 / fast / mini / 2.5、`MiniMax-H3`、`cfdream/minimax-h3-r2v`）—— 它绝不会返回 `driving` 模型（那会把样本原样播出来）。
 > 台词写进 `prompt`，样本放 `reference_audios`，与说话角色的参考图同序。
 > `standalone: false` 表示音频不能单独传，至少还要带一张图或一段视频。
 >

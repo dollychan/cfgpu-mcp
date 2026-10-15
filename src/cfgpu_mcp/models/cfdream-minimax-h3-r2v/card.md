@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `cfdream/minimax-h3-r2v` |
-| 任务（tasks） | reference_to_video, video_edit, synced_audio_output |
+| 任务（tasks） | reference_to_video, video_edit, synced_audio_output, voice_reference_video |
 | 成本档位 | 1/5 |
 | 速度档位 | 1/5 |
 
@@ -112,6 +112,19 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
   "prompt": "<Picture 1> is speaking to the camera, saying the words in <Audio 1>",
   "reference_images": ["https://example.com/portrait.jpg"],
   "reference_audios": ["https://example.com/line.wav"],
+  "duration_seconds": 5,
+  "resolution": "480p"
+}
+```
+
+音色克隆（锁定角色音色、说新台词）：上传目标人物的一段语音作为参考，锁定视频中生成角色的音色，让角色用这个声音说 prompt 里的新台词（`voice_reference_video`）。 prompt 要写明台词，并说明 `<Audio 1>` 只提供音色。
+
+```json
+{
+  "model": "cfdream/minimax-h3-r2v",
+  "prompt": "<Picture 1> smiles at the camera and says: \"欢迎来到诊所，我是小姚。\" Her voice matches the timbre of <Audio 1>; do not repeat the words in <Audio 1>.",
+  "reference_images": ["https://example.com/portrait.jpg"],
+  "reference_audios": ["https://example.com/voice-sample.wav"],
   "duration_seconds": 5,
   "resolution": "480p"
 }

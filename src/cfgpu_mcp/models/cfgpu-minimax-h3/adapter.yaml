@@ -48,6 +48,8 @@ tasks:
   - reference_to_video
   - video_edit
   - synced_audio_output
+  # A reference voice clip locks the generated character's voice (voice cloning).
+  - voice_reference_video
 
 # Whether the output has sound (adapters/inputs.py AUDIO_OUTPUTS): native audio on every output; no switch in the request.
 outputs:

@@ -492,7 +492,13 @@ async def test_voice_reference_search_never_returns_a_driving_model(_full_regist
 
     catalog = await model_service.list_model_profiles(required_tasks=["voice_reference_video"])
     by_id = {model["model_id"]: model for model in catalog["models"]}
-    assert "wan2.7-r2v" in by_id
+    assert {
+        "wan2.7-r2v", "doubao-seedance-2-0", "doubao-seedance-2-0-fast",
+        "doubao-seedance-2-0-mini", "doubao-seedance-2-5",
+        "MiniMax-H3", "cfdream/minimax-h3-r2v",
+    } <= set(by_id)
+    # Claimed for Seedance, not inherited back onto its WAN 2.0 base.
+    assert "wan-video" not in by_id
     for model in by_id.values():
         assert model["inputs"]["reference_audios"]["role"] in {"voice", "reference"}
     assert catalog["task_catalog"]["voice_reference_video"]["requires"] == {
