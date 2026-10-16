@@ -1,0 +1,33 @@
+id: case-video-one-take-spy
+version: 1
+rank: 276
+kind: case
+media: video
+title: 一镜到底：谍战跟拍穿过拐角
+summary: 全程不切镜头，靠路人遮挡、拐角和摇镜完成场景转换。
+genres:
+- short-drama
+scenes:
+- story
+tags:
+- 一镜到底
+- 跟拍
+slots:
+- name: 首帧图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 拐角建筑图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 面具女孩图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 豪宅图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+source:
+  origin: dexhunter/seedance2-skill
+  license: MIT
+  author: Dex
+  url: https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md
+content: 谍战片风格，[首帧图]作为首帧画面。镜头正面跟拍穿红风衣的女特工向前走，全景跟随，不断有路人遮挡红衣女子；走到拐角处（拐角建筑参考[拐角建筑图]），固定镜头，红衣女子走出画面、在拐角处消失；一个戴面具的女孩在拐角处躲着恶狠狠地盯着她（形象参考[面具女孩图]）；镜头往前摇向红衣女特工，她走进一座豪宅消失不见（豪宅参考[豪宅图]）。全程不要切镜头，一镜到底。

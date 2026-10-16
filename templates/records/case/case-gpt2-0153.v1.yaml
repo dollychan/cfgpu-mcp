@@ -1,0 +1,19 @@
+id: case-gpt2-0153
+version: 1
+rank: 153
+kind: case
+media: image
+title: Quiet-luxury skincare morning tray
+summary: Create a 3:4 vertical beauty lifestyle photograph for a premium skincare morning routine.
+genres:
+- beauty-lifestyle
+tags:
+- portrait
+- 1024x1536
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-beauty-and-lifestyle.md
+content: 'Create a 3:4 vertical beauty lifestyle photograph for a premium skincare morning routine. Scene: a travertine bathroom counter beside a soft frosted window, with a minimal glass serum bottle, ceramic cleanser tube, cream jar, folded linen towel, jade roller, small dish of pearl hair clips, and a single dewy white camellia flower. Lighting: natural morning side light, gentle reflections, realistic glass thickness, soft shadows, clean negative space. Aesthetic: quiet luxury, Japanese minimalism meets modern spa editorial, cream / warm stone / translucent pale green palette. No visible brand logos, no readable fake labels except a tiny generic mark "AM ROUTINE", no human face, no clutter, no overdone CGI shine.'

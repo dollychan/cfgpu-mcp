@@ -1,0 +1,20 @@
+id: case-gpt2-0048
+version: 1
+rank: 48
+kind: case
+media: image
+title: Dreamy watercolor young woman at lily pond
+summary: Dreamy watercolor illustration of a young woman in a cream linen dress sitting on a weathered stone bench, contemplating a lily pond at late golden hour.
+genres:
+- watercolor
+tags:
+- portrait
+- 1024x1536
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: EvoLinkAI
+  url: https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts
+content: Dreamy watercolor illustration of a young woman in a cream linen dress sitting on a weathered stone bench, contemplating a lily pond at late golden hour. Impressionist-light aesthetic, loose confident brush strokes, translucent washes in muted teal and warm ochre tones with soft lavender shadows. Soft blur of water lilies and reflected clouds in the pond surface. Gentle sunlight filters through overhanging willow branches. Cold-pressed paper texture visible throughout, edges of wet-on-wet bleeds, delicate lighting, clean composition with generous negative space, minimalist focus on mood, sense of calm, lightness, and ephemeral beauty. Editorial high-quality illustration, in the tradition of Turner's watercolor studies and modern editorial magazine illustration.

@@ -1,0 +1,38 @@
+id: tpl-style-architecture-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: 建筑与空间 · 常规
+summary: 生成[空间类型]设计效果图，功能定位为[用途]。
+genres:
+- architecture-interior
+tags:
+- 建筑与空间
+- 常规
+slots:
+- name: 空间类型
+  required: true
+- name: 用途
+  required: true
+- name: 现代简约/工业/新中式
+  required: true
+- name: 木/石/金属/玻璃
+  required: true
+- name: 开敞/分区
+  required: true
+- name: 主通道说明
+  required: true
+- name: 自然采光/人工照明方案
+  required: true
+- name: 白天/夜景
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  生成[空间类型]设计效果图，功能定位为[用途]。
+  风格：[现代简约/工业/新中式]，材质：[木/石/金属/玻璃]。
+  空间结构：[开敞/分区]，动线：[主通道说明]。
+  光线：[自然采光/人工照明方案]，时间：[白天/夜景]。
+  输出：写实建筑空间渲染图。

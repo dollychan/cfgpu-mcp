@@ -1,0 +1,33 @@
+id: style-video-mv-lyric-typography
+version: 1
+rank: 360
+kind: style
+media: video
+title: 音乐 MV：歌词空间贴字与多镜头拼接
+summary: 歌词作为空间中的动态图形，硬切卡鼓点；超过单次生成时长时按镜头拆分并锁定衔接。
+genres:
+- music-video
+scenes:
+- social
+- creative
+styles:
+- kinetic-typography
+tags:
+- MV
+- 歌词
+- 硬切
+- 多镜头拼接
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (music-video-subtitle-generator)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/music-video-subtitle-generator
+content: |-
+  适用：带歌词贴字的 AI MV、情绪短片。不适合普通字幕校对或照搬已有 IP。
+  前期锁定：画幅（竖屏 9:16、横屏 16:9、方图 1:1、宽银幕 21:9）贯穿所有素材；目标时长必须先确认；上传的音乐长于目标时长时先选定片段（最强副歌或 hook）。
+  歌词：用户给了歌词就逐字锁定，不改写；没有才原创并锁定。每镜的唱词和画面文字都来自同一份锁定歌词，有人声时画面文字逐字匹配正在唱的词；人物口型、下颌、呼吸、点头和手势重音跟随歌词节奏。
+  参考图分工：文字参考卡只管字体质感与排版动效，不含人物和场景；人物卡只管形象、服装和气质；场景卡只管空间、影像质感和光影。三者互不混用。
+  文字包装：文字是空间中的动态图形，可处于前景、中景、背景或被肩膀、手遮挡；不遮挡眼睛和主要表情，对嘴时不挡嘴；每个镜头只有一个主文字事件。
+  剪辑（以 Dark-pop / Trap 为例）：只用硬切，不用淡入淡出或溶解；画面响应鼓点——hi-hat 微震跳帧、snare 放大或硬切、808 低频压屏错位；快节奏时在多个近景场景间切换，切点落在明确的音乐冲击上。
+  质感（例）：写实高时装、90 年代末独立杂志与胶片扫描质感、粗颗粒、半色调网点、印刷毛边。
+  超过单次生成时长（如 15 秒）：先锁定一条完整主音轨，再拆成 2–5 秒的镜头，映射到歌词时间和鼓点。
+  衔接五锁：切点落在句间停顿或强鼓点，不在唱词中途切；剪辑点对齐 1/4 或 1/8 拍；每镜带同一段美学前缀（颗粒、色调、光向）；同场景延续用上一镜末帧作下一镜首帧，换景用同向运镜或动作匹配切；文字在切点随低音破碎扫出，下一镜在重音上砸入。

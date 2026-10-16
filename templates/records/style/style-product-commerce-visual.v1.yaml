@@ -1,0 +1,36 @@
+id: style-product-commerce-visual
+version: 1
+rank: 9
+kind: style
+media: image
+title: Product Commerce Visual / 商品商业视觉
+summary: 用于商品主图、包装视觉、详情页和销售卖点排版。
+genres:
+- product-food
+scenes:
+- commerce
+- food
+styles:
+- product
+- realistic
+tags:
+- Product
+- Commerce
+- Packaging
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于商品主图、包装视觉、详情页和销售卖点排版。
+  Use when: Use for product hero shots, packaging visuals, detail pages, and sales layouts.
+  要点 / Guidance:
+  - Define product, selling points, material, scene, lighting, and layout blocks.
+  - Separate hero product, benefit labels, and supporting props.
+  - 定义商品、卖点、材质、场景、光线和版块。
+  - 区分主商品、卖点标签和辅助道具。
+  避坑 / Pitfalls:
+  - Avoid random props that weaken product recognition.
+  - Constrain packaging text and claim wording.
+  - 避免无关道具削弱商品识别。
+  - 约束包装文字和卖点表达。
+  可配合的模板骨架 / Skeletons: tpl-style-product-1, tpl-style-product-2

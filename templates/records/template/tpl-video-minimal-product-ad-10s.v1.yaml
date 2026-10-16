@@ -1,0 +1,66 @@
+id: tpl-video-minimal-product-ad-10s
+version: 1
+rank: 301
+kind: template
+media: video
+title: 极简产品广告片 10 秒节拍骨架
+summary: 按节拍写清动作、文字与停顿的 10 秒产品片骨架。
+genres:
+- product-ad
+scenes:
+- commerce
+styles:
+- minimal
+- product
+tags:
+- 10秒
+- 节拍表
+- 画面文字
+slots:
+- name: 画幅
+  required: true
+- name: 背景风格
+  required: true
+  hint: 白色科技风 或 黑底轮廓光
+- name: 产品名称
+  required: true
+- name: 产品主色
+  required: true
+- name: 叙事脊柱
+  required: true
+  hint: 发布型 / 功能触感型 / 色彩家族型
+- name: 开场产品动作
+  required: true
+- name: 主视觉角度
+  required: true
+- name: 材质或结构细节
+  required: true
+- name: 中段文案
+  required: true
+  hint: 3–5 个英文词
+- name: 前半文字颜色
+  required: true
+  hint: 白底用黑或深灰，黑底用白
+- name: 产品自然动作
+  required: true
+- name: 结尾文案
+  required: true
+  hint: 3–5 个英文词
+- name: 文字位置
+  required: true
+  hint: 左 或 右
+- name: 配乐方向
+  required: true
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (minimalist-product-ad-generator)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/minimalist-product-ad-generator
+content: |-
+  [画幅]，10秒，[背景风格]的极简产品广告片。产品为[产品名称]，本体颜色严格保持[产品主色]，不重新上色。叙事：[叙事脊柱]。
+  0–1.5秒：[开场产品动作]，干净留白，无文字。
+  1.5–4秒：主视角建立，[主视觉角度]，产品边缘高光滑过。
+  4–6秒：材质与功能特写，[材质或结构细节]；画面内出现单行英文「[中段文案]」，前半[前半文字颜色]、后半[产品主色]，前半先淡入，后半随后轻滑入，前半在同一行内轻微让位。
+  6–8秒：[产品自然动作]，动作完成后制动停顿。
+  8–10秒：单一全画幅产品收束，单行英文「[结尾文案]」稳定停留、清晰可读，位于画面上下居中区域靠[文字位置]。
+  全程同一时刻只有一条单行文字；不出现网格、分屏、拼贴或商品墙；不用镜面反光台面。
+  声音：[配乐方向]，节拍与产品动作和文字出现对齐。

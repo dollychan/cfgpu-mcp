@@ -1,0 +1,44 @@
+id: tpl-video-papercraft-i2v-5s
+version: 1
+rank: 342
+kind: template
+media: video
+title: 纸艺定格科普：5 秒图生视频
+summary: 让一张纸艺参考图动起来，动作克制、符合纸片物理。
+genres:
+- scientific-educational
+scenes:
+- education
+styles:
+- papercraft
+tags:
+- 图生视频
+- 5秒
+slots:
+- name: 纸艺参考图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 运镜
+  required: true
+  hint: 缓慢推近 / 轻微横移
+- name: 纸偶角色
+  required: true
+- name: 角色动作
+  required: true
+- name: 机关元素
+  required: true
+  hint: 箭头、标签、滑轨、转盘等
+- name: 纸艺音效
+  required: true
+- name: 配乐方向
+  required: true
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (papercraft-stop-motion-explainer)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/papercraft-stop-motion-explainer
+content: |-
+  以[纸艺参考图]为画面基础，生成5秒纸艺定格动画，保持纸张纹理、剪裁边缘、分层布景和真实投影不变。
+  镜头[运镜]，前景和背景产生视差；[纸偶角色]做小幅定格式动作：[角色动作]；纸质[机关元素]轻微移动。
+  动作像逐帧手工拨动：分段移动、短暂停顿、轻微回弹。
+  声音：[纸艺音效]，[配乐方向]。
+  避免：光滑 CG 变形、融化、塑料质感、高速镜头。

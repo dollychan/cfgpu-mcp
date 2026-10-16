@@ -1,0 +1,51 @@
+id: tpl-video-short-drama-15s
+version: 1
+rank: 220
+kind: template
+media: video
+title: 短剧冲突片段 15 秒：崩溃 → 反驳 → 反转
+summary: 两人对峙、带台词与伏笔的 15 秒短剧骨架。
+genres:
+- short-drama
+scenes:
+- story
+styles:
+- cinematic
+tags:
+- 台词
+- 反转
+- 15秒
+slots:
+- name: 角色A
+  required: true
+- name: 角色A的动作
+  required: true
+- name: 角色A语气
+  required: true
+- name: 台词1
+  required: true
+- name: 角色B
+  required: true
+- name: 角色B的反应
+  required: true
+- name: 角色B语气
+  required: true
+- name: 台词2
+  required: true
+- name: 反转揭示
+  required: true
+- name: 氛围音效
+  required: true
+source:
+  origin: dexhunter/seedance2-skill
+  license: MIT
+  author: Dex
+  url: https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md
+content: |-
+  画面（0–5秒）：特写[角色A]通红的眼眶，[角色A的动作]，情绪濒临崩溃。
+  台词1（[角色A]，[角色A语气]）：「[台词1]」
+  画面（6–10秒）：[角色B][角色B的反应]，镜头扫过背景细节作为伏笔。
+  台词2（[角色B]，[角色B语气]）：「[台词2]」
+  画面（11–15秒）：[反转揭示]，[角色A]瞬间僵住，眼神从愤怒转为震惊。
+  音效：[氛围音效]，角色哽咽声，结尾混入模糊人声。
+  时长：精准15秒，节奏紧凑，无冗余。

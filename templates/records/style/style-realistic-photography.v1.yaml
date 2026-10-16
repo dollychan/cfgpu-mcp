@@ -1,0 +1,36 @@
+id: style-realistic-photography
+version: 1
+rank: 14
+kind: style
+media: image
+title: Realistic Photography / 写实摄影
+summary: 用于人像、街拍、商品摄影和电影感写实。
+genres:
+- photography
+scenes:
+- fashion
+- commerce
+styles:
+- photography
+- realistic
+tags:
+- Photography
+- Realistic
+- Lens
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于人像、街拍、商品摄影和电影感写实。
+  Use when: Use for portraits, street photos, product photography, and cinematic realism.
+  要点 / Guidance:
+  - Specify camera distance, lens, light source, texture, background, and motion.
+  - Use believable imperfections for documentary realism.
+  - 指定机位、镜头、光源、质感、背景和动作。
+  - 加入可信的小瑕疵增强纪实感。
+  避坑 / Pitfalls:
+  - Avoid over-polished plastic skin unless commercial beauty is required.
+  - Add negative constraints for hands, text, and anatomy when needed.
+  - 商业美妆之外，避免过度磨皮。
+  - 需要时加入手部、文字、结构类负面约束。
+  可配合的模板骨架 / Skeletons: tpl-style-photo-1, tpl-style-photo-2

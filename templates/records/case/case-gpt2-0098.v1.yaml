@@ -1,0 +1,23 @@
+id: case-gpt2-0098
+version: 1
+rank: 98
+kind: case
+media: image
+title: Minimalist bakery logo Field & Flour
+summary: Create an original, non-infringing logo for a company called Field & Flour, a local bakery.
+tags:
+- square
+- 1024x1024
+- openai-cookbook
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: OpenAI
+  url: https://github.com/openai/openai-cookbook/blob/main/examples/multimodal/image-gen-models-prompting-guide.ipynb
+content: |-
+  Create an original, non-infringing logo for a company called Field & Flour, a local bakery.
+  The logo should feel warm, simple, and timeless. Use clean, vector-like shapes, a strong silhouette, and balanced negative space.
+  Favor simplicity over detail so it reads clearly at small and large sizes. Flat design, minimal strokes, no gradients unless essential.
+  Plain background. Deliver a single centered logo with generous padding. No watermark.

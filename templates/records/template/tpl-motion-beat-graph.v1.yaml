@@ -1,0 +1,79 @@
+id: tpl-motion-beat-graph
+version: 1
+rank: 401
+kind: template
+media: video
+title: 动效优先视频：动效主张 + 节拍图
+summary: 先写一句动效主张，再按节拍列出主运动物体与状态变化。
+genres:
+- motion-graphics
+scenes:
+- education
+styles:
+- kinetic-typography
+tags:
+- 节拍图
+- 动效主张
+slots:
+- name: 视觉隐喻
+  required: true
+- name: 起始状态
+  required: true
+- name: 结束状态
+  required: true
+- name: 核心观点
+  required: true
+- name: 画幅
+  required: true
+- name: 时长
+  required: true
+- name: 主原语
+  required: true
+- name: 辅助原语
+  required: true
+- name: 节拍1时间
+  required: true
+- name: 节拍1主运动物体
+  required: true
+- name: 节拍1状态变化
+  required: true
+- name: 节拍1镜头运动
+  required: true
+- name: 节拍1文字
+  required: true
+- name: 节拍2时间
+  required: true
+- name: 节拍2主运动物体
+  required: true
+- name: 节拍2状态变化
+  required: true
+- name: 节拍2镜头运动
+  required: true
+- name: 节拍2文字
+  required: true
+- name: 节拍3时间
+  required: true
+- name: 节拍3主运动物体
+  required: true
+- name: 节拍3状态变化
+  required: true
+- name: 节拍3镜头运动
+  required: true
+- name: 节拍3文字
+  required: true
+- name: 节拍4时间
+  required: true
+- name: 收尾画面
+  required: true
+source:
+  origin: first-party, structure adapted from Pluviobyte/video-production-skills (ai-motion-director)
+  license: first-party
+  url: https://github.com/Pluviobyte/video-production-skills/tree/main/ai-motion-director
+content: |-
+  动效主张：这支视频通过展示[视觉隐喻]从[起始状态]变成[结束状态]，来证明[核心观点]。
+  画幅[画幅]，时长[时长]，动效原语：[主原语]、[辅助原语]。
+  节拍1（[节拍1时间]）钩子：[节拍1主运动物体]，[节拍1状态变化]；镜头[节拍1镜头运动]；文字：[节拍1文字]。
+  节拍2（[节拍2时间]）机制：[节拍2主运动物体]，[节拍2状态变化]；镜头[节拍2镜头运动]；文字：[节拍2文字]。
+  节拍3（[节拍3时间]）后果或证明：[节拍3主运动物体]，[节拍3状态变化]；镜头[节拍3镜头运动]；文字：[节拍3文字]。
+  节拍4（[节拍4时间]）收尾：同一视觉系统收束成[收尾画面]，停留可读。
+  每个节拍都要有淡入滑入以外的状态变化；全片沿用同一个视觉系统，不切成互不相关的页面。

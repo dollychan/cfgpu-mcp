@@ -1,0 +1,27 @@
+id: case-gpt2-0031
+version: 1
+rank: 31
+kind: case
+media: image
+title: Official character reference sheet
+summary: Based on this character and background, please create a character reference sheet similar to official setting materials.
+genres:
+- character-design
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@MANISH1027512'
+  url: https://x.com/MANISH1027512
+content: |-
+  Based on this character and background, please create a character reference sheet similar to official setting materials.
+  - Includes three-view drawings: front view, side view, and back view
+  - Add variations of the character's facial expressions
+  - Break down and display detailed parts of the clothing and equipment
+  - Add a color palette
+  - Include a brief explanation of the worldview setting
+  - Overall, use an organized layout (white background, illustration style)

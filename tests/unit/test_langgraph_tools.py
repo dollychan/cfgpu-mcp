@@ -18,6 +18,8 @@ from cfgpu_mcp.tool_registry import (
     ListModelProfilesInput,
     ListVoiceProfilesInput,
     GetModelCardInput,
+    GetTemplateInput,
+    SearchTemplatesInput,
 )
 
 
@@ -32,6 +34,8 @@ _EXPECTED_SCHEMAS = {
     "list_model_profiles": ListModelProfilesInput,
     "list_voice_profiles": ListVoiceProfilesInput,
     "get_model_card": GetModelCardInput,
+    "search_templates": SearchTemplatesInput,
+    "get_template": GetTemplateInput,
 }
 
 

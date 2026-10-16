@@ -1,0 +1,19 @@
+id: case-gpt2-0091
+version: 1
+rank: 91
+kind: case
+media: image
+title: Frontier Safety Eval Loop
+summary: Create a beautiful research flowchart for an AI safety benchmark pipeline called Frontier Safety Eval Loop.
+genres:
+- research-paper-figures
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+content: Create a beautiful research flowchart for an AI safety benchmark pipeline called Frontier Safety Eval Loop. Landscape figure, white background, large typography, vector-like shapes, soft indigo, coral, sage, and graphite palette. Show stages Prompt Suite, Model Runs, Judge Models, Human Audit, Failure Taxonomy, Patch Queue, and Re-run. Use clean swimlanes, numbered callouts, compact legends, and premium paper-ready styling. High detail, excellent color harmony, generous whitespace, no clutter, conference-quality diagram.

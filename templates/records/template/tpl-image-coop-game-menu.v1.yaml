@@ -1,0 +1,63 @@
+id: tpl-image-coop-game-menu
+version: 1
+rank: 370
+kind: template
+media: image
+title: 双人合作游戏主菜单：确认首图
+summary: 固定菜单框架 + 按用户风格填充色彩、人物画风与 UI；先出图确认再做视频。
+genres:
+- game-intro
+- gaming
+scenes:
+- creative
+styles:
+- ui
+tags:
+- 游戏 UI
+- 主菜单
+- 双人
+slots:
+- name: 视觉风格
+  required: true
+- name: 主体色
+  required: true
+- name: UI主体色
+  required: true
+- name: 文字色
+  required: true
+- name: 强调色
+  required: true
+- name: 背景纹理
+  required: true
+- name: 玩家1参考图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 玩家1服装
+  required: true
+- name: 玩家2参考图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 玩家2服装
+  required: true
+- name: 玩家1名字
+  required: true
+- name: 玩家2名字
+  required: true
+- name: 游戏名字
+  required: true
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (co-op-game-intro-generator)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/co-op-game-intro-generator
+content: |-
+  双人合作游戏主菜单 UI，高品质游戏宣传海报质感，UI 与角色深度融合，现代商业游戏 UI 设计，视觉冲击力强，画面简洁干净，[视觉风格]。
+  色彩：[主体色]作为主体颜色，[UI主体色]作为 UI 主体颜色，[文字色]作为文字颜色，[强调色]作为功能强调色，红色作为危险提示色；整体不超过 5 种颜色，高对比撞色。按钮、图标、字体都沿用这套颜色。
+  布局：16:9 横版，背景铺满；中央两位角色，UI 围绕角色不遮挡；左上角玩家信息卡，右侧纵向菜单，底部警戒胶带，四角少量涂鸦；Z 字阅读路径，视觉重心落在 CONTINUE。
+  背景：纯[主体色]背景，轻微[背景纹理]，大面积留白，边缘少量喷漆；避免大量脏污、密集划痕、大面积泼溅。
+  左侧角色：五官参考[玩家1参考图]，按所选风格重绘（保留脸型、发型、眼镜等身份特征，不保留照片质感）；双腿交叉坐地、双手撑地、身体微后仰、抬头看镜头；服装[玩家1服装]。
+  右侧角色：五官参考[玩家2参考图]，按所选风格重绘；盘腿坐、双手放在腿前、身体略前倾、正视镜头；服装[玩家2服装]。
+  灯光：顶部主光，左上补光，底部柔和环境反光，柔和阴影与接触阴影，轻微轮廓光。
+  玩家信息卡：不规则描边卡片，左侧图标，右侧三行——「PLAYER 1」「[玩家1名字]」「READY」，另一张为「PLAYER 2」「[玩家2名字]」「READY」。
+  菜单：统一尺寸的横向长条圆角按钮，略微倾斜，贴纸化；自上而下「START NEW GAME」「CONTINUE」「SETTINGS」「EXIT GAME」；CONTINUE 最大最亮，EXIT GAME 带红色危险点缀。标题「[游戏名字]」。
+  字体：超粗无衬线、全部大写、字距紧凑；所有标题单行，严禁换行或两行标题。
+  图标：单排横向、数量精简、统一尺寸，严禁换行或上下堆叠。

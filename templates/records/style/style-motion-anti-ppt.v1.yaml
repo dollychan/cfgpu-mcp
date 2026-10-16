@@ -1,0 +1,43 @@
+id: style-motion-anti-ppt
+version: 1
+rank: 400
+kind: style
+media: video
+title: 动效优先的主题视频：可运动的视觉隐喻与反 PPT 检查
+summary: 把一个主题做成真正在动的视频而不是幻灯片：先找能动的隐喻，再排节拍，最后用检查表拦住 PPT 感。
+genres:
+- motion-graphics
+- explainer
+scenes:
+- education
+- tech
+styles:
+- kinetic-typography
+tags:
+- 动态图形
+- 视觉隐喻
+- 反PPT
+- HTML合成
+slots:
+- name: 隐喻
+  required: true
+- name: 起始状态
+  required: true
+- name: 结束状态
+  required: true
+- name: 核心观点
+  required: true
+source:
+  origin: first-party, structure adapted from Pluviobyte/video-production-skills (ai-motion-director)
+  license: first-party
+  url: https://github.com/Pluviobyte/video-production-skills/tree/main/ai-motion-director
+content: |-
+  适用：给一个主题、文章或脚本，做 30–60 秒的动态讲解或动态图形视频；也适用于 HTML/代码合成的确定性动画。
+  核心：不从页面或卡片出发，从运动出发。先为主题找一个会动的视觉隐喻——河流、网络、分叉的树、轨道、流水线、蜂群、坍缩、压缩、扫描、交接、增长飞轮、地图路线、堆叠、波、时钟、透镜、机器。文字是锚点，不是主要载体。
+  动效主张（一句话）：这支视频通过展示[隐喻]从[起始状态]变成[结束状态]，来证明[核心观点]。
+  动效原语：描画、分叉、汇聚、环绕、交接、形变、扫描、堆叠、流动、断裂、镜头（推/摇/环绕/裁切/景深视差）、材质变化（纹理、发光、颗粒、模糊、阴影）。一支视频选 2–4 个原语反复使用，每次换一层含义。
+  主题到隐喻：历史/演化——时间之河、家谱树、化石层、迁徙地图；AI/软件——光标分裂、任务图、工具环绕、接口路线；商业增长——飞轮、漏斗、复利曲线、管线；经济——压力场、被拉伸的价格网格、天平；教学——揭示透镜、装配线、步骤机器；策略——地形图、移动的前线、决策树；效率——杂乱坍缩、工作流传送带、能量电池。
+  节拍字段：时间、叙事任务（钩子/揭示/对比/机制/后果/证明/收尾）、主运动物体、状态变化、镜头或图层运动、文字角色、素材需求、PPT 风险。至少 80% 的节拍要有淡入滑入以外的可见状态变化；每个节拍一个主原语加一个辅助原语。
+  静态图片要动起来：裁切、遮罩、视差、揭示、扫光、景深分层或形变；静图加文字不算视频。
+  PPT 味清单：反复居中标题加三条要点；空背景上的大卡片；切场景时清空全部视觉上下文；没有运动轨迹的装饰图标；不动的图库式图片；所有元素同一种淡入；关键帧像一组互不相关的海报。
+  检查：把关键帧排成一张联系表，不读字也能看出演进；若像六张幻灯片缩略图，先改方案再渲染。

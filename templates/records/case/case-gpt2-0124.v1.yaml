@@ -1,0 +1,19 @@
+id: case-gpt2-0124
+version: 1
+rank: 124
+kind: case
+media: image
+title: Circulatory System Poster
+summary: Create a clean educational anatomy poster showing the human circulatory system in anterior and posterior views on a pale cream background.
+genres:
+- scientific-educational
+tags:
+- tall
+- 2160x3840
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-scientific-and-educational.md
+content: Create a clean educational anatomy poster showing the human circulatory system in anterior and posterior views on a pale cream background. Use an academic but visually refined medical-wall-chart style with precise vascular linework, muted crimson and deep blue vessels, soft ivory body silhouettes, and thin charcoal labels. Include a centered title with crisp in-image text "Human Circulatory System" and subtitle "Major Arteries and Veins". Label key structures such as "Heart", "Aorta", "Carotid Artery", "Vena Cava", "Pulmonary Artery", "Radial Artery", "Femoral Artery", "Saphenous Vein", and "Capillary Beds". Add a compact legend with "Arteries" and "Veins" plus a note reading "Educational schematic". Keep the composition symmetrical, scientifically accurate in appearance, classroom-safe, non-gory, highly legible, and publication-quality.

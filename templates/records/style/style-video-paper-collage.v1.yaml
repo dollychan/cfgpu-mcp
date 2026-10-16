@@ -1,0 +1,33 @@
+id: style-video-paper-collage
+version: 1
+rank: 330
+kind: style
+media: video
+title: 半调纸拼贴讲解动画
+summary: 把一句观点或抽象概念变成定格拼贴：大色块纸面、黑白半调剪影、暖白描边、触感纸片音效。
+genres:
+- explainer
+scenes:
+- education
+- creative
+styles:
+- paper-collage
+tags:
+- 拼贴
+- 半调
+- 定格
+- 视觉隐喻
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (paper-collage-explainer-generator)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/paper-collage-explainer-generator
+content: |-
+  适用：口播句、知识点、观点、故事节点的视觉隐喻 B-roll；单段约 4 秒，默认 16:9。不适合真人口播广告、需要可编辑图层或大量可读文字的画面。
+  风格签名：扁平大色块纸背景、黑白半调照片剪影、选择性彩色卡纸点缀、暖白描边、柔和纸影、细腻未涂布纸纹、精致手撕边、轻微纤维毛边、层叠纸缝；高级编辑感拼贴。
+  纸张质感：不能像扁平数字图层，也不能过旧、发黄、偏棕或皱脏（除非明确要求）。
+  色彩：每段一个主色场，整批统一。参考含义——焦橙或红：劳动、时间压力、紧迫；芥末黄：工具、警示、累积错误；墨绿：认知、重置、判断、超现实平静；深紫：记忆、结构、神秘；青绿：协作、执行、系统流动；玫红：荒诞、仪式、戏剧张力。不把钴蓝当默认色。
+  构图：3–6 个大而易读的纸片组，前景/中景/背景层次清楚，主体层级强，留白可控。
+  画面里不出现可读文字、假字母、数字、界面、水印或 LOGO（除非明确要求）。
+  运动：停格组装——逐片出现，滑入或弹入，轻微回弹，压平，停顿，锁定。不用快速旋转、混乱飞散、整体淡入、平滑的数字平移缩放或泛泛漂浮。
+  开场：从与最终画面主色一致的干净纸色场开始，不用不匹配的牛皮纸底。
+  声音：默认只有触感拼贴音效——纸片滑动、弹入、压平轻敲、轻微摩擦、小纸片脆响，与纸片动作同步；默认不加背景音乐、旁白和字幕。

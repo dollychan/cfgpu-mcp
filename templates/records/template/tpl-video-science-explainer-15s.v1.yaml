@@ -1,0 +1,45 @@
+id: tpl-video-science-explainer-15s
+version: 1
+rank: 260
+kind: template
+media: video
+title: 科普动画 15 秒：正常 → 变化 → 后果
+summary: 用分时段对比讲清一个变化过程的科普短片骨架。
+genres:
+- explainer
+- scientific-educational
+scenes:
+- education
+tags:
+- 科普
+- 对比
+- 15秒
+slots:
+- name: 主题
+  required: true
+- name: 视觉风格
+  required: true
+  hint: 如：超写实医学 CGI、半透明人体可视化
+- name: 正常状态
+  required: true
+- name: 开场运镜
+  required: true
+- name: 变化因素
+  required: true
+- name: 被追踪对象
+  required: true
+- name: 变化过程
+  required: true
+- name: 结果状态
+  required: true
+source:
+  origin: dexhunter/seedance2-skill
+  license: MIT
+  author: Dex
+  url: https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md
+content: |-
+  15秒[主题]科普短片，[视觉风格]。
+  0–5秒：[正常状态]，镜头[开场运镜]。
+  5–10秒：[变化因素]进入画面，镜头跟随[被追踪对象]前进，[变化过程]。
+  10–15秒：[结果状态]，与开场形成「之前与现在」的对比，画面整体颜色变暗。
+  氛围：教育性与警示性，冷色调的临床灯光。

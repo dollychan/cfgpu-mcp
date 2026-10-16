@@ -1,0 +1,56 @@
+id: tpl-video-fantasy-battle-15s
+version: 1
+rank: 250
+kind: template
+media: video
+title: 仙侠/奇幻高燃战斗 15 秒
+summary: 低角度蓄势 → 环绕出招 → 腾空大招 → 落地收势的战斗骨架。
+genres:
+- fantasy-action
+scenes:
+- story
+styles:
+- cinematic
+tags:
+- 仙侠
+- 战斗
+- 台词
+- 15秒
+slots:
+- name: 题材
+  required: true
+- name: 主色调
+  required: true
+- name: 主角
+  required: true
+- name: 服饰细节
+  required: true
+- name: 武器
+  required: true
+- name: 武器特效
+  required: true
+- name: 环境危机
+  required: true
+- name: 敌人
+  required: true
+- name: 台词1
+  required: true
+- name: 冲击效果
+  required: true
+- name: 大招效果
+  required: true
+- name: 台词2
+  required: true
+- name: 收尾意象
+  required: true
+source:
+  origin: dexhunter/seedance2-skill
+  license: MIT
+  author: Dex
+  url: https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md
+content: |-
+  15秒[题材]高燃战斗镜头，[主色调]。
+  0–3秒：低角度特写[主角]的[服饰细节]被热浪吹得猎猎飘动，双手紧握[武器]，[武器特效]持续爆闪，[环境危机]，远处[敌人]嘶吼着冲锋逼近，[主角]低喝「[台词1]」，伴随兵器鸣响与环境声。
+  4–8秒：环绕摇镜快切，[主角]旋身出招，[冲击效果]，前排[敌人]被击飞碎裂成灰烬，伴随破空声与惨嚎。
+  9–12秒：仰拍拉远并慢放定格，[主角]跃起腾空，[大招效果]劈向敌群，所过之处碎石与火光飞溅。
+  13–15秒：缓推特写[主角]落地收势，衣摆余波微动，[武器]残留光效闪烁，冷声道「[台词2]」，镜头定格在[收尾意象]的剪影上，音效收束为余音震颤与渐弱风声。

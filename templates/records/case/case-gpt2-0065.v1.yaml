@@ -1,0 +1,23 @@
+id: case-gpt2-0065
+version: 1
+rank: 65
+kind: case
+media: image
+title: Chess board mid-tournament game
+summary: Generate a photorealistic photo of a chess board during the middle of a serious tournament game.
+genres:
+- photography
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@EddGorenstein'
+  url: https://x.com/EddGorenstein
+content: |-
+  Generate a photorealistic photo of a chess board during the middle of a serious tournament game. Top-down three-quarter view, shallow depth of field. All pieces clearly distinguishable and correctly shaped: pawns, rooks, knights (with horse-head silhouette), bishops (mitre tops), queens, kings (with cross finials). The position is mid-game: several pieces already captured and set aside to the right of the board, some pawns advanced, pieces clustered around the central files d4-e5-f4.
+
+  Materials: polished wooden staunton-style pieces — dark side in rosewood, light side in maple. Board made of inlaid maple and walnut squares. A digital chess clock sits to the left showing "00:14:28 / 00:08:47". Soft overhead tournament lighting, blurred tournament-hall background. All pieces accurate, no mutants, no extra sets.

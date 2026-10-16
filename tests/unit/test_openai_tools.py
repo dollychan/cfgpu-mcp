@@ -9,7 +9,7 @@ from cfgpu_mcp.agent.openai_tools import get_openai_tools, openai_dispatch_tool
 
 def test_no_filter_returns_all_tools():
     tools = get_openai_tools()
-    assert len(tools) == 10
+    assert len(tools) == 12
     assert "understand_vision" in {t["function"]["name"] for t in tools}
 
 

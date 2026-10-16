@@ -1,0 +1,36 @@
+id: style-sports-campaign-poster
+version: 1
+rank: 5
+kind: style
+media: image
+title: Sports Campaign Poster / 运动商业 Campaign
+summary: 用于运动品牌 Campaign、运动员海报和运动产品视觉。
+genres:
+- typography-posters
+scenes:
+- commerce
+- fashion
+styles:
+- poster
+- realistic
+tags:
+- Poster
+- Campaign
+- Typography
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于运动品牌 Campaign、运动员海报和运动产品视觉。
+  Use when: Use for sports brand campaigns, athlete posters, and product-led sport visuals.
+  要点 / Guidance:
+  - Define sport, athlete pose, hero prop, title, and brand palette.
+  - Use dramatic light, clean composition, and readable data overlays.
+  - 定义运动项目、姿态、核心道具、标题和品牌色。
+  - 使用强光影、干净构图和可读数据层。
+  避坑 / Pitfalls:
+  - Avoid wrong equipment and noisy collage.
+  - Keep the athlete and hero prop visually dominant.
+  - 避免错误运动器材和杂乱拼贴。
+  - 让运动员和核心道具占据主导。
+  可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8

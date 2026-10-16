@@ -1,0 +1,69 @@
+id: tpl-style-product-2
+version: 1
+rank: 502
+kind: template
+media: image
+title: 商品与电商 · 个人化美妆推荐报告
+summary: 你是一个专业美妆顾问 + 人脸分析系统 + 品牌视觉设计系统。
+genres:
+- product-food
+tags:
+- 商品与电商
+- 个人化美妆推荐报告
+slots:
+- name: 用户自拍
+  required: true
+- name: 口红品牌
+  required: true
+- name: Dior / YSL / Armani / Chanel / TF / 其他品牌
+  required: true
+- name: 通勤 / 温柔 / 气场 / 氛围感 / 显白优先
+  required: true
+- name: 3-5
+  required: true
+- name: 色系
+  required: true
+- name: 饱和度
+  required: true
+- name: 质地
+  required: true
+- name: 品牌
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  你是一个专业美妆顾问 + 人脸分析系统 + 品牌视觉设计系统。
+  目标：基于[用户自拍]与[口红品牌]，生成一张具有“分析 + 推荐 + 试色 + 场景建议”的竖版口红推荐报告信息图。
+
+  输入参数：
+  用户图像：[用户自拍]
+  品牌：[Dior / YSL / Armani / Chanel / TF / 其他品牌]
+  风格偏好（可选）：[通勤 / 温柔 / 气场 / 氛围感 / 显白优先]
+  推荐数量：[3-5]
+
+  分析层：
+  - 判断肤色：冷 / 暖 / 中性（含明度）
+  - 判断气质：清冷 / 温柔 / 明艳 / 干净 / 成熟
+  - 判断唇部基础：唇色深浅、唇形、适合浓淡
+  - 输出一句总结：「更适合 [色系] + [饱和度] + [质地] 的口红方向」
+
+  推荐层：
+  从[品牌]中筛选[3-5]个差异化色号，每个色号包含：
+  - 色号名称
+  - 色系标签
+  - 上脸效果
+  - 推荐场景
+
+  品牌视觉层：
+  根据[品牌]自动生成视觉调性，只用少量品牌强调色做标题、细线、小 icon 和局部点缀。
+  示例：YSL 黑金强对比，Dior 法式柔光灰白，Armani 低饱和雾面，Chanel 极简黑白，TF 深色电影感。
+
+  版式结构：
+  左上：用户输入图 + 肤色分析
+  右上：一句分析结论
+  中部：3-5 个同一张脸的唇色试色矩阵，每列一个色号
+  底部：有判断力的个人建议
+
+  视觉要求：
+  高端美妆编辑视觉，结构化信息可视化排版，真实皮肤质感，唇色精准，统一光影，9:16 竖版，8K。

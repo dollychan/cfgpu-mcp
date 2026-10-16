@@ -1,0 +1,20 @@
+id: case-gpt2-0005
+version: 1
+rank: 5
+kind: case
+media: image
+title: 16-panel anime expression grid
+summary: Create a 16-panel expression grid of a silver-haired, blue-eyed anime girl.
+genres:
+- anime-manga
+tags:
+- square
+- 1024x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: Unknown
+  url: https://mp.weixin.qq.com/s/ASxig6mFVYxrIE8-8Fthew
+content: 'Create a 16-panel expression grid of a silver-haired, blue-eyed anime girl. Her face shape, hairstyle, and clothing must remain highly consistent across all panels. The 16 expressions should include: happy, sad, angry, surprised, shy, speechless, evil grin, contemplative, curious, proud, wronged, disdainful, confused, scared, crying, and a heart expression.'

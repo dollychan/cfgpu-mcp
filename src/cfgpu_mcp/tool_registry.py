@@ -1095,6 +1095,54 @@ class GetModelCardInput(BaseModel):
     model_name: str = Field(description="A model_id from list_models")
 
 
+TemplateKind = Folded("case", "style", "template")
+TemplateMedia = Folded("image", "video", "audio")
+
+
+class SearchTemplatesInput(BaseModel):
+    """Search the shared library of official prompt templates, worked cases and style directions; returns cards, so call get_template for the full content."""
+
+    query: Optional[str] = Field(
+        default=None,
+        description="Keywords in any language, such as '产品详情页' or 'isometric city'. "
+        "Omit to browse the curated order",
+    )
+    kind: Optional[TemplateKind] = Field(
+        default=None,
+        description="'case' is a complete worked prompt, 'template' is a skeleton with "
+        "[placeholders] to fill, 'style' is a visual direction with guidance and pitfalls",
+    )
+    media: Optional[TemplateMedia] = Field(default=None, description="Output media of the template")
+    genres: Optional[list[str]] = Field(
+        default=None,
+        description="Category filter, any-of. An unknown value is rejected with the valid list",
+    )
+    scenes: Optional[list[str]] = Field(
+        default=None, description="Usage-context filter, any-of, such as 'commerce' or 'education'"
+    )
+    styles: Optional[list[str]] = Field(
+        default=None, description="Visual-style filter, any-of, such as 'realistic' or '3d'"
+    )
+    model: Optional[str] = Field(
+        default=None,
+        description="The model you plan to generate with; templates tested on it rank higher, "
+        "and every template still works with any model",
+    )
+    limit: int = Field(default=10, ge=1, le=20, description="Cards per page (1-20)")
+    cursor: int = Field(default=0, ge=0, description="Offset returned as next_cursor by the previous page")
+
+
+class GetTemplateInput(BaseModel):
+    """Get one template's full content by id; fill each [placeholder] with the user's specifics and keep the user's own decisions."""
+
+    template_id: str = Field(description="The id of a search_templates result")
+    version: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="A specific version to reproduce earlier work; omit for the latest",
+    )
+
+
 # ── NormalizedResult ────────────────────────────────────────────────────────
 
 @dataclass
@@ -1456,6 +1504,8 @@ _REGISTRY: list[tuple[str, type[BaseModel]]] = [
     ("list_model_profiles", ListModelProfilesInput),
     ("list_voice_profiles", ListVoiceProfilesInput),
     ("get_model_card",  GetModelCardInput),
+    ("search_templates", SearchTemplatesInput),
+    ("get_template",    GetTemplateInput),
 ]
 
 _TOOL_TASK_TYPE: dict[str, str] = {

@@ -329,6 +329,15 @@ Its `size` table is **computed, not transcribed**: unlike Seedream this family p
 3. For a TTS model with system voices, map its vendor in `scripts/migrate_voice_catalogs.py` and regenerate `voices.yaml` from the `model_audio_voices` export (schema in `voice_catalog.py`; generated, never hand-edited; a variant inherits its `extends` parent's) — `list_voice_profiles` and the adapter's local voice check both read it
 4. If the model needs custom `build_payload` / `parse_response` logic, create `src/cfgpu_mcp/adapters/<name>.py` with `@register_python_adapter` and import it in `adapters/__init__.py`; otherwise `GenericAdapter` is used automatically
 
+### Template library — `search_templates` / `get_template`
+
+A shared, read-only library of official prompt templates, worked cases and style directions (design: `docs/template-library-and-dialect.md` §6). Public to every caller and **identity-free** — a user's private templates are host-side custom skills, never records here. Four rules:
+
+- **Git is the source of truth, the bundle is what ships.** One YAML per record version under `templates/records/<kind>/<id>.v<version>.yaml`, facet vocabulary in `templates/catalog.yaml`. `scripts/templates/build_bundle.py` is the only writer of `template_library/templates.bundle.json`; `test_committed_bundle_matches_the_source_tree` fails when the two drift. The server has no write path (I-TL2).
+- **A published `(id, version)` never changes its `content` / `slots` / `kind` / `media` / `dialect_variants`** — edit those by adding version N+1; metadata (title, tags, facets, rank, status) may change in place. A record is never deleted, only `withdrawn` (content removed, `withdrawn_reason` kept), so a Production that pinned `id + version` always gets an answer.
+- **`content` is model-neutral.** The build refuses any model dialect spelling (`template_library/dialect_guard.py`), and `[[` too until the unified-notation renderer lands — `generate_image` would read it as a material handle today. `dialect_variants` is server-internal and never returned.
+- **Imports land in `templates/_staging/` (gitignored)**, never in `records/`: `scripts/templates/import_sources.py gpt-image2|style-library <path>`, review with `build_bundle.py --source templates/_staging --check`, then move. Search is an in-memory BM25 over title×3 / tags×2 / summary / facets / content×0.5 with CJK bigrams; ties break on `rank` then `id` (deterministic).
+
 ### Key files
 
 - `tool_registry.py` — Pydantic schemas + `get_anthropic_tools()` + `NormalizedResult`

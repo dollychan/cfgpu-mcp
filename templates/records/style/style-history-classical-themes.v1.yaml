@@ -1,0 +1,37 @@
+id: style-history-classical-themes
+version: 1
+rank: 20
+kind: style
+media: image
+title: History & Classical Themes / 历史与古风题材
+summary: 用于古风题材、长卷、朝代服饰、诗词视觉和历史场景。
+genres:
+- history-classical
+scenes:
+- history
+- story
+styles:
+- history
+- classical
+- illustration
+tags:
+- History
+- Classical
+- Scroll
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于古风题材、长卷、朝代服饰、诗词视觉和历史场景。
+  Use when: Use for ancient Chinese themes, scrolls, dynasty clothing, poetry visuals, and historical scenes.
+  要点 / Guidance:
+  - Specify dynasty, clothing system, object references, layout format, and cultural mood.
+  - Use scroll, album page, or poster format deliberately.
+  - 指定朝代、服饰制度、器物参考、版式和文化气质。
+  - 明确长卷、册页或海报形式。
+  避坑 / Pitfalls:
+  - Avoid mixing dynasties when historical accuracy matters.
+  - Constrain random modern props.
+  - 需要历史准确时，避免朝代混搭。
+  - 约束随机现代物件。
+  可配合的模板骨架 / Skeletons: tpl-style-history-1

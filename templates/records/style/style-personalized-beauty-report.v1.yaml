@@ -1,0 +1,36 @@
+id: style-personalized-beauty-report
+version: 1
+rank: 10
+kind: style
+media: image
+title: Personalized Beauty Report / 个性化美妆报告
+summary: 用于美妆推荐、肤质报告、导购助手和生活方式商品卡片。
+genres:
+- product-food
+scenes:
+- commerce
+- fashion
+styles:
+- product
+- ui
+tags:
+- Product
+- Layout
+- Style
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于美妆推荐、肤质报告、导购助手和生活方式商品卡片。
+  Use when: Use for beauty recommendations, skin reports, shopping assistants, and lifestyle product cards.
+  要点 / Guidance:
+  - Use a report-like hierarchy with diagnosis, recommendation, and product cards.
+  - Keep product images, labels, and ratings aligned.
+  - 使用诊断、推荐和商品卡片的报告层级。
+  - 对齐商品图、标签和评分。
+  避坑 / Pitfalls:
+  - Avoid medical claims and unreadable dense notes.
+  - Keep recommendation logic simple.
+  - 避免医疗化结论和难读小字。
+  - 保持推荐逻辑清楚。
+  可配合的模板骨架 / Skeletons: tpl-style-product-1, tpl-style-product-2

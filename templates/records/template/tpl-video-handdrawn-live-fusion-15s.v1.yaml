@@ -1,0 +1,64 @@
+id: tpl-video-handdrawn-live-fusion-15s
+version: 1
+rank: 321
+kind: template
+media: video
+title: 手绘实拍融合 15 秒（16:9）
+summary: 按 0–3 / 3–6 / 6–10 / 10–13 / 13–15 秒五段写接触、变形、追逐与空间级收尾。
+genres:
+- cinematic-animation
+scenes:
+- creative
+styles:
+- handdrawn
+tags:
+- 15秒
+- '16:9'
+- 分时段
+slots:
+- name: 实拍空间
+  required: true
+- name: 空间细节
+  required: true
+- name: 初始形态
+  required: true
+- name: 中心色彩
+  required: true
+- name: 与手或实物的接触方式
+  required: true
+- name: 第二形态
+  required: true
+- name: 追逐路线
+  required: true
+- name: 第三形态
+  required: true
+- name: 一次恶作剧或发现
+  required: true
+- name: 拍摄者反应
+  required: true
+- name: 第四形态
+  required: true
+- name: 空间中的物件
+  required: true
+- name: 空间级变形
+  required: true
+- name: 可爱笑点
+  required: true
+- name: 环境音
+  required: true
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (handdrawn-live-video-generator)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/handdrawn-live-video-generator
+content: |-
+  15秒，16:9横版视频。将实拍的[实拍空间]与手绘发光动画融合的影像。
+  实拍空间与拍摄质感：[空间细节]，手持手机拍摄，自然光，轻微晃动。
+  0–3秒：[初始形态]以[中心色彩]的发光笔触出现，[与手或实物的接触方式]。
+  3–6秒：它变形为[第二形态]，保留上一形态的线条痕迹，沿[追逐路线]逃开，拍摄者伸手去抓。
+  6–10秒：继续变形为[第三形态]，[一次恶作剧或发现]，拍摄者[拍摄者反应]。
+  10–13秒：变形为[第四形态]，钻进或绕过[空间中的物件]，镜头慢半拍追上。
+  13–15秒：线条扩散到整个空间，变成[空间级变形]，以[可爱笑点]收尾。
+  手绘质感：蜡笔、粉笔、彩铅般的粗糙发光笔触，线条轻微抖动，逐帧重画感。
+  相机：慢半拍的手持追拍，不把动画稳定居中。
+  禁止：3D CG、毛绒感、平滑霓虹、恐怖元素、巨大眼睛、牙齿、跳吓、突然黑屏、突然出现新角色。
+  环境音：[环境音]，配合接触与变形的轻微音效。

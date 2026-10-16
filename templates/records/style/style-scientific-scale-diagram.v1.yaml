@@ -1,0 +1,38 @@
+id: style-scientific-scale-diagram
+version: 1
+rank: 3
+kind: style
+media: image
+title: Scientific Scale Diagram / 科学尺度缩放图
+summary: 用于需要从微观到宏观展示尺度变化的科普主题。
+genres:
+- infographics-field-guides
+- data-visualization
+scenes:
+- education
+- tech
+styles:
+- infographic
+- charts
+- realistic
+tags:
+- Infographic
+- Chart
+- Education
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于需要从微观到宏观展示尺度变化的科普主题。
+  Use when: Use when the topic needs micro-to-macro scale comparison and labeled detail windows.
+  要点 / Guidance:
+  - Use 6-8 scale frames and keep each label short.
+  - Show units, magnification, and distinct scale detail.
+  - 使用 6-8 个尺度框，每个标签保持短句。
+  - 展示单位、倍率和不同尺度的细节。
+  避坑 / Pitfalls:
+  - Avoid making every scale frame visually identical.
+  - Avoid generic magnifying glass icon layouts.
+  - 避免所有尺度框长得一样。
+  - 避免通用放大镜式布局。
+  可配合的模板骨架 / Skeletons: tpl-style-infographic-1, tpl-style-infographic-2

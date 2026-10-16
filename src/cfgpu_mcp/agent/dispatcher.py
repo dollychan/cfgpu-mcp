@@ -7,6 +7,7 @@ from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import model as model_service
 from cfgpu_mcp.service import task as task_service
+from cfgpu_mcp.service import template as template_service
 from cfgpu_mcp.service import video as video_service
 from cfgpu_mcp.service import vision as vision_service
 
@@ -39,6 +40,10 @@ async def dispatch_tool(name: str, inputs: dict[str, Any]) -> Any:
                 return await model_service.list_voice_profiles(**inputs)
             case "get_model_card":
                 return await model_service.get_model_card(**inputs)
+            case "search_templates":
+                return await template_service.search_templates(**inputs)
+            case "get_template":
+                return await template_service.get_template(**inputs)
             case _:
                 raise ValueError(f"Unknown tool: {name!r}")
     except ValueError:

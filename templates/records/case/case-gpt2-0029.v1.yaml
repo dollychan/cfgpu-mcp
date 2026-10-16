@@ -1,0 +1,22 @@
+id: case-gpt2-0029
+version: 1
+rank: 29
+kind: case
+media: image
+title: Studio-Ghibli-style animation still
+summary: A Studio-Ghibli-style hand-painted animation still, landscape 16:9.
+genres:
+- cinematic-animation
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-and-animation.md
+content: |-
+  A Studio-Ghibli-style hand-painted animation still, landscape 16:9. A small wooden cottage sits on a grassy hillside overlooking a valley at golden hour. A child stands barefoot at the cottage doorway waving to a small furry forest spirit half-hidden in the meadow grass. A distant train cuts across the valley floor, swallows dip overhead.
+
+  Art direction: classic Miyazaki / Studio Ghibli watercolor-gouache style. Soft painterly edges, slightly desaturated greens and warm skin tones, visible brush texture in the clouds and grass. Thin ink line art on the characters. Gentle atmospheric perspective. The whole frame should feel like a cel from "My Neighbor Totoro" or "Kiki's Delivery Service", not a 3D render.

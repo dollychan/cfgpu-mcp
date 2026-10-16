@@ -1,0 +1,34 @@
+id: style-video-handdrawn-live-fusion
+version: 1
+rank: 320
+kind: style
+media: video
+title: 手绘发光动画 × 实拍空间融合
+summary: 粗糙发光的手绘小生命与真实的手和物体接触、连续变形逃跑，手机镜头慢半拍追拍。
+genres:
+- cinematic-animation
+scenes:
+- creative
+- social
+styles:
+- handdrawn
+tags:
+- 手绘
+- 实拍融合
+- 变形
+- 手持追拍
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (handdrawn-live-video-generator)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/handdrawn-live-video-generator
+content: |-
+  适用：单场景、15 秒左右的超现实创意短片。不适合精致 CG、恐怖跳吓、毛绒角色或多场景剪辑。
+  固定结构：实拍空间里出现平面的手绘发光动画；开头 3 秒内与真实的手或物体发生明确接触（缠住手指、落在掌心、被抓时逃跑、从指尖诞生）；同一个存在连续变形并逃跑；镜头总是慢半拍追赶。
+  手绘质感：蜡笔、粉笔、彩铅、粉彩、粗糙笔刷；线条轻微抖动，涂抹不均、有毛边、逐帧重画感。
+  变形：始终是同一个实体，在线条、小生物、记号、植物、交通工具、生活小物之间变化，每个新形态保留上一形态的线、尾巴、色彩拖痕或图案母题；不突然出现新角色。
+  空间：全片在同一空间或相邻区域连续展开，像拍摄者边走边追，不剪辑跳地点。可选空间如雨天厨房水槽、旧阳台晾衣角、清晨玄关、小书店走廊、火车窗边小桌、浴室镜柜、温室通道、自助洗衣店长椅。
+  拍摄者参与：伸手、抓、追、开门或开盒、接住、后退、被恶作剧。
+  节奏：每个时间段都要有新的变形、移动、接触、发现或惊喜；结尾做空间级变形——线条扩散到墙、地板、天花板、窗户，变成巨大花朵、星空、夕阳、云或涂鸦小镇，留下感动余韵和一个可爱笑点。
+  相机：手持手机质感，不把动画稳定居中，在实体已离开画面边缘后才平移、俯仰或前进。
+  调性：可爱、生活感、怀旧、温柔，不是恐怖喜剧。
+  禁止：3D CG、毛绒玩具感、均匀矢量线、平滑霓虹、恐怖怪物、巨大眼睛、裂口、牙齿、威吓、扑咬、突然黑屏、跳吓。

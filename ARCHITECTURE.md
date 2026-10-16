@@ -1117,6 +1117,19 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
 ---
 
+### 模板库：新增或修改模板
+
+模板库（`search_templates` / `get_template`）的内容不在代码里，在 git 目录 `templates/`：
+
+1. 新记录写成 `templates/records/<kind>/<id>.v1.yaml`（schema 见 `template_library/schema.py`）；批量导入先用 `scripts/templates/import_sources.py` 写进 `templates/_staging/`，人工审过再移入 `records/`。
+2. 运行 `python scripts/templates/build_bundle.py`：校验 schema、分类词表、正文无模型方言、`verified_on` 是真实模型、已发布版本未被改动，再编译 `template_library/templates.bundle.json`。
+3. 已发布记录的正文不能原地修改：改正文就发新版本 `<id>.v2.yaml`；下架用 `status: withdrawn` + `withdrawn_reason`，不删文件。
+4. 分类取值是封闭词表（`templates/catalog.yaml`）；新增取值要先加进词表，并避免与已有取值近义重复。
+
+运行时只读内存索引，没有写接口，也不查数据库。设计见 `docs/template-library-and-dialect.md` §6。
+
+---
+
 ### 修改工具参数
 
 工具参数定义在**四处**，需同步修改：

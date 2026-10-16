@@ -1,0 +1,36 @@
+id: tpl-style-character-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: 人物与角色 · 常规
+summary: 设计[角色身份]角色设定图。
+genres:
+- character-design
+tags:
+- 人物与角色
+- 常规
+slots:
+- name: 角色身份
+  required: true
+- name: 年龄/发型/服饰/配件
+  required: true
+- name: 关键词
+  required: true
+- name: 站姿/动态动作
+  required: true
+- name: 情绪
+  required: true
+- name: 时代/阵营/职业
+  required: true
+- name: 元素
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  设计[角色身份]角色设定图。
+  外观：[年龄/发型/服饰/配件]，性格：[关键词]。
+  姿态：[站姿/动态动作]，表情：[情绪]。
+  世界观：[时代/阵营/职业]，标志性元素：[元素]。
+  输出：角色主视图 + 风格统一的人设图。

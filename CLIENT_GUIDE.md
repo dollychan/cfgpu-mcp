@@ -147,11 +147,20 @@ disabled_tools:
   - understand_vision
 ```
 
-可用的名字：`generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`task_status`、`task_wait`、`list_models`、`get_model_card`。写错名字会在启动时报错 —— 这个字段的意义就是「某个工具不暴露」，拼错却静默通过，恰好等于没生效。
+可用的名字：`generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`task_status`、`task_wait`、`list_models`、`list_model_profiles`、`list_voice_profiles`、`get_model_card`、`search_templates`、`get_template`。写错名字会在启动时报错 —— 这个字段的意义就是「某个工具不暴露」，拼错却静默通过，恰好等于没生效。
 
 被禁用的工具是**注销**而非隐藏：客户端硬调它会得到 "unknown tool"。注意 `task_status` / `task_wait` 是异步任务取结果的唯一入口，和 `generate_video` 一起留着才有意义。
 
 该配置只作用于 MCP（Mode A）。Mode B / Mode C 直接调 service 层，用 `get_anthropic_tools(tools=[...])` 自行筛选。
+
+### 模板库：`search_templates` / `get_template`
+
+官方模板库是全租户共享的只读知识库，检索不带用户身份。三类记录：`case`（完整案例 prompt）、`template`（带 `[占位符]` 的骨架）、`style`（视觉方向：适用场景、要点、避坑）。
+
+- `search_templates(query?, kind?, media?, genres?, scenes?, styles?, model?, limit=10, cursor=0)` 返回卡片：`id / version / kind / title / summary / 分类 / tags / verified_on / cover / source`，外加 `total`、`next_cursor`、`matched_terms` / `missing_terms`、`catalog_version`。不带 `query` 是浏览模式，按人工排序。分类过滤同一维度内任一命中、跨维度同时满足；写了词表外的取值会报错并列出合法取值。传 `model` 时，实测过该模型的记录排在前面，其余记录照常返回。
+- `get_template(template_id, version?)` 返回整条记录；不传 `version` 取最新版本。要复现旧作品就传当时记下的版本号——已发布版本的内容永远不变；被下架的记录只返回下架原因。
+- 返回 `available: false` 表示模板库没加载成功，**不等于**没有匹配结果。
+- 正文是与模型无关的写法，不含任何模型专用的标签或分镜语法；按目标模型改写由服务端在生成时完成。
 
 ### 使用 MCP Inspector 调试
 

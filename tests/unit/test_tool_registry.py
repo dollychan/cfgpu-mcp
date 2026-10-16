@@ -5,7 +5,7 @@ from cfgpu_mcp.tool_registry import _REGISTRY, get_anthropic_tools, get_field_de
 def test_no_filter_returns_all_tools():
     tools = get_anthropic_tools()
     names = {t["name"] for t in tools}
-    assert len(tools) == 10
+    assert len(tools) == 12
     assert "understand_vision" in names
 
 

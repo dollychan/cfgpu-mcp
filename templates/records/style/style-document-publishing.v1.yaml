@@ -1,0 +1,36 @@
+id: style-document-publishing
+version: 1
+rank: 21
+kind: style
+media: image
+title: Document & Publishing / 文档与出版物
+summary: 用于白皮书、手册、百科图鉴、报告页面和出版系统。
+genres:
+- documents-publishing
+scenes:
+- education
+- tech
+styles:
+- documents
+- infographic
+tags:
+- Document
+- Publishing
+- Layout
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于白皮书、手册、百科图鉴、报告页面和出版系统。
+  Use when: Use for white papers, manuals, encyclopedic plates, report pages, and publication systems.
+  要点 / Guidance:
+  - Define page size, columns, table of contents, figure system, and typography hierarchy.
+  - Use readable headings, tables, labels, and page rhythm.
+  - 定义页面尺寸、分栏、目录、图表系统和字体层级。
+  - 使用可读标题、表格、标签和页面节奏。
+  避坑 / Pitfalls:
+  - Avoid tiny dense text.
+  - Keep charts and captions aligned to the page grid.
+  - 避免密集小字。
+  - 让图表和说明对齐页面网格。
+  可配合的模板骨架 / Skeletons: tpl-style-document-1, tpl-style-document-2

@@ -1,0 +1,20 @@
+id: case-gpt2-0034
+version: 1
+rank: 34
+kind: case
+media: image
+title: 1980s propaganda poster
+summary: Generate a 1980s propaganda poster.
+genres:
+- typography-posters
+tags:
+- portrait
+- 1024x1536
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@akokoi1'
+  url: https://x.com/akokoi1
+content: Generate a 1980s propaganda poster. Use the exact slogan "热烈庆祝GPT-Image-2全量开放". Include Sam Altman, Dario Amodei, and Elon Musk, and give Dario Amodei a red scarf.

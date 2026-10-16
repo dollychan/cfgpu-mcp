@@ -1,0 +1,20 @@
+id: case-gpt2-0030
+version: 1
+rank: 30
+kind: case
+media: image
+title: VHS grocery-store chaos still
+summary: Create a chaotic security-camera still from a 1990s grocery store.
+genres:
+- cinematic-animation
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: Unknown
+  url: https://www.reddit.com/r/ChatGPT/comments/1jk0p3v/tried_to_push_the_new_image_model_with_an/
+content: Create a chaotic security-camera still from a 1990s grocery store. A man in full medieval armor is frozen mid-sprint stealing several rotisserie chickens past the dairy section. Overhead fluorescent lights reflect off the armor. The floor is baby-blue tile. Add a timestamp reading "08/13/96 04:44 AM" and a wall poster saying "NEW! TOASTER STRUDELS!". Make it low-fidelity, absurd, slightly intense, with motion blur, VHS color bleed, surveillance noise, and authentic analog-store lighting.

@@ -1,0 +1,40 @@
+id: tpl-style-ui-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: UI与界面 · 常规
+summary: 为[产品类型]生成一张[平台，如 iOS/Android/Web]界面图。
+genres:
+- ui-ux-mockups
+tags:
+- UI与界面
+- 常规
+slots:
+- name: 产品类型
+  required: true
+- name: 平台，如 iOS/Android/Web
+  required: true
+- name: 功能点A
+  required: true
+- name: 功能点B
+  required: true
+- name: 功能点C
+  required: true
+- name: 极简/科技/拟物
+  required: true
+- name: 颜色
+  required: true
+- name: 顶部导航/双栏/卡片流
+  required: true
+- name: 9:16/16:9
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  为[产品类型]生成一张[平台，如 iOS/Android/Web]界面图。
+  核心功能：[功能点A]、[功能点B]、[功能点C]。
+  视觉风格：[极简/科技/拟物]，主色[颜色]，强调色[颜色]。
+  布局：[顶部导航/双栏/卡片流]，信息层级清晰，留白充足。
+  输出：高保真UI截图，文字清晰可读，比例[9:16/16:9]。

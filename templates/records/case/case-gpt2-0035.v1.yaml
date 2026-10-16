@@ -1,0 +1,29 @@
+id: case-gpt2-0035
+version: 1
+rank: 35
+kind: case
+media: image
+title: Saul-Bass-style thriller movie poster
+summary: A Saul-Bass-style minimalist thriller movie poster, 3:4 portrait.
+genres:
+- typography-posters
+tags:
+- portrait
+- 1024x1536
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-typography-and-posters.md
+content: |-
+  A Saul-Bass-style minimalist thriller movie poster, 3:4 portrait. Off-white paper background with subtle vintage grain. Large flat-color cut-paper shapes, bold geometry, negative-space illusion.
+
+  Composition: a single stylised human silhouette in crimson running across centre; the shadow warps into a knife blade pointing up into the title. Black ink-brush splatter across the lower third. A single yellow eye motif in the upper-left negative space.
+
+  Exact typography:
+  - Title (large hand-lettered serif, black): "THE LAST HEIR"
+  - Tagline (small caps sans-serif, dark red): "EVERY FAMILY KEEPS A SECRET. HIS WILL BURY THEM ALL."
+  - Bottom credit block: "PRODUCERS JANE NORRIS  LEWIS HAHN    DIRECTED BY MAYA ALVAREZ    A CINERA RELEASE    IN CINEMAS OCTOBER 31"
+
+  Palette: cream, charcoal black, crimson red, mustard-yellow accent. Pure flat graphic design, no photo elements, no gradients, no 3D — in the lineage of Bass's "Anatomy of a Murder", "Vertigo", and "The Man with the Golden Arm".

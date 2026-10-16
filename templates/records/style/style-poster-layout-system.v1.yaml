@@ -1,0 +1,35 @@
+id: style-poster-layout-system
+version: 1
+rank: 4
+kind: style
+media: image
+title: Poster Layout System / 海报排版系统
+summary: 用于活动海报、电影海报、封面和社媒传播视觉。
+genres:
+- typography-posters
+scenes:
+- commerce
+- social
+styles:
+- poster
+tags:
+- Poster
+- Typography
+- Campaign
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于活动海报、电影海报、封面和社媒传播视觉。
+  Use when: Use for event posters, movie posters, covers, and social campaign visuals.
+  要点 / Guidance:
+  - Lock subject, headline, layout, palette, and aspect ratio.
+  - Make the title hierarchy and primary visual clear.
+  - 锁定主体、标题、版式、配色和比例。
+  - 突出标题层级和主视觉。
+  避坑 / Pitfalls:
+  - Avoid mixed moodboards or process sheets when asking for one finished poster.
+  - Constrain extra text and decorative symbols.
+  - 需要成品海报时，避免生成拼贴展示板。
+  - 约束多余文字和装饰符号。
+  可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8

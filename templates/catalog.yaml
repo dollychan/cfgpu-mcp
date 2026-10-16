@@ -1,0 +1,80 @@
+# Template library catalog (docs/template-library-and-dialect.md §6).
+#
+# catalog_version: bump when a published record is removed or changes meaning (I-TL1).
+# Adding records, retuning metadata, or deprecating needs no bump.
+#
+# The facet lists below are the closed vocabulary records may use. search_templates
+# rejects any other value with this list, so keep it short and free of near-duplicates —
+# two slugs for one category silently split a filter's results in half.
+schema_version: 1
+catalog_version: 1
+facets:
+  genres:
+    - animation-short
+    - anime-manga
+    - architecture-interior
+    - beauty-lifestyle
+    - brand-promo
+    - brand-systems-identity
+    - character-design
+    - cinematic-animation
+    - cinematic-film-references
+    - dance
+    - data-visualization
+    - documents-publishing
+    - events-experience
+    - explainer
+    - fantasy-action
+    - fashion-editorial
+    - fine-art-painting
+    - game-intro
+    - gaming
+    - history-classical
+    - illustration
+    - infographics-field-guides
+    - ink-chinese
+    - isometric
+    - motion-graphics
+    - music-video
+    - photography
+    - pixel-art
+    - product-ad
+    - product-food
+    - research-paper-figures
+    - retro-cyberpunk
+    - scenes-storytelling
+    - scientific-educational
+    - screen-photography
+    - short-drama
+    - tattoo-design
+    - technical-illustration
+    - typography-posters
+    - ui-ux-mockups
+    - watercolor
+  scenes: [commerce, creative, education, fashion, food, history, social, story, tech, travel]
+  styles:
+    - 3d
+    - architecture
+    - brand
+    - cartoon-3d
+    - character
+    - charts
+    - cinematic
+    - classical
+    - dark-tech
+    - documents
+    - handdrawn
+    - history
+    - illustration
+    - infographic
+    - kinetic-typography
+    - minimal
+    - other-use-cases
+    - paper-collage
+    - papercraft
+    - photography
+    - poster
+    - product
+    - realistic
+    - scenes
+    - ui

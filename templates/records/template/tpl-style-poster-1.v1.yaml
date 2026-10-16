@@ -1,0 +1,40 @@
+id: tpl-style-poster-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: 海报与排版 · 常规
+summary: 设计一张[活动/产品/电影]海报，主题为[主题词]。
+genres:
+- typography-posters
+tags:
+- 海报与排版
+- 常规
+slots:
+- name: 活动/产品/电影
+  required: true
+- name: 主题词
+  required: true
+- name: 主体元素
+  required: true
+- name: 标题
+  required: true
+- name: 副标题
+  required: true
+- name: 居中/左对齐/对角构图
+  required: true
+- name: 复古/未来/极简
+  required: true
+- name: 主色 + 辅色
+  required: true
+- name: 情绪关键词
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  设计一张[活动/产品/电影]海报，主题为[主题词]。
+  主视觉：[主体元素]，标题文案：[标题]，副标题：[副标题]。
+  版式：[居中/左对齐/对角构图]，风格：[复古/未来/极简]。
+  色彩：[主色 + 辅色]，氛围：[情绪关键词]。
+  输出：可用于社媒传播的高分辨率海报。

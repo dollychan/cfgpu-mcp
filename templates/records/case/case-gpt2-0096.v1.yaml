@@ -1,0 +1,22 @@
+id: case-gpt2-0096
+version: 1
+rank: 96
+kind: case
+media: image
+title: Automatic coffee machine infographic
+summary: Create a detailed Infographic of the functioning and flow of an automatic coffee machine like a Jura.
+tags:
+- portrait
+- 1024x1536
+- openai-cookbook
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: OpenAI
+  url: https://github.com/openai/openai-cookbook/blob/main/examples/multimodal/image-gen-models-prompting-guide.ipynb
+content: |-
+  Create a detailed Infographic of the functioning and flow of an automatic coffee machine like a Jura.
+  From bean basket, to grinding, to scale, water tank, boiler, etc.
+  I'd like to understand technically and visually the flow.

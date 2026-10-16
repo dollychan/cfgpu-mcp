@@ -1,0 +1,35 @@
+id: tpl-video-beat-sync-montage
+version: 1
+rank: 240
+kind: template
+media: video
+title: 图集音乐卡点剪辑
+summary: 把一组图片按参考视频的画面节奏与音乐节拍做成卡点视频。
+genres:
+- music-video
+scenes:
+- social
+- travel
+tags:
+- 卡点
+- 图集
+- 转场
+slots:
+- name: 图片组
+  required: true
+  hint: 多张图片素材的引用，按出场顺序
+- name: 主题
+  required: true
+- name: 节奏参考视频
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 整体风格
+  required: true
+source:
+  origin: dexhunter/seedance2-skill
+  license: MIT
+  author: Dex
+  url: https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md
+content: |-
+  把[图片组]按顺序作为[主题]的画面素材，参考[节奏参考视频]的画面节奏、转场风格和音乐节拍进行卡点。
+  每次转场落在节拍上；可根据音乐需要调整景别、补充光影变化；画面中的人物更有动感，整体风格[整体风格]，画面张力强。

@@ -1,0 +1,34 @@
+id: style-concept-product-breakdown
+version: 1
+rank: 22
+kind: style
+media: image
+title: Concept Product Breakdown / 概念产品研发拆解
+summary: 用于实验型任务、研发视觉板、拆解图和特殊视觉系统。
+scenes:
+- creative
+- tech
+styles:
+- other-use-cases
+- product
+tags:
+- Creative
+- R&D
+- Special
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于实验型任务、研发视觉板、拆解图和特殊视觉系统。
+  Use when: Use for experimental prompt tasks, R&D boards, exploded diagrams, and unusual visual systems.
+  要点 / Guidance:
+  - Define the artifact type, components, labels, material logic, and final presentation format.
+  - Use clear callouts and a controlled technical style.
+  - 定义产物类型、组件、标签、材质逻辑和展示格式。
+  - 使用清晰标注和受控技术风格。
+  避坑 / Pitfalls:
+  - Avoid unspecified mixed tasks.
+  - Keep labels short and component relationships visible.
+  - 避免任务边界过泛。
+  - 标签要短，组件关系要清楚。
+  可配合的模板骨架 / Skeletons: tpl-style-other-1, tpl-style-other-2

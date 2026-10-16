@@ -1,0 +1,36 @@
+id: style-scene-storytelling
+version: 1
+rank: 19
+kind: style
+media: image
+title: Scene Storytelling / 场景叙事
+summary: 用于分镜、世界观、直播场景和情绪叙事画面。
+genres:
+- scenes-storytelling
+scenes:
+- story
+- social
+styles:
+- scenes
+- illustration
+tags:
+- Scene
+- Story
+- Storyboard
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于分镜、世界观、直播场景和情绪叙事画面。
+  Use when: Use for storyboards, worldbuilding, live scenes, and emotional narrative frames.
+  要点 / Guidance:
+  - Define who, where, when, conflict, emotion, and camera framing.
+  - Use scene details to support narrative rather than decoration.
+  - 定义人物、地点、时间、冲突、情绪和机位。
+  - 让场景细节服务故事。
+  避坑 / Pitfalls:
+  - Avoid generic fantasy backgrounds.
+  - Keep narrative cues visible in the frame.
+  - 避免通用幻想背景。
+  - 让故事线索在画面里可见。
+  可配合的模板骨架 / Skeletons: tpl-style-scene-1

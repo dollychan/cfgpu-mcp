@@ -1,0 +1,19 @@
+id: case-gpt2-0139
+version: 1
+rank: 139
+kind: case
+media: image
+title: 'Color Field Abstract: Crimson and Ochre'
+summary: A large-scale abstract painting in the lineage of mid-century Color Field expressionism.
+genres:
+- fine-art-painting
+tags:
+- tall
+- 2160x3840
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fine-art-painting.md
+content: A large-scale abstract painting in the lineage of mid-century Color Field expressionism. The composition consists of three stacked, soft-edged rectangular forms that appear to float against a darker background. The top rectangle is a deep 'Oxblood Red', the middle is a vibrating 'Burnt Orange', and the bottom is a dusty 'Ochre'. The edges of the shapes are hazy and feathered, allowing the colors to bleed into one another and create a sense of profound depth. The texture of the canvas is subtly visible through the thin, layered washes of pigment. There is no representational subject matter; the focus is entirely on the emotional resonance of the color and the monumental scale. The lighting is soft and ambient, making the colors seem to glow from within the canvas. The mood is spiritual, somber, and deeply immersive.

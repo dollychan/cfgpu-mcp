@@ -1,0 +1,40 @@
+id: tpl-image-papercraft-keyframe
+version: 1
+rank: 341
+kind: template
+media: image
+title: 纸艺定格科普：单张主视觉
+summary: 一张图只讲一个知识概念的纸雕舞台主视觉。
+genres:
+- scientific-educational
+scenes:
+- education
+styles:
+- papercraft
+tags:
+- 主视觉
+- 单图
+slots:
+- name: 主题
+  required: true
+- name: 画幅
+  required: true
+- name: 核心知识对象
+  required: true
+- name: 前景遮挡物
+  required: true
+- name: 背景布景
+  required: true
+- name: 需要标注的要点
+  required: false
+- name: 主色调
+  required: true
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (papercraft-stop-motion-explainer)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/papercraft-stop-motion-explainer
+content: |-
+  [主题]的纸艺定格动画风格主视觉，[画幅]。核心对象是[核心知识对象]，放在醒目的中景层。
+  微缩纸雕舞台，多层卡纸剪裁，可见纸张纤维、折痕、缝隙、剪裁边缘和纸片厚度；层与层之间有真实物理投影；前景用[前景遮挡物]制造空间深度，背景是[背景布景]。
+  用纸质标签、箭头或知识卡片标注[需要标注的要点]。微距摄影感，轻微景深，[主色调]。
+  不要：光滑塑料 3D、高亮 CG、扁平矢量插画、金属或玻璃材质、霓虹。

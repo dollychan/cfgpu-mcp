@@ -1,0 +1,20 @@
+id: case-gpt2-0134
+version: 1
+rank: 134
+kind: case
+media: image
+title: Muted streetwear studio editorial portrait
+summary: A high-end studio photoshoot featuring a half-body portrait of a person in their mid-30s to early 40s with a naturally fit build.
+genres:
+- fashion-editorial
+tags:
+- portrait
+- 1024x1536
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@john_my07'
+  url: https://x.com/john_my07/status/2047182640760140198
+content: 'A high-end studio photoshoot featuring a half-body portrait of a person in their mid-30s to early 40s with a naturally fit build. The subject stands in a relaxed yet confident pose, with a calm, neutral, self-assured expression. They are dressed in modern, minimal casual streetwear, such as a well-fitted t-shirt or a light jacket, using neutral, muted tones. Shot at eye level using an 85mm portrait lens with an aperture of f/2.8, keeping the subject tack sharp while creating a soft, shallow depth of field that gently blurs the background. The lighting is professional studio quality: a softbox key light from the front, subtle fill lighting to balance shadows, and a gentle rim light to separate the subject from the background. Shadows are soft and natural, with accurate, realistic skin tones. The background is a clean studio backdrop with a smooth, minimal texture and a soft neutral gradient, completely distraction-free. The overall style is highly realistic with an editorial fashion portrait look. Color grading is natural and balanced, with no filters or overprocessing. Rendered in ultra-high detail.'

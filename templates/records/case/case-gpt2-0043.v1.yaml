@@ -1,0 +1,20 @@
+id: case-gpt2-0043
+version: 1
+rank: 43
+kind: case
+media: image
+title: Spanish fantasy film mobile poster
+summary: Haz un póster vertical 4:5 para una película fantástica inexistente llamada "La Última Ciudad Sumergida".
+genres:
+- typography-posters
+tags:
+- portrait
+- 1024x1536
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@palabraseca'
+  url: https://x.com/palabraseca/status/2047079358326849911
+content: 'Haz un póster vertical 4:5 para una película fantástica inexistente llamada "La Última Ciudad Sumergida". Debe sentirse como un gran estreno cinematográfico: detallado, elegante, épico y pensado como wallpaper de móvil. Muestra a una heroína sola sobre un puente inundado mirando una ciudad luminosa bajo el mar. Usa tipografía dramática en español, créditos falsos creíbles, niebla dorada, luz azul verdosa, composición premium y acabado de cartel internacional de cine.'

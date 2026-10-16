@@ -1,0 +1,19 @@
+id: case-gpt2-0148
+version: 1
+rank: 148
+kind: case
+media: image
+title: 'Monolithic Scifi: The Obsidian Gate'
+summary: A breathtaking cinematic wide shot in the lineage of Denis Villeneuve's monolithic sci-fi.
+genres:
+- cinematic-film-references
+tags:
+- wide
+- 2048x1152
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-film-references.md
+content: 'A breathtaking cinematic wide shot in the lineage of Denis Villeneuve''s monolithic sci-fi. A lone, tiny figure stands before a gargantuan, featureless obsidian slab that rises miles into a dusty orange sky. The scale is incomprehensible, making the person look like a grain of sand. The environment is a vast, flat salt plain under a hazy, dim sun. The lighting is low-contrast and atmospheric, with the monolith''s surface reflecting a dull, oily sheen. The color palette is ''Industrial Monochrome'': deep blacks, slate greys, and a muted, sandy ochre. There is a sense of immense weight and ancient silence. The camera uses a wide-angle lens with a deep focus to emphasize the terrifying scale of the structure. The mood is one of awe, dread, and the sublime mystery of an advanced, alien intelligence. Minimalist and brutalist in design.'

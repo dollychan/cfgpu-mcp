@@ -1,0 +1,35 @@
+id: style-conceptual-typography-poster
+version: 1
+rank: 6
+kind: style
+media: image
+title: Conceptual Typography Poster / 概念字体海报
+summary: 用于标题文字需要成为主视觉结构的海报。
+genres:
+- typography-posters
+scenes:
+- creative
+- social
+styles:
+- poster
+tags:
+- Typography
+- Poster
+- Style
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于标题文字需要成为主视觉结构的海报。
+  Use when: Use when the exact title must become the main visual structure.
+  要点 / Guidance:
+  - Make typography the hero and spell the title exactly.
+  - Tie human figures, objects, or landscapes to the title meaning.
+  - 让字体成为画面主角，并保证标题拼写准确。
+  - 人物、物体或风景需要服务标题含义。
+  避坑 / Pitfalls:
+  - Avoid default word art, unrelated icons, and misspelled title text.
+  - Limit the color system to a restrained palette.
+  - 避免默认字效、无关图标和标题错字。
+  - 控制配色数量，保持克制。
+  可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8
