@@ -86,13 +86,17 @@
     "task_type":"cf_image_generation",
     "status":"completed",
     "result":{
-      "images":["https://..."]
+      "images":["https://..."],
+      "tokenUsage":{"imageInputTokens":0,"textInputTokens":987,"totalTokens":3689,"imageOutputTokens":2702},
+      "tokenBillingSettlement":{"actualPoints":40,"supplementPoints":1,"prechargePoints":39,"channel":"official","refundPoints":0}
     },
     "created_at":"2026-05-13T13:48:01.000Z",
     "updated_at":"2026-05-13T13:48:35.000Z"
   }
 }
 ```
+
+没有顶层 `usage`：token 用量在 `data.result.tokenUsage`，与 [CF Image 2.5](../gpt-image-2-5-sunburst/card.md) 同形，工具结果原样作为 `usage` 返回。积分结算（`tokenBillingSettlement`）不进 `usage`。
 
 
 ## 约束与限制
