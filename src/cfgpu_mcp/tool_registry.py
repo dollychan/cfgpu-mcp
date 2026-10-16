@@ -79,6 +79,7 @@ def media_field(
     role: Literal["image", "video", "audio", "region"],
     arity: Literal["one", "many"],
     accepts: list[str],
+    refs: Optional[str] = None,
 ) -> Any:
     """Declare a material slot: a Field carrying ``x-cfgpu-media`` + generated prose.
 
@@ -96,6 +97,9 @@ def media_field(
     / ``requires`` key; such limits are owned by adapter validation. The agent-facing
     profile catalog is selection guidance, not a substitute for that enforcement.
 
+    ``refs`` names the sibling caller-handle list for a ``many`` slot (``image_refs`` for
+    ``reference_images``); see the inline comment below.
+
     Every media slot is optional and defaults to ``None`` (kept here rather than at each
     call site so the eight declarations stay comparable; the schema-consistency test pins
     this against the FastMCP wrapper signatures).
@@ -104,6 +108,13 @@ def media_field(
     if unknown:
         raise ValueError(f"unknown media wire form(s) {unknown}; known: {sorted(_WIRE_FORMS)}")
     spec: dict[str, Any] = {"role": role, "arity": arity, "accepts": list(accepts), "slot": slot}
+    if refs is not None:
+        # The sibling field holding one caller handle per item of this slot — the list
+        # that gives `[[<handle>]]` in `prompt` its meaning. Named here rather than left to
+        # a naming convention so a host can fill it from its own ids without guessing
+        # which slot pairs with which list. A permissive fact like the others: it says
+        # where handles may go, never that they must.
+        spec["refs"] = refs
     return Field(
         default=None,
         description=_compose_media_description(slot, accepts, arity),
@@ -286,21 +297,115 @@ def _validate_regions(
         )
 
 
-def image_refs_field(image_slot: str) -> Any:
-    """Declare the per-image caller-handle list (kept in one place for both tools)."""
+#: Characters a handle may not contain: ``#`` qualifies a region, and brackets would
+#: let a handle close or open a placeholder of its own.
+_HANDLE_FORBIDDEN = set("#[]")
+
+
+def _validate_video_refs(req: Any) -> None:
+    """Check ``generate_video``'s three handle lists and every ``[[...]]`` in its prompt.
+
+    Model-independent, so it lives at the schema layer where no routing can get around
+    it: a handle list must pair with its slot item for item, a handle may name only one
+    item across all three lists, and every placeholder must name one of them. A
+    placeholder that resolves to nothing would reach the model as literal text — a
+    request naming a material the model cannot see, billed anyway — so it is refused
+    here, exactly as ``regions.render_prompt`` refuses one on the image tools.
+
+    Whether the selected model can name a given kind at all, and whether it ignores an
+    unnamed reference, are per-model facts and are checked in ``supports()``.
+    """
+    from cfgpu_mcp.adapters.dialect import REFS_FIELD, SLOT_KIND
+    from cfgpu_mcp.adapters.regions import _PLACEHOLDER
+
+    owner: dict[str, str] = {}
+    for slot, kind in SLOT_KIND.items():
+        refs_name = REFS_FIELD[kind]
+        refs = getattr(req, refs_name)
+        if refs is None:
+            continue
+        items = getattr(req, slot) or []
+        if len(refs) != len(items):
+            raise ValueError(
+                f"{refs_name} has {len(refs)} entry/entries but {slot} has {len(items)} — "
+                f"{refs_name} is one handle per item, in the same order, so the two must be "
+                f"the same length (use an empty string for an item you will not refer to, "
+                f"or omit {refs_name} entirely)."
+            )
+        for i, handle in enumerate(refs):
+            if not handle:
+                continue
+            if handle != handle.strip() or _HANDLE_FORBIDDEN & set(handle):
+                raise ValueError(
+                    f"{refs_name}[{i}] = {handle!r} is not a usable handle: no surrounding "
+                    f"whitespace and none of '#', '[' or ']'."
+                )
+            if handle in owner:
+                raise ValueError(
+                    f"handle {handle!r} names both {owner[handle]} and {slot}[{i}]; a "
+                    f"`[[{handle}]]` in prompt could then mean either, so each handle must "
+                    f"name exactly one item."
+                )
+            owner[handle] = f"{slot}[{i}]"
+
+    for match in _PLACEHOLDER.finditer(req.prompt or ""):
+        token = match.group(1).strip()
+        if "#" in token:
+            raise ValueError(
+                f"prompt placeholder [[{token}]] names a region, but generate_video takes "
+                f"no regions; refer to the whole material with [[<handle>]] and describe "
+                f"the part you mean in words."
+            )
+        if token in owner:
+            continue
+        available = ", ".join(f"[[{h}]]" for h in owner)
+        hint = (
+            f"available here: {available}."
+            if available
+            else "this call has no image_refs / video_refs / audio_refs, so nothing can "
+            "resolve; give each reference a handle in the list that pairs with its slot "
+            "(same order, same length) and write [[<handle>]]."
+        )
+        raise ValueError(
+            f"prompt placeholder [[{token}]] names no handle in image_refs / video_refs / "
+            f"audio_refs — {hint} If [[{token}]] is a material, also pass it in the "
+            f"reference_* list for its kind. An unresolved [[...]] would reach the model "
+            f"as literal text, so nothing was sent."
+        )
+
+
+def media_refs_field(slot: str, kind: str = "image") -> Any:
+    """Declare the per-item caller-handle list for one media slot.
+
+    One description for every slot and every tool, so how a handle is written cannot
+    differ between them. It deliberately names no model's own way of writing a
+    reference: the server renders `[[<handle>]]` into that form, and a form the caller
+    can read is a form the caller will copy into the next model's prompt (I-DL5).
+    """
     return Field(
         default=None,
-        description=f"Optional: your own handle for each image in `{image_slot}`, in the "
-        f"same order and the same length. Its only job is to let `prompt` refer to a "
-        f"whole image by name — write `[[<handle>]]` and the adapter renders it as that "
-        f"model's own image ordinal. Use it instead of writing '图1' / 'the second "
-        f"image' yourself: ordinals shift whenever the image list is rebuilt, and a "
-        f"sentence that hard-codes one then points at the wrong picture without any "
-        f"error. Handles are also the qualified half of a `[[<handle>#<label>]]` region "
-        f"placeholder. A `[[...]]` that matches no handle or label is refused before "
-        f"anything is sent, since it would otherwise reach the model as literal text. "
-        f"Passed through untouched — never fetched, never sent upstream.",
+        description=f"Optional: your own handle for each {kind} in `{slot}`, in the same "
+        f"order and the same length. Its only job is to let `prompt` refer to that {kind} "
+        f"by name — write `[[<handle>]]` and the server renders it in whatever form the "
+        f"selected model reads. Use it instead of numbering {kind}s yourself ('the second "
+        f"{kind}'): positions shift whenever a list is rebuilt or another model is chosen, "
+        f"and a sentence that hard-codes one then points at the wrong material without "
+        f"any error. Use an empty string for an item you will not refer to. A `[[...]]` "
+        f"that matches no handle is refused before anything is sent, since it would "
+        f"otherwise reach the model as literal text. Passed through untouched — never "
+        f"fetched, never sent upstream.",
     )
+
+
+def image_refs_field(image_slot: str) -> Any:
+    """``media_refs_field`` for an image slot, which is also the qualified half of a
+    ``[[<handle>#<label>]]`` region placeholder."""
+    field = media_refs_field(image_slot, "image")
+    field.description += (
+        " On image tools a handle is also the qualified half of a `[[<handle>#<label>]]` "
+        "region placeholder."
+    )
+    return field
 
 
 # ── Caption / label (artifact description and name) ─────────────────────────
@@ -530,6 +635,7 @@ class GenerateImageInput(BaseModel):
         role="image",
         arity="many",
         accepts=["https_url"],
+        refs="image_refs",
     )
     regions: Optional[list[RegionSpec]] = media_field(
         slot="Regions of `reference_images` to edit, as boxes the user marked. Supply "
@@ -664,6 +770,7 @@ class GenerateVideoInput(BaseModel):
         role="image",
         arity="many",
         accepts=["https_url", "asset_url"],
+        refs="image_refs",
     )
     reference_videos: Optional[list[str]] = media_field(
         slot="Reference videos that guide the generation. Model-specific support and limits "
@@ -671,6 +778,7 @@ class GenerateVideoInput(BaseModel):
         role="video",
         arity="many",
         accepts=["https_url", "asset_url"],
+        refs="video_refs",
     )
     reference_audios: Optional[list[str]] = media_field(
         slot="Audio supplied to the generation. Models use it differently — as the "
@@ -681,7 +789,11 @@ class GenerateVideoInput(BaseModel):
         role="audio",
         arity="many",
         accepts=["https_url", "asset_url"],
+        refs="audio_refs",
     )
+    image_refs: Optional[list[str]] = media_refs_field("reference_images", "image")
+    video_refs: Optional[list[str]] = media_refs_field("reference_videos", "video")
+    audio_refs: Optional[list[str]] = media_refs_field("reference_audios", "audio")
     duration_seconds: Optional[int] = Field(
         default=None,
         description="Video duration in seconds. None uses the selected model's default "
@@ -764,6 +876,11 @@ class GenerateVideoInput(BaseModel):
     caption: CaptionStr = caption_field()
     label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
+
+    @model_validator(mode="after")
+    def _validate_reference_handles(self) -> "GenerateVideoInput":
+        _validate_video_refs(self)
+        return self
 
 
 class GenerateAudioInput(BaseModel):
@@ -893,6 +1010,7 @@ class UnderstandVisionInput(BaseModel):
         role="image",
         arity="many",
         accepts=["https_url"],
+        refs="image_refs",
     )
     video: Optional[str] = media_field(
         slot="A single video to understand (long video supported). Use this for ANY video "

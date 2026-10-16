@@ -16,6 +16,9 @@ inputs:
   reference_videos: null
   reference_audios: null
 
+# How [[handle]] references in `prompt` are rendered for this model (capabilities/prompt_dialects.yaml); takes no reference media, so nothing to number.
+prompt_dialect: natural
+
 # Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
 # both the code gates and the agent-facing profile catalog.
 tasks:

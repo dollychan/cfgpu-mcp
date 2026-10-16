@@ -16,6 +16,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+from tests.unit._video_refs import tag_references
 from pydantic import ValidationError
 
 from cfgpu_mcp.adapters.registry import AdapterRegistry
@@ -788,7 +790,7 @@ def test_every_video_model_checks_4k_against_its_resolution_set(
     model, extra, expected_resolution
 ):
     registry = _real_registry()
-    req = GenerateVideoInput(prompt="x", model=model, resolution="4k", **extra)
+    req = GenerateVideoInput(**tag_references({"prompt": "x", "model": model, "resolution": "4k", **extra}))
     adapter = ModelRouter(registry).resolve(req, for_validation=True)
 
     result = validate_request(adapter, req)

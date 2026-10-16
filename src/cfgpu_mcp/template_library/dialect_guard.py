@@ -30,7 +30,8 @@ _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("h3-reference-tag", re.compile(r"<(?:Picture|Video|Audio) ?\d+>")),
     ("kling-reference-tag", re.compile(r"<<<(?:image|video)_\d+>>>")),
     ("bracket-image-index", re.compile(r"\[(?:Image|Video|Audio) ?\d+\]")),
-    ("wan26-character-tag", re.compile(r"\bcharacter\d+\b")),
+    # Not \b: Chinese characters are word characters, so "character1在" has no boundary.
+    ("wan26-character-tag", re.compile(r"(?<![A-Za-z])character\d+(?!\d)")),
     # "参考图1" is the image-ordinal dialect; "地图1号线" is not.
     ("cn-ordinal-reference", re.compile(r"(?:图片|视频|音频|图像)\d+|(?<!地)图\d+")),
     ("at-reference", re.compile(r"@(?:图片|视频|音频|图像|Image|Video|Audio)\d+")),

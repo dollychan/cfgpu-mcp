@@ -20,6 +20,9 @@ inputs:
   # not a driving track. Must ride with at least one reference image or video.
   reference_audios: {max: 3, role: reference, standalone: false}
 
+# How [[handle]] references in `prompt` are rendered for this model (capabilities/prompt_dialects.yaml); inherited by the Seedance 2.x entries that extend this one.
+prompt_dialect: seedance
+
 # Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
 # both the code gates and the agent-facing profile catalog.
 tasks:

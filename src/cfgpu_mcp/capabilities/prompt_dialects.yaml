@@ -1,0 +1,88 @@
+# Prompt dialects — how each model wants a reference material named inside `prompt`.
+#
+# The caller never writes any of these. It writes `[[<handle>]]` (the unified notation,
+# docs/template-library-and-dialect.md §4.2) next to a `*_refs` list that gives each
+# handle its slot and position, and the server renders the handle into the label below
+# just before build_payload (adapters/prompt_render.py). Nothing in this file is shown to
+# an agent: not in a tool schema, not in list_model_profiles, not in an error (I-DL5).
+#
+# Only C/V-level evidence goes in (D-DL6): C = this repo's card/adapter says so,
+# V = the vendor's own documentation. A model with no verified convention uses
+# `natural`, which names a reference in plain words and is never refused.
+#
+# Fields
+#   version   bump whenever the rendered text for some input changes (I-DL8); the task
+#             row records `<id>@<version>`, so an old render stays explainable.
+#   extends   inherit every field not set here (single level is enough today).
+#   ref       label template per material kind — image / video / audio. A kind with no
+#             template cannot be referenced on that model; load-time checks require the
+#             template set to cover every reference slot the model's `inputs:` accepts.
+#   numbering per_kind        each kind counts from 1 on its own
+#             global_ordered  one count across kinds, concatenated in `order`
+#   required  every passed reference must be named in the rendered prompt, or the
+#             request is refused before it is sent (D-DL3). Only for models that
+#             silently ignore an unnamed reference.
+#
+# Template fields: `{n}` — the 1-based number under this dialect's numbering rule.
+
+schema_version: 1
+
+dialects:
+  # Whole-image ordinal, the behaviour `regions._ordinal` always had. Every image and
+  # understanding model uses it today, and region rendering depends on it, so it must
+  # stay byte-identical (I-DL2).
+  image-ordinal:
+    version: 1
+    ref: {image: "图{n}"}
+    numbering: per_kind
+
+  # Seedance 2.x and the WAN 2.0 entry that serves it. C: wan-2-0/card.md
+  # 「将视频1礼盒中的香水替换成图片1中的面霜」, doubao-seedance-2-5/card.md.
+  seedance:
+    version: 1
+    ref: {image: "图片{n}", video: "视频{n}", audio: "音频{n}"}
+    numbering: per_kind
+
+  # MiniMax H3 family. V: MiniMax-AI/MiniMax-H3 skills/h3-prompt-writing; C:
+  # cfdream-minimax-h3-r2v/card.md.
+  h3:
+    version: 1
+    ref: {image: "<Picture {n}>", video: "<Video {n}>", audio: "<Audio {n}>"}
+    numbering: per_kind
+
+  # The ref2va weights ignore any reference the prompt does not tag, without an error
+  # (cfdream-minimax-h3-r2v/card.md) — so an untagged one is refused here instead.
+  h3-ref2va:
+    version: 1
+    extends: h3
+    required: true
+
+  # 万相 2.7 r2v numbers videos first, then images, in one sequence (C: wan-2-7-r2v
+  # card + wan_video.py media order): two videos and one image are 视频1 视频2 图片3.
+  wan27-r2v:
+    version: 1
+    ref: {video: "视频{n}", image: "图片{n}"}
+    numbering: global_ordered
+    order: [video, image]
+
+  # 万相 2.6 r2v names each reference subject characterN, videos then images, matching
+  # the order the adapter builds its reference_urls list in (C: wan-2-6-r2v card; V:
+  # 百炼 wan2.6-r2v API reference).
+  wan26-r2v:
+    version: 1
+    ref: {video: "character{n}", image: "character{n}"}
+    numbering: global_ordered
+    order: [video, image]
+
+  # HappyHorse r2v. C: happyhorse-1-0-r2v/card.md「[Image N] 引用第 N 张参考图」.
+  happyhorse-r2v:
+    version: 1
+    ref: {image: "[Image {n}]"}
+    numbering: per_kind
+
+  # No verified numbering convention: name the reference in plain words. Never refused;
+  # the model reads it as ordinary description (Q-DL2, current leaning).
+  natural:
+    version: 1
+    ref: {image: "参考图{n}", video: "参考视频{n}", audio: "参考音频{n}"}
+    numbering: per_kind

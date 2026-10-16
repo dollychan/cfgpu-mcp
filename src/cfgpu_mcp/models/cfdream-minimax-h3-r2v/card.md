@@ -17,26 +17,19 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
 **至少要给一个 `reference_*`**，否则请改用 `cfdream/minimax-h3`。
 **不接受 `first_frame` / `last_frame`** —— 那是另一套 `fl2va` 权重，两者不能混用。
 
-## ★ 最容易踩的坑：素材必须在 prompt 里被标签引用
+## ★ 最容易踩的坑：每个参考素材都必须在 prompt 里被点名
 
-传了参考素材却没在 `prompt` 里写标签，**模型不会用它们，而且不会报任何错**。
-最后你拿到的是一条纯文生视频，白烧一次 GPU 还找不到原因。
+这套权重**只使用 prompt 里点名的参考素材**；没点名的会被忽略，而且上游不报错 ——
+你拿到的是一条纯文生视频，白烧一次 GPU。所以 MCP 在发出前就拒绝这种请求。
 
-标签是 1-based，**编号按数组顺序**：
+点名的写法：给每个素材一个句柄（放在与素材列表同序同长的 `image_refs` /
+`video_refs` / `audio_refs` 里），在 prompt 里写 `[[句柄]]`，把它当名词嵌进句子：
 
-| 参数 | 标签 |
-|---|---|
-| `reference_images[0]` | `<Picture 1>` |
-| `reference_images[1]` | `<Picture 2>` |
-| `reference_videos[0]` | `<Video 1>` |
-| `reference_audios[0]` | `<Audio 1>` |
+> `"[[hero]] is walking through a neon-lit alley, camera follows from behind."`
+> 配 `"reference_images": [...], "image_refs": ["hero"]`
 
-写法就是把标签当名词嵌进句子：
-
-> `"<Picture 1> is walking through a neon-lit alley, camera follows from behind."`
-
-网关检测到"有素材但 prompt 里缺对应标签"时只记 warning、**不拒绝**
-（调用方可能有意只做弱引导），所以这条防线在你这边。
+MCP 会把 `[[hero]]` 换成这个模型要的写法再发出；不要自己写模型的标签或序号 ——
+序号随素材顺序变，换模型时写法也会变。
 
 ## 素材上限
 
@@ -70,7 +63,8 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
 
 | 统一 Schema 字段 | 网关字段 | 映射说明 |
 |------------------|----------|----------|
-| prompt | prompt | **必须含 `<Picture N>` / `<Video N>` / `<Audio N>` 标签** |
+| prompt | prompt | **每个参考素材都要用 `[[句柄]]` 点名**，MCP 发出前渲染成模型的标签 |
+| image_refs / video_refs / audio_refs | — | 与对应素材列表同序同长的句柄，只用于解析 `[[句柄]]`，不上行 |
 | reference_images | reference_images | ≤9 |
 | reference_videos | reference_videos | ≤3，24fps，单条 2–15s |
 | reference_audios | reference_audios | ≤3 |
@@ -96,8 +90,9 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
 ```json
 {
   "model": "cfdream/minimax-h3-r2v",
-  "prompt": "<Picture 1> walks through a neon-lit alley at night, camera follows from behind, rain on the pavement",
+  "prompt": "[[hero]] walks through a neon-lit alley at night, camera follows from behind, rain on the pavement",
   "reference_images": ["https://example.com/person.jpg"],
+  "image_refs": ["hero"],
   "duration_seconds": 5,
   "resolution": "480p",
   "aspect_ratio": "16:9"
@@ -109,22 +104,26 @@ MiniMax H3 的 `ref2va` 权重，由自建 comfy-gateway 提供（不是 CFGPU �
 ```json
 {
   "model": "cfdream/minimax-h3-r2v",
-  "prompt": "<Picture 1> is speaking to the camera, saying the words in <Audio 1>",
+  "prompt": "[[host]] is speaking to the camera, saying the words in [[line]]",
   "reference_images": ["https://example.com/portrait.jpg"],
+  "image_refs": ["host"],
   "reference_audios": ["https://example.com/line.wav"],
+  "audio_refs": ["line"],
   "duration_seconds": 5,
   "resolution": "480p"
 }
 ```
 
-音色克隆（锁定角色音色、说新台词）：上传目标人物的一段语音作为参考，锁定视频中生成角色的音色，让角色用这个声音说 prompt 里的新台词（`voice_reference_video`）。 prompt 要写明台词，并说明 `<Audio 1>` 只提供音色。
+音色克隆（锁定角色音色、说新台词）：上传目标人物的一段语音作为参考，锁定视频中生成角色的音色，让角色用这个声音说 prompt 里的新台词（`voice_reference_video`）。 prompt 要写明台词，并说明这段参考音频只提供音色。
 
 ```json
 {
   "model": "cfdream/minimax-h3-r2v",
-  "prompt": "<Picture 1> smiles at the camera and says: \"欢迎来到诊所，我是小姚。\" Her voice matches the timbre of <Audio 1>; do not repeat the words in <Audio 1>.",
+  "prompt": "[[nurse]] smiles at the camera and says: \"欢迎来到诊所，我是小姚。\" Her voice matches the timbre of [[voice]]; do not repeat the words in [[voice]].",
   "reference_images": ["https://example.com/portrait.jpg"],
+  "image_refs": ["nurse"],
   "reference_audios": ["https://example.com/voice-sample.wav"],
+  "audio_refs": ["voice"],
   "duration_seconds": 5,
   "resolution": "480p"
 }

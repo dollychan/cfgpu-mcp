@@ -10,7 +10,7 @@
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
-万相 2.6 参考生视频模型：输入参考媒体（视频/图片）+ 文本提示词，生成视频。提示词中可用 character1 等引用参考主体。
+万相 2.6 参考生视频模型：输入参考媒体（视频/图片）+ 文本提示词，生成视频。提示词中用 `[[句柄]]` 引用参考主体（句柄放在 `video_refs` / `image_refs` 里），MCP 发出前按上游的主体编号规则渲染。
 
 ## 价格
 
@@ -31,7 +31,7 @@
 
 | 统一 Schema 字段 | wan2.6-r2v 字段 | 映射说明 |
 |------------------|-----------------|----------|
-| prompt | input.prompt | 文本提示词，可引用 character1 等 |
+| prompt | input.prompt | 文本提示词，用 `[[句柄]]` 引用参考主体 |
 | reference_videos + reference_images | input.reference_urls | 合并为一个 URL 列表（视频在前，图片在后） |
 | resolution + aspect_ratio | parameters.size | 720P：`1280*720` / `720*1280` / `960*960`；1080P：`1920*1080` / `1080*1920` |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
@@ -39,6 +39,8 @@
 | model_specific.parameters.shot_type | parameters.shot_type | `single` / `multi` |
 
 ## 请求示例
+
+> 以下是**上游请求体**，`prompt` 是 MCP 渲染之后的样子；调用 `generate_video` 时用 `[[句柄]]` 点名素材，不要照抄这里的序号写法。
 
 ```json
 {

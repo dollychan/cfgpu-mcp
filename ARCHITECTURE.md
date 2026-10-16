@@ -390,7 +390,8 @@ service/image.py::generate_image()
     ▼
 TaskManager.create(adapter, req)
     │
-    ├─ resolve_image_refs(req)         [[句柄]] → 图N（无 regions 时，所有模型）；未解析的 [[...]] 直接报错
+    ├─ render_for(adapter, req)        [[句柄]] → 该模型方言的标签（图片工具：图N，同 resolve_image_refs；
+    │                                  generate_video：按 prompt_dialects.yaml 渲染）；结果只进 payload
     ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式（有 regions 时由区域 adapter 一并渲染）
     │
     ├─ insert_task(request_id or uuid4, "submitting")   ← ★ 行先落，POST 后发
@@ -418,6 +419,15 @@ service 返回 dict → 访问层格式化 → 用户
 入口（`create()` 与 `validate_request()`）都先调 `regions.resolve_image_refs(req)`，没有
 adapter 需要自己记得。带 `regions` 的请求原样放行：`supports()` 已把它限定在区域 adapter，
 那里句柄与标记必须一次性渲染，因为「既是句柄又是标记名」的歧义只有两者同时可见才能发现。
+
+**视频参考素材按模型方言渲染**（`adapters/dialect.py` + `adapters/prompt_render.py`，设计见
+`docs/template-library-and-dialect.md` §4）。`generate_video` 接受 `image_refs` / `video_refs` /
+`audio_refs`，prompt 里写 `[[句柄]]`，`render_for` 按 `adapter.yaml` 的 `prompt_dialect:` 渲染成
+`图片1` / `<Picture 1>` / `视频1 视频2 图片3`（万相 2.7 r2v 跨类型连续编号）/ `character1` / `[Image 1]`
+/ 自然语言。方言对调用方完全不可见：不进 schema、profile、card、错误文案；渲染后的 prompt 只在
+`structuredContent.payload`，任务行另存 `_prompt_dialect` 与 `_prompt_source`（对外剥离）。
+「某类素材该模型无法点名」与「`required` 方言下有参考素材没被点名」（H3 r2v 会静默忽略并照常计费）
+在 `supports()` 里拒绝，`model="auto"` 因而会绕开；手写模型标签只附 `prompt_note` 提醒，不拒绝。
 
 未解析的 `[[...]]` **fail closed**（`invalid_params`，列出本次可用的占位符）。`[[...]]` 不会
 出现在正常行文里，剩下的必然是写错的句柄/标记；原样发出只会得到一张看似合理、已计费的错图。

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal
 
+from cfgpu_mcp.adapters.dialect import resolve_dialect_id
 from cfgpu_mcp.adapters.inputs import (
     LEGACY_INPUT_KEYS,
     InputSlot,
@@ -295,6 +296,10 @@ class ModelAdapter(ABC):
     #: means the shared request-schema limit is the only local restriction.
     max_images_per_request: int | None
     poll_config: PollConfig | None
+    #: Id in ``capabilities/prompt_dialects.yaml`` naming how ``[[handle]]`` references
+    #: in ``prompt`` are rendered for this model (``adapters/dialect.py``). Internal only:
+    #: never part of any agent-facing surface (I-DL5). ``None`` for audio models.
+    prompt_dialect: str | None
     extends: str | None          # parent adapter_id, or None
     card_base: str | None        # model dir to inherit card.md from; None = no inheritance
 
@@ -406,6 +411,9 @@ class ModelAdapter(ABC):
         instance.max_images_per_request = config.get("max_images_per_request")
         pc = config.get("poll_config")
         instance.poll_config = PollConfig.from_dict(pc) if pc else None
+        instance.prompt_dialect = resolve_dialect_id(
+            instance.adapter_id, instance.task_type, config.get("prompt_dialect")
+        )
         instance.extends = config.get("extends")
         # "card_base" key absent → inherit from extends; "card_base: ~" → None (no inheritance)
         instance.card_base = (
@@ -513,6 +521,14 @@ class ModelAdapter(ABC):
                 ok, reason = check_declared_inputs(self.model_name, self.inputs, req)
                 if not ok:
                     return False, reason
+            # How this model names a reference in `prompt`, and whether it ignores one it
+            # is not told about. Here rather than at render time so model="auto" routes
+            # around a model that would refuse, instead of failing after routing.
+            from cfgpu_mcp.adapters.prompt_render import check_prompt_refs
+
+            ok, reason = check_prompt_refs(self, req)
+            if not ok:
+                return False, reason
             resolution = self.resolve_resolution(req)
             if self.resolutions is not None and resolution not in self.resolutions:
                 return False, (

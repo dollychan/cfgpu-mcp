@@ -24,6 +24,9 @@ inputs:
   # speaks in that voice, it does not play the recording.
   reference_audios: {max: 5, role: voice, standalone: false}
 
+# How [[handle]] references in `prompt` are rendered for this model (capabilities/prompt_dialects.yaml).
+prompt_dialect: wan27-r2v
+
 # Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
 # both the code gates and the agent-facing profile catalog.
 tasks:

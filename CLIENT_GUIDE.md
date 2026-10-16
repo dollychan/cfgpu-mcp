@@ -351,6 +351,28 @@ await image_svc.generate_image(
 请求不发送、不计费；`validate_only=True` 预检时同样会报。宿主若有自己的素材 id（如 `m_31b5b08b`），
 直接把它当句柄传进 `image_refs` 即可，不必自己换算序号——素材列表一重排，写死的序号就会悄悄指错图。
 
+`generate_video` 同样接受句柄：`image_refs` / `video_refs` / `audio_refs` 分别与 `reference_images` /
+`reference_videos` / `reference_audios` 同序等长（不打算点名的素材填空串 `""`）。服务端按所选模型的写法
+渲染 `[[句柄]]`——各模型写法与编号规则不同（有的按类型各自编号，有的视频、图片连续编号），换模型不用改 prompt：
+
+```python
+await video_svc.generate_video(
+    prompt="[[hero]] 抱着 [[guitar]] 弹琴，[[friend]] 在旁边看着",
+    reference_videos=["https://.../friend.mp4", "https://.../hero.mp4"],
+    video_refs=["friend", "hero"],
+    reference_images=["https://.../guitar.png"],
+    image_refs=["guitar"],
+)
+```
+
+两条只在视频上有的规则：有些模型**只使用 prompt 里点名的参考素材**，没点名的会被静默忽略、照常计费，
+这类模型会在发出前拒绝「有参考素材没被点名」的请求（`model="auto"` 时改选别的模型）；有些素材类型在某些
+模型上只有固定用途（例如作为主体的音色），不能在 prompt 里点名，写了 `[[句柄]]` 也会被拒绝。prompt 里手写
+序号（「图片1」「视频2」之类）不会被拒绝，但结果里会多一条 `prompt_note` 提醒改用 `[[句柄]]`。
+
+媒体槽的 `x-cfgpu-media` 注解带 `refs` 字段，指明该槽对应的句柄列表名（`reference_videos` → `video_refs`），
+宿主可以据此用自己的素材 id 自动填写，无需按名字猜。
+
 ### 轮询异步任务
 
 ```python

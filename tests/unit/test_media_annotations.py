@@ -101,12 +101,36 @@ def test_annotation_carries_permissive_facts_only():
     the model actually in use. Such limits belong in the prose, with get_model_card as the
     authority. Adding a key here means answering that objection first.
     """
+    allowed = {"role", "arity", "accepts", "slot", "refs"}
     for tool_name in _EXPECTED_SLOTS:
         for fname, spec in get_media_slots(tool_name).items():
-            assert set(spec) == {"role", "arity", "accepts", "slot"}, (
-                f"{tool_name}.{fname}: unexpected annotation key(s) "
-                f"{set(spec) - {'role', 'arity', 'accepts', 'slot'}}"
+            assert {"role", "arity", "accepts", "slot"} <= set(spec) <= allowed, (
+                f"{tool_name}.{fname}: unexpected annotation key(s) {set(spec) - allowed}"
             )
+
+
+def test_refs_points_at_a_real_sibling_handle_list():
+    """``refs`` names where handles for this slot's items go — permissive like the rest
+    (it says where a handle may go, never that one must). A host fills it from its own
+    ids, so a name pointing at no field would be filled into nothing, silently."""
+    from cfgpu_mcp.tool_registry import _REGISTRY
+
+    expected = {
+        ("generate_image", "reference_images"): "image_refs",
+        ("generate_video", "reference_images"): "image_refs",
+        ("generate_video", "reference_videos"): "video_refs",
+        ("generate_video", "reference_audios"): "audio_refs",
+        ("understand_vision", "images"): "image_refs",
+    }
+    seen = {}
+    for tool_name in _EXPECTED_SLOTS:
+        model = dict(_REGISTRY)[tool_name]
+        for fname, spec in get_media_slots(tool_name).items():
+            if "refs" in spec:
+                assert spec["arity"] == "many"
+                assert spec["refs"] in model.model_fields
+                seen[(tool_name, fname)] = spec["refs"]
+    assert seen == expected
 
 
 def test_accepts_uses_only_the_closed_vocabulary():

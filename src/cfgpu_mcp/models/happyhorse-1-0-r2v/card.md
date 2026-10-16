@@ -33,7 +33,7 @@ HappyHorse-1.0-R2V 支持参考生视频，更加稳定的主体与场景参考�
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `prompt` | string | ✓ | 视频描述文本；可用 `[Image N]` 引用第 N 张参考图 |
+| `prompt` | string | ✓ | 视频描述文本；用 `[[句柄]]` 引用参考图（句柄放在与 `reference_images` 同序同长的 `image_refs` 里），MCP 发出前渲染成模型的写法 |
 | `reference_images` | list[str] | ✓ | 参考图片 URL 列表，最多 9 张 |
 
 ### 视频输出参数
@@ -47,6 +47,8 @@ HappyHorse-1.0-R2V 支持参考生视频，更加稳定的主体与场景参考�
 | `model_specific.parameters.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |
 
 ## 示例
+
+> 以下是**上游请求体**，prompt 是 MCP 渲染之后的样子；调用 `generate_video` 时用 `[[句柄]]` 点名素材，不要照抄这里的序号写法。
 
 ### 参考生视频
 

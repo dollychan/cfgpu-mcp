@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from cfgpu_mcp.adapters.prompt_render import with_prompt_note
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import RegionSpec, UnderstandVisionInput
 
 
+@with_prompt_note
 async def understand_vision(
     prompt: str,
     model: str | list[str] = "auto",

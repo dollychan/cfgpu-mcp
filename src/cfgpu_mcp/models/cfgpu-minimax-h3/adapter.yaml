@@ -39,6 +39,9 @@ inputs:
   # reference input is not refused upstream or here.
   reference_audios: {max: 3, role: reference, standalone: true}
 
+# How [[handle]] references in `prompt` are rendered for this model (capabilities/prompt_dialects.yaml).
+prompt_dialect: h3
+
 # Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
 # both the code gates and the agent-facing profile catalog.
 tasks:

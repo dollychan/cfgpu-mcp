@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit._video_refs import tag_references
+
 from cfgpu_mcp.adapters.inputs import (
     AUDIO_ROLES,
     InputSlot,
@@ -44,7 +46,7 @@ def _candidate_counts(slot: str, spec: InputSlot | None) -> list[int]:
     return sorted(counts)
 
 
-def _request(counts: dict[str, int]) -> GenerateVideoInput:
+def _request(counts: dict[str, int], adapter=None) -> GenerateVideoInput:
     kwargs: dict = {"prompt": "a cat walks"}
     for slot, n in counts.items():
         if not n:
@@ -54,7 +56,7 @@ def _request(counts: dict[str, int]) -> GenerateVideoInput:
         else:
             ext = {"reference_images": "png", "reference_videos": "mp4", "reference_audios": "mp3"}[slot]
             kwargs[slot] = [f"https://example.com/{slot}/{i}.{ext}" for i in range(n)]
-    return GenerateVideoInput(**kwargs)
+    return GenerateVideoInput(**tag_references(kwargs, adapter))
 
 
 def _accepted_combinations(adapter) -> list[dict[str, int]]:
@@ -64,7 +66,7 @@ def _accepted_combinations(adapter) -> list[dict[str, int]]:
     accepted = []
     for combo in itertools.product(*axes):
         counts = dict(zip(VIDEO_INPUT_SLOTS, combo))
-        ok, _ = adapter.supports(_request(counts))
+        ok, _ = adapter.supports(_request(counts, adapter))
         if ok:
             accepted.append(counts)
     return accepted
@@ -293,7 +295,7 @@ def test_refusals_name_the_public_model_never_the_adapter_id(adapter):
     inputs = adapter.inputs or {}
     axes = [_candidate_counts(slot, inputs.get(slot)) for slot in VIDEO_INPUT_SLOTS]
     for combo in itertools.product(*axes):
-        ok, reason = adapter.supports(_request(dict(zip(VIDEO_INPUT_SLOTS, combo))))
+        ok, reason = adapter.supports(_request(dict(zip(VIDEO_INPUT_SLOTS, combo)), adapter))
         if not ok:
             assert adapter.adapter_id not in reason, reason
             assert "capabilit" not in reason, reason
@@ -391,7 +393,7 @@ def test_synced_audio_output_is_claimed_exactly_when_the_output_has_sound(adapte
 def test_with_audio_reaches_the_payload_exactly_when_declared_switchable(adapter, accepted):
     """``switchable`` is a promise that the flag decides; anything else says it cannot."""
     counts = accepted[adapter.adapter_id][0]
-    base = _request(counts)
+    base = _request(counts, adapter)
     on = adapter.build_payload(base.model_copy(update={"with_audio": True}))
     off = adapter.build_payload(base.model_copy(update={"with_audio": False}))
     honoured = on != off
