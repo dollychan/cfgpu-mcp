@@ -429,6 +429,18 @@ adapter 需要自己记得。带 `regions` 的请求原样放行：`supports()` 
 「某类素材该模型无法点名」与「`required` 方言下有参考素材没被点名」（H3 r2v 会静默忽略并照常计费）
 在 `supports()` 里拒绝，`model="auto"` 因而会绕开；手写模型标签只附 `prompt_note` 提醒，不拒绝。
 
+**分镜、台词、画面文字、声景同样走统一写法**（P2，`adapters/prompt_markup.py` 解析成与模型无关的节点）：
+`[[shot 0-3]]` / `[[say S1: 原话]]` / `[[text: 文字]]` / `[[sound: …]]` / `[[music: …]]`。语法错误、镜头时间
+倒序或重叠、镜头超出显式给定的时长属于模型无关的问题，在 schema 层拒绝；没给时长时镜头超出该模型的默认时长、方言写不出某个标记、渲染后超过
+`adapter.yaml` 的 `prompt_limits`（只对用了 `[[...]]` 的 prompt 量）属于 per-model 问题，在 `supports()` 拒绝。
+方言决定写法：Seedance `[0-3秒]：`，万相 `第1个镜头[0-3秒] `，自然语言兜底 `0–3 秒：`；H3 改用官方字段布局
+（`integrated_multimodal_description` / `overall_soundscape` / `non_diegetic_music`，r2v 用 `detailed_description`），
+`[Shot N] At MM:SS.mmm,` 切镜、`(S1) says: <d>[Chinese] …</d>` 台词，并按首帧/尾帧推出 I2VA / FL2VA / L2VA 模式头。
+调用方没写的声景字段直接省略、不填 `N/A`（官方指南里 `N/A` 表示全程无声）。`render_for` 顺带推出两个请求事实：
+D-DL10（带 `[[...]]` 且调用方未设置时，万相 2.7 的 `prompt_extend` 发 `false`；`prompt_extend` 因此改成三态）与
+万相 2.6 两个以上镜头时补 `parameters.shot_type=multi`（调用方设置过的一律不覆盖）。视频调用里手写的镜头头、
+时间段或台词标签只附 `prompt_note` 提醒，不拒绝。
+
 未解析的 `[[...]]` **fail closed**（`invalid_params`，列出本次可用的占位符）。`[[...]]` 不会
 出现在正常行文里，剩下的必然是写错的句柄/标记；原样发出只会得到一张看似合理、已计费的错图。
 在 `create()` 里它发生在写行之前，所以既不落行也不 POST；`validate_only` 同样能免费拦下。

@@ -77,7 +77,7 @@ def register(mcp: FastMCP) -> None:
         with_audio: bool = True,
         quality_tier: str = "balanced",
         watermark: bool = False,
-        prompt_extend: bool = True,
+        prompt_extend: Optional[bool] = None,
         wait: bool = True,
         timeout: Optional[int] = None,
         return_metadata: bool = True,

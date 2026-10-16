@@ -40,7 +40,7 @@
 | reference_audios | input.media[].reference_voice | 按参考视频/图片顺序附加音色样本 |
 | resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
 | aspect_ratio | parameters.ratio | `16:9` / `9:16` / `1:1` / `4:3` / `3:4`，默认 `16:9` |
-| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
+| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词；不传时默认开启，但 prompt 用了 `[[...]]` 写法时默认关闭（扩写会改动分镜、台词和素材指代），显式传 `true` / `false` 则按传入的来 |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
 | negative_prompt | input.negative_prompt | 最多 500 字符 |

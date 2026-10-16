@@ -8,16 +8,25 @@ preflight alike, so what a preflight shows is what would be sent.
   ordinal *is* the ``image-ordinal`` dialect (I-DL2). A request carrying regions is still
   rendered by the region-capable adapter's own ``build_payload``, because a token that is
   both a handle and a label can only be caught as ambiguous with both in view.
-- **generate_video** renders each ``[[handle]]`` through the model's dialect
-  (``adapters/dialect.py``): the handle's slot gives its kind, its position gives its
+- **generate_video** parses the prompt into model-neutral nodes
+  (``adapters/prompt_markup.py``) and renders each through the model's dialect
+  (``adapters/dialect.py``). A ``[[handle]]``'s slot gives its kind, its position its
   number, and the dialect's numbering rule decides whether kinds count separately or as
-  one sequence.
+  one sequence. Structure markers (``[[shot]]`` / ``[[say]]`` / ``[[text]]`` /
+  ``[[sound]]`` / ``[[music]]``, P2) render inline, or — for H3 — into H3's own field
+  layout behind a mode header derived from the request's frames.
 
-Two per-model refusals live in :func:`check_prompt_refs`, called from
-``ModelAdapter.supports()`` so ``model="auto"`` routes around them instead of failing:
-a placeholder naming a kind the model has no way to name, and — for a dialect marked
-``required`` — a reference the rendered prompt never names (D-DL3). Both messages talk
-about ``[[handle]]`` only; neither names a model's own label (I-DL5).
+The per-model refusals live in :func:`check_prompt_refs`, called from
+``ModelAdapter.supports()`` so ``model="auto"`` routes around them instead of failing: a
+placeholder naming a kind the model has no way to name, a marker the dialect cannot
+write, a shot past the duration this model resolves to, a reference a ``required``
+dialect's rendered prompt never names (D-DL3), and a rendered prompt over the model's
+``prompt_limits``. Every message talks about the unified notation only; none names a
+model's own label (I-DL5).
+
+:func:`render_for` also applies two request facts that follow from the markup: D-DL10
+(a model that rewrites its prompt server-side gets the rewrite off unless the caller set
+it) and 万相 2.6's ``shot_type=multi`` for two or more shots.
 """
 
 from __future__ import annotations
@@ -33,6 +42,7 @@ from cfgpu_mcp.adapters.dialect import (
     PromptDialect,
     get_dialect,
 )
+from cfgpu_mcp.adapters import prompt_markup as markup
 from cfgpu_mcp.adapters.regions import _PLACEHOLDER, resolve_image_refs
 from cfgpu_mcp.errors import CFGPUError
 
@@ -84,80 +94,263 @@ def _counts(req: Any) -> dict[str, int]:
     return {kind: len(getattr(req, slot) or []) for slot, kind in SLOT_KIND.items()}
 
 
-def _render_video_prompt(prompt: str, req: Any, dialect: PromptDialect) -> tuple[str, set[tuple[str, int]]]:
-    """Substitute every ``[[handle]]``; return the text and which references it named."""
+class _Unrenderable(Exception):
+    """A node this model's dialect has no way to write."""
+
+    def __init__(self, what: str) -> None:
+        super().__init__(what)
+        self.what = what
+
+
+@dataclass(frozen=True)
+class _Rendered:
+    prompt: str
+    named: frozenset[tuple[str, int]]
+    shot_count: int
+
+
+def _duration(adapter: "ModelAdapter", req: Any) -> Optional[int]:
+    """Seconds the video will last on this model, or ``None`` when the model decides."""
+    resolve = getattr(adapter, "resolve_duration_seconds", None)
+    try:
+        seconds = resolve(req) if callable(resolve) else req.duration_seconds
+    except Exception:  # a test double without the config this needs
+        seconds = req.duration_seconds
+    return seconds if isinstance(seconds, int) and seconds > 0 else None
+
+
+def _header_mode(req: Any) -> Optional[str]:
+    if req.first_frame and req.last_frame:
+        return "fl2va"
+    if req.first_frame:
+        return "i2va"
+    if req.last_frame:
+        return "l2va"
+    return None
+
+
+def _shot_label(dialect: PromptDialect, shot: markup.Shot) -> str:
+    style = dialect.shot
+    assert style is not None
+    fmt = markup.format_mmss_ms if style.time == "mmss_ms" else markup.format_seconds
+    template = style.first if shot.index == 1 else style.next
+    return template.format(index=shot.index, start=fmt(shot.start), end=fmt(shot.end))
+
+
+def _say_label(dialect: PromptDialect, say: markup.Say) -> str:
+    style = dialect.say
+    assert style is not None
+    lang = say.lang or (markup.detect_lang(say.text) if style.lang == "detect" else "")
+    if say.speaker:
+        return style.speaker.format(speaker=say.speaker, lang=lang, text=say.text)
+    return style.anonymous.format(lang=lang, text=say.text)
+
+
+def _join(parts: list[str], node: Any, piece: str) -> None:
+    """Append ``piece``; a shot label starts its own segment, so it is spaced off."""
+    if isinstance(node, markup.Shot) and parts and parts[-1] and not parts[-1][-1].isspace():
+        parts.append(" ")
+    parts.append(piece)
+
+
+def _render_nodes(nodes: list[markup.Node], req: Any, dialect: PromptDialect, adapter: "ModelAdapter") -> _Rendered:
+    """Render parsed nodes in ``dialect``; raise :class:`_Unrenderable` for a gap."""
     handles = _handles(req)
     counts = _counts(req)
     named: set[tuple[str, int]] = set()
+    fields = dialect.layout != "inline"
+    body: list[str] = []
+    sounds: list[str] = []
+    music: list[str] = []
+    strip_next = False
 
-    def substitute(match: re.Match[str]) -> str:
-        token = match.group(1).strip()
-        target = handles.get(token)
-        if target is None:  # schema validation already refused this; defensive only
-            raise CFGPUError(
-                error_type="invalid_params",
-                user_message=f"prompt 里的占位符 [[{token}]] 不对应任何素材句柄，本次请求未发送。",
-                card_hint=False,
-            )
-        kind, index = target
-        label = dialect.label(kind, index, counts)
-        if label is None:  # check_prompt_refs refuses this in supports(); defensive only
-            raise CFGPUError(
-                error_type="invalid_params",
-                user_message=f"所选模型无法在 prompt 里点名 [[{token}]] 这类素材，本次请求未发送。",
-                card_hint=False,
-            )
-        named.add(target)
-        return label
+    for node in nodes:
+        if isinstance(node, markup.Text):
+            text = node.text.lstrip(" \t") if strip_next else node.text
+            strip_next = False
+            body.append(text)
+            continue
+        strip_next = False
+        if isinstance(node, markup.Ref):
+            target = handles.get(node.token)
+            if target is None:  # schema validation already refused this; defensive only
+                raise CFGPUError(
+                    error_type="invalid_params",
+                    user_message=f"prompt 里的占位符 [[{node.token}]] 不对应任何素材句柄，本次请求未发送。",
+                    card_hint=False,
+                )
+            label = dialect.label(target[0], target[1], counts)
+            if label is None:
+                raise _Unrenderable(f"[[{node.token}]]")
+            named.add(target)
+            body.append(label)
+        elif isinstance(node, markup.Shot):
+            if dialect.shot is None:
+                raise _Unrenderable("[[shot …]]")
+            _join(body, node, _shot_label(dialect, node))
+            strip_next = True
+        elif isinstance(node, markup.Say):
+            if dialect.say is None:
+                raise _Unrenderable("[[say …]]")
+            body.append(_say_label(dialect, node))
+        elif isinstance(node, markup.OnScreen):
+            if dialect.text is None:
+                raise _Unrenderable("[[text: …]]")
+            body.append(dialect.text.format(text=node.text))
+        elif isinstance(node, (markup.Sound, markup.Music)):
+            if fields:
+                (sounds if isinstance(node, markup.Sound) else music).append(node.text)
+                continue
+            template = dialect.sound if isinstance(node, markup.Sound) else dialect.music
+            if template is None:
+                raise _Unrenderable("[[sound: …]]" if isinstance(node, markup.Sound) else "[[music: …]]")
+            body.append(template.format(text=node.text))
 
-    return _PLACEHOLDER.sub(substitute, prompt), named
+    shot_count = len(markup.shots(nodes))
+    if not fields or not markup.has_structure(nodes):
+        return _Rendered("".join(body), frozenset(named), shot_count)
+
+    # H3 field layout: the body is one timeline that always opens on [Shot 1].
+    text = re.sub(r"\s+", " ", "".join(body)).strip()
+    if shot_count == 0:
+        assert dialect.shot is not None
+        text = dialect.shot.first.format(index=1, start="", end="") + text
+    joined_sound = " ".join(sounds)
+    joined_music = " ".join(music)
+    if dialect.layout == "h3_ref2va":
+        sections = [f"detailed_description:\n{text}"]
+        if joined_sound:
+            sections.append(f"overall_soundscape:\n{joined_sound}")
+        if joined_music:
+            sections.append(f"non_diegetic_music:\n{joined_music}")
+    else:
+        sections = [f"integrated_multimodal_description: {text}"]
+        # A field the caller did not write is left out rather than filled with "N/A":
+        # in H3's own guide "N/A" soundscape means *complete silence*, which is a claim
+        # the caller never made.
+        if joined_sound:
+            sections.append(f"overall_soundscape: {joined_sound}")
+        if joined_music:
+            sections.append(f"non_diegetic_music: {joined_music}")
+    mode = _header_mode(req)
+    template = dialect.header.get(mode) if mode else None
+    if template:
+        duration = _duration(adapter, req)
+        sections.insert(0, template.format(
+            duration=f"{duration:.2f}" if duration else "",
+            last_index=max(shot_count, 1),
+        ))
+    return _Rendered("\n\n".join(sections), frozenset(named), shot_count)
+
+
+def _parse(prompt: str) -> list[markup.Node]:
+    try:
+        return markup.parse(prompt)
+    except markup.MarkupError as exc:  # schema validation already refused this; defensive only
+        raise CFGPUError(error_type="invalid_params", user_message=f"{exc} 本次请求未发送。", card_hint=False) from None
+
+
+def _over_limit(adapter: "ModelAdapter", prompt: str) -> Optional[str]:
+    limits = getattr(adapter, "prompt_limits", None)
+    if not isinstance(limits, dict):
+        return None
+    measured = {
+        "chars": (len(prompt), "字符"),
+        "zh_chars": (len(re.findall(r"[\u4e00-\u9fff\u3400-\u4dbf]", prompt)), "个汉字"),
+        "en_words": (len(re.findall(r"[A-Za-z]+(?:['’-][A-Za-z]+)*", prompt)), "个英文词"),
+    }
+    for unit, ceiling in limits.items():
+        value, noun = measured[unit]
+        if value > ceiling:
+            return f"{ceiling} {noun}（这次是 {value}）"
+    return None
 
 
 def check_prompt_refs(adapter: "ModelAdapter", req: Any) -> tuple[bool, str]:
-    """The per-model half of reference validation, for ``ModelAdapter.supports()``."""
+    """The per-model half of prompt validation, for ``ModelAdapter.supports()``.
+
+    Everything here is about how this model would render the prompt; a prompt with no
+    ``[[...]]`` is looked at only by a ``required`` dialect. Messages speak the unified
+    notation only (I-DL5).
+    """
     if not _is_video(req):
         return True, ""
     dialect = dialect_for(adapter)
     if dialect is None:
         return True, ""
     prompt = req.prompt or ""
+    has_markup = bool(_PLACEHOLDER.search(prompt))
+    # Without markup only a `required` dialect has anything to say: a reference the
+    # prompt never names (perhaps named by hand in the model's own label).
+    if not has_markup and not dialect.required:
+        return True, ""
+    nodes = _parse(prompt) if has_markup else [markup.Text(prompt)]
     handles = _handles(req)
 
-    for match in _PLACEHOLDER.finditer(prompt):
-        token = match.group(1).strip()
-        target = handles.get(token)
-        if target is not None and target[0] not in dialect.ref:
-            slot = next(s for s, k in SLOT_KIND.items() if k == target[0])
+    for node in nodes:
+        if isinstance(node, markup.Ref):
+            target = handles.get(node.token)
+            if target is not None and target[0] not in dialect.ref:
+                slot = next(s for s, k in SLOT_KIND.items() if k == target[0])
+                return False, (
+                    f"{adapter.model_name} 不能在 prompt 里点名 {slot} 中的素材（[[{node.token}]]）："
+                    f"这类素材对该模型只有固定用途，不由 prompt 指派角色。请去掉这个占位符、用自然语言"
+                    f"描述它的用途，或换一个能在 prompt 里引用该类素材的模型。"
+                )
+
+    duration = _duration(adapter, req)
+    for shot in markup.shots(nodes):
+        if duration is not None and shot.end > duration:
             return False, (
-                f"{adapter.model_name} 不能在 prompt 里点名 {slot} 中的素材（[[{token}]]）："
-                f"这类素材对该模型只有固定用途，不由 prompt 指派角色。请去掉这个占位符、用自然语言"
-                f"描述它的用途，或换一个能在 prompt 里引用该类素材的模型。"
+                f"[[shot {markup.format_seconds(shot.start)}-{markup.format_seconds(shot.end)}]] "
+                f"超出了视频时长：{adapter.model_name} 这次生成 {duration} 秒。请把分镜写在时长之内，"
+                f"或把 duration_seconds 设为能装下全部分镜的秒数。"
             )
 
-    if not dialect.required:
-        return True, ""
-    counts = _counts(req)
-    rendered, named = _render_video_prompt(prompt, req, dialect)
-    missing: list[str] = []
-    for slot, kind in SLOT_KIND.items():
-        refs = getattr(req, REFS_FIELD[kind]) or []
-        for i in range(counts[kind]):
-            if (kind, i) in named:
-                continue
-            label = dialect.label(kind, i, counts)
-            # A caller that still writes this model's own label by hand has named it too.
-            if label is not None and label in rendered:
-                continue
-            handle = refs[i] if i < len(refs) else ""
-            missing.append(f"{slot}[{i}]" + (f"（[[{handle}]]）" if handle else ""))
-    if missing:
+    try:
+        rendered = _render_nodes(nodes, req, dialect, adapter)
+    except _Unrenderable as gap:
         return False, (
-            f"{adapter.model_name} 只使用 prompt 里点名的参考素材，没点名的会被静默忽略、照常计费。"
-            f"以下参考素材没有在 prompt 中被引用：{'、'.join(missing)}。请在 prompt 里用 "
-            f"[[<句柄>]] 写出每个素材在画面里扮演什么（句柄放在与素材列表同序同长的 image_refs / "
-            f"video_refs / audio_refs 里），本次请求未发送。"
+            f"{adapter.model_name} 不支持 prompt 里的 {gap.what} 标记。请改用自然语言描述，"
+            f"或换一个支持这种标记的模型。"
+        )
+
+    if dialect.required:
+        counts = _counts(req)
+        missing: list[str] = []
+        for slot, kind in SLOT_KIND.items():
+            refs = getattr(req, REFS_FIELD[kind]) or []
+            for i in range(counts[kind]):
+                if (kind, i) in rendered.named:
+                    continue
+                label = dialect.label(kind, i, counts)
+                # A caller that still writes this model's own label by hand has named it too.
+                if label is not None and label in rendered.prompt:
+                    continue
+                handle = refs[i] if i < len(refs) else ""
+                missing.append(f"{slot}[{i}]" + (f"（[[{handle}]]）" if handle else ""))
+        if missing:
+            return False, (
+                f"{adapter.model_name} 只使用 prompt 里点名的参考素材，没点名的会被静默忽略、照常计费。"
+                f"以下参考素材没有在 prompt 中被引用：{'、'.join(missing)}。请在 prompt 里用 "
+                f"[[<句柄>]] 写出每个素材在画面里扮演什么（句柄放在与素材列表同序同长的 image_refs / "
+                f"video_refs / audio_refs 里），本次请求未发送。"
+            )
+
+    over = _over_limit(adapter, rendered.prompt) if has_markup else None
+    if over:
+        return False, (
+            f"{adapter.model_name} 的 prompt 上限是 {over}（按替换完 [[...]] 后的最终文本计算）。"
+            f"请精简 prompt，或换一个上限更高的模型。"
         )
     return True, ""
+
+
+def _sets_parameter(req: Any, name: str) -> bool:
+    """Did the caller set ``name`` itself, through ``model_specific``?"""
+    extra = req.model_specific or {}
+    params = extra.get("parameters")
+    return name in extra or (isinstance(params, dict) and name in params)
 
 
 def render_for(adapter: "ModelAdapter", req: Any) -> RenderOutcome:
@@ -175,8 +368,22 @@ def render_for(adapter: "ModelAdapter", req: Any) -> RenderOutcome:
     ok, reason = check_prompt_refs(adapter, req)
     if not ok:
         raise CFGPUError(error_type="invalid_params", user_message=reason, card_hint=False)
-    rendered, _ = _render_video_prompt(prompt, req, dialect)
-    return RenderOutcome(req.model_copy(update={"prompt": rendered}), dialect.key, prompt)
+    rendered = _render_nodes(_parse(prompt), req, dialect, adapter)
+    update: dict[str, Any] = {"prompt": rendered.prompt}
+    # D-DL10: a server-side rewrite would renumber the labels and retime the shots just
+    # rendered, so it is off unless the caller asked for it — through the typed field or
+    # model_specific, either of which wins.
+    if dialect.rewrite == "prompt_extend" and req.prompt_extend is None and not _sets_parameter(req, "prompt_extend"):
+        update["prompt_extend"] = False
+    # 万相 2.6 renders several shots only when told to; the shots are the caller's
+    # instruction, so the parameter follows from them unless the caller set it.
+    if dialect.multi_shot == "wan26_shot_type" and rendered.shot_count >= 2 and not _sets_parameter(req, "shot_type"):
+        extra = dict(req.model_specific or {})
+        params = dict(extra.get("parameters") or {})
+        params["shot_type"] = "multi"
+        extra["parameters"] = params
+        update["model_specific"] = extra
+    return RenderOutcome(req.model_copy(update=update), dialect.key, prompt)
 
 
 # ── hand-written labels ─────────────────────────────────────────────────────
@@ -184,8 +391,7 @@ def render_for(adapter: "ModelAdapter", req: Any) -> RenderOutcome:
 _MEDIA_FIELDS = ("reference_images", "reference_videos", "reference_audios", "images", "video", "first_frame", "last_frame")
 
 #: Reference spellings worth a nudge. Reused from the template library's dialect guard so
-#: there is one list of "what a model-specific reference looks like"; shot/field headers
-#: are left out because they are not references.
+#: there is one list of "what a model-specific reference looks like".
 _LABEL_RULES = frozenset({
     "h3-reference-tag",
     "kling-reference-tag",
@@ -195,27 +401,48 @@ _LABEL_RULES = frozenset({
     "at-reference",
 })
 
+#: Hand-written structure (P2): shot headers, time ranges, dialogue tags, field names.
+#: Unlike a reference these are never ordinary prose, so they are noted with or without
+#: media — on video calls only, the one tool the structure markers exist on.
+_STRUCTURE_RULES = frozenset({
+    "h3-shot-header",
+    "h3-field",
+    "h3-markup",
+    "wan-multishot-header",
+    "seconds-range-header",
+})
+
 PROMPT_NOTE = (
     "prompt 里出现了手写的素材序号写法。请改用 [[<句柄>]] 指代素材（句柄放在与素材列表同序同长的 "
     "*_refs 里）：同一个素材在不同模型、不同素材顺序下的写法和序号都不同，手写的序号可能指向别的素材。"
 )
 
+STRUCTURE_NOTE = (
+    "prompt 里出现了手写的镜头编号、时间段或台词标签。请改用 [[shot 0-3]] 标出每个镜头（秒），"
+    "[[say S1: 原话]] 写台词，[[text: 文字]] 写画面文字：各模型的镜头与台词格式不同，统一写法会按所选模型生成，"
+    "手写的格式换了模型就可能被当成普通文字。"
+)
+
 
 def handwritten_reference_note(req: Any) -> Optional[str]:
-    """A nudge when the caller numbered materials itself instead of using ``[[handle]]``.
+    """A nudge when the caller wrote a model's own notation instead of the unified one.
 
     Never a refusal: 「图1」 is also ordinary Chinese, and refusing a legitimate prompt
-    costs more than a note. Fires only when the request actually carries media, since a
-    reference with nothing to refer to is just prose. The note names no model's label.
+    costs more than a note. A hand-numbered reference is noted only when the request
+    actually carries media (a reference with nothing to refer to is just prose); a
+    hand-written shot header or dialogue tag only on a video call (``duration_seconds``
+    is the video tool's own parameter). Neither note names a model's label.
     """
     from cfgpu_mcp.template_library.dialect_guard import find_dialect
 
-    if not any(getattr(req, name, None) for name in _MEDIA_FIELDS):
-        return None
     prose = _PLACEHOLDER.sub(" ", getattr(req, "prompt", "") or "")
-    if any(hit.rule in _LABEL_RULES for hit in find_dialect(prose)):
-        return PROMPT_NOTE
-    return None
+    rules = {hit.rule for hit in find_dialect(prose)}
+    notes: list[str] = []
+    if rules & _LABEL_RULES and any(getattr(req, name, None) for name in _MEDIA_FIELDS):
+        notes.append(PROMPT_NOTE)
+    if rules & _STRUCTURE_RULES and hasattr(req, "duration_seconds"):
+        notes.append(STRUCTURE_NOTE)
+    return "\n".join(notes) or None
 
 
 def with_prompt_note(service: Any) -> Any:
@@ -238,6 +465,7 @@ def with_prompt_note(service: Any) -> Any:
         if not isinstance(result, dict) or result.get("error"):
             return result
         bound = signature.bind_partial(*args, **kwargs)
+        bound.apply_defaults()  # which tool this is shows in its parameters, passed or not
         note = handwritten_reference_note(SimpleNamespace(**bound.arguments))
         if note:
             result = {**result, "prompt_note": note}

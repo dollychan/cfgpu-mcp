@@ -315,8 +315,8 @@ def _validate_video_refs(req: Any) -> None:
     Whether the selected model can name a given kind at all, and whether it ignores an
     unnamed reference, are per-model facts and are checked in ``supports()``.
     """
+    from cfgpu_mcp.adapters import prompt_markup as markup
     from cfgpu_mcp.adapters.dialect import REFS_FIELD, SLOT_KIND
-    from cfgpu_mcp.adapters.regions import _PLACEHOLDER
 
     owner: dict[str, str] = {}
     for slot, kind in SLOT_KIND.items():
@@ -340,6 +340,13 @@ def _validate_video_refs(req: Any) -> None:
                     f"{refs_name}[{i}] = {handle!r} is not a usable handle: no surrounding "
                     f"whitespace and none of '#', '[' or ']'."
                 )
+            if markup.is_reserved(handle):
+                raise ValueError(
+                    f"{refs_name}[{i}] = {handle!r} is not a usable handle: "
+                    f"{', '.join(sorted(markup.KEYWORDS))} are reserved prompt keywords "
+                    f"([[shot ...]], [[say ...]], ...), so a handle may not be one of them or start "
+                    f"with one followed by a space, colon or '='."
+                )
             if handle in owner:
                 raise ValueError(
                     f"handle {handle!r} names both {owner[handle]} and {slot}[{i}]; a "
@@ -348,8 +355,26 @@ def _validate_video_refs(req: Any) -> None:
                 )
             owner[handle] = f"{slot}[{i}]"
 
-    for match in _PLACEHOLDER.finditer(req.prompt or ""):
-        token = match.group(1).strip()
+    try:
+        nodes = markup.parse(req.prompt or "")
+    except markup.MarkupError as exc:
+        raise ValueError(f"prompt markup is malformed: {exc} Nothing was sent.") from None
+    # An explicit duration is the same on every model, so a shot past it is a
+    # model-independent mistake; with the duration unset each model resolves its own and
+    # supports() judges it per model.
+    duration = getattr(req, "duration_seconds", None)
+    if isinstance(duration, int) and duration > 0:
+        for shot in markup.shots(nodes):
+            if shot.end > duration:
+                raise ValueError(
+                    f"[[shot {markup.format_seconds(shot.start)}-{markup.format_seconds(shot.end)}]] "
+                    f"ends after the video does (duration_seconds={duration}); keep every shot "
+                    f"within the duration, or raise duration_seconds to fit them. Nothing was sent."
+                )
+    for node in nodes:
+        if not isinstance(node, markup.Ref):
+            continue
+        token = node.token
         if "#" in token:
             raise ValueError(
                 f"prompt placeholder [[{token}]] names a region, but generate_video takes "
@@ -739,7 +764,16 @@ class GenerateVideoInput(BaseModel):
     prompt: str = Field(
         default="",
         description="Text description of the video. Required for text-to-video; optional "
-        "for model-supported image, reference, or audio-driven workflows.",
+        "for model-supported image, reference, or audio-driven workflows. Write it in "
+        "plain language plus this one notation, which the server renders into whatever "
+        "form the selected model reads: `[[<handle>]]` names a reference material (see "
+        "image_refs / video_refs / audio_refs); `[[shot 0-3]]` starts a shot covering "
+        "seconds 0–3 (decimals allowed; shots in time order, within the duration); "
+        "`[[say S1: words]]` is a spoken line kept verbatim (speaker optional: "
+        "`[[say: words]]`); `[[text: words]]` is text that must appear in the picture; "
+        "`[[sound: …]]` / `[[music: …]]` describe ambient sound / background music. "
+        "Do not write shot headers, timecodes, dialogue tags or material numbers in any "
+        "model's own format — they differ per model and are generated for you.",
     )
     model: str | list[str] = Field(
         default="auto",
@@ -840,10 +874,12 @@ class GenerateVideoInput(BaseModel):
         description="Add a watermark. Defaults to false and is sent explicitly by models "
         "whose upstream API supports it; models with no watermark request field ignore it.",
     )
-    prompt_extend: bool = Field(
-        default=True,
-        description="Use an LLM to rewrite and expand the prompt before generation. "
-        "When supported, disabling it reduces latency and preserves the original prompt.",
+    prompt_extend: Optional[bool] = Field(
+        default=None,
+        description="Use an LLM to rewrite and expand the prompt before generation, on "
+        "models that support it. Leave unset for the default: on, except off when the "
+        "prompt uses [[...]] notation, since a rewrite would reword the shots, lines and "
+        "material references you wrote. Set true or false to decide yourself.",
     )
     wait: bool = Field(
         default=True,

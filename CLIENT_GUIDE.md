@@ -373,6 +373,32 @@ await video_svc.generate_video(
 媒体槽的 `x-cfgpu-media` 注解带 `refs` 字段，指明该槽对应的句柄列表名（`reference_videos` → `video_refs`），
 宿主可以据此用自己的素材 id 自动填写，无需按名字猜。
 
+视频 prompt 的结构也用同一套写法，服务端按所选模型渲染成它认的镜头、台词格式：
+
+| 写法 | 含义 |
+|---|---|
+| `[[shot 0-3]]` | 一个镜头开始，0–3 秒（可写小数；镜头按时间顺序、不重叠、不超过视频时长） |
+| `[[say S1: 原话]]` | 说出来的台词，逐字保留；说话人可省（`[[say: 原话]]`），语言可指定（`[[say S1 lang=en: …]]`） |
+| `[[text: 文字]]` | 画面里要出现的文字，逐字、不翻译 |
+| `[[sound: …]]` / `[[music: …]]` | 环境声 / 背景音乐 |
+
+```python
+await video_svc.generate_video(
+    prompt="[[shot 0-3]] [[hero]] 在雨夜街头行走 [[sound: 雨声]] "
+           "[[shot 3-6]] 她抬头看向招牌 [[text: 营业中]]，说 [[say S1: 就是这里。]]",
+    reference_images=["https://.../hero.png"],
+    image_refs=["hero"],
+    duration_seconds=6,
+)
+```
+
+写错语法（`[[shot 6-3]]`、`[[say]]` 缺冒号）或镜头重叠会直接以 `invalid_params` 拒绝；镜头超出所选模型的时长、
+模型不支持某个标记、渲染后超过模型的 prompt 长度上限，则是该模型不可用（`model="auto"` 时改选别的模型）。
+句柄不能叫 `shot` / `say` / `text` / `sound` / `music`。
+
+`prompt_extend`（服务端扩写 prompt）不传时默认开启，但 prompt 用了 `[[...]]` 写法时默认关闭，因为扩写会改动
+写好的镜头、台词和素材指代；显式传 `true` / `false` 则按传入的来。不需要自己写任何模型的镜头编号或时间码格式。
+
 ### 轮询异步任务
 
 ```python
@@ -661,7 +687,7 @@ cfgpu generate video "将视频中女孩的衣服替换为图片中的衣服" \
 # 万相 2.6 — 与 2.7 的 input 形态不同（扁平字段，非 media 数组），但 CLI 用法一致
 cfgpu generate video "侦探追查故事，电影级分镜..." --model wan-2-6-t2v -r 720p -d 5
 # 2.6 图生视频：首帧 → img_url，可选音频（reference_audios[0]）→ audio_url（如音频驱动 rap）；支持 2–15 秒，默认 1080P
-# 多镜头仅在 prompt_extend=true 时生效：model_specific={"parameters":{"shot_type":"multi"}}
+# 多镜头：prompt 里写两个以上 [[shot a-b]] 时自动发 shot_type=multi（2.6 仅在 prompt_extend 开启时出多镜头，不传即开启）
 cfgpu generate video "少年说唱 rap" --model wan-2-6-i2v \
   --first-frame https://example.com/rap.png \
   --reference-audios https://example.com/rap.mp3 -r 720p -d 5

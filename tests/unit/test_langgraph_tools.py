@@ -108,7 +108,7 @@ def test_generate_video_schema_has_reference_fields():
     props = _json_schema(tool)["properties"]
     assert "reference_videos" in props
     assert "reference_audios" in props
-    assert props["prompt_extend"]["default"] is True
+    assert props["prompt_extend"]["default"] is None  # unset: on, off with [[...]] markup (D-DL10)
 
 
 # ── coroutine is async ────────────────────────────────────────────────────────

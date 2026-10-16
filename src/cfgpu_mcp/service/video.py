@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from cfgpu_mcp.adapters.prompt_render import with_prompt_note
 from cfgpu_mcp.errors import CFGPUError
@@ -53,7 +53,7 @@ async def generate_video(
     with_audio: bool = True,
     quality_tier: str = "balanced",
     watermark: bool = False,
-    prompt_extend: bool = True,
+    prompt_extend: Optional[bool] = None,
     wait: bool = True,
     timeout: int | None = None,
     return_metadata: bool = True,

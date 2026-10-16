@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal
 
-from cfgpu_mcp.adapters.dialect import resolve_dialect_id
+from cfgpu_mcp.adapters.dialect import parse_prompt_limits, resolve_dialect_id
 from cfgpu_mcp.adapters.inputs import (
     LEGACY_INPUT_KEYS,
     InputSlot,
@@ -300,6 +300,12 @@ class ModelAdapter(ABC):
     #: in ``prompt`` are rendered for this model (``adapters/dialect.py``). Internal only:
     #: never part of any agent-facing surface (I-DL5). ``None`` for audio models.
     prompt_dialect: str | None
+    #: Prompt length ceilings from the card (``prompt_limits:`` in adapter.yaml): any of
+    #: ``chars`` (all characters), ``zh_chars`` (CJK characters), ``en_words`` (Latin
+    #: words). Measured on the *rendered* prompt, and only when the caller used
+    #: ``[[...]]`` markup — rendering changes the length, and a prompt the server did not
+    #: touch keeps whatever behaviour it had before. ``None`` = no declared limit.
+    prompt_limits: dict[str, int] | None
     extends: str | None          # parent adapter_id, or None
     card_base: str | None        # model dir to inherit card.md from; None = no inheritance
 
@@ -414,6 +420,7 @@ class ModelAdapter(ABC):
         instance.prompt_dialect = resolve_dialect_id(
             instance.adapter_id, instance.task_type, config.get("prompt_dialect")
         )
+        instance.prompt_limits = parse_prompt_limits(instance.adapter_id, config.get("prompt_limits"))
         instance.extends = config.get("extends")
         # "card_base" key absent → inherit from extends; "card_base: ~" → None (no inheritance)
         instance.card_base = (

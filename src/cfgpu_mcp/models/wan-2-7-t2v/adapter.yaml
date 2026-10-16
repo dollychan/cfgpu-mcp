@@ -23,6 +23,10 @@ inputs:
 
 # Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
 # both the code gates and the agent-facing profile catalog.
+# How [[...]] markup in `prompt` is rendered for this model (capabilities/prompt_dialects.yaml):
+# 「第N个镜头[a-b秒]」 multi-shot prompts (card example); the server rewrite is turned off when the prompt carries [[...]] markup.
+prompt_dialect: wan27
+
 tasks:
   - text_to_video
   - audio_driven_video

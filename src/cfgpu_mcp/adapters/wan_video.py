@@ -44,6 +44,15 @@ class WanVideoAdapter(ModelAdapter):
     def _uses_ratio(self) -> bool:
         return self.adapter_id not in self._RATIOLESS_ADAPTERS
 
+    @staticmethod
+    def resolve_prompt_extend(req: "GenerateVideoInput") -> bool:
+        """The ``prompt_extend`` to send: the caller's, else this API's default (on).
+
+        The field is tri-state so an unset value can be told apart from ``true``;
+        ``render_for`` turns an unset one off when the prompt carries markup (D-DL10).
+        """
+        return True if req.prompt_extend is None else req.prompt_extend
+
     def validation_corrections(self, req: "GenerateVideoInput") -> dict:
         # The base corrects an explicit unsupported ratio to the nearest declared one;
         # this pins what ``adaptive`` resolves to on an endpoint that always sends a ratio.
@@ -95,7 +104,7 @@ class WanVideoAdapter(ModelAdapter):
         assert isinstance(req, GenerateVideoInput)
         parameters: dict = {
             "resolution": self.resolve_resolution(req).upper(),   # 720p → 720P
-            "prompt_extend": req.prompt_extend,
+            "prompt_extend": self.resolve_prompt_extend(req),
             "watermark": req.watermark,
             "duration": self.resolve_duration_seconds(req),
         }
@@ -289,7 +298,7 @@ class WanVideoEditAdapter(WanVideoAdapter):
         assert isinstance(req, GenerateVideoInput)
         parameters: dict = {
             "resolution": self.resolve_resolution(req).upper(),
-            "prompt_extend": req.prompt_extend,
+            "prompt_extend": self.resolve_prompt_extend(req),
             "watermark": req.watermark,
         }
         if req.aspect_ratio != "adaptive":   # adaptive keeps the source video's ratio
@@ -357,7 +366,7 @@ class Wan26VideoT2VAdapter(WanVideoAdapter):
         parameters: dict = {
             "size": self._SIZES[self.resolve_resolution(req)],
             "duration": self.resolve_duration_seconds(req),
-            "prompt_extend": req.prompt_extend,
+            "prompt_extend": self.resolve_prompt_extend(req),
             "watermark": req.watermark,
         }
         if req.negative_prompt:

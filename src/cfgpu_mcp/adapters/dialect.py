@@ -13,6 +13,12 @@ notation exists to remove. So the dialect id, the label templates and the render
 prompt stay inside the server: the agent-facing schema talks only about ``[[handle]]``,
 and the rendered prompt reaches only ``structuredContent.payload``.
 
+A dialect also says how the structure markers render (P2): shot headers and their time
+format, dialogue, on-screen text, sound/music, the H3 field layouts and mode headers, the
+server-side rewrite D-DL10 turns off, and 万相 2.6's ``shot_type``. Every one of those is
+a template or a choice from a closed set in this module; the YAML never holds logic
+(D-DL11).
+
 The file is validated when first loaded and any error raises: a typo in a template or a
 numbering name would otherwise render a plausible, billed prompt that points at the
 wrong material.
@@ -57,7 +63,45 @@ DEFAULT_BY_TASK_TYPE: dict[str, str] = {
 
 _NUMBERINGS = frozenset({"per_kind", "global_ordered"})
 _TEMPLATE_FIELDS = frozenset({"n"})
-_KEYS = frozenset({"version", "extends", "ref", "numbering", "order", "required"})
+_KEYS = frozenset({
+    "version", "extends", "ref", "numbering", "order", "required",
+    "layout", "shot", "say", "text", "sound", "music", "header", "rewrite", "multi_shot",
+})
+
+#: How the rendered pieces are assembled (D-DL11). ``inline`` keeps the caller's order;
+#: the H3 layouts move sound/music into their own fields and prefix a mode header.
+LAYOUTS = frozenset({"inline", "h3_fields", "h3_ref2va"})
+#: Shot time formats: ``secs`` → ``3.5``; ``mmss_ms`` → ``00:03.500``.
+SHOT_TIMES = frozenset({"secs", "mmss_ms"})
+#: Dialogue language policy: name it (``detect`` from the script unless the caller said)
+#: or leave it out.
+SAY_LANGS = frozenset({"detect", "omit"})
+#: Server-side prompt rewrite this model performs, and so the request field D-DL10 turns
+#: off when the prompt carries markup.
+REWRITES = frozenset({"prompt_extend"})
+#: How a multi-shot prompt is backed by a request parameter (万相 2.6's ``shot_type``).
+MULTI_SHOTS = frozenset({"wan26_shot_type"})
+#: H3 mode headers, chosen from the request's frames (never written by the caller).
+HEADER_MODES = frozenset({"i2va", "fl2va", "l2va"})
+
+_SHOT_FIELDS = frozenset({"index", "start", "end"})
+_SAY_FIELDS = frozenset({"speaker", "lang", "text"})
+_TEXT_FIELDS = frozenset({"text"})
+_HEADER_FIELDS = frozenset({"duration", "last_index"})
+
+
+@dataclass(frozen=True)
+class ShotStyle:
+    first: str
+    next: str
+    time: str = "secs"
+
+
+@dataclass(frozen=True)
+class SayStyle:
+    speaker: str
+    anonymous: str
+    lang: str = "omit"
 
 
 @dataclass(frozen=True)
@@ -68,6 +112,15 @@ class PromptDialect:
     numbering: str = "per_kind"
     order: tuple[str, ...] = field(default=KINDS)
     required: bool = False
+    layout: str = "inline"
+    shot: Optional[ShotStyle] = None
+    say: Optional[SayStyle] = None
+    text: Optional[str] = None
+    sound: Optional[str] = None
+    music: Optional[str] = None
+    header: Mapping[str, str] = field(default_factory=dict)
+    rewrite: Optional[str] = None
+    multi_shot: Optional[str] = None
 
     @property
     def key(self) -> str:
@@ -99,6 +152,85 @@ class PromptDialect:
 
 def _template_fields(template: str) -> set[str]:
     return {name for _, name, _, _ in string.Formatter().parse(template) if name is not None}
+
+
+def _template(dialect_id: str, where: str, template: Any, allowed: frozenset[str], need: str | None) -> str:
+    """Validate one structural template: a non-empty string over ``allowed`` fields."""
+    if not isinstance(template, str) or not template:
+        raise ValueError(f"prompt dialect {dialect_id!r}: {where} must be a non-empty string")
+    fields = _template_fields(template)
+    if fields - allowed:
+        raise ValueError(
+            f"prompt dialect {dialect_id!r}: {where} uses unknown fields {sorted(fields - allowed)} "
+            f"(allowed: {sorted(allowed)})"
+        )
+    if need and need not in fields:
+        raise ValueError(f"prompt dialect {dialect_id!r}: {where} must use the {{{need}}} field")
+    if "[[" in template or "]]" in template:
+        raise ValueError(f"prompt dialect {dialect_id!r}: {where} may not contain [[ or ]]")
+    return template
+
+
+def _closed(dialect_id: str, key: str, value: Any, allowed: frozenset[str]) -> Any:
+    if value is not None and value not in allowed:
+        raise ValueError(f"prompt dialect {dialect_id!r}: {key} must be one of {sorted(allowed)}")
+    return value
+
+
+def _build_structure(dialect_id: str, raw: dict[str, Any]) -> dict[str, Any]:
+    """The structural half of a dialect (P2): shots, dialogue, on-screen text, sound."""
+    out: dict[str, Any] = {}
+    layout = raw.get("layout", "inline")
+    out["layout"] = _closed(dialect_id, "layout", layout, LAYOUTS)
+
+    shot = raw.get("shot")
+    if shot is not None:
+        if not isinstance(shot, dict):
+            raise ValueError(f"prompt dialect {dialect_id!r}: shot must be a mapping")
+        unknown = set(shot) - {"each", "first", "next", "time"}
+        if unknown:
+            raise ValueError(f"prompt dialect {dialect_id!r}: shot has unknown keys {sorted(unknown)}")
+        each = shot.get("each")
+        first = shot.get("first", each)
+        nxt = shot.get("next", each)
+        out["shot"] = ShotStyle(
+            _template(dialect_id, "shot.first", first, _SHOT_FIELDS, None),
+            _template(dialect_id, "shot.next", nxt, _SHOT_FIELDS, None),
+            _closed(dialect_id, "shot.time", shot.get("time", "secs"), SHOT_TIMES),
+        )
+
+    say = raw.get("say")
+    if say is not None:
+        if not isinstance(say, dict):
+            raise ValueError(f"prompt dialect {dialect_id!r}: say must be a mapping")
+        unknown = set(say) - {"any", "speaker", "anonymous", "lang"}
+        if unknown:
+            raise ValueError(f"prompt dialect {dialect_id!r}: say has unknown keys {sorted(unknown)}")
+        any_ = say.get("any")
+        out["say"] = SayStyle(
+            _template(dialect_id, "say.speaker", say.get("speaker", any_), _SAY_FIELDS, "text"),
+            _template(dialect_id, "say.anonymous", say.get("anonymous", any_), _SAY_FIELDS - {"speaker"}, "text"),
+            _closed(dialect_id, "say.lang", say.get("lang", "omit"), SAY_LANGS),
+        )
+
+    for key in ("text", "sound", "music"):
+        if raw.get(key) is not None:
+            out[key] = _template(dialect_id, key, raw[key], _TEXT_FIELDS, "text")
+
+    header = raw.get("header") or {}
+    if not isinstance(header, dict):
+        raise ValueError(f"prompt dialect {dialect_id!r}: header must be a mapping")
+    if set(header) - HEADER_MODES:
+        raise ValueError(f"prompt dialect {dialect_id!r}: header has unknown modes {sorted(set(header) - HEADER_MODES)}")
+    out["header"] = {
+        mode: _template(dialect_id, f"header.{mode}", template, _HEADER_FIELDS, None)
+        for mode, template in header.items()
+    }
+    out["rewrite"] = _closed(dialect_id, "rewrite", raw.get("rewrite"), REWRITES)
+    out["multi_shot"] = _closed(dialect_id, "multi_shot", raw.get("multi_shot"), MULTI_SHOTS)
+    if out["layout"] != "inline" and out.get("shot") is None:
+        raise ValueError(f"prompt dialect {dialect_id!r}: layout {out['layout']} needs a shot template")
+    return out
 
 
 def _build(dialect_id: str, raw: dict[str, Any]) -> PromptDialect:
@@ -136,7 +268,7 @@ def _build(dialect_id: str, raw: dict[str, Any]) -> PromptDialect:
     required = raw.get("required", False)
     if not isinstance(required, bool):
         raise ValueError(f"prompt dialect {dialect_id!r}: required must be a boolean")
-    return PromptDialect(dialect_id, version, dict(ref), numbering, order, required)
+    return PromptDialect(dialect_id, version, dict(ref), numbering, order, required, **_build_structure(dialect_id, raw))
 
 
 def parse_dialects(data: Any) -> dict[str, PromptDialect]:
@@ -196,3 +328,19 @@ def resolve_dialect_id(adapter_id: str, task_type: str, declared: Any) -> Option
             f"{adapter_id}: unknown prompt_dialect {declared!r} (valid: {sorted(load_dialects())})"
         )
     return declared
+
+
+#: Units a ``prompt_limits:`` block may bound (see ``ModelAdapter.prompt_limits``).
+PROMPT_LIMIT_UNITS = frozenset({"chars", "zh_chars", "en_words"})
+
+
+def parse_prompt_limits(adapter_id: str, raw: Any) -> Optional[dict[str, int]]:
+    """Validate an adapter's ``prompt_limits:`` (``None`` / ``{}`` = no limit)."""
+    if not raw:
+        return None
+    if not isinstance(raw, dict) or set(raw) - PROMPT_LIMIT_UNITS:
+        raise ValueError(f"{adapter_id}: prompt_limits keys must be among {sorted(PROMPT_LIMIT_UNITS)}")
+    for unit, value in raw.items():
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            raise ValueError(f"{adapter_id}: prompt_limits.{unit} must be a positive integer")
+    return dict(raw)

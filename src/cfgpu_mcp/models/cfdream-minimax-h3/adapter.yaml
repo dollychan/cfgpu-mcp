@@ -44,6 +44,13 @@ inputs:
 
 # Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
 # both the code gates and the agent-facing profile catalog.
+# How [[...]] markup in `prompt` is rendered for this model (capabilities/prompt_dialects.yaml).
+# Same H3 weights family as MiniMax-H3: with shot/dialogue markup the prompt takes H3's own
+# field layout, and the I2VA / FL2VA / L2VA header is derived from first_frame / last_frame
+# (V: MiniMax-AI/MiniMax-H3 h3-prompt-writing base-en.txt). Inherited by the r2v entry,
+# which overrides it.
+prompt_dialect: h3
+
 tasks:
   - text_to_video
   - image_to_video

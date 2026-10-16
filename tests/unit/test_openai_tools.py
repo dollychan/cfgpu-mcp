@@ -65,7 +65,7 @@ def test_generate_video_has_reference_fields():
     assert "reference_videos" in props
     assert "reference_audios" in props
     assert "reference_images" in props
-    assert props["prompt_extend"]["default"] is True
+    assert props["prompt_extend"]["default"] is None  # unset: on, off with [[...]] markup (D-DL10)
 
 
 # ── filtering ─────────────────────────────────────────────────────────────────
