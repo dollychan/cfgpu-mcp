@@ -1,0 +1,53 @@
+id: tpl-video-coop-game-intro-15s
+version: 2
+rank: 371
+kind: template
+media: video
+title: 双人合作游戏开场 15 秒：菜单 → 装备 → 加载 → 进入世界
+summary: 以确认过的主菜单图为基准，按固定事件时间轴生成游戏开场。
+genres:
+- game-intro
+- gaming
+scenes:
+- creative
+styles:
+- ui
+tags:
+- 游戏开场
+- 15秒
+- UI 动效
+slots:
+- name: 视觉风格
+  required: true
+- name: 确认首图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 玩家1参考图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 玩家2参考图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 玩家1名字
+  required: true
+- name: 玩家2名字
+  required: true
+- name: 玩家1装备名
+  required: true
+- name: 玩家2装备名
+  required: true
+- name: 游戏世界
+  required: true
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (co-op-game-intro-generator)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/co-op-game-intro-generator
+content: |-
+  双人合作游戏开场视频，15秒，16:9，[视觉风格]。画面构图、UI 层级、色彩和字体以[确认首图]为准；左侧玩家参考[玩家1参考图]，右侧玩家参考[玩家2参考图]，身份、发型和左右位置全程不变。全程一镜到底，按秒推进：
+  0–2秒：高角度俯拍大全景，镜头缓慢下压推进；两人并排坐在中央抬头看镜头，只有呼吸和眨眼；左上信息卡显示 [[text: PLAYER 1]] [[text: [玩家1名字]]] [[text: READY]] 与 [[text: PLAYER 2]] [[text: [玩家2名字]]] [[text: READY]]，右侧菜单 [[text: START NEW GAME]] [[text: CONTINUE]] [[text: SETTINGS]] [[text: EXIT GAME]]，CONTINUE 高亮。[[sound: 菜单环境音、轻微悬停音]]
+  2–4秒：镜头推近左侧玩家的手臂，菜单滑出，强调色装备面板滑入，显示 [[text: [玩家1装备名]]]；轻量机械结构从前臂展开并逐一锁定，指示灯依次亮起。[[sound: 精密机械展开与锁定声]]
+  4–7秒：镜头横移到右侧玩家，暖色装备面板滑入，显示 [[text: [玩家2装备名]]]；厚重护甲分段替换并锁定，与左侧的轻量装备形成体型和力量对比。[[sound: 低沉电机与重型扣合声]]
+  7–8.5秒：拉回双人构图，两个面板汇合成 [[text: CONFIRM CONFIG]] 按钮，点击后两色能量脉冲流过两人装备，面板收缩消失，两人调整坐姿。
+  8.5–10秒：底部加载条 [[text: LOADING]] 从 0% 填到 100%，左半段用左侧玩家的强调色、右半段用右侧玩家的暖色；平面背景连续转化为游戏世界——警戒胶带变成道路标记，涂鸦扩展成墙面喷绘，不硬切、不用烟雾遮挡。
+  10–15秒：两人同时起身，镜头下降绕到身后转为第三人称双人视角，并肩走进[游戏世界]；HUD 淡入，右上小地图，左下两条状态栏分别显示 [[text: [玩家1名字]]] [[text: [玩家2名字]]]。[[sound: 城市环境声、脚步声、HUD 提示音]]
+  不要：第三个玩家、角色互换、名字互换、两人体型相同、换脸换发型、分屏、硬切、随机抖动。

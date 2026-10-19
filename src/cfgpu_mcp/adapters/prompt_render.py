@@ -5,7 +5,9 @@ immediately before ``build_payload``, on the billed path and the ``validate_only
 preflight alike, so what a preflight shows is what would be sent.
 
 - **Image and understanding tools** keep ``regions.resolve_image_refs``, whose whole-image
-  ordinal *is* the ``image-ordinal`` dialect (I-DL2). A request carrying regions is still
+  ordinal *is* the ``image-ordinal`` dialect (I-DL2). ``generate_image`` additionally
+  renders ``[[text: …]]`` (text that must appear in the picture) first; the other
+  structure markers are video-only and refused there. A request carrying regions is still
   rendered by the region-capable adapter's own ``build_payload``, because a token that is
   both a handle and a label can only be caught as ambiguous with both in view.
 - **generate_video** parses the prompt into model-neutral nodes
@@ -78,6 +80,46 @@ def _is_video(req: Any) -> bool:
     from cfgpu_mcp.tool_registry import GenerateVideoInput
 
     return isinstance(req, GenerateVideoInput)
+
+
+def _is_image(req: Any) -> bool:
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+
+    return isinstance(req, GenerateImageInput)
+
+
+def _render_image_text(req: Any, dialect: Optional[PromptDialect]) -> Any:
+    """Render ``[[text: …]]`` on an image prompt; every other marker is video-only.
+
+    Handles and region labels are written back exactly as ``[[token]]`` so the region
+    renderer that runs next sees them unchanged. Returns ``req`` itself when the prompt
+    carries no structure marker.
+    """
+    prompt = req.prompt or ""
+    if not _PLACEHOLDER.search(prompt):
+        return req
+    nodes = _parse(prompt)
+    structural = [n for n in nodes if isinstance(n, markup.STRUCTURAL)]
+    if not structural:
+        return req
+    if any(not isinstance(n, markup.OnScreen) for n in structural) or dialect is None or dialect.text is None:
+        raise CFGPUError(
+            error_type="invalid_params",
+            user_message=(
+                "图片生成的 prompt 只支持 [[text: 文字]] 这一种结构标记；[[shot …]] / [[say …]] / "
+                "[[sound: …]] / [[music: …]] 只用于视频。请改用自然语言描述，本次请求未发送。"
+            ),
+            card_hint=False,
+        )
+    parts: list[str] = []
+    for node in nodes:
+        if isinstance(node, markup.Text):
+            parts.append(node.text)
+        elif isinstance(node, markup.Ref):
+            parts.append(f"[[{node.token}]]")
+        else:
+            parts.append(dialect.text.format(text=node.text))
+    return req.model_copy(update={"prompt": "".join(parts)})
 
 
 def _handles(req: Any) -> dict[str, tuple[str, int]]:
@@ -357,7 +399,8 @@ def render_for(adapter: "ModelAdapter", req: Any) -> RenderOutcome:
     """The single rendering point before ``build_payload`` (I-DL7)."""
     dialect = dialect_for(adapter)
     if not _is_video(req):
-        rendered_req = resolve_image_refs(req)
+        staged = _render_image_text(req, dialect) if _is_image(req) else req
+        rendered_req = resolve_image_refs(staged)
         if rendered_req is req:
             return RenderOutcome(req)
         return RenderOutcome(rendered_req, dialect.key if dialect else None, req.prompt)

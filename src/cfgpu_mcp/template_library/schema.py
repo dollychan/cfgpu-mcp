@@ -14,9 +14,12 @@ Two field groups behave differently on purpose:
 * **Editable metadata** — title, summary, facets, tags, rank, status. Retuning search or
   deprecating a record must not force a new version.
 
-``content`` is written in the caller-facing notation (plain prose plus ``[slot]``
-placeholders). It never carries a model-specific prompt dialect: those exist only inside
-the server, and a record that contains one would teach the agent to imitate it.
+``content`` is written in the caller-facing notation: plain prose, ``[slot]``
+placeholders, and on video (image: ``[[text]]`` only) the unified structure markers
+``[[shot a-b]]`` / ``[[say S1: …]]`` / ``[[text: …]]`` / ``[[sound: …]]`` / ``[[music: …]]``,
+which the server renders per model. It never carries a model-specific prompt dialect:
+those exist only inside the server, and a record that contains one would teach the agent
+to imitate it.
 """
 
 from __future__ import annotations

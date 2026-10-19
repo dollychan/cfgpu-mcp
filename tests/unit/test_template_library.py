@@ -26,7 +26,7 @@ from cfgpu_mcp.template_library.bundle import (
     load_bundle,
     parse_bundle,
 )
-from cfgpu_mcp.template_library.dialect_guard import find_dialect
+from cfgpu_mcp.template_library.dialect_guard import find_dialect, markup_problems
 from cfgpu_mcp.template_library.index import TemplateIndex
 from cfgpu_mcp.template_library.schema import TemplateRecord
 from cfgpu_mcp.template_library.tokenize import query_terms
@@ -96,7 +96,11 @@ def test_shipped_library_never_exposes_dialect():
     for record in index.bundle.records:
         payload = json.dumps(index.get(record.id, record.version), ensure_ascii=False)
         assert "dialect_variants" not in payload
-        assert not find_dialect(record.content or ""), record.id
+        # The unified notation is allowed in content (judged by markup_problems); any
+        # model's own spelling is not.
+        hits = [h for h in find_dialect(record.content or "") if h.rule != "unified-notation"]
+        assert not hits, record.id
+        assert not markup_problems(record.content or "", record.media, [s.name for s in record.slots]), record.id
 
 
 # ── dialect guard ─────────────────────────────────────────────────────────────
@@ -397,3 +401,61 @@ def test_staging_drafts_are_not_shipped(tmp_path):
     staging.mkdir(parents=True)
     shutil.copy(root / "records" / "case" / "case-test-0001.v1.yaml", staging / "case-draft-0001.v1.yaml")
     assert [r.id for r in compile_source(root).records] == ["case-test-0001"]
+
+
+# ── unified structure markers in content ─────────────────────────────────────
+
+
+@pytest.mark.parametrize("content, media", [
+    ("[[shot 0-3]] [主角]登场 [[say S1: [台词]]] [[text: [片名]]] [[sound: 风声]] [[music: [配乐]]]", "video"),
+    ("[[shot [开始秒]-[结束秒]]] 镜头一 [[shot [开始秒2]-[结束秒2]]] 镜头二", "video"),
+    ("海报，标题 [[text: [标题]]]", "image"),
+    ("没有任何标记的普通正文，[主角]在走", "video"),
+])
+def test_markers_a_media_renders_are_allowed(content, media):
+    slots = ["主角", "台词", "片名", "配乐", "开始秒", "结束秒", "开始秒2", "结束秒2", "标题"]
+    assert markup_problems(content, media, slots) == []
+
+
+@pytest.mark.parametrize("content, media, fragment", [
+    ("[[m_hero]] 走路", "video", "material handle"),
+    ("[[hero]] 走路", "video", "material handle"),
+    ("[[shot 0-3]] 海报", "image", "Shot markers are not rendered for image"),
+    ("[[say: 你好]]", "image", "Say markers"),
+    ("[[shot 3-1]] 走", "video", "malformed"),
+    ("[[shot 0-3]] a [[shot 2-5]] b", "video", "malformed"),
+    ("[[say S1: [未声明的槽]]]", "video", "malformed"),
+])
+def test_markers_that_would_not_render_are_refused(content, media, fragment):
+    problems = markup_problems(content, media, [])
+    assert problems and fragment in problems[0]
+
+
+def test_the_bundle_builder_reports_bad_markup(tmp_path):
+    src = tmp_path / "templates"
+    shutil.copytree(SOURCE, src)
+    bad = src / "records" / "template" / "tpl-video-short-drama-15s.v3.yaml"
+    text = (src / "records" / "template" / "tpl-video-short-drama-15s.v2.yaml").read_text(encoding="utf-8")
+    bad.write_text(text.replace("version: 2", "version: 3").replace("[[shot 6-10]]", "[[shot 2-10]]"), encoding="utf-8")
+    with pytest.raises(BundleError, match="malformed marker"):
+        compile_source(src)
+
+
+def test_v2_templates_render_once_filled():
+    """A filled-in v2 template is a prompt generate_video accepts and renders."""
+    from cfgpu_mcp.adapters.prompt_render import render_for
+    from cfgpu_mcp.config import load_registry
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+
+    index = TemplateIndex(load_bundle())
+    record = index.get("tpl-video-short-drama-15s")
+    assert record["version"] == 2
+    prompt = record["content"]
+    for slot in record["slots"]:
+        prompt = prompt.replace(f"[{slot['name']}]", "小林" if "角色" in slot["name"] else "好")
+    adapter = load_registry(disabled_models=[]).get("MiniMax-H3")
+    req = GenerateVideoInput(model="MiniMax-H3", prompt=prompt, duration_seconds=15, resolution=None)
+    rendered = render_for(adapter, req).req.prompt
+    assert rendered.startswith("integrated_multimodal_description: [Shot 1]")
+    assert "[Shot 3] At 00:11.000," in rendered and "(S2) says: <d>[Chinese] 好</d>" in rendered
+    assert "[[" not in rendered

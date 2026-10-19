@@ -45,11 +45,14 @@ schema_version: 1
 dialects:
   # Whole-image ordinal, the behaviour `regions._ordinal` always had. Every image and
   # understanding model uses it today, and region rendering depends on it, so it must
-  # stay byte-identical (I-DL2). Image tools take no structural markers.
+  # stay byte-identical (I-DL2). generate_image takes one structure marker, [[text: …]]:
+  # exact text in the picture goes in double quotes (C: Seedream Flash card; 3P: Nano
+  # Banana / GPT-Image prompt guides).
   image-ordinal:
     version: 1
     ref: {image: "图{n}"}
     numbering: per_kind
+    text: '"{text}"'
 
   # No verified numbering convention: name the reference in plain words. Never refused;
   # the model reads it as ordinary description (Q-DL2: neutral wording). Its structural

@@ -1,0 +1,64 @@
+id: tpl-video-brand-promo-15s
+version: 2
+rank: 311
+kind: template
+media: video
+title: 品牌宣传短片 15 秒七段结构
+summary: 钩子 → 场景 → 机制 → 能力 → 证明 → 回报 → LOGO 与行动号召。
+genres:
+- brand-promo
+scenes:
+- commerce
+styles:
+- brand
+tags:
+- 15秒
+- 节拍表
+- CTA
+slots:
+- name: 画幅
+  required: true
+- name: 品牌名称
+  required: true
+- name: 目标受众
+  required: true
+- name: 品牌色
+  required: true
+- name: LOGO素材
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 开场钩子
+  required: true
+- name: 使用场景
+  required: true
+- name: 产品如何工作
+  required: true
+- name: 驱动转场的真实元素
+  required: true
+- name: 核心能力
+  required: true
+- name: 真实输出或证据
+  required: true
+- name: 用户得到的结果
+  required: true
+- name: 行动号召
+  required: true
+- name: 峰值节拍
+  required: true
+- name: 声音方案
+  required: true
+source:
+  origin: first-party, structure adapted from MiniMax-AI/MiniMax-H3 (brand-promo-video-generator)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/brand-promo-video-generator
+content: |-
+  [画幅]，15秒，[品牌名称]宣传短片，面向[目标受众]。品牌色[品牌色]，LOGO 使用[LOGO素材]原件，不重绘。
+  [[shot 0-2]] 品牌钩子——[开场钩子]。
+  [[shot 2-4]] 用户意图或场景建立——[使用场景]。
+  [[shot 4-6.5]] 产品机制——[产品如何工作]，由[驱动转场的真实元素]带入下一镜。
+  [[shot 6.5-9]] 能力或应用——[核心能力]。
+  [[shot 9-11.5]] 输出或证明——[真实输出或证据]。
+  [[shot 11.5-13]] 产品回报——[用户得到的结果]。
+  [[shot 13-15]] LOGO 定格与行动号召 [[text: [行动号召]]]，留足安全区，停留可读。
+  动效：每个节拍一个主动作，峰值放在[峰值节拍]；色彩状态不超过 5 个。
+  [[sound: [声音方案]]]

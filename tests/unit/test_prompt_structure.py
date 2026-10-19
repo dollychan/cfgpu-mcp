@@ -450,3 +450,45 @@ def test_both_notes_can_apply_at_once():
 def test_the_structure_note_names_no_model_label():
     for label in ("第1个镜头", "[Shot", "<d>", "秒]：", "integrated_multimodal_description"):
         assert label not in STRUCTURE_NOTE
+
+
+# ── generate_image: [[text: …]] only ─────────────────────────────────────────
+
+
+def test_image_text_marker_renders_and_handles_still_resolve(registry):
+    adapter = registry.get("gpt-image-2")
+    req = GenerateImageInput(prompt="海报顶部大标题 [[text: 秋日拿铁]]，[[cup]] 放在中间", model="gpt-image-2",
+                             reference_images=[IMG.format(1)], image_refs=["cup"])
+    outcome = render_for(adapter, req)
+    assert outcome.req.prompt == '海报顶部大标题 "秋日拿铁"，图1 放在中间'
+    assert outcome.dialect == "image-ordinal@1" and outcome.source_prompt == req.prompt
+
+
+def test_image_text_marker_alongside_regions(registry):
+    """With regions the region adapter renders handles and labels itself; [[text]] is
+    rendered first and the region tokens reach it unchanged."""
+    from cfgpu_mcp.tool_registry import RegionSpec
+
+    adapter = registry.get("doubao-seedream-5-0-pro")
+    req = GenerateImageInput(
+        prompt="把[[标记1]]换成写着 [[text: OPEN]] 的招牌", model="doubao-seedream-5-0-pro",
+        reference_images=[IMG.format(1)], image_refs=["m_a1"],
+        regions=[RegionSpec(image_index=0, box=[0.1, 0.2, 0.3, 0.4], label="标记1")],
+    )
+    payload = adapter.build_payload(render_for(adapter, req).req)
+    assert '"OPEN"' in payload["prompt"] and "<bbox>" in payload["prompt"]
+    assert "[[" not in payload["prompt"] and "标记1" not in payload["prompt"]
+
+
+@pytest.mark.parametrize("prompt", ["[[shot 0-3]] 海报", "海报 [[say: 你好]]", "[[music: 钢琴]] 海报", "[[sound: 雨]]"])
+def test_video_only_markers_are_refused_on_images(registry, prompt):
+    with pytest.raises(CFGPUError) as info:
+        render_for(registry.get("gpt-image-2"), GenerateImageInput(prompt=prompt, model="gpt-image-2"))
+    assert "[[text: 文字]]" in info.value.user_message
+    for label in _LABELS:
+        assert label not in info.value.user_message
+
+
+def test_an_image_prompt_without_markers_is_untouched(registry):
+    req = GenerateImageInput(prompt="一杯拿铁，标题写“秋日”", model="gpt-image-2")
+    assert render_for(registry.get("gpt-image-2"), req).req is req

@@ -21,7 +21,7 @@ from typing import Any, Iterable, Optional
 
 import yaml
 
-from cfgpu_mcp.template_library.dialect_guard import find_dialect
+from cfgpu_mcp.template_library.dialect_guard import find_dialect, markup_problems
 from cfgpu_mcp.template_library.schema import (
     SCHEMA_VERSION,
     Catalog,
@@ -112,7 +112,12 @@ def compile_source(
         texts = [("content", record.content or ""), ("title", record.title), ("summary", record.summary)]
         for field_name, text in texts:
             for hit in find_dialect(text):
+                # content may carry the unified notation; markup_problems judges it below.
+                if field_name == "content" and hit.rule == "unified-notation":
+                    continue
                 problems.append(f"{rel}: {field_name} carries model dialect ({hit.rule}): …{hit.excerpt}…")
+        for problem in markup_problems(record.content or "", record.media, [s.name for s in record.slots]):
+            problems.append(f"{rel}: content {problem}")
         if known_models is not None:
             unknown = sorted(set(record.verified_on) - known_models)
             if unknown:

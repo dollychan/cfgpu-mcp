@@ -1,0 +1,43 @@
+id: tpl-motion-black-white-opener-5s
+version: 2
+rank: 411
+kind: template
+media: video
+title: 黑底白字打字开场：标准 5 秒
+summary: 第一句 → 替换词 → 最终句 → 转场的标准时间表。
+genres:
+- motion-graphics
+scenes:
+- tech
+styles:
+- kinetic-typography
+tags:
+- 开场
+- 5秒
+slots:
+- name: 画幅
+  required: true
+- name: 第一句
+  required: true
+- name: 被替换的词
+  required: true
+- name: 替换词
+  required: true
+- name: 最终句
+  required: true
+- name: 转场方式
+  required: true
+  hint: 白色速度擦除 / 文字抹入黑暗 / 淡出到黑 / 硬切
+source:
+  origin: first-party, structure adapted from Pluviobyte/video-production-skills (black-white-text-opener)
+  license: first-party
+  url: https://github.com/Pluviobyte/video-production-skills/tree/main/black-white-text-opener
+content: |-
+  约5.5秒开场，[画幅]，纯黑背景，大号白色无衬线字，一镜到底按时间推进，逐字打出并配轻微按键声。
+  0–0.3秒：纯黑。
+  0.3–1.35秒：逐字打出 [[text: [第一句]]]。
+  1.35–2.2秒：停留。
+  2.2–3.55秒：把 [[text: [被替换的词]]] 横向抹掉，逐字打出 [[text: [替换词]]]。
+  3.55–4.7秒：逐字打出最终句 [[text: [最终句]]] 并停留可读。
+  4.7–5.5秒：[转场方式]进入正片。
+  按键声只在字出现时响，停留和转场时静音；不出现彩色闪烁或霓虹线。

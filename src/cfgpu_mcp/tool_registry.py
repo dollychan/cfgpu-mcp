@@ -639,7 +639,9 @@ class GenerateImageInput(BaseModel):
     prompt: str = Field(
         description="Text description of the image to generate. Required by the tool; "
         "pass an empty string for documented image-analysis modes such as Seedream 5.0 "
-        "layer decomposition, which works from one input image.",
+        "layer decomposition, which works from one input image. Text that must appear "
+        "in the picture verbatim (a headline, a sign, a label) is written "
+        "`[[text: words]]`; the server renders it in the form the selected model reads.",
     )
     model: str | list[str] = Field(
         default="auto",
@@ -1287,7 +1289,7 @@ class SearchTemplatesInput(BaseModel):
 
 
 class GetTemplateInput(BaseModel):
-    """Get one template's full content by id; fill each [placeholder] with the user's specifics and keep the user's own decisions."""
+    """Get one template's full content by id; fill each [placeholder] with the user's specifics and keep the user's own decisions. Keep any [[shot …]] / [[say …]] / [[text: …]] / [[sound: …]] / [[music: …]] markers as they are (fill the [placeholder] inside them); generation renders them for the chosen model."""
 
     template_id: str = Field(description="The id of a search_templates result")
     version: Optional[int] = Field(
