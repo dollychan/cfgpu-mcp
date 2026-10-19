@@ -202,7 +202,7 @@ class TemplateIndex:
     @staticmethod
     def _card(record: TemplateRecord, score: Optional[float]) -> dict[str, Any]:
         card = record.model_dump(mode="json", include=set(_CARD_FIELDS))
-        card["cover"] = record.cover.object_key if record.cover else None
+        card["cover"] = record.cover.model_dump(mode="json") if record.cover else None
         card["source"] = {"author": record.source.author, "origin": record.source.origin}
         if score is not None:
             card["score"] = round(score, 4)
@@ -227,6 +227,6 @@ class TemplateIndex:
                 "catalog_version": self.catalog_version,
             }
         data = record.model_dump(mode="json", exclude={"dialect_variants", "withdrawn_reason"})
-        data["cover"] = record.cover.object_key if record.cover else None
+        data["cover"] = record.cover.model_dump(mode="json") if record.cover else None
         data["catalog_version"] = self.catalog_version
         return data

@@ -1,0 +1,896 @@
+notice: 封面均为第三方示例图，只作参考，用来展示一条记录大致能产出什么。版权归各条目注明的原作者；来源仓库的许可证只覆盖其文本，不覆盖这些图片。不得把封面当作生成素材，也不得作为本库自有作品再分发；原作者要求下架时，删除对应条目和文件。
+  / Cover images are third-party examples shown for reference only. Copyright stays with the original
+  author named in each entry; the source repository's license covers its text, not these images. Never
+  use a cover as generation material or redistribute it as the library's own work; on a takedown request,
+  delete the entry and its file.
+covers:
+  case-gpt2-0001/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0002/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0003/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0004/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@cht0001'
+    url: https://x.com/cht0001
+    usage: reference-only
+  case-gpt2-0005/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://mp.weixin.qq.com/s/ASxig6mFVYxrIE8-8Fthew
+    usage: reference-only
+  case-gpt2-0006/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0007/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0008/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0009/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0010/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0011/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0012/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+    usage: reference-only
+  case-gpt2-0013/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@flowersslop'
+    url: https://x.com/flowersslop
+    usage: reference-only
+  case-gpt2-0014/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@WolfRiccardo'
+    url: https://x.com/WolfRiccardo
+    usage: reference-only
+  case-gpt2-0015/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-gaming.md
+    usage: reference-only
+  case-gpt2-0016/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-gaming.md
+    usage: reference-only
+  case-gpt2-0017/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.reddit.com/r/midjourney/comments/1kozn4u/retro_video_games_in_japan_prompts_included/
+    usage: reference-only
+  case-gpt2-0018/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.reddit.com/r/midjourney/comments/1kzzy77/cyberpunk_video_games_in_european_cities_prompts/
+    usage: reference-only
+  case-gpt2-0019/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.reddit.com/r/midjourney/comments/1lh2l98/anime_style_video_games_prompts_included/
+    usage: reference-only
+  case-gpt2-0020/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-gaming.md
+    usage: reference-only
+  case-gpt2-0021/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.reddit.com/r/midjourney/comments/1l2d5dr/lowpoly_strategy_video_games_in_japan_prompts/
+    usage: reference-only
+  case-gpt2-0022/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@aleenaamiir'
+    url: https://x.com/aleenaamiir/status/2046866168208916503
+    usage: reference-only
+  case-gpt2-0023/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: EvoLinkAI
+    url: https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts
+    usage: reference-only
+  case-gpt2-0024/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-retro-and-cyberpunk.md
+    usage: reference-only
+  case-gpt2-0025/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-retro-and-cyberpunk.md
+    usage: reference-only
+  case-gpt2-0026/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-and-animation.md
+    usage: reference-only
+  case-gpt2-0027/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-and-animation.md
+    usage: reference-only
+  case-gpt2-0028/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-and-animation.md
+    usage: reference-only
+  case-gpt2-0029/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-and-animation.md
+    usage: reference-only
+  case-gpt2-0030/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.reddit.com/r/ChatGPT/comments/1jk0p3v/tried_to_push_the_new_image_model_with_an/
+    usage: reference-only
+  case-gpt2-0031/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@MANISH1027512'
+    url: https://x.com/MANISH1027512
+    usage: reference-only
+  case-gpt2-0032/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.reddit.com/r/midjourney/comments/1jrcpan/fantasy_concept_arts_with_v7_prompts_included/
+    usage: reference-only
+  case-gpt2-0033/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-typography-and-posters.md
+    usage: reference-only
+  case-gpt2-0034/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@akokoi1'
+    url: https://x.com/akokoi1
+    usage: reference-only
+  case-gpt2-0035/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-typography-and-posters.md
+    usage: reference-only
+  case-gpt2-0036/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-typography-and-posters.md
+    usage: reference-only
+  case-gpt2-0037/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-typography-and-posters.md
+    usage: reference-only
+  case-gpt2-0038/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@BubbleBrain'
+    url: https://x.com/BubbleBrain
+    usage: reference-only
+  case-gpt2-0039/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e324cd0000000021039ca9
+    usage: reference-only
+  case-gpt2-0040/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e7a01700000000230153f3
+    usage: reference-only
+  case-gpt2-0041/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e78cd4000000002103bdd3
+    usage: reference-only
+  case-gpt2-0042/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@midori_tatsuta'
+    url: https://x.com/midori_tatsuta/status/2045441358530498797
+    usage: reference-only
+  case-gpt2-0043/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@palabraseca'
+    url: https://x.com/palabraseca/status/2047079358326849911
+    usage: reference-only
+  case-gpt2-0044/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e5cb85000000001a027aa8
+    usage: reference-only
+  case-gpt2-0045/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@aleenaamiir'
+    url: https://x.com/aleenaamiir/status/2047325329052823996
+    usage: reference-only
+  case-gpt2-0046/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@WolfRiccardo'
+    url: https://x.com/WolfRiccardo
+    usage: reference-only
+  case-gpt2-0047/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-illustration.md
+    usage: reference-only
+  case-gpt2-0048/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: EvoLinkAI
+    url: https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts
+    usage: reference-only
+  case-gpt2-0049/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-watercolor.md
+    usage: reference-only
+  case-gpt2-0050/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: EvoLinkAI
+    url: https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts
+    usage: reference-only
+  case-gpt2-0051/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-ink-and-chinese.md
+    usage: reference-only
+  case-gpt2-0052/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@RoundtableSpace'
+    url: https://x.com/RoundtableSpace
+    usage: reference-only
+  case-gpt2-0053/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.reddit.com/r/midjourney/comments/1jmodcx/animated_pixel_art_food_prompts_included/
+    usage: reference-only
+  case-gpt2-0054/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: EvoLinkAI
+    url: https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts
+    usage: reference-only
+  case-gpt2-0055/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.reddit.com/r/midjourney/comments/1hkqr4x/isometric_maps_prompts_included/
+    usage: reference-only
+  case-gpt2-0056/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@Salmaaboukarr'
+    url: https://x.com/Salmaaboukarr
+    usage: reference-only
+  case-gpt2-0057/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@mehvishs25'
+    url: https://x.com/mehvishs25
+    usage: reference-only
+  case-gpt2-0058/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@ChillaiKalan__'
+    url: https://x.com/ChillaiKalan__
+    usage: reference-only
+  case-gpt2-0059/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e7878300000000230050bb
+    usage: reference-only
+  case-gpt2-0060/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@LexnLin'
+    url: https://x.com/LexnLin/status/2046952493213429886
+    usage: reference-only
+  case-gpt2-0061/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@den_turbin'
+    url: https://x.com/den_turbin/status/2046863385791467773
+    usage: reference-only
+  case-gpt2-0062/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@aleenaamiir'
+    url: https://x.com/aleenaamiir/status/2047207315976368584
+    usage: reference-only
+  case-gpt2-0063/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@WolfRiccardo'
+    url: https://x.com/WolfRiccardo
+    usage: reference-only
+  case-gpt2-0064/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@patrickassale'
+    url: https://x.com/patrickassale
+    usage: reference-only
+  case-gpt2-0065/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@EddGorenstein'
+    url: https://x.com/EddGorenstein
+    usage: reference-only
+  case-gpt2-0066/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@AIimagined'
+    url: https://x.com/AIimagined
+    usage: reference-only
+  case-gpt2-0067/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@Panda20230902'
+    url: https://x.com/Panda20230902
+    usage: reference-only
+  case-gpt2-0068/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@MrLarus'
+    url: https://x.com/MrLarus
+    usage: reference-only
+  case-gpt2-0069/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@MrLarus'
+    url: https://x.com/MrLarus
+    usage: reference-only
+  case-gpt2-0070/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e8cd0d0000000023007215
+    usage: reference-only
+  case-gpt2-0071/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e832170000000023012116
+    usage: reference-only
+  case-gpt2-0072/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e8eeed0000000021004a54
+    usage: reference-only
+  case-gpt2-0073/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@Vtrivedy10'
+    url: https://x.com/Vtrivedy10/status/2046771959157887014
+    usage: reference-only
+  case-gpt2-0074/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@billtheinvestor'
+    url: https://x.com/billtheinvestor/status/2047153211560399009
+    usage: reference-only
+  case-gpt2-0075/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0076/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0077/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0078/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0079/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0080/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0081/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0082/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0083/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0084/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0085/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0086/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0087/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0088/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0089/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0090/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0091/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0092/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69d396140000000023012282
+    usage: reference-only
+  case-gpt2-0093/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0094/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: Unknown
+    url: https://www.xiaohongshu.com/explore/69e997a90000000022027c30
+    usage: reference-only
+  case-gpt2-0095/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+    usage: reference-only
+  case-gpt2-0096/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: OpenAI
+    url: https://github.com/openai/openai-cookbook/blob/main/examples/multimodal/image-gen-models-prompting-guide.ipynb
+    usage: reference-only
+  case-gpt2-0097/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: OpenAI
+    url: https://github.com/openai/openai-cookbook/blob/main/examples/multimodal/image-gen-models-prompting-guide.ipynb
+    usage: reference-only
+  case-gpt2-0098/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: OpenAI
+    url: https://github.com/openai/openai-cookbook/blob/main/examples/multimodal/image-gen-models-prompting-guide.ipynb
+    usage: reference-only
+  case-gpt2-0099/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: OpenAI
+    url: https://github.com/openai/openai-cookbook/blob/main/examples/multimodal/image-gen-models-prompting-guide.ipynb
+    usage: reference-only
+  case-gpt2-0100/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: OpenAI
+    url: https://github.com/openai/openai-cookbook/blob/main/examples/multimodal/image-gen-models-prompting-guide.ipynb
+    usage: reference-only
+  case-gpt2-0101/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-edit-endpoint-showcase.md
+    usage: reference-only
+  case-gpt2-0102/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-ui-ux-mockups.md
+    usage: reference-only
+  case-gpt2-0103/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-ui-ux-mockups.md
+    usage: reference-only
+  case-gpt2-0104/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-ui-ux-mockups.md
+    usage: reference-only
+  case-gpt2-0105/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-ui-ux-mockups.md
+    usage: reference-only
+  case-gpt2-0106/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-ui-ux-mockups.md
+    usage: reference-only
+  case-gpt2-0107/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-data-visualization.md
+    usage: reference-only
+  case-gpt2-0108/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-data-visualization.md
+    usage: reference-only
+  case-gpt2-0109/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-data-visualization.md
+    usage: reference-only
+  case-gpt2-0110/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-data-visualization.md
+    usage: reference-only
+  case-gpt2-0111/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-data-visualization.md
+    usage: reference-only
+  case-gpt2-0112/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-technical-illustration.md
+    usage: reference-only
+  case-gpt2-0113/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-technical-illustration.md
+    usage: reference-only
+  case-gpt2-0114/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-technical-illustration.md
+    usage: reference-only
+  case-gpt2-0115/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-technical-illustration.md
+    usage: reference-only
+  case-gpt2-0116/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-technical-illustration.md
+    usage: reference-only
+  case-gpt2-0117/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-architecture-and-interior.md
+    usage: reference-only
+  case-gpt2-0118/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-architecture-and-interior.md
+    usage: reference-only
+  case-gpt2-0119/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-architecture-and-interior.md
+    usage: reference-only
+  case-gpt2-0120/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-architecture-and-interior.md
+    usage: reference-only
+  case-gpt2-0121/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-architecture-and-interior.md
+    usage: reference-only
+  case-gpt2-0122/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-scientific-and-educational.md
+    usage: reference-only
+  case-gpt2-0123/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-scientific-and-educational.md
+    usage: reference-only
+  case-gpt2-0124/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-scientific-and-educational.md
+    usage: reference-only
+  case-gpt2-0125/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-scientific-and-educational.md
+    usage: reference-only
+  case-gpt2-0126/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-scientific-and-educational.md
+    usage: reference-only
+  case-gpt2-0127/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-scientific-and-educational.md
+    usage: reference-only
+  case-gpt2-0128/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-scientific-and-educational.md
+    usage: reference-only
+  case-gpt2-0129/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fashion-editorial.md
+    usage: reference-only
+  case-gpt2-0130/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fashion-editorial.md
+    usage: reference-only
+  case-gpt2-0131/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fashion-editorial.md
+    usage: reference-only
+  case-gpt2-0132/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fashion-editorial.md
+    usage: reference-only
+  case-gpt2-0133/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fashion-editorial.md
+    usage: reference-only
+  case-gpt2-0134/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@john_my07'
+    url: https://x.com/john_my07/status/2047182640760140198
+    usage: reference-only
+  case-gpt2-0135/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@Sheldon056'
+    url: https://x.com/Sheldon056/status/2047157379020861782
+    usage: reference-only
+  case-gpt2-0136/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fine-art-painting.md
+    usage: reference-only
+  case-gpt2-0137/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fine-art-painting.md
+    usage: reference-only
+  case-gpt2-0138/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fine-art-painting.md
+    usage: reference-only
+  case-gpt2-0139/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fine-art-painting.md
+    usage: reference-only
+  case-gpt2-0140/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fine-art-painting.md
+    usage: reference-only
+  case-gpt2-0141/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-more-illustration-styles.md
+    usage: reference-only
+  case-gpt2-0142/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-more-illustration-styles.md
+    usage: reference-only
+  case-gpt2-0143/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-more-illustration-styles.md
+    usage: reference-only
+  case-gpt2-0144/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-more-illustration-styles.md
+    usage: reference-only
+  case-gpt2-0145/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: '@aleenaamiir'
+    url: https://x.com/aleenaamiir/status/2046875573574877663
+    usage: reference-only
+  case-gpt2-0146/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-more-illustration-styles.md
+    usage: reference-only
+  case-gpt2-0147/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-film-references.md
+    usage: reference-only
+  case-gpt2-0148/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-film-references.md
+    usage: reference-only
+  case-gpt2-0149/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-film-references.md
+    usage: reference-only
+  case-gpt2-0150/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-film-references.md
+    usage: reference-only
+  case-gpt2-0151/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-film-references.md
+    usage: reference-only
+  case-gpt2-0152/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-cinematic-film-references.md
+    usage: reference-only
+  case-gpt2-0153/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-beauty-and-lifestyle.md
+    usage: reference-only
+  case-gpt2-0154/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-beauty-and-lifestyle.md
+    usage: reference-only
+  case-gpt2-0155/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-events-and-experience.md
+    usage: reference-only
+  case-gpt2-0156/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-events-and-experience.md
+    usage: reference-only
+  case-gpt2-0157/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-tattoo-design.md
+    usage: reference-only
+  case-gpt2-0158/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-tattoo-design.md
+    usage: reference-only
+  case-gpt2-0159/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-tattoo-design.md
+    usage: reference-only
+  case-gpt2-0160/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-tattoo-design.md
+    usage: reference-only
+  case-gpt2-0161/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://www.reddit.com/r/OpenAI/comments/1st5kcd/gpt2_cooked_this_photo_of_a_screen_prompt_macbook/
+    usage: reference-only
+  case-gpt2-0162/1.jpg:
+    origin: wuyoscar/GPT-Image2-Skill
+    author: null
+    url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-screen-photography.md
+    usage: reference-only
+  style-architecture-space/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 331
+    author: 苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）
+    url: ''
+    usage: reference-only
+  style-brand-identity-package/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 354
+    author: '@wanerfu'
+    url: https://x.com/wanerfu/status/2048659924822184026
+    usage: reference-only
+  style-brand-touchpoint-board/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 362
+    author: '@Preda2005'
+    url: https://x.com/Preda2005/status/2049846981271699685
+    usage: reference-only
+  style-character-design-sheet/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 347
+    author: '@oggii_0'
+    url: https://x.com/oggii_0/status/2048614158699217302
+    usage: reference-only
+  style-concept-product-breakdown/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 370
+    author: '@ShamsAmin56'
+    url: https://x.com/ShamsAmin56/status/2050281206139461780
+    usage: reference-only
+  style-conceptual-typography-poster/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 355
+    author: '@dotey'
+    url: https://x.com/dotey/status/2048793351290327381
+    usage: reference-only
+  style-document-publishing/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 360
+    author: '@Gemalpha_88'
+    url: https://x.com/Gemalpha_88/status/2048918707343401034
+    usage: reference-only
+  style-history-classical-themes/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 375
+    author: '@ToroJushiAi'
+    url: https://x.com/ToroJushiAi/status/2050713034503409874
+    usage: reference-only
+  style-illustration-art-style/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 346
+    author: '@dotey'
+    url: https://x.com/dotey/status/2048529821706195442
+    usage: reference-only
+  style-infographic-engine/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 334
+    author: 苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）
+    url: ''
+    usage: reference-only
+  style-nature-science-poster/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 339
+    author: '@berryxia'
+    url: https://x.com/berryxia/status/2048251413147644100
+    usage: reference-only
+  style-poster-layout-system/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 5
+    author: 小红书号6455654397
+    url: ''
+    usage: reference-only
+  style-product-commerce-visual/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 373
+    author: '@xpg0970'
+    url: https://x.com/xpg0970/status/2050108279385419965
+    usage: reference-only
+  style-scene-storytelling/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 330
+    author: 苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）
+    url: ''
+    usage: reference-only
+  style-scientific-scale-diagram/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 341
+    author: '@hqmank'
+    url: https://x.com/hqmank/status/2048587150544028084
+    usage: reference-only
+  style-street-accident-moment/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 376
+    author: '@Shinning1010'
+    url: https://x.com/Shinning1010/status/2050693240253214894
+    usage: reference-only

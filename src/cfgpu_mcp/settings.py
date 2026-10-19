@@ -34,6 +34,27 @@ class HttpSettings:
     stateless: bool = True
 
 
+@dataclass
+class PublicHttpSettings:
+    """The public, unauthenticated static service for template covers (``public_http``).
+
+    A separate process and port from the MCP transport: the MCP port binds the caller's
+    token and belongs on a private network, while this one serves read-only public
+    images to browsers. ``public_base_url`` is also read by the MCP process — it is what
+    turns a record's cover path into a URL; left unset, no cover is returned at all
+    rather than a link that resolves nowhere.
+    """
+
+    host: str = "0.0.0.0"
+    port: int = 8090
+    #: Externally reachable base, e.g. ``https://assets.example.com``; no trailing slash needed.
+    public_base_url: str | None = None
+    #: Directory holding ``<id>/<version>.jpg``; None → the repository's ``templates/covers``.
+    covers_dir: str | None = None
+    #: Seconds browsers / CDNs may cache a cover. Kept short so a takedown takes effect.
+    cache_max_age: int = 86400
+
+
 #: The built-in provider — the CFGPU API itself. Models that declare no
 #: ``provider:`` belong to it, which is every model that predates this field.
 DEFAULT_PROVIDER = "cfgpu"
@@ -67,6 +88,7 @@ class ProviderSettings:
 class Settings:
     transport: str = "stdio"  # "stdio" | "streamable-http"
     http: HttpSettings = field(default_factory=HttpSettings)
+    public_http: PublicHttpSettings = field(default_factory=PublicHttpSettings)
     base_url: str = _DEFAULT_BASE_URL
     http_timeout: float = 120.0
     connect_timeout: float = 10.0
@@ -198,6 +220,13 @@ def load_settings() -> Settings:
         for key, value in (data.get("http") or {}).items():
             if hasattr(s.http, key):
                 setattr(s.http, key, value)
+
+        public_http = data.get("public_http") or {}
+        unknown = set(public_http) - set(PublicHttpSettings.__dataclass_fields__)
+        if unknown:
+            raise ValueError(f"public_http has unknown keys: {sorted(unknown)}")
+        for key, value in public_http.items():
+            setattr(s.public_http, key, value)
 
         api = data.get("cfgpu_api") or {}
         s.base_url = api.get("base_url", s.base_url)

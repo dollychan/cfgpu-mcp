@@ -56,10 +56,32 @@ class Slot(BaseModel):
     hint: Optional[str] = Field(default=None, max_length=200)
 
 
+_COVER_PATH = re.compile(r"^covers/[a-z0-9][a-z0-9-]{2,80}/[1-9][0-9]*\.jpg$")
+
+
 class Cover(BaseModel):
+    """A record's example image, served by the public HTTP service (``public_http``).
+
+    Never written in a record file: the bundle builder fills it from
+    ``templates/covers/credits.yaml``. Every cover so far is a third-party example kept
+    for reference only, so the credit travels with it and the caller shows it.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
-    object_key: str = Field(min_length=1)
+    #: ``covers/<id>/<version>.jpg``, relative to ``public_http.public_base_url``.
+    path: str
+    origin: str = Field(min_length=1)
+    author: Optional[str] = None
+    source_url: Optional[str] = None
+    usage: Literal["reference-only"] = "reference-only"
+
+    @field_validator("path")
+    @classmethod
+    def _path_shape(cls, v: str) -> str:
+        if not _COVER_PATH.match(v):
+            raise ValueError(f"cover path {v!r} must match {_COVER_PATH.pattern}")
+        return v
 
 
 class Source(BaseModel):

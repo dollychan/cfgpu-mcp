@@ -25,6 +25,7 @@ from cfgpu_mcp.template_library.dialect_guard import find_dialect, markup_proble
 from cfgpu_mcp.template_library.schema import (
     SCHEMA_VERSION,
     Catalog,
+    Cover,
     TemplateRecord,
     canonical_json,
     immutable_hash,
@@ -33,6 +34,8 @@ from cfgpu_mcp.template_library.schema import (
 BUNDLE_PATH = Path(__file__).parent / "templates.bundle.json"
 RECORDS_DIRNAME = "records"
 CATALOG_FILENAME = "catalog.yaml"
+COVERS_DIRNAME = "covers"
+CREDITS_FILENAME = "credits.yaml"
 
 
 class BundleError(ValueError):
@@ -66,6 +69,47 @@ def _bundle_checksum(catalog_version: int, records_json: list[dict[str, Any]]) -
 
 def _sorted(records: Iterable[TemplateRecord]) -> list[TemplateRecord]:
     return sorted(records, key=lambda r: (r.id, r.version))
+
+
+def _attach_covers(source_dir: Path, records: dict[tuple[str, int], TemplateRecord]) -> list[str]:
+    """Fill ``record.cover`` from ``covers/credits.yaml`` (the only place covers are declared).
+
+    Each credits key is ``<id>/<version>.jpg``; it must name a record version and an
+    existing file. A record file that sets ``cover`` itself is refused, so there is one
+    source for a cover and its credit.
+    """
+    problems = [
+        f"{r.id}@{r.version}: cover is set from covers/credits.yaml, not in the record"
+        for r in records.values()
+        if r.cover
+    ]
+    credits_path = source_dir / COVERS_DIRNAME / CREDITS_FILENAME
+    if not credits_path.exists():
+        return problems
+    covers = (yaml.safe_load(credits_path.read_text(encoding="utf-8")) or {}).get("covers") or {}
+    for key, entry in covers.items():
+        record_id, _, file_name = key.partition("/")
+        version = file_name.removesuffix(".jpg")
+        record = records.get((record_id, int(version))) if version.isdigit() else None
+        if record is None:
+            problems.append(f"covers/{key}: no record {record_id}@{version}")
+            continue
+        if not (source_dir / COVERS_DIRNAME / key).is_file():
+            problems.append(f"covers/{key}: credited but the file is missing")
+            continue
+        try:
+            cover = Cover(
+                path=f"{COVERS_DIRNAME}/{key}",
+                origin=entry.get("origin"),
+                author=entry.get("author"),
+                source_url=entry.get("url") or None,
+                usage=entry.get("usage"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            problems.append(f"covers/{key}: {exc}")
+            continue
+        records[record.key] = record.model_copy(update={"cover": cover})
+    return problems
 
 
 def compile_source(
@@ -122,6 +166,8 @@ def compile_source(
             unknown = sorted(set(record.verified_on) - known_models)
             if unknown:
                 problems.append(f"{rel}: verified_on names unknown models {unknown}")
+
+    problems.extend(_attach_covers(source_dir, records))
 
     if previous is not None:
         for key, old_hash in previous.immutable_hashes.items():

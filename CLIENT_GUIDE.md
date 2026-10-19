@@ -161,6 +161,7 @@ disabled_tools:
 - `get_template(template_id, version?)` 返回整条记录；不传 `version` 取最新版本。要复现旧作品就传当时记下的版本号——已发布版本的内容永远不变；被下架的记录只返回下架原因。
 - 返回 `available: false` 表示模板库没加载成功，**不等于**没有匹配结果。
 - 正文是与模型无关的写法，不含任何模型专用的标签或分镜语法；按目标模型改写由服务端在生成时完成。
+- `cover` 是示例图：`{url, usage: "reference-only", origin, author, source_url}`，没有封面或部署没配公共地址时为 `null`。封面都是第三方示例图，**只作参考**：展示时注明来源和「版权归原作者」，不要把它当生成素材传给 `generate_*`。图片由独立的公共服务提供（`cfgpu-mcp-public` / `python -m cfgpu_mcp.public_http`，配置见 `config.example.yaml` 的 `public_http`），与 MCP 端口分开、无鉴权、只读；`url` 用的就是那里配置的 `public_base_url`。
 
 ### 使用 MCP Inspector 调试
 
