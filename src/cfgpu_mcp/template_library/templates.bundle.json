@@ -1,6 +1,6 @@
 {
  "catalog_version": 1,
- "checksum": "40d58256d223ae2601c5ffbd8015495683b5f15d8ccac98ef729a9f814c41c25",
+ "checksum": "01f23dcbd866b9c71ffbd560ab724f4583e6f31e4fc98b3bfaef4bcd2ea2ce6c",
  "facets": {
   "genres": [
    "animation-short",
@@ -265,8 +265,17 @@
   "case-video-targeted-edit@2": "80dc05a575556f56858a9a0a2a26694157c42fe06365f8235714e747288d8adb",
   "style-3d-collectible-toy@1": "8492f1f5d23ea2c1fa8c3d5db9fdfa97ea5c637e4277301d771fdd431b05650b",
   "style-architecture-space@1": "9c808655442ab97e28aea88c3858c1313c56bdc652fc111d71201f7158dbf217",
+  "style-brand-cultural-experimental@1": "abc14c6edcb63eeccb730c9a27d9784204ffc2c9c82a25e0ffdd47b9247f1c68",
+  "style-brand-dark-builder@1": "8dfbc4f4bf8ebf237a45aea76d6d506fef815442872736f127e4143a8b084903",
+  "style-brand-dark-nature@1": "3bf6ff56775a632ef549b2fab97461135b6c00f7a938845231b80a7eab841ac1",
+  "style-brand-dark-operator@1": "8889c5635fdfe6d5cf7edaa5da8b373926afecdd6c90f184b6bf9df07f4afeba",
   "style-brand-identity-package@1": "5102698dc35778a9dcb62b1b6bac7724723007d56d239c6ff4e66cfc044cf3f1",
+  "style-brand-light-editorial-trust@1": "179022e15dd421e3d5a1fdbb6649765b4b22e5e92fde3837f0879cc7016220f0",
+  "style-brand-luxury-beauty@1": "9b117f0c486dc54684981fbe02c52597fd9ab66609ff5e6b4720cba5b7cd63de",
+  "style-brand-security@1": "88986d3b319d057ab1707cc135d56a26f9dcfbfba7579e9b707ead41905cfca5",
+  "style-brand-studio-board@1": "797d4ffa7dec6fa260c3a69132ebd138d3876659b0d5947f00fdbd33ec2fc50a",
   "style-brand-touchpoint-board@1": "858a291d93002a4b0cd3a9bd4a87bcdd9386290f61c7d90a2e3befd5abb3a457",
+  "style-brand-voice@1": "a44a3a7b87b4db5f15a52d1497b28b944f58a96e5e0c4dceecd47051fd73dec7",
   "style-character-design-sheet@1": "339fb1fd6aa029152e46cb76b30fda8f33ca38a1e0ae98009147e0d1c8ffb095",
   "style-concept-product-breakdown@1": "02e6c6d4ea0318b9569f2f5aab6c963a0f6c4965c16002f7e06ef9b61680b4a0",
   "style-conceptual-typography-poster@1": "ad2138943f0ff913af5eae4a813b66d40402ab354dbd22caa8548390255c69c7",
@@ -296,6 +305,14 @@
   "style-video-paper-collage@1": "3b3e7959dcd471a6773be2fdacae66dfae7cfd5fcbe4f945618c811b8bbb712c",
   "style-video-papercraft-stop-motion@1": "2cb82cb1eb3bdcc4cd71da39ad7d8226ea13d02fa07a65fd905f25cf1d87d3ec",
   "style-video-prompt-craft@1": "d73bf7d867214e71283ee218be71b17216216ddc4a0ce00fc02e69d417201be1",
+  "style-web-agency-portfolio@1": "f9290f5c0f481062aa1e0a02837c7e3a23ab6212d84be916caa457d169778541",
+  "style-web-cinematic-premium@1": "095b39fd94858322d82caa419ed019dfc59c54f12ad0fad39e0fd6b6452879fc",
+  "style-web-ecommerce@1": "15d38d26941d434ac2533a113595a8c5a8c13358a36f8cd98030a60dd6e61c81",
+  "style-web-editorial-magazine@1": "4955750735802ab3f5aba508d388448bc8cc0530109a1985f0a9f5434df02fb8",
+  "style-web-landing-art-direction@1": "5fcf3fe3f313ecc7838b5a3f7145eb6d69034258aa5c2cda92ffed739f1037a5",
+  "style-web-minimal-swiss@1": "1e6a04318ddf59c2e43b85eb330cc26d8c11eccb4a80330725be94c0efb05b66",
+  "style-web-saas-product@1": "f0153f7ef6b833306d6369d1643365402b78deecdead39affa1db925532ba38b",
+  "style-web-trust-first@1": "c57614f7601508d2c9ec8cc5af3e6b26eaa0f3e21f47255df61871d8ca97105e",
   "tpl-image-coop-game-menu@1": "8a885a66f47c422f2835097ad43c8bb722c5fc0c1ea8dc39c3b10e7a981b2ea7",
   "tpl-image-papercraft-keyframe@1": "35333e3274821916fdd1d1312ea8918e6f25399eb0f4c318e34f9bfa0744eccb",
   "tpl-motion-beat-graph@1": "ca17430a6f0b55a671f999227d8c8a833a612f9c6c6fbb996355ad197ff4a6aa",
@@ -6452,6 +6469,161 @@
    "withdrawn_reason": null
   },
   {
+   "content": "适用：音乐、创意工具、活动、接近游戏的产品、文化项目。\n画面：网点和显像管纹理、模拟印刷感、一个大胆的强调色、海报式的格子、出人意料的图像裁切。\nLogo 方向：定制文字标、有态度的图标、象征性的吉祥物、印刷感的标。\n情绪：好记、有创意、仍然受控——每格一个想法，不做拼贴墙。\n避免：随机彩虹、杂乱贴纸、无主次的涂鸦。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-cultural-experimental",
+   "kind": "style",
+   "media": "image",
+   "rank": 580,
+   "scenes": [
+    "creative",
+    "social"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "poster"
+   ],
+   "summary": "网点、显像管纹理、模拟印刷、大胆的强调色和海报式格子，好记、有创意，但依然受控。",
+   "tags": [
+    "音乐",
+    "活动",
+    "创意工具",
+    "印刷感"
+   ],
+   "title": "文化实验：网点、印刷感和有态度的标",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：开发者工具、编程助手、基础设施、自动化、AI 构建平台。\n画面：近黑色面板，细微网格；等宽字作点缀；终端窗口、命令输入条、提示框、安装命令作为品牌应用；必要时加像素或显像管纹理。\n配色：近黑底配一个冷或亮的强调色（青、蓝、珊瑚或青柠），其余保持灰阶。\nLogo 方向：光标加框架、闪电表达构建速度、脚手架加首字母、终端符号与几何标结合、模块化构成标。\n情绪：精确、锋利、自信、像工程师自己做的。\n避免：满屏代码、假仪表盘、霓虹光晕、通用科技蓝紫渐变。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-dark-builder",
+   "kind": "style",
+   "media": "image",
+   "rank": 510,
+   "scenes": [
+    "tech"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "dark-tech"
+   ],
+   "summary": "近黑底、等宽字点缀、命令行和终端窗口作为品牌应用，精确、锋利、懂行。",
+   "tags": [
+    "开发者工具",
+    "终端",
+    "基础设施",
+    "深色"
+   ],
+   "title": "深色建造者：开发工具、基础设施与自动化品牌",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：策略咨询、出行、健康、气候、安静的高端软件服务。\n画面：深绿底，青柠作唯一强调色；雾气中的山野风景；圆形图像遮罩；柔和的半透明叠层；安静的页码标签和深色编辑式网格。\nLogo 方向：路径、叶、月、地平线、指南针、门洞、折叠标。\n情绪：平静、可信、专注。\n避免：鲜艳的自然色堆砌、卡通植物、与品牌含义无关的风景。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-dark-nature",
+   "kind": "style",
+   "media": "image",
+   "rank": 530,
+   "scenes": [
+    "travel",
+    "tech"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "photography"
+   ],
+   "summary": "深绿配青柠点缀，雾气风景、圆形图像框和柔和叠层，平静、可信、专注。",
+   "tags": [
+    "自然",
+    "健康",
+    "出行",
+    "沉静"
+   ],
+   "title": "深色自然：沉静的策略、出行与健康品牌",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：业务工具、增长工具、销售助手、自动化流程、效率产品。\n画面：黑底配暗红或琥珀；少量发光的界面标签、卡片体系、分段的流程示意、图标行、奖励或进度母题；首屏文字极少。\nLogo 方向：信号、礼物、路径、操作者标记、开关、循环、指令系统。\n情绪：快、可操作、战术感、高级。\n避免：数据密集的大屏、过多发光、喧闹的营销口号。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-dark-operator",
+   "kind": "style",
+   "media": "image",
+   "rank": 520,
+   "scenes": [
+    "tech",
+    "commerce"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "dark-tech"
+   ],
+   "summary": "黑配暗红或琥珀，发光的界面标签、卡片体系和分段流程，快速、战术感、高级。",
+   "tags": [
+    "业务工具",
+    "增长",
+    "销售",
+    "效率"
+   ],
+   "title": "深色运营者：业务工具与增长产品品牌",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
    "content": "适用：用于 Logo 系统、品牌板、VI 套件和应用样机。\nUse when: Use for logo systems, brand boards, visual identity kits, and application mockups.\n要点 / Guidance:\n- Define brand name, positioning, palette, typography, logo usage, and touchpoints.\n- Ask for a coherent board with aligned applications.\n- 定义品牌名、定位、配色、字体、Logo 用法和触点。\n- 要求视觉板中的应用统一对齐。\n避坑 / Pitfalls:\n- Avoid unrelated logo variants and inconsistent palettes.\n- Keep brand text accurate.\n- 避免无关 Logo 变体和混乱配色。\n- 保持品牌文字准确。\n可配合的模板骨架 / Skeletons: tpl-style-brand-1, tpl-style-brand-2, tpl-style-brand-3, tpl-style-brand-4, tpl-style-brand-5",
    "cover": null,
    "dialect_variants": {},
@@ -6483,6 +6655,162 @@
     "Identity"
    ],
    "title": "Brand Identity Package / 品牌身份包",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：法律、隐私、合规、文档类产品、以信任为核心的品牌。\n画面：暖象牙底和纸张纹理；小号衬线标签；印章、徽记、封蜡；色轮或色卡实物；安静的文具应用（信封、文件夹、名片）。\n配色：象牙底配深蓝、红、金中的一到两个。\nLogo 方向：印章、守护犬、盾、文件、图章、组合字母。\n情绪：可信、考究、机构感但不陈旧。\n避免：法槌天平等陈词滥调、仿古族徽、过多装饰花纹。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-light-editorial-trust",
+   "kind": "style",
+   "media": "image",
+   "rank": 550,
+   "scenes": [
+    "commerce",
+    "education"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "documents"
+   ],
+   "summary": "暖象牙色纸张质感、小号衬线标签、印章与徽记，深蓝红金点缀，可信、考究、现代。",
+   "tags": [
+    "合规",
+    "法律",
+    "隐私",
+    "浅色",
+    "印章"
+   ],
+   "title": "浅色编辑：法律、隐私与合规的可信品牌",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：美妆、时尚、精品酒店、高端服务。\n画面：象牙、石色、深咖为主；衬线字标和优雅的组合字母；纸张颗粒、压印、烫印；产品标签；编辑式的局部裁切；柔和的阴影。\nLogo 方向：组合字母、印章、花瓣、器皿、仪式物件、精修的文字标。\n情绪：有品位、成熟、贵而不炫。\n避免：仿冒奢侈品纹样、金色滥用、廉价的光泽和闪粉。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-luxury-beauty",
+   "kind": "style",
+   "media": "image",
+   "rank": 560,
+   "scenes": [
+    "fashion",
+    "commerce"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "minimal"
+   ],
+   "summary": "象牙、石色、深咖，衬线字标与优雅组合字母，纸纹、压印和编辑式裁切，有品位、成熟、贵。",
+   "tags": [
+    "美妆",
+    "时尚",
+    "酒店",
+    "奢华"
+   ],
+   "title": "奢华美妆时尚：克制的材质与仪式感",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：网络安全、监控、威胁情报、网络产品。\n画面：黑或藏青底；盾的形态、雷达扫描线、威胁标签、细微的运动轨迹；红蓝警示标签点缀；受控的渐变。\nLogo 方向：盾、猛禽、眼、守望、边界、受保护的核心。\n情绪：严肃、警觉、精确。\n避免：骷髅、黑客兜帽人、绿色代码雨、恐吓式视觉。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-security",
+   "kind": "style",
+   "media": "image",
+   "rank": 540,
+   "scenes": [
+    "tech"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "dark-tech"
+   ],
+   "summary": "黑或藏青底，盾形、雷达线、威胁标签和红蓝警示标签，严肃、警觉、精确。",
+   "tags": [
+    "安全",
+    "合规",
+    "监控",
+    "网络"
+   ],
+   "title": "安全与威胁情报：警觉、边界、受保护的核心",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：新品牌的视觉方向提案、Logo 系统展示、品牌 VI 概览板。不适合单张 Logo 或海报。\n先回答五个问题再出图：品牌代表什么；核心隐喻是什么；Logo 怎么表达它；体系怎么延展到界面、印刷、图像和细节；为什么整体只属于这个品牌。\nLogo 构思最多组合两种方法：\n- 首字母加含义：用切口、折叠、负形把首字母和隐喻合成一个标，不做只有字母的图标。\n- 产品动作：把产品最核心的动作抽象成符号（构建→框架/脚手架，保护→边界/盾，转换→切换/箭头，说话→声波）。\n- 隐喻融合：两个有意义的概念合成一个简化的标，融合要含蓄但能读懂。\n- 负形：用空白藏出箭头、受保护的中心、内部路径。\n- 构成几何：圆、对角切、模块、轨道、十字准线，用一格展示构成逻辑。\n版面：深色或浅色的展示底，格子之间间距统一、对齐严格、大量留白。各格不要一样响：安静的封面格、功能性的界面格、情绪化的图像格、技术性的构成格、实物应用格、安静的口号格，形成起伏。\n配色：一个主色板——底色、主强调色、次强调色、中性色；强调色在各格重复出现，一个强调色就能撑起整套系统。\n文字：只有品牌名、一句口号、少量分区标签和极短的界面标签；不要段落、假小字、菜单、占位文字。\n细节：小页码、细线、对位标、构成线、低透明度纹理、网点处理，点到为止，让人凑近看才发现。\n避免：漂浮图标、通用渐变、过度设计的 Logo、无意义色块、拼贴式乱排、各格 Logo 不一致、颜色过多、廉价霓虹、模板感品牌板。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-studio-board",
+   "kind": "style",
+   "media": "image",
+   "rank": 500,
+   "scenes": [
+    "commerce",
+    "tech"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "minimal"
+   ],
+   "summary": "品牌视觉板的总体做法：先定品牌主张和 Logo 构思，再用节奏有起伏的多格展示它在数字、印刷、图像和细节上的延展。",
+   "tags": [
+    "品牌板",
+    "Logo 构思",
+    "VI",
+    "提案"
+   ],
+   "title": "工作室品牌提案板：一个品牌主张，安静的网格叙事",
    "verified_on": [],
    "version": 1,
    "withdrawn_reason": null
@@ -6521,6 +6849,45 @@
     "Campaign"
    ],
    "title": "Brand Touchpoint Board / 品牌触点视觉板",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：语音 AI、聊天、智能助手、语音识别、音频产品。\n画面：深靛底，淡紫或柔紫光晕；声波、话筒抽象、声音球体；手机局部裁切、指令输入框、App 图标作为应用。\nLogo 方向：声波加首字母、声音球、说话路径、话筒抽象、脉冲环。\n情绪：流畅、聪明、亲密。\n避免：写实麦克风、满屏频谱、过亮的霓虹紫。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "brand-systems-identity"
+   ],
+   "id": "style-brand-voice",
+   "kind": "style",
+   "media": "image",
+   "rank": 570,
+   "scenes": [
+    "tech",
+    "social"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream brandkit skill",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "brand",
+    "ui"
+   ],
+   "summary": "深靛底配淡紫光晕，声波、话筒母题、手机局部和指令输入框，流畅、聪明、亲密。",
+   "tags": [
+    "语音",
+    "对话",
+    "助手",
+    "音频"
+   ],
+   "title": "语音与沟通：流动的声波与亲密感",
    "verified_on": [],
    "version": 1,
    "withdrawn_reason": null
@@ -7642,6 +8009,320 @@
     "避坑"
    ],
    "title": "多模态视频提示词写法：结构、运镜、景别与避坑",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：用户说\"工作室、创意机构、作品集\"。\n首屏：巨型陈述或极简小首屏，二选一要果断，不取中间。\n背景：大胆地变化——全幅作品图、色块对拼、双色调照片；可以用与品牌情绪一致的编辑式色彩晕染。\n构图：偏离网格、海报式堆叠叙事、作品图廊节奏；作品是主角，说明文字退后。\n字体：可以用富有表现力的展示字体或压缩的大字，但全站只保留一种情绪。\n避免：作品缩成小缩略图墙、每个项目同一种卡片、为了实验而牺牲可读性。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "ui-ux-mockups"
+   ],
+   "id": "style-web-agency-portfolio",
+   "kind": "style",
+   "media": "image",
+   "rank": 650,
+   "scenes": [
+    "creative"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "ui",
+    "poster"
+   ],
+   "summary": "巨型陈述或极简小首屏二选一，背景大胆变化，偏离网格的海报式版式，适合创意工作室、设计师和个人作品集。",
+   "tags": [
+    "作品集",
+    "创意工作室",
+    "海报式",
+    "设计师"
+   ],
+   "title": "工作室与作品集：海报式构图和果断的取舍",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：用户说\"电影感、氛围、高端、奢华、大胆\"。\n首屏：巨型陈述式——超大字和大图占满第一屏，文字放在左下或画面下部 40% 的安全区。\n背景：全幅图加深色或色调遮罩保证文字可读；柔和径向暗角衬托产品局部；细噪点叠在渐变上增加触感。背景图的色调必须与色板一致，强调色不随背景变化。\n渐变：可以使用与色板匹配的电影感色调渐变。\n构图：图即画布，文字压在干净的安全区；区块之间用整屏影像和安静的文字区交替。\n避免：图片与色板打架、文字压在杂乱区域、霓虹光晕、每一屏都满幅导致没有呼吸。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "ui-ux-mockups"
+   ],
+   "id": "style-web-cinematic-premium",
+   "kind": "style",
+   "media": "image",
+   "rank": 630,
+   "scenes": [
+    "commerce",
+    "fashion"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "ui",
+    "cinematic"
+   ],
+   "summary": "全幅背景图加色调遮罩、柔和径向暗角衬托产品、细噪点渐变，巨型陈述式首屏，适合高端、奢华和大胆的品牌。",
+   "tags": [
+    "电影感",
+    "高端",
+    "奢华",
+    "全幅背景"
+   ],
+   "title": "电影感高端：全幅影像、色调遮罩与大胆陈述",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：用户说\"电商、商店、产品页\"，页面目标是购买或加购。\n首屏：中等编辑式，产品是视觉中心，主按钮一眼可见。\n背景：全幅产品照、柔和径向暗角衬托产品局部、色块配材质或细节特写。\n渐变：细微，永远不和产品争夺注意力。\n构图：产品主导；卖点区块用产品局部特写配一句说明，而不是图标加文字的卡片排。\n价格、促销、评价和数据只用用户提供的；没有时不出现。\n避免：商品墙、九宫格平铺、与产品无关的场景图、闪烁的促销标签。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "ui-ux-mockups"
+   ],
+   "id": "style-web-ecommerce",
+   "kind": "style",
+   "media": "image",
+   "rank": 660,
+   "scenes": [
+    "commerce"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "ui",
+    "product"
+   ],
+   "summary": "全幅产品照、径向暗角加局部特写、色块加细节，中等首屏强调产品，渐变永远不与产品争夺注意力。",
+   "tags": [
+    "电商",
+    "商店",
+    "产品页",
+    "购买"
+   ],
+   "title": "电商产品页：产品主导、按钮一眼可见",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：用户说\"编辑感、杂志风、艺术指导、时尚\"。\n首屏：中等编辑式或巨型陈述式；主标题可以很大，配一张有强烈调色的照片。\n背景：编辑式分栏图（50/50、60/40 可左右翻转）、双色调处理的照片、单色调的氛围照片。\n渐变：只用细微的色调过渡。\n字体：优雅衬线配无衬线，大小对比强；可用竖排旁注、超大编号。\n构图：偏离网格的错位、非对称牵引、图片出血；但阅读顺序必须清楚。\n避免：所有区块同一种分栏、图片当装饰贴边、字体超过两种。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "ui-ux-mockups"
+   ],
+   "id": "style-web-editorial-magazine",
+   "kind": "style",
+   "media": "image",
+   "rank": 620,
+   "scenes": [
+    "fashion",
+    "creative"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "ui",
+    "photography"
+   ],
+   "summary": "衬线加无衬线的编辑式组合、偏离网格的错位构图、双色调或调色照片，适合品牌、时尚和内容型页面。",
+   "tags": [
+    "编辑",
+    "杂志",
+    "时尚",
+    "非对称"
+   ],
+   "title": "编辑杂志：非对称版式与强烈的字体对比",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：落地页、营销页、作品集的分区设计稿，以及照着设计稿写页面。不适合后台、仪表盘、数据表格。\n出图：每个区块单独一张横版图，不把多个区块压进一张长图；所有图同一画幅、同一套色板，像同一个网站。\n每张图要让开发者看得出：版式、层级、间距、字号阶梯、按钮主次、组件样式、图片处理。不要画成抽象氛围图。\n首屏：一句 5–10 个词的有力主标题、简短副标题、一个主按钮，大量留白；不堆徽章、假数据、小 Logo 墙。左文右图是最常见的套路，不作为默认——可选居中陈述压在全幅图下部、左下或右下压图、图即画布、反向分栏、极简小首屏（小 Logo、一句话、细按钮）。\n构图：各区块的锚点要变化，全站至少三种；背景方式也要变化：纯色加小图、纸张或网格纹理、全幅图加色调遮罩、编辑式分栏图、色块对拼、低饱和色调渐变。\n主线：全站选一条叙事母题贯穿（珍藏品、旅程、精密工具、生长系统、舞台聚光、档案卷宗），再选一个只出现一次的\"第二眼\"细节（一个超大数字、一处材质切换、一条竖排旁注）。\n色板：一个主色、一个辅色、一个只用于按钮和高亮的强调色，加一组中性色；各区块换情绪也不换色板。渐变只用低饱和、与色板一致的色调渐变。\n文字：主标题用中等或细字重、紧字距、行数受控；不用渐变字冒充高级感。文案短、可信，不用\"赋能、颠覆、无缝、下一代\"这类空话，不编造品牌名。\n避免：一路居中到底、每个区块一排三张相同卡片、蓝紫 AI 渐变、满屏发光边、漂浮球体、无理由的毛玻璃叠层、读不清的合作方 Logo 跑马灯、三列假统计数字。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "ui-ux-mockups"
+   ],
+   "id": "style-web-landing-art-direction",
+   "kind": "style",
+   "media": "image",
+   "rank": 600,
+   "scenes": [
+    "tech",
+    "commerce"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "ui",
+    "minimal"
+   ],
+   "summary": "网页分区设计稿的通用艺术指导：每个区块一张横版图，全站一套色板，首屏不默认左文右图，避开常见的 AI 网页套路。",
+   "tags": [
+    "落地页",
+    "设计稿",
+    "首屏",
+    "分区"
+   ],
+   "title": "落地页设计稿：一屏一图、构图有变化、不像 AI 模板",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：用户说\"极简、干净、只要文字、瑞士风\"，或产品本身足够有说服力。\n首屏：极简小首屏——小 Logo、一句陈述、一个细按钮，大量负空间。\n背景：纯色面、极淡的纸张或网格纹理，最多一处色块对拼；不用全幅图。\n渐变：不用，或只用最柔和的同色渐变。\n字体：理性无衬线，字号对比极强，严格网格对齐；靠字号、字重和留白建立层级。\n构图：居中堆叠或严格分栏，节奏均匀但用尺度对比避免单调。\n避免：装饰性插画、阴影卡片堆叠、多种字体情绪混用。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "ui-ux-mockups"
+   ],
+   "id": "style-web-minimal-swiss",
+   "kind": "style",
+   "media": "image",
+   "rank": 610,
+   "scenes": [
+    "tech",
+    "creative"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "ui",
+    "minimal"
+   ],
+   "summary": "纯色或细纹理底，强层级的理性无衬线字体，居中堆叠或严格网格，几乎不用图，适合“干净、简单”的诉求。",
+   "tags": [
+    "极简",
+    "瑞士风格",
+    "字体排印",
+    "留白"
+   ],
+   "title": "极简瑞士：字体即版式，留白即结构",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：用户说\"SaaS、产品、金融科技、基础设施\"，或页面要讲清楚一个软件产品。\n首屏：中等编辑式——主标题、简短说明、主按钮，加一张清楚的产品界面框景。\n背景：纯色面加产品截图、色块加界面细节裁切，偶尔一屏编辑式分栏图。\n渐变：非常细微，只用色板内的颜色。\n构图：产品界面是主角，裁切到能看懂的局部，不画满屏假数据；信任区块只放用户提供的评价和数据。\n实现清晰度略高于其他风格：组件样式、间距、按钮主次一眼可读。\n避免：卡片套卡片、三列相同功能卡、假仪表盘图表、蓝紫渐变光球。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "ui-ux-mockups"
+   ],
+   "id": "style-web-saas-product",
+   "kind": "style",
+   "media": "image",
+   "rank": 640,
+   "scenes": [
+    "tech"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "ui",
+    "product"
+   ],
+   "summary": "纯色面加产品界面截图、色块加细节裁切，中等首屏，构图服务于理解产品，适合软件、金融科技和基础设施。",
+   "tags": [
+    "SaaS",
+    "软件",
+    "金融科技",
+    "产品截图"
+   ],
+   "title": "SaaS 产品：清晰的产品框景与信任感",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "适用：公共服务、受监管行业（医疗、金融、保险）、教育、面向儿童或长者的产品。这类约束优先于审美偏好。\n版式：规整网格、对称或接近对称，区块职责清楚；信息密度可以略高，但每块只讲一件事。\n字体：大字号、高对比、行长适中；按钮和链接样式明显、可点击区域足够大。\n配色：沉稳的主色加一个清楚的操作色；状态色（成功、警告、错误）含义固定。\n图片：真实、温和的场景或清晰的示意图，不用炫技的视觉处理。\n避免：低对比的浅灰字、装饰性动效、图片压文字、模糊的行动号召。",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "ui-ux-mockups"
+   ],
+   "id": "style-web-trust-first",
+   "kind": "style",
+   "media": "image",
+   "rank": 670,
+   "scenes": [
+    "education",
+    "tech"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)",
+    "url": null
+   },
+   "status": "active",
+   "styles": [
+    "ui",
+    "documents"
+   ],
+   "summary": "低变化度、低动效、信息清晰，字号和对比度优先保证可读，适合政务、医疗、金融、教育和面向儿童的产品。",
+   "tags": [
+    "公共服务",
+    "可访问性",
+    "医疗",
+    "金融",
+    "教育",
+    "医院",
+    "政务",
+    "预约",
+    "银行"
+   ],
+   "title": "可信优先：公共服务与受监管行业的清晰页面",
    "verified_on": [],
    "version": 1,
    "withdrawn_reason": null

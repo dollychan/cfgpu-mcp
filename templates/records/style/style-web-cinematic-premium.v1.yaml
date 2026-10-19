@@ -1,0 +1,30 @@
+id: style-web-cinematic-premium
+version: 1
+rank: 630
+kind: style
+media: image
+title: 电影感高端：全幅影像、色调遮罩与大胆陈述
+summary: 全幅背景图加色调遮罩、柔和径向暗角衬托产品、细噪点渐变，巨型陈述式首屏，适合高端、奢华和大胆的品牌。
+genres:
+- ui-ux-mockups
+scenes:
+- commerce
+- fashion
+styles:
+- ui
+- cinematic
+tags:
+- 电影感
+- 高端
+- 奢华
+- 全幅背景
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)
+  license: first-party
+content: |-
+  适用：用户说"电影感、氛围、高端、奢华、大胆"。
+  首屏：巨型陈述式——超大字和大图占满第一屏，文字放在左下或画面下部 40% 的安全区。
+  背景：全幅图加深色或色调遮罩保证文字可读；柔和径向暗角衬托产品局部；细噪点叠在渐变上增加触感。背景图的色调必须与色板一致，强调色不随背景变化。
+  渐变：可以使用与色板匹配的电影感色调渐变。
+  构图：图即画布，文字压在干净的安全区；区块之间用整屏影像和安静的文字区交替。
+  避免：图片与色板打架、文字压在杂乱区域、霓虹光晕、每一屏都满幅导致没有呼吸。

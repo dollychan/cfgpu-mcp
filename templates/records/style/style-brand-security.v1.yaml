@@ -1,0 +1,28 @@
+id: style-brand-security
+version: 1
+rank: 540
+kind: style
+media: image
+title: 安全与威胁情报：警觉、边界、受保护的核心
+summary: 黑或藏青底，盾形、雷达线、威胁标签和红蓝警示标签，严肃、警觉、精确。
+genres:
+- brand-systems-identity
+scenes:
+- tech
+styles:
+- brand
+- dark-tech
+tags:
+- 安全
+- 合规
+- 监控
+- 网络
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream brandkit skill
+  license: first-party
+content: |-
+  适用：网络安全、监控、威胁情报、网络产品。
+  画面：黑或藏青底；盾的形态、雷达扫描线、威胁标签、细微的运动轨迹；红蓝警示标签点缀；受控的渐变。
+  Logo 方向：盾、猛禽、眼、守望、边界、受保护的核心。
+  情绪：严肃、警觉、精确。
+  避免：骷髅、黑客兜帽人、绿色代码雨、恐吓式视觉。

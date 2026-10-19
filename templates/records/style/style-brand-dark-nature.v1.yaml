@@ -1,0 +1,29 @@
+id: style-brand-dark-nature
+version: 1
+rank: 530
+kind: style
+media: image
+title: 深色自然：沉静的策略、出行与健康品牌
+summary: 深绿配青柠点缀，雾气风景、圆形图像框和柔和叠层，平静、可信、专注。
+genres:
+- brand-systems-identity
+scenes:
+- travel
+- tech
+styles:
+- brand
+- photography
+tags:
+- 自然
+- 健康
+- 出行
+- 沉静
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream brandkit skill
+  license: first-party
+content: |-
+  适用：策略咨询、出行、健康、气候、安静的高端软件服务。
+  画面：深绿底，青柠作唯一强调色；雾气中的山野风景；圆形图像遮罩；柔和的半透明叠层；安静的页码标签和深色编辑式网格。
+  Logo 方向：路径、叶、月、地平线、指南针、门洞、折叠标。
+  情绪：平静、可信、专注。
+  避免：鲜艳的自然色堆砌、卡通植物、与品牌含义无关的风景。

@@ -1,0 +1,31 @@
+id: style-web-editorial-magazine
+version: 1
+rank: 620
+kind: style
+media: image
+title: 编辑杂志：非对称版式与强烈的字体对比
+summary: 衬线加无衬线的编辑式组合、偏离网格的错位构图、双色调或调色照片，适合品牌、时尚和内容型页面。
+genres:
+- ui-ux-mockups
+scenes:
+- fashion
+- creative
+styles:
+- ui
+- photography
+tags:
+- 编辑
+- 杂志
+- 时尚
+- 非对称
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)
+  license: first-party
+content: |-
+  适用：用户说"编辑感、杂志风、艺术指导、时尚"。
+  首屏：中等编辑式或巨型陈述式；主标题可以很大，配一张有强烈调色的照片。
+  背景：编辑式分栏图（50/50、60/40 可左右翻转）、双色调处理的照片、单色调的氛围照片。
+  渐变：只用细微的色调过渡。
+  字体：优雅衬线配无衬线，大小对比强；可用竖排旁注、超大编号。
+  构图：偏离网格的错位、非对称牵引、图片出血；但阅读顺序必须清楚。
+  避免：所有区块同一种分栏、图片当装饰贴边、字体超过两种。

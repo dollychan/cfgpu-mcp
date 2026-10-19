@@ -1,0 +1,31 @@
+id: style-brand-light-editorial-trust
+version: 1
+rank: 550
+kind: style
+media: image
+title: 浅色编辑：法律、隐私与合规的可信品牌
+summary: 暖象牙色纸张质感、小号衬线标签、印章与徽记，深蓝红金点缀，可信、考究、现代。
+genres:
+- brand-systems-identity
+scenes:
+- commerce
+- education
+styles:
+- brand
+- documents
+tags:
+- 合规
+- 法律
+- 隐私
+- 浅色
+- 印章
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream brandkit skill
+  license: first-party
+content: |-
+  适用：法律、隐私、合规、文档类产品、以信任为核心的品牌。
+  画面：暖象牙底和纸张纹理；小号衬线标签；印章、徽记、封蜡；色轮或色卡实物；安静的文具应用（信封、文件夹、名片）。
+  配色：象牙底配深蓝、红、金中的一到两个。
+  Logo 方向：印章、守护犬、盾、文件、图章、组合字母。
+  情绪：可信、考究、机构感但不陈旧。
+  避免：法槌天平等陈词滥调、仿古族徽、过多装饰花纹。

@@ -1,0 +1,30 @@
+id: style-web-ecommerce
+version: 1
+rank: 660
+kind: style
+media: image
+title: 电商产品页：产品主导、按钮一眼可见
+summary: 全幅产品照、径向暗角加局部特写、色块加细节，中等首屏强调产品，渐变永远不与产品争夺注意力。
+genres:
+- ui-ux-mockups
+scenes:
+- commerce
+styles:
+- ui
+- product
+tags:
+- 电商
+- 商店
+- 产品页
+- 购买
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)
+  license: first-party
+content: |-
+  适用：用户说"电商、商店、产品页"，页面目标是购买或加购。
+  首屏：中等编辑式，产品是视觉中心，主按钮一眼可见。
+  背景：全幅产品照、柔和径向暗角衬托产品局部、色块配材质或细节特写。
+  渐变：细微，永远不和产品争夺注意力。
+  构图：产品主导；卖点区块用产品局部特写配一句说明，而不是图标加文字的卡片排。
+  价格、促销、评价和数据只用用户提供的；没有时不出现。
+  避免：商品墙、九宫格平铺、与产品无关的场景图、闪烁的促销标签。
