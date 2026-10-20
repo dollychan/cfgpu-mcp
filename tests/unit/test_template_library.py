@@ -30,6 +30,7 @@ from cfgpu_mcp.template_library import bundle as bundle_module
 from cfgpu_mcp.template_library.dialect_guard import find_dialect, markup_problems
 from cfgpu_mcp.template_library.index import TemplateIndex
 from cfgpu_mcp.template_library.schema import COVER_MEDIA_TYPES, TemplateRecord
+from cfgpu_mcp.template_library.query import EXPANSION_WEIGHT, plan_query
 from cfgpu_mcp.template_library.tokenize import query_terms
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -305,9 +306,47 @@ def test_keyword_search_scores_and_reports_terms(tmp_path):
 
 def test_chinese_query_uses_bigrams_and_single_characters(tmp_path):
     index = _index(tmp_path, _corpus())
-    assert [c["id"] for c in index.search(query="咖啡包装")["results"]] == ["case-b"]
+    # The others carry only the default "packaging" tag, reached through 包装 -> packaging,
+    # so they rank below the direct hit.
+    assert [c["id"] for c in index.search(query="咖啡包装")["results"]][0] == "case-b"
     assert [c["id"] for c in index.search(query="啡")["results"]] == ["case-b"]
     assert query_terms("咖啡包装") == ["咖啡", "啡包", "包装"]
+
+
+def test_generic_words_alone_do_not_return_a_record(tmp_path):
+    """"辣子鸡 封面图": the topic misses everywhere, so nothing comes back, even though
+    封面 occurs in a record — rather than confident results about something else."""
+    index = _index(tmp_path, [*_corpus(), _record(id="tpl-ui", kind="template", title="UI 骨架", content="App 封面与首屏")])
+    result = index.search(query="辣子鸡 封面图")
+    assert result["results"] == [] and result["total"] == 0
+    assert {"辣子", "子鸡"} <= set(result["missing_terms"])
+    # A query made only of generic words is not gated.
+    assert [c["id"] for c in index.search(query="封面")["results"]] == ["tpl-ui"]
+
+
+def test_synonyms_cross_languages_below_the_users_own_words(tmp_path):
+    index = _index(
+        tmp_path,
+        [
+            _record(id="case-en", title="Salad food photography", content="A salad bowl, food styling."),
+            _record(id="case-zh", rank=5, title="美食摄影：一碗面", content="一碗热面的美食摄影。"),
+        ],
+    )
+    result = index.search(query="美食 封面")
+    assert [c["id"] for c in result["results"]] == ["case-zh", "case-en"]
+    assert "美食" in result["matched_terms"] and "food" not in result["matched_terms"]
+    # And the other way round: an English query reaches the Chinese record.
+    assert {c["id"] for c in index.search(query="food")["results"]} == {"case-en", "case-zh"}
+
+
+def test_query_plan_splits_topic_from_generic_words():
+    plan = plan_query("辣子鸡封面图")
+    assert plan.topic == {"辣子", "子鸡"}
+    assert plan.weights["cover"] == EXPANSION_WEIGHT  # generic words still widen scoring
+    food = plan_query("美食 封面")
+    assert {"food", "dish", "美食"} <= food.topic and "cover" not in food.topic
+    assert food.credited({"food"}) == {"美食"}
+    assert plan_query("封面 模板 poster").topic == set()
 
 
 def test_facets_are_any_of_within_and_all_across(tmp_path):

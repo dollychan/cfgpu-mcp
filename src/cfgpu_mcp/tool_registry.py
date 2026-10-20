@@ -1261,7 +1261,9 @@ class SearchTemplatesInput(BaseModel):
     query: Optional[str] = Field(
         default=None,
         description="Keywords in any language, such as '产品详情页' or 'isometric city'. "
-        "Omit to browse the curated order",
+        "Words like 封面 / 模板 / poster only narrow; a record must match a subject word. "
+        "If a specific subject finds nothing (a dish name, say), retry with its category "
+        "(美食). Omit to browse the curated order",
     )
     kind: Optional[TemplateKind] = Field(
         default=None,

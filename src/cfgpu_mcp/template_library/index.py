@@ -5,7 +5,10 @@ Built once per bundle, read-only afterwards. ``search`` is filter-then-score:
 1. facets (``kind`` / ``media`` / ``genres`` / ``scenes`` / ``styles``) narrow the
    candidate set; only ``active`` records are candidates;
 2. with a query, candidates are scored with BM25 over weighted fields plus a phrase
-   bonus; with no query it is browse mode, ordered by the curated ``rank``;
+   bonus; with no query it is browse mode, ordered by the curated ``rank``. The query
+   is planned first (:mod:`.query`): synonyms widen it across languages at a lower
+   weight, and a record matching none of the query's topic words (only generic ones
+   such as 封面 / poster) is dropped;
 3. a ``model`` boosts records verified on that model without excluding the rest — the
    content is model-neutral, so every record can be rendered for every model;
 4. ties break on ``rank`` then ``id``, so the same bundle and query always return the
@@ -25,7 +28,8 @@ from typing import Any, Optional
 
 from cfgpu_mcp.template_library.bundle import Bundle
 from cfgpu_mcp.template_library.schema import TemplateRecord
-from cfgpu_mcp.template_library.tokenize import is_cjk, normalize, query_terms, tokenize
+from cfgpu_mcp.template_library.query import plan_query
+from cfgpu_mcp.template_library.tokenize import is_cjk, normalize, tokenize
 
 #: Field weights. ``content`` is indexed at a low weight: titles are short, and a user
 #: asking for "大教堂" should find the case whose prompt is about a cathedral interior.
@@ -121,22 +125,22 @@ class TemplateIndex:
         df = self._df.get(term, 0)
         return math.log(1.0 + (self._n - df + 0.5) / (df + 0.5))
 
-    def _bm25(self, doc: _Doc, terms: list[str]) -> tuple[float, set[str]]:
+    def _bm25(self, doc: _Doc, weights: dict[str, float]) -> tuple[float, set[str]]:
         score = 0.0
         matched: set[str] = set()
         norm = _K1 * (1 - _B + _B * doc.length / self._avg_len)
-        for term in terms:
+        for term, weight in weights.items():
             if len(term) == 1 and is_cjk(term):
                 # A lone CJK character never appears as a bigram token; match it by
                 # substring so a one-character query still works.
                 if term in doc.phrase_text or term in normalize(doc.record.content or ""):
                     matched.add(term)
-                    score += self._idf(term) * 0.5
+                    score += self._idf(term) * 0.5 * weight
                 continue
             tf = doc.tf.get(term)
             if tf:
                 matched.add(term)
-                score += self._idf(term) * tf * (_K1 + 1) / (tf + norm)
+                score += self._idf(term) * tf * (_K1 + 1) / (tf + norm) * weight
         return score, matched
 
     def search(
@@ -171,19 +175,22 @@ class TemplateIndex:
                 continue
             candidates.append(doc)
 
-        terms = query_terms(query) if query and query.strip() else []
+        plan = plan_query(query) if query and query.strip() else None
+        terms = plan.original if plan else []
         phrase = normalize(query.strip()) if query else ""
         scored: list[tuple[float, TemplateRecord]] = []
         matched_any: set[str] = set()
         for doc in candidates:
             verified = bool(model) and model in doc.record.verified_on
-            if terms:
-                score, matched = self._bm25(doc, terms)
-                if len(phrase) >= 2 and phrase in doc.phrase_text:
+            if plan:
+                score, matched = self._bm25(doc, plan.weights)
+                phrase_hit = len(phrase) >= 2 and phrase in doc.phrase_text
+                if phrase_hit:
                     score = max(score * _PHRASE_BONUS, _PHRASE_FLOOR)
-                if score <= 0:
+                # Generic words alone (封面, poster, 模板) are not a reason to return a record.
+                if score <= 0 or (plan.topic and not phrase_hit and not matched & plan.topic):
                     continue
-                matched_any |= matched
+                matched_any |= plan.credited(matched)
                 if verified:
                     score *= _MODEL_BOOST
             else:
