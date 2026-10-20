@@ -7,7 +7,7 @@
 # rejects any other value with this list, so keep it short and free of near-duplicates —
 # two slugs for one category silently split a filter's results in half.
 schema_version: 1
-catalog_version: 1
+catalog_version: 2
 facets:
   genres:
     - animation-short

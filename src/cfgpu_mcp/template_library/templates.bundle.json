@@ -1,6 +1,6 @@
 {
- "catalog_version": 1,
- "checksum": "cdcccc4bddd8b33d7ae2eebdc96991ae44870ebc7f99a7c339451d57d2664989",
+ "catalog_version": 2,
+ "checksum": "195fecfc93f42a9f647a8904f593435ead7a079167ece754add7d5cf840d75d9",
  "facets": {
   "genres": [
    "animation-short",
@@ -251,17 +251,13 @@
   "case-video-camera-replica@1": "9f28d5b2cf39ebe015974878ee0fe7c692e91e9562ac62acbba620e1d055896b",
   "case-video-character-consistency@1": "659223f470bbc5e7165df8c40a6a18a647bccc443bd0364a02b2b07f417d6ec4",
   "case-video-comic-performance@1": "eeb234bcccbb81febac62b742b975894ab9da0b8582e00a9dc97269fcbbc4104",
-  "case-video-dialogue-comedy@1": "fe4feb2e1fc528480d1af632486af612326b482c9ed675c7601e07dd3d80afac",
   "case-video-dialogue-comedy@2": "d6c65939733e25e584dbfb2402fe3568fe7638aafb6f0c6d4a80736fae911159",
   "case-video-effect-replica@1": "17d21dc7093a75c03e0f06159b66e0138770149a89a128fb087e92df0b6c47d8",
-  "case-video-extend-forward@1": "d05d5b0a229e9f3f44fccbf0c4bd76f9fb50b606ba470a50d74cb41df1603bf5",
   "case-video-extend-forward@2": "53fd69314216edd45823731e90a35fc8c767b9d82b68aace72e6f6f64b6885fe",
   "case-video-food-exploded@1": "c9a63c3aefffd4ff99e6aa2025c3e58213b46ef88abaff73982572c2cece152b",
-  "case-video-fusion-particles@1": "5f0683f8e423128aaa2ac9d4f9d650149a0b7c6b0f78486dddea2927c028c9f3",
   "case-video-fusion-particles@2": "edf7755fa251e80a3823843a36b11886166ca12f99c8f332572cbbe867322c0b",
   "case-video-one-take-spy@1": "d9dc01bdb521d5ba2a0f7b9b677b32d2bf7304fcd1d99339b96334400b3366be",
   "case-video-product-spin-split@1": "192531e0be4097e6d6c3a7f22771056d2ffa01156f386c27d2989586c97e13d8",
-  "case-video-targeted-edit@1": "af05eff634ae35eeb054047fcd9c469e21408a261a1dc5e3bcf7c31fa52fdcd6",
   "case-video-targeted-edit@2": "80dc05a575556f56858a9a0a2a26694157c42fe06365f8235714e747288d8adb",
   "style-3d-collectible-toy@1": "8492f1f5d23ea2c1fa8c3d5db9fdfa97ea5c637e4277301d771fdd431b05650b",
   "style-architecture-space@1": "9c808655442ab97e28aea88c3858c1313c56bdc652fc111d71201f7158dbf217",
@@ -316,9 +312,7 @@
   "tpl-image-coop-game-menu@1": "8a885a66f47c422f2835097ad43c8bb722c5fc0c1ea8dc39c3b10e7a981b2ea7",
   "tpl-image-papercraft-keyframe@1": "35333e3274821916fdd1d1312ea8918e6f25399eb0f4c318e34f9bfa0744eccb",
   "tpl-motion-beat-graph@1": "ca17430a6f0b55a671f999227d8c8a833a612f9c6c6fbb996355ad197ff4a6aa",
-  "tpl-motion-black-white-opener-5s@1": "d1bd8f8910be925719843fa05776e899c3a62322c1b998b6280806f5edc5980c",
   "tpl-motion-black-white-opener-5s@2": "2ee6e48d46ba94ed23dac573a1c3f653f64fcb6a26051709d092816c59d52651",
-  "tpl-motion-dark-saas-30s@1": "026f35d5a1f937483cd973bcfbcccf3fd0f149aa4d445b650ef592899127305b",
   "tpl-motion-dark-saas-30s@2": "53b10f7177c15e044760f96a6dabad8db85e390caf97589fc1c67fa5d53f1338",
   "tpl-style-architecture-1@1": "d4e67c7af1ff0cefdf5427f0032fccd8223ce8696b1aa0f063333a6d6eb391ac",
   "tpl-style-brand-1@1": "f42f5753d5ac6b4952c4adda973686f76659892c8c2757b6bacc38d6b5919036",
@@ -354,29 +348,18 @@
   "tpl-style-ui-2@1": "1df64fba29f6b47c405edb7d22e4b21ff21f97501c5a856bcfe19cd4353000ef",
   "tpl-style-ui-3@1": "33b02de8631c3965b4e3e083901440e60554ad1ead9d163b9aa33825a007679c",
   "tpl-video-beat-sync-montage@1": "75df0842ff1b4f16c30f5f4c2c3e2ecee19648db05b8806e8886581ff868488e",
-  "tpl-video-brand-promo-15s@1": "de9c1665fbf65099ee26106a57d4e22a4a81a39de0976e9ef3e0469322d20e31",
   "tpl-video-brand-promo-15s@2": "237d45f1153915146d28700aa81bfd1563d33d0df8d76cd07071c94765af2813",
-  "tpl-video-cartoon-3d-shot@1": "de585665fc4f499fef7df91dffab82d93fbef0c0c95daa2451cb6a5ae75e7ab2",
   "tpl-video-cartoon-3d-shot@2": "542f39e03e9bfca290574de74dd91f2358d26f81ff4f46b1c374d0aabdfb34e1",
-  "tpl-video-coop-game-intro-15s@1": "8d6cf1b07657ea0267a5bd5f95990ad535e7614b96aa54c01f14e53d169b3319",
   "tpl-video-coop-game-intro-15s@2": "e9ded4b3fc53ad818e84aa5de98824895960cf9222686db6e0be943b89a8d7d7",
   "tpl-video-dance-replica@1": "7fee3a54644058adfcdab48be4780e4b1e93c6c0fa62860a7bea7fe6722bc0b0",
-  "tpl-video-fantasy-battle-15s@1": "a1c8a0ce28ebfde9a789ffb19da09dbc0767317295a46acf192e9c17bc05db59",
   "tpl-video-fantasy-battle-15s@2": "6733a936ec8376db447225593d6931055723ef2b0c4e9c3c8ffcd2abe17809ea",
-  "tpl-video-handdrawn-live-fusion-15s@1": "6e7562243f6b71eeef309a5fc0a51e7ea5efe4ba0f1ea8e6e41815a3495351a8",
   "tpl-video-handdrawn-live-fusion-15s@2": "b763eecf8eb8037de74bbf0937ec841152fc113ad01d89033028d85be6d21306",
-  "tpl-video-minimal-product-ad-10s@1": "302474b152a58c3d15cc05b385a0559d00c7054d51bc2c5f7a8db775ef81e1b3",
   "tpl-video-minimal-product-ad-10s@2": "ce456d3924699c2a6a48f82334fa2d3a5fcdf3ae996b709fbcab9a1e396b8b1f",
-  "tpl-video-mv-shot-script@1": "885d5056d0f5dffe75c0fa5a51628b2535e3391e781d3b9639bf8e238a68641a",
   "tpl-video-mv-shot-script@2": "67a8196dcfd5e31019c80be044468beb4c8ce3ccc545c293549e8bf6944e92e3",
-  "tpl-video-paper-collage-assembly@1": "8bea45ea8129532d09af02a772f3bbbac0e4636459968039492a43dfc96168b5",
   "tpl-video-paper-collage-assembly@2": "c9c6197e739065a5ad5a9a701f51aadd15f8f06477bbc647b71b2b80897b7f21",
-  "tpl-video-papercraft-i2v-5s@1": "2ce8861a2c9eb8b263d2065cef599c36eda4cb6c553ff798e9dea49e4acb63d3",
   "tpl-video-papercraft-i2v-5s@2": "1257711a4528f2e1c38443ae063345a2f7f047a44efa2c609a647dec3f2d08d1",
-  "tpl-video-product-ad-15s@1": "5e1a17fe1e6d44067fd5eb19f7caa047bd2d2a9cc0ee9ddc09c2126671afa483",
   "tpl-video-product-ad-15s@2": "82b113441066d66ed208b1df5c7c076d23774175b2b73fd395b56b4f793ad15f",
   "tpl-video-science-explainer-15s@1": "92462f5dc7adcfda88e28410978addd6e99e98677330b3bcab789af85b91f74c",
-  "tpl-video-short-drama-15s@1": "a8bc67990ab41527aa16350e911f2b80b36d61d58d0ae0f500682262985cb5d7",
   "tpl-video-short-drama-15s@2": "ebd695c2ce8877c5038fe243ebd8165dafe60e5fe4c9ce9f5b9cb4cfb2bdc861"
  },
  "records": [
@@ -6827,40 +6810,6 @@
    "withdrawn_reason": null
   },
   {
-   "content": "在「猫狗吐槽间」里的一段吐槽对话，要求情感丰沛，符合脱口秀表演：\n喵酱（猫主持，舔毛翻眼）：「家人们谁懂啊，我身边这位，每天除了摇尾巴、拆沙发，就只会用那种‘我超乖求摸摸’的眼神骗人类零食……」\n旺仔（狗主持，歪头晃尾巴）：「你还好意思说我？你每天睡18个小时，醒了就蹭人类腿要罐头……」",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "short-drama"
-   ],
-   "id": "case-video-dialogue-comedy",
-   "kind": "case",
-   "media": "video",
-   "rank": 275,
-   "scenes": [
-    "social"
-   ],
-   "slots": [],
-   "source": {
-    "author": "Dex",
-    "license": "MIT",
-    "origin": "dexhunter/seedance2-skill",
-    "url": "https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md"
-   },
-   "status": "active",
-   "styles": [],
-   "summary": "两个拟人角色的脱口秀式对话，台词带表演提示。",
-   "tags": [
-    "台词",
-    "表演提示",
-    "拟人"
-   ],
-   "title": "对话演绎：猫狗脱口秀吐槽",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
    "content": "在「猫狗吐槽间」里的一段吐槽对话，要求情感丰沛，符合脱口秀表演：\n喵酱（猫主持，舔毛翻眼）说 [[say S1: 家人们谁懂啊，我身边这位，每天除了摇尾巴、拆沙发，就只会用那种‘我超乖求摸摸’的眼神骗人类零食……]]\n旺仔（狗主持，歪头晃尾巴）说 [[say S2: 你还好意思说我？你每天睡18个小时，醒了就蹭人类腿要罐头……]]",
    "cover": null,
    "dialect_variants": {},
@@ -6955,47 +6904,6 @@
    "withdrawn_reason": null
   },
   {
-   "content": "将[待延长视频]向后延长15秒。\n1–5秒：光影透过百叶窗在木桌、杯身上缓缓滑过，树枝伴随轻微呼吸般的晃动。\n6–10秒：一粒咖啡豆从画面上方轻轻飘落，镜头向咖啡豆推进直至黑屏。\n11–15秒：英文逐行渐显，第一行「Lucky Coffee」，第二行「Breakfast」，第三行「AM 7:00-10:00」。\n注意：生成时长选新增部分的时长（本例为 15 秒）。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "product-ad"
-   ],
-   "id": "case-video-extend-forward",
-   "kind": "case",
-   "media": "video",
-   "rank": 273,
-   "scenes": [
-    "commerce",
-    "food"
-   ],
-   "slots": [
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "待延长视频",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": "Dex",
-    "license": "MIT",
-    "origin": "dexhunter/seedance2-skill",
-    "url": "https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md"
-   },
-   "status": "active",
-   "styles": [],
-   "summary": "在已有视频后接 15 秒，分时段写清光影、物件与收尾文字。",
-   "tags": [
-    "视频延长",
-    "分时段",
-    "画面文字"
-   ],
-   "title": "视频延长：向后续写 15 秒的咖啡店收尾",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
    "content": "将[待延长视频]向后延长15秒，一镜到底按时间推进。\n1–5秒：光影透过百叶窗在木桌、杯身上缓缓滑过，树枝伴随轻微呼吸般的晃动。\n6–10秒：一粒咖啡豆从画面上方轻轻飘落，镜头向咖啡豆推进直至黑屏。\n11–15秒：英文逐行渐显，第一行 [[text: Lucky Coffee]]，第二行 [[text: Breakfast]]，第三行 [[text: AM 7:00-10:00]]。\n注意：生成时长选新增部分的时长（本例为 15 秒）。",
    "cover": null,
    "dialect_variants": {},
@@ -7073,55 +6981,6 @@
     "食品"
    ],
    "title": "电商：汉堡悬浮拆解再重组",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "[第一段视频]中由粒子组成的马逐渐具象化，粒子变密，逐渐过渡到[第二段视频]；[第二段视频]中的马在奔跑中逐渐变为[第三段视频]，并逐渐消散；画面唯美，背景音是马蹄声和科技感粒子音效。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "cinematic-animation"
-   ],
-   "id": "case-video-fusion-particles",
-   "kind": "case",
-   "media": "video",
-   "rank": 280,
-   "scenes": [
-    "creative"
-   ],
-   "slots": [
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "第一段视频",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "第二段视频",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "第三段视频",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": "Dex",
-    "license": "MIT",
-    "origin": "dexhunter/seedance2-skill",
-    "url": "https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md"
-   },
-   "status": "active",
-   "styles": [],
-   "summary": "把三段素材首尾衔接成一条，靠形态过渡而不是硬切。",
-   "tags": [
-    "视频融合",
-    "形态过渡"
-   ],
-   "title": "视频融合：粒子马奔跑后消散",
    "verified_on": [],
    "version": 1,
    "withdrawn_reason": null
@@ -7265,54 +7124,6 @@
     "3D 产品"
    ],
    "title": "产品 360° 旋转后分裂展示再合体",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "改剧情：颠覆[源视频]里的剧情，男人眼神从温柔瞬间转为冰冷狠厉，在女主毫无防备时猛地把她从桥上推进水里；动作干脆利落，没有丝毫犹豫；女主坠水瞬间没有尖叫，只有难以置信的眼神，她抬头冲他嘶吼：「你从一开始就在骗我！」\n换角色：把[源视频]中的女主唱换成[人物参考图]中的男主唱，动作完全模仿原视频，不要切镜，乐队演唱音乐。\n加元素：把[源视频]中女人的发型改成红色长发，[元素参考图]中的大白鲨在她身后缓缓浮出半个脑袋。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [],
-   "id": "case-video-targeted-edit",
-   "kind": "case",
-   "media": "video",
-   "rank": 274,
-   "scenes": [
-    "story"
-   ],
-   "slots": [
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "源视频",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "人物参考图",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "元素参考图",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": "Dex",
-    "license": "MIT",
-    "origin": "dexhunter/seedance2-skill",
-    "url": "https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md"
-   },
-   "status": "active",
-   "styles": [],
-   "summary": "保留原视频大部分内容，只改指定元素的三种写法。",
-   "tags": [
-    "视频编辑",
-    "角色替换",
-    "元素添加"
-   ],
-   "title": "定向修改已有视频：改剧情、换角色、加元素",
    "verified_on": [],
    "version": 1,
    "withdrawn_reason": null
@@ -9731,72 +9542,6 @@
    "withdrawn_reason": null
   },
   {
-   "content": "约5.5秒开场，[画幅]，纯黑背景，大号白色无衬线字，逐字打出并配轻微按键声。\n0–0.3秒：纯黑。\n0.3–1.35秒：逐字打出「[第一句]」。\n1.35–2.2秒：停留。\n2.2–3.55秒：把「[被替换的词]」横向抹掉，逐字打出「[替换词]」。\n3.55–4.7秒：逐字打出最终句「[最终句]」并停留可读。\n4.7–5.5秒：[转场方式]进入正片。\n按键声只在字出现时响，停留和转场时静音；不出现彩色闪烁或霓虹线。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "motion-graphics"
-   ],
-   "id": "tpl-motion-black-white-opener-5s",
-   "kind": "template",
-   "media": "video",
-   "rank": 411,
-   "scenes": [
-    "tech"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "画幅",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "第一句",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "被替换的词",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "替换词",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "最终句",
-     "required": true
-    },
-    {
-     "hint": "白色速度擦除 / 文字抹入黑暗 / 淡出到黑 / 硬切",
-     "name": "转场方式",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from Pluviobyte/video-production-skills (black-white-text-opener)",
-    "url": "https://github.com/Pluviobyte/video-production-skills/tree/main/black-white-text-opener"
-   },
-   "status": "active",
-   "styles": [
-    "kinetic-typography"
-   ],
-   "summary": "第一句 → 替换词 → 最终句 → 转场的标准时间表。",
-   "tags": [
-    "开场",
-    "5秒"
-   ],
-   "title": "黑底白字打字开场：标准 5 秒",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
    "content": "约5.5秒开场，[画幅]，纯黑背景，大号白色无衬线字，一镜到底按时间推进，逐字打出并配轻微按键声。\n0–0.3秒：纯黑。\n0.3–1.35秒：逐字打出 [[text: [第一句]]]。\n1.35–2.2秒：停留。\n2.2–3.55秒：把 [[text: [被替换的词]]] 横向抹掉，逐字打出 [[text: [替换词]]]。\n3.55–4.7秒：逐字打出最终句 [[text: [最终句]]] 并停留可读。\n4.7–5.5秒：[转场方式]进入正片。\n按键声只在字出现时响，停留和转场时静音；不出现彩色闪烁或霓虹线。",
    "cover": null,
    "dialect_variants": {},
@@ -9860,105 +9605,6 @@
    "title": "黑底白字打字开场：标准 5 秒",
    "verified_on": [],
    "version": 2,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "约30秒，[画幅]，暗色 SaaS 魔术 UI 风格的[产品名称]介绍片。黑色空间舞台，底部弱紫色地平线光，大号白色无衬线动态字，青到品红的渐变按钮。\n0–5.5秒：动态承诺——黑场中逐字打出「[承诺句]」，关键名词横向拖影替换为「[替换名词]」，速度擦除进入下一场。\n5.5–9.5秒：提示词召唤——倾斜的大提示词卡片，打出「[示例提示词]」，渐变按钮「[按钮文字]」发光，光标点击触发闪光换场。\n9.5–14.5秒：生成结果——多张[产出类型]卡片在黑色空间视差漂浮，一张主卡横穿画面，最后汇成一块完整画布。\n14.5–17秒：平台能力——应用窗口从底部升起，上方打出「[平台能力句]」，下方出现平台胶囊。\n17–20.5秒：连接生态——大圆形节点沿弧线进入，四周依次出现[集成服务]文字胶囊。\n20.5–24.5秒：能力环——一圈[模型或能力]徽章环绕旋转，读清后中央出现短句。\n24.5–30秒：导出迸发与主张——点击导出按钮，文件夹中迸出[导出格式]胶囊；随后单词逐步扩展为「[最终主张]」并停留至少1秒。\n不要：整屏纯色闪烁、持续横向霓虹线、远处的小界面、平铺网页布局、伪造的官方 LOGO。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "motion-graphics",
-    "brand-promo"
-   ],
-   "id": "tpl-motion-dark-saas-30s",
-   "kind": "template",
-   "media": "video",
-   "rank": 421,
-   "scenes": [
-    "tech"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "画幅",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "产品名称",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "承诺句",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "替换名词",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "示例提示词",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "按钮文字",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "产出类型",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "平台能力句",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "集成服务",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "模型或能力",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "导出格式",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "最终主张",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from Pluviobyte/video-production-skills (dark-saas-magic-video)",
-    "url": "https://github.com/Pluviobyte/video-production-skills/tree/main/dark-saas-magic-video"
-   },
-   "status": "active",
-   "styles": [
-    "dark-tech",
-    "ui"
-   ],
-   "summary": "承诺 → 提示词 → 生成 → 平台 → 生态 → 能力环 → 导出 → 主张。",
-   "tags": [
-    "30秒",
-    "节拍表",
-    "SaaS"
-   ],
-   "title": "暗色 SaaS 产品短片：标准 30 秒节拍",
-   "verified_on": [],
-   "version": 1,
    "withdrawn_reason": null
   },
   {
@@ -12144,118 +11790,6 @@
    "withdrawn_reason": null
   },
   {
-   "content": "[画幅]，15秒，[品牌名称]宣传短片，面向[目标受众]。品牌色[品牌色]，LOGO 使用[LOGO素材]原件，不重绘。\n0–2秒：品牌钩子——[开场钩子]。\n2–4秒：用户意图或场景建立——[使用场景]。\n4–6.5秒：产品机制——[产品如何工作]，由[驱动转场的真实元素]带入下一镜。\n6.5–9秒：能力或应用——[核心能力]。\n9–11.5秒：输出或证明——[真实输出或证据]。\n11.5–13秒：产品回报——[用户得到的结果]。\n13–15秒：LOGO 定格与行动号召「[行动号召]」，留足安全区，停留可读。\n动效：每个节拍一个主动作，峰值放在[峰值节拍]；色彩状态不超过 5 个。\n声音：[声音方案]。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "brand-promo"
-   ],
-   "id": "tpl-video-brand-promo-15s",
-   "kind": "template",
-   "media": "video",
-   "rank": 311,
-   "scenes": [
-    "commerce"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "画幅",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "品牌名称",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "目标受众",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "品牌色",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "LOGO素材",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "开场钩子",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "使用场景",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "产品如何工作",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "驱动转场的真实元素",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "核心能力",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "真实输出或证据",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "用户得到的结果",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "行动号召",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "峰值节拍",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "声音方案",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from MiniMax-AI/MiniMax-H3 (brand-promo-video-generator)",
-    "url": "https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/brand-promo-video-generator"
-   },
-   "status": "active",
-   "styles": [
-    "brand"
-   ],
-   "summary": "钩子 → 场景 → 机制 → 能力 → 证明 → 回报 → LOGO 与行动号召。",
-   "tags": [
-    "15秒",
-    "节拍表",
-    "CTA"
-   ],
-   "title": "品牌宣传短片 15 秒七段结构",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
    "content": "[画幅]，15秒，[品牌名称]宣传短片，面向[目标受众]。品牌色[品牌色]，LOGO 使用[LOGO素材]原件，不重绘。\n[[shot 0-2]] 品牌钩子——[开场钩子]。\n[[shot 2-4]] 用户意图或场景建立——[使用场景]。\n[[shot 4-6.5]] 产品机制——[产品如何工作]，由[驱动转场的真实元素]带入下一镜。\n[[shot 6.5-9]] 能力或应用——[核心能力]。\n[[shot 9-11.5]] 输出或证明——[真实输出或证据]。\n[[shot 11.5-13]] 产品回报——[用户得到的结果]。\n[[shot 13-15]] LOGO 定格与行动号召 [[text: [行动号召]]]，留足安全区，停留可读。\n动效：每个节拍一个主动作，峰值放在[峰值节拍]；色彩状态不超过 5 个。\n[[sound: [声音方案]]]",
    "cover": null,
    "dialect_variants": {},
@@ -12368,102 +11902,6 @@
    "withdrawn_reason": null
   },
   {
-   "content": "风格化 3D 动画镜头，[时长]秒，[画幅]。皮克斯感 3D 卡通渲染，C4D + Octane 质感，Q 版比例，温润次表面散射皮肤，夸张弹性表演。\n角色：[角色及其不可改特征]。场景：[场景与地标位置]。光位：[光位]。\n承接：[上一镜结束时的状态]。\n0–1秒：[动作与表情]；镜头[镜头运动]；[空间位置]；声音：[音频线索]。\n1–2秒：[动作与表情]；镜头[镜头运动]；[空间位置]；声音：[音频线索]。\n2–3秒：[动作与表情]；镜头[镜头运动]；[空间位置]；声音：[音频线索]，并把[交给下一镜的状态]留给下一镜。\n对白：[对白]。\n不要：写实摄影、扁平二次元、塑料玩具皮肤、僵硬姿势。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "animation-short"
-   ],
-   "id": "tpl-video-cartoon-3d-shot",
-   "kind": "template",
-   "media": "video",
-   "rank": 351,
-   "scenes": [
-    "story"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "时长",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "画幅",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "角色及其不可改特征",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "场景与地标位置",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "光位",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "上一镜结束时的状态",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "动作与表情",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "镜头运动",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "空间位置",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "音频线索",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "交给下一镜的状态",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "对白",
-     "required": false
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from MiniMax-AI/MiniMax-H3 (3d-animation-short-generator)",
-    "url": "https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/3d-animation-short-generator"
-   },
-   "status": "active",
-   "styles": [
-    "cartoon-3d"
-   ],
-   "summary": "一个 3–6 秒镜头的逐秒写法，附风格锁。",
-   "tags": [
-    "逐秒指令",
-    "单镜头"
-   ],
-   "title": "3D 动画单镜头：逐秒指令骨架",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
    "content": "风格化 3D 动画镜头，[时长]秒，[画幅]。皮克斯感 3D 卡通渲染，C4D + Octane 质感，Q 版比例，温润次表面散射皮肤，夸张弹性表演。\n角色：[角色及其不可改特征]。场景：[场景与地标位置]。光位：[光位]。\n承接：[上一镜结束时的状态]。\n单镜头内逐秒推进，不切镜：\n0–1秒：[动作与表情]；镜头[镜头运动]；[空间位置]；[[sound: [音频线索]]]\n1–2秒：[动作与表情]；镜头[镜头运动]；[空间位置]；[[sound: [音频线索]]]\n2–3秒：[动作与表情]；镜头[镜头运动]；[空间位置]；[[sound: [音频线索]]]，并把[交给下一镜的状态]留给下一镜。\n对白：[[say: [对白]]]（没有对白时删去这一行）\n不要：写实摄影、扁平二次元、塑料玩具皮肤、僵硬姿势。",
    "cover": null,
    "dialect_variants": {},
@@ -12557,89 +11995,6 @@
    "title": "3D 动画单镜头：逐秒指令骨架",
    "verified_on": [],
    "version": 2,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "双人合作游戏开场视频，15秒，16:9，[视觉风格]。画面构图、UI 层级、色彩和字体以[确认首图]为准；左侧玩家参考[玩家1参考图]，右侧玩家参考[玩家2参考图]，身份、发型和左右位置全程不变。\n0–2秒：高角度俯拍大全景，镜头缓慢下压推进；两人并排坐在中央抬头看镜头，只有呼吸和眨眼；左上信息卡显示「PLAYER 1」「[玩家1名字]」「READY」与「PLAYER 2」「[玩家2名字]」「READY」，右侧菜单「START NEW GAME」「CONTINUE」「SETTINGS」「EXIT GAME」，CONTINUE 高亮。声音：菜单环境音、轻微悬停音。\n2–4秒：镜头推近左侧玩家的手臂，菜单滑出，强调色装备面板滑入，显示「[玩家1装备名]」；轻量机械结构从前臂展开并逐一锁定，指示灯依次亮起。声音：精密机械展开与锁定声。\n4–7秒：镜头横移到右侧玩家，暖色装备面板滑入，显示「[玩家2装备名]」；厚重护甲分段替换并锁定，与左侧的轻量装备形成体型和力量对比。声音：低沉电机与重型扣合声。\n7–8.5秒：拉回双人构图，两个面板汇合成「CONFIRM CONFIG」按钮，点击后两色能量脉冲流过两人装备，面板收缩消失，两人调整坐姿。\n8.5–10秒：底部加载条「LOADING」从 0% 填到 100%，左半段用左侧玩家的强调色、右半段用右侧玩家的暖色；平面背景连续转化为游戏世界——警戒胶带变成道路标记，涂鸦扩展成墙面喷绘，不硬切、不用烟雾遮挡。\n10–15秒：两人同时起身，镜头下降绕到身后转为第三人称双人视角，并肩走进[游戏世界]；HUD 淡入，右上小地图，左下两条状态栏分别显示「[玩家1名字]」「[玩家2名字]」。声音：城市环境声、脚步声、HUD 提示音。\n不要：第三个玩家、角色互换、名字互换、两人体型相同、换脸换发型、分屏、硬切、随机抖动。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "game-intro",
-    "gaming"
-   ],
-   "id": "tpl-video-coop-game-intro-15s",
-   "kind": "template",
-   "media": "video",
-   "rank": 371,
-   "scenes": [
-    "creative"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "视觉风格",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "确认首图",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "玩家1参考图",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "玩家2参考图",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "玩家1名字",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "玩家2名字",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "玩家1装备名",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "玩家2装备名",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "游戏世界",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from MiniMax-AI/MiniMax-H3 (co-op-game-intro-generator)",
-    "url": "https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/co-op-game-intro-generator"
-   },
-   "status": "active",
-   "styles": [
-    "ui"
-   ],
-   "summary": "以确认过的主菜单图为基准，按固定事件时间轴生成游戏开场。",
-   "tags": [
-    "游戏开场",
-    "15秒",
-    "UI 动效"
-   ],
-   "title": "双人合作游戏开场 15 秒：菜单 → 装备 → 加载 → 进入世界",
-   "verified_on": [],
-   "version": 1,
    "withdrawn_reason": null
   },
   {
@@ -12780,109 +12135,6 @@
    "withdrawn_reason": null
   },
   {
-   "content": "15秒[题材]高燃战斗镜头，[主色调]。\n0–3秒：低角度特写[主角]的[服饰细节]被热浪吹得猎猎飘动，双手紧握[武器]，[武器特效]持续爆闪，[环境危机]，远处[敌人]嘶吼着冲锋逼近，[主角]低喝「[台词1]」，伴随兵器鸣响与环境声。\n4–8秒：环绕摇镜快切，[主角]旋身出招，[冲击效果]，前排[敌人]被击飞碎裂成灰烬，伴随破空声与惨嚎。\n9–12秒：仰拍拉远并慢放定格，[主角]跃起腾空，[大招效果]劈向敌群，所过之处碎石与火光飞溅。\n13–15秒：缓推特写[主角]落地收势，衣摆余波微动，[武器]残留光效闪烁，冷声道「[台词2]」，镜头定格在[收尾意象]的剪影上，音效收束为余音震颤与渐弱风声。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "fantasy-action"
-   ],
-   "id": "tpl-video-fantasy-battle-15s",
-   "kind": "template",
-   "media": "video",
-   "rank": 250,
-   "scenes": [
-    "story"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "题材",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "主色调",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "主角",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "服饰细节",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "武器",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "武器特效",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "环境危机",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "敌人",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "台词1",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "冲击效果",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "大招效果",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "台词2",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "收尾意象",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": "Dex",
-    "license": "MIT",
-    "origin": "dexhunter/seedance2-skill",
-    "url": "https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md"
-   },
-   "status": "active",
-   "styles": [
-    "cinematic"
-   ],
-   "summary": "低角度蓄势 → 环绕出招 → 腾空大招 → 落地收势的战斗骨架。",
-   "tags": [
-    "仙侠",
-    "战斗",
-    "台词",
-    "15秒"
-   ],
-   "title": "仙侠/奇幻高燃战斗 15 秒",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
    "content": "15秒[题材]高燃战斗镜头，[主色调]。\n[[shot 0-3]] 低角度特写[主角]的[服饰细节]被热浪吹得猎猎飘动，双手紧握[武器]，[武器特效]持续爆闪，[环境危机]，远处[敌人]嘶吼着冲锋逼近，[主角]低喝 [[say S1: [台词1]]] [[sound: 兵器鸣响与环境声]]\n[[shot 4-8]] 环绕摇镜快切，[主角]旋身出招，[冲击效果]，前排[敌人]被击飞碎裂成灰烬。[[sound: 破空声与惨嚎]]\n[[shot 9-12]] 仰拍拉远并慢放定格，[主角]跃起腾空，[大招效果]劈向敌群，所过之处碎石与火光飞溅。\n[[shot 13-15]] 缓推特写[主角]落地收势，衣摆余波微动，[武器]残留光效闪烁，冷声道 [[say S1: [台词2]]]，镜头定格在[收尾意象]的剪影上。[[sound: 余音震颤与渐弱风声]]",
    "cover": null,
    "dialect_variants": {},
@@ -12983,118 +12235,6 @@
    "title": "仙侠/奇幻高燃战斗 15 秒",
    "verified_on": [],
    "version": 2,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "15秒，16:9横版视频。将实拍的[实拍空间]与手绘发光动画融合的影像。\n实拍空间与拍摄质感：[空间细节]，手持手机拍摄，自然光，轻微晃动。\n0–3秒：[初始形态]以[中心色彩]的发光笔触出现，[与手或实物的接触方式]。\n3–6秒：它变形为[第二形态]，保留上一形态的线条痕迹，沿[追逐路线]逃开，拍摄者伸手去抓。\n6–10秒：继续变形为[第三形态]，[一次恶作剧或发现]，拍摄者[拍摄者反应]。\n10–13秒：变形为[第四形态]，钻进或绕过[空间中的物件]，镜头慢半拍追上。\n13–15秒：线条扩散到整个空间，变成[空间级变形]，以[可爱笑点]收尾。\n手绘质感：蜡笔、粉笔、彩铅般的粗糙发光笔触，线条轻微抖动，逐帧重画感。\n相机：慢半拍的手持追拍，不把动画稳定居中。\n禁止：3D CG、毛绒感、平滑霓虹、恐怖元素、巨大眼睛、牙齿、跳吓、突然黑屏、突然出现新角色。\n环境音：[环境音]，配合接触与变形的轻微音效。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "cinematic-animation"
-   ],
-   "id": "tpl-video-handdrawn-live-fusion-15s",
-   "kind": "template",
-   "media": "video",
-   "rank": 321,
-   "scenes": [
-    "creative"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "实拍空间",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "空间细节",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "初始形态",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "中心色彩",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "与手或实物的接触方式",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "第二形态",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "追逐路线",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "第三形态",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "一次恶作剧或发现",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "拍摄者反应",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "第四形态",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "空间中的物件",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "空间级变形",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "可爱笑点",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "环境音",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from MiniMax-AI/MiniMax-H3 (handdrawn-live-video-generator)",
-    "url": "https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/handdrawn-live-video-generator"
-   },
-   "status": "active",
-   "styles": [
-    "handdrawn"
-   ],
-   "summary": "按 0–3 / 3–6 / 6–10 / 10–13 / 13–15 秒五段写接触、变形、追逐与空间级收尾。",
-   "tags": [
-    "15秒",
-    "16:9",
-    "分时段"
-   ],
-   "title": "手绘实拍融合 15 秒（16:9）",
-   "verified_on": [],
-   "version": 1,
    "withdrawn_reason": null
   },
   {
@@ -13210,114 +12350,6 @@
    "withdrawn_reason": null
   },
   {
-   "content": "[画幅]，10秒，[背景风格]的极简产品广告片。产品为[产品名称]，本体颜色严格保持[产品主色]，不重新上色。叙事：[叙事脊柱]。\n0–1.5秒：[开场产品动作]，干净留白，无文字。\n1.5–4秒：主视角建立，[主视觉角度]，产品边缘高光滑过。\n4–6秒：材质与功能特写，[材质或结构细节]；画面内出现单行英文「[中段文案]」，前半[前半文字颜色]、后半[产品主色]，前半先淡入，后半随后轻滑入，前半在同一行内轻微让位。\n6–8秒：[产品自然动作]，动作完成后制动停顿。\n8–10秒：单一全画幅产品收束，单行英文「[结尾文案]」稳定停留、清晰可读，位于画面上下居中区域靠[文字位置]。\n全程同一时刻只有一条单行文字；不出现网格、分屏、拼贴或商品墙；不用镜面反光台面。\n声音：[配乐方向]，节拍与产品动作和文字出现对齐。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "product-ad"
-   ],
-   "id": "tpl-video-minimal-product-ad-10s",
-   "kind": "template",
-   "media": "video",
-   "rank": 301,
-   "scenes": [
-    "commerce"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "画幅",
-     "required": true
-    },
-    {
-     "hint": "白色科技风 或 黑底轮廓光",
-     "name": "背景风格",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "产品名称",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "产品主色",
-     "required": true
-    },
-    {
-     "hint": "发布型 / 功能触感型 / 色彩家族型",
-     "name": "叙事脊柱",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "开场产品动作",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "主视觉角度",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "材质或结构细节",
-     "required": true
-    },
-    {
-     "hint": "3–5 个英文词",
-     "name": "中段文案",
-     "required": true
-    },
-    {
-     "hint": "白底用黑或深灰，黑底用白",
-     "name": "前半文字颜色",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "产品自然动作",
-     "required": true
-    },
-    {
-     "hint": "3–5 个英文词",
-     "name": "结尾文案",
-     "required": true
-    },
-    {
-     "hint": "左 或 右",
-     "name": "文字位置",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "配乐方向",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from MiniMax-AI/MiniMax-H3 (minimalist-product-ad-generator)",
-    "url": "https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/minimalist-product-ad-generator"
-   },
-   "status": "active",
-   "styles": [
-    "minimal",
-    "product"
-   ],
-   "summary": "按节拍写清动作、文字与停顿的 10 秒产品片骨架。",
-   "tags": [
-    "10秒",
-    "节拍表",
-    "画面文字"
-   ],
-   "title": "极简产品广告片 10 秒节拍骨架",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
    "content": "[画幅]，10秒，[背景风格]的极简产品广告片。产品为[产品名称]，本体颜色严格保持[产品主色]，不重新上色。叙事：[叙事脊柱]。\n[[shot 0-1.5]] [开场产品动作]，干净留白，无文字。\n[[shot 1.5-4]] 主视角建立，[主视觉角度]，产品边缘高光滑过。\n[[shot 4-6]] 材质与功能特写，[材质或结构细节]；画面内出现单行英文 [[text: [中段文案]]]，前半[前半文字颜色]、后半[产品主色]，前半先淡入，后半随后轻滑入，前半在同一行内轻微让位。\n[[shot 6-8]] [产品自然动作]，动作完成后制动停顿。\n[[shot 8-10]] 单一全画幅产品收束，单行英文 [[text: [结尾文案]]] 稳定停留、清晰可读，位于画面上下居中区域靠[文字位置]。\n全程同一时刻只有一条单行文字；不出现网格、分屏、拼贴或商品墙；不用镜面反光台面。\n[[music: [配乐方向]]]，节拍与产品动作和文字出现对齐。",
    "cover": null,
    "dialect_variants": {},
@@ -13423,112 +12455,6 @@
    "title": "极简产品广告片 10 秒节拍骨架",
    "verified_on": [],
    "version": 2,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "全局美学与人物锁：[全局美学]；人物：[人物形象]；画幅[画幅]。\n镜头1（[镜头1时间段]）\n唱词：「[镜头1唱词]」\n画面文字：「[镜头1唱词]」，[文字动效]\n画面与动作：[镜头1画面与动作]\n运镜：[镜头1运镜]\n转出：[镜头1转出方式]\n镜头2（[镜头2时间段]）\n唱词：「[镜头2唱词]」\n画面文字：「[镜头2唱词]」，[文字动效]\n画面与动作：[镜头2画面与动作]\n运镜：[镜头2运镜]\n转出：[镜头2转出方式]\n（按同样格式继续，切点落在句间停顿或强鼓点上。）",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "music-video"
-   ],
-   "id": "tpl-video-mv-shot-script",
-   "kind": "template",
-   "media": "video",
-   "rank": 361,
-   "scenes": [
-    "social"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "全局美学",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "人物形象",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "画幅",
-     "required": true
-    },
-    {
-     "hint": "如 0.0–3.5秒",
-     "name": "镜头1时间段",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "镜头1唱词",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "文字动效",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "镜头1画面与动作",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "镜头1运镜",
-     "required": true
-    },
-    {
-     "hint": "如 低音重击处硬切 / 同向甩镜",
-     "name": "镜头1转出方式",
-     "required": true
-    },
-    {
-     "hint": "如 3.5–7.0秒",
-     "name": "镜头2时间段",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "镜头2唱词",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "镜头2画面与动作",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "镜头2运镜",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "镜头2转出方式",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from MiniMax-AI/MiniMax-H3 (music-video-subtitle-generator)",
-    "url": "https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/music-video-subtitle-generator"
-   },
-   "status": "active",
-   "styles": [
-    "kinetic-typography"
-   ],
-   "summary": "全局美学锁 + 按镜头列出唱词、贴字、画面动作、运镜与转出方式。",
-   "tags": [
-    "分镜脚本",
-    "歌词"
-   ],
-   "title": "音乐 MV 多镜头脚本骨架",
-   "verified_on": [],
-   "version": 1,
    "withdrawn_reason": null
   },
   {
@@ -13648,73 +12574,6 @@
    "withdrawn_reason": null
   },
   {
-   "content": "纸拼贴定格组装动画，约4秒，[画幅]。最终画面以[最终静帧]为准。\n从与最终静帧主背景一致的干净[主色]纸色场开始；按可读顺序组装前景、中景、背景纸片组：先是[基础结构]，再是[主要隐喻元素]，最后是[次要物件]。每个纸片出现、滑入或弹入、轻微回弹、压平、停顿、锁定到位。\n保留半调网点、暖白描边、细微纤维撕边、层叠纸缝、柔和阴影和纸纹。结尾停留在与最终静帧一致的完整构图上。\n声音：只有与纸片动作同步的触感拼贴音效——纸片滑动、弹入、压平轻敲、轻微摩擦、小纸片脆响；不加背景音乐、旁白或对白。\n不要：牛皮纸开场、发黄或偏棕的底、快速旋转、混乱飞散、平滑数字图层移动、切镜、运镜、变焦、形变、新增物件、文字、LOGO、水印、界面。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "explainer"
-   ],
-   "id": "tpl-video-paper-collage-assembly",
-   "kind": "template",
-   "media": "video",
-   "rank": 331,
-   "scenes": [
-    "education"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "画幅",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "最终静帧",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "主色",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "基础结构",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "主要隐喻元素",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "次要物件",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from MiniMax-AI/MiniMax-H3 (paper-collage-explainer-generator)",
-    "url": "https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/paper-collage-explainer-generator"
-   },
-   "status": "active",
-   "styles": [
-    "paper-collage"
-   ],
-   "summary": "以确认过的静帧为最终画面，从空色场逐片组装到位。",
-   "tags": [
-    "图生视频",
-    "定格组装",
-    "4秒"
-   ],
-   "title": "纸拼贴定格组装（约 4 秒，图生视频）",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
    "content": "纸拼贴定格组装动画，约4秒，[画幅]。最终画面以[最终静帧]为准。\n从与最终静帧主背景一致的干净[主色]纸色场开始；按可读顺序组装前景、中景、背景纸片组：先是[基础结构]，再是[主要隐喻元素]，最后是[次要物件]。每个纸片出现、滑入或弹入、轻微回弹、压平、停顿、锁定到位。\n保留半调网点、暖白描边、细微纤维撕边、层叠纸缝、柔和阴影和纸纹。结尾停留在与最终静帧一致的完整构图上。\n[[sound: 只有与纸片动作同步的触感拼贴音效：纸片滑动、弹入、压平轻敲、轻微摩擦、小纸片脆响]]；不加背景音乐、旁白或对白。\n不要：牛皮纸开场、发黄或偏棕的底、快速旋转、混乱飞散、平滑数字图层移动、切镜、运镜、变焦、形变、新增物件、文字、LOGO、水印、界面。",
    "cover": null,
    "dialect_variants": {},
@@ -13779,77 +12638,6 @@
    "title": "纸拼贴定格组装（约 4 秒，图生视频）",
    "verified_on": [],
    "version": 2,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "以[纸艺参考图]为画面基础，生成5秒纸艺定格动画，保持纸张纹理、剪裁边缘、分层布景和真实投影不变。\n镜头[运镜]，前景和背景产生视差；[纸偶角色]做小幅定格式动作：[角色动作]；纸质[机关元素]轻微移动。\n动作像逐帧手工拨动：分段移动、短暂停顿、轻微回弹。\n声音：[纸艺音效]，[配乐方向]。\n避免：光滑 CG 变形、融化、塑料质感、高速镜头。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "scientific-educational"
-   ],
-   "id": "tpl-video-papercraft-i2v-5s",
-   "kind": "template",
-   "media": "video",
-   "rank": 342,
-   "scenes": [
-    "education"
-   ],
-   "slots": [
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "纸艺参考图",
-     "required": true
-    },
-    {
-     "hint": "缓慢推近 / 轻微横移",
-     "name": "运镜",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "纸偶角色",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "角色动作",
-     "required": true
-    },
-    {
-     "hint": "箭头、标签、滑轨、转盘等",
-     "name": "机关元素",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "纸艺音效",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "配乐方向",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": null,
-    "license": "first-party",
-    "origin": "first-party, structure adapted from MiniMax-AI/MiniMax-H3 (papercraft-stop-motion-explainer)",
-    "url": "https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/papercraft-stop-motion-explainer"
-   },
-   "status": "active",
-   "styles": [
-    "papercraft"
-   ],
-   "summary": "让一张纸艺参考图动起来，动作克制、符合纸片物理。",
-   "tags": [
-    "图生视频",
-    "5秒"
-   ],
-   "title": "纸艺定格科普：5 秒图生视频",
-   "verified_on": [],
-   "version": 1,
    "withdrawn_reason": null
   },
   {
@@ -13921,78 +12709,6 @@
    "title": "纸艺定格科普：5 秒图生视频",
    "verified_on": [],
    "version": 2,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "制作一段15秒的[产品名称]展示视频，产品外观以[产品参考图]为准。\n剪辑节奏与转场方式参考[风格参考视频]。\n0–3秒：产品以动感旋转入场，特写表面材质和[标志性细节]。\n4–8秒：多角度转场展示正面、侧面、背面，配合扫光效果。\n9–12秒：产品在[使用场景]中展示实际用法。\n13–15秒：产品主视觉定格，画面文字「[广告语]」出现，背景音乐推向高潮。\n声音：[背景音乐风格]，加入产品交互音效。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "product-ad"
-   ],
-   "id": "tpl-video-product-ad-15s",
-   "kind": "template",
-   "media": "video",
-   "rank": 210,
-   "scenes": [
-    "commerce"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "产品名称",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
-     "name": "产品参考图",
-     "required": true
-    },
-    {
-     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签；没有可整句删除",
-     "name": "风格参考视频",
-     "required": false
-    },
-    {
-     "hint": null,
-     "name": "标志性细节",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "使用场景",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "广告语",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "背景音乐风格",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": "Dex",
-    "license": "MIT",
-    "origin": "dexhunter/seedance2-skill",
-    "url": "https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md"
-   },
-   "status": "active",
-   "styles": [
-    "product"
-   ],
-   "summary": "15 秒产品展示视频的四段式时间轴骨架，可选参考一段已有广告的剪辑节奏。",
-   "tags": [
-    "电商",
-    "15秒",
-    "分时段"
-   ],
-   "title": "产品广告片 15 秒：旋转入场 → 多角度 → 场景 → 定格",
-   "verified_on": [],
-   "version": 1,
    "withdrawn_reason": null
   },
   {
@@ -14139,93 +12855,6 @@
     "15秒"
    ],
    "title": "科普动画 15 秒：正常 → 变化 → 后果",
-   "verified_on": [],
-   "version": 1,
-   "withdrawn_reason": null
-  },
-  {
-   "content": "画面（0–5秒）：特写[角色A]通红的眼眶，[角色A的动作]，情绪濒临崩溃。\n台词1（[角色A]，[角色A语气]）：「[台词1]」\n画面（6–10秒）：[角色B][角色B的反应]，镜头扫过背景细节作为伏笔。\n台词2（[角色B]，[角色B语气]）：「[台词2]」\n画面（11–15秒）：[反转揭示]，[角色A]瞬间僵住，眼神从愤怒转为震惊。\n音效：[氛围音效]，角色哽咽声，结尾混入模糊人声。\n时长：精准15秒，节奏紧凑，无冗余。",
-   "cover": null,
-   "dialect_variants": {},
-   "genres": [
-    "short-drama"
-   ],
-   "id": "tpl-video-short-drama-15s",
-   "kind": "template",
-   "media": "video",
-   "rank": 220,
-   "scenes": [
-    "story"
-   ],
-   "slots": [
-    {
-     "hint": null,
-     "name": "角色A",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "角色A的动作",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "角色A语气",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "台词1",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "角色B",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "角色B的反应",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "角色B语气",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "台词2",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "反转揭示",
-     "required": true
-    },
-    {
-     "hint": null,
-     "name": "氛围音效",
-     "required": true
-    }
-   ],
-   "source": {
-    "author": "Dex",
-    "license": "MIT",
-    "origin": "dexhunter/seedance2-skill",
-    "url": "https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md"
-   },
-   "status": "active",
-   "styles": [
-    "cinematic"
-   ],
-   "summary": "两人对峙、带台词与伏笔的 15 秒短剧骨架。",
-   "tags": [
-    "台词",
-    "反转",
-    "15秒"
-   ],
-   "title": "短剧冲突片段 15 秒：崩溃 → 反驳 → 反转",
    "verified_on": [],
    "version": 1,
    "withdrawn_reason": null
