@@ -1,6 +1,7 @@
 id: tpl-video-cartoon-3d-shot
 version: 2
 rank: 351
+family: minimax-h3-3d-animation-short-generator
 kind: template
 media: video
 title: 3D 动画单镜头：逐秒指令骨架

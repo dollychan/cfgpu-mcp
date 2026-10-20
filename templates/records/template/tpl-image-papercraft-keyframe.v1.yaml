@@ -1,6 +1,7 @@
 id: tpl-image-papercraft-keyframe
 version: 1
 rank: 341
+family: minimax-h3-papercraft-stop-motion-explainer
 kind: template
 media: image
 title: 纸艺定格科普：单张主视觉

@@ -26,6 +26,7 @@ from cfgpu_mcp.template_library.bundle import (
     load_bundle,
     parse_bundle,
 )
+from cfgpu_mcp.template_library import bundle as bundle_module
 from cfgpu_mcp.template_library.dialect_guard import find_dialect, markup_problems
 from cfgpu_mcp.template_library.index import TemplateIndex
 from cfgpu_mcp.template_library.schema import COVER_MEDIA_TYPES, TemplateRecord
@@ -244,6 +245,15 @@ def test_tampered_bundle_is_refused(tmp_path):
         parse_bundle(json.dumps(data))
 
 
+def test_a_bundle_from_before_a_new_optional_field_still_loads(tmp_path):
+    """Adding a defaulted field to the schema must not make an intact older bundle look tampered."""
+    data = json.loads(dump_bundle(compile_source(_write_tree(tmp_path, [_record()]))))
+    for record in data["records"]:
+        del record["family"]
+    data["checksum"] = bundle_module._bundle_checksum(data["catalog_version"], data["records"])
+    assert parse_bundle(json.dumps(data)).records[0].family is None
+
+
 def test_broken_bundle_reads_as_unavailable_not_empty(tmp_path, monkeypatch):
     broken = tmp_path / "bundle.json"
     broken.write_text("{not json", encoding="utf-8")
@@ -364,6 +374,46 @@ def test_withdrawn_returns_only_the_notice(tmp_path):
     got = _index(tmp_path, [withdrawn]).get("case-test-0001")
     assert got["status"] == "withdrawn"
     assert "content" not in got and got["withdrawn_reason"] == "source license unclear"
+
+
+def _family(tmp_path: Path) -> TemplateIndex:
+    """A style and a template rewritten from one source, plus an unrelated case."""
+    return _index(
+        tmp_path,
+        [
+            _record(id="style-test-tea", kind="style", rank=10, family="src-tea", title="Matcha studio look"),
+            _record(id="tpl-test-tea", kind="template", rank=20, family="src-tea", title="Matcha packshot skeleton"),
+            _record(id="case-test-0002", rank=30, title="Matcha latte art"),
+        ],
+    )
+
+
+def test_a_family_shows_as_one_card_listing_the_rest(tmp_path):
+    """The user never sees one source twice; the agent still learns the others exist."""
+    result = _family(tmp_path).search(query="matcha")
+    ids = [c["id"] for c in result["results"]]
+    assert ids == ["style-test-tea", "case-test-0002"] and result["total"] == 2
+    assert result["results"][0]["related"] == ["tpl-test-tea"]
+    assert "related" not in result["results"][1]
+
+
+def test_a_kind_filter_reaches_the_other_family_member(tmp_path):
+    result = _family(tmp_path).search(query="matcha", kind="template")
+    assert [c["id"] for c in result["results"]] == ["tpl-test-tea"]
+    assert "related" not in result["results"][0]  # its sibling did not match the filter
+
+
+def test_get_lists_the_family(tmp_path):
+    data = _family(tmp_path).get("tpl-test-tea")
+    assert data["related"] == [{"id": "style-test-tea", "kind": "style", "media": "image", "title": "Matcha studio look"}]
+    assert "family" not in data
+    assert _family(tmp_path).get("case-test-0002")["related"] == []
+
+
+def test_family_is_editable_metadata(tmp_path):
+    """Grouping records must not force new versions of them."""
+    first = compile_source(_write_tree(tmp_path / "a", [_record()]))
+    compile_source(_write_tree(tmp_path / "b", [_record(family="src-tea")]), previous=first)
 
 
 def test_dialect_variants_never_leave_the_server(tmp_path):

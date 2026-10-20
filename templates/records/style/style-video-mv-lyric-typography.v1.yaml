@@ -1,6 +1,7 @@
 id: style-video-mv-lyric-typography
 version: 1
 rank: 360
+family: minimax-h3-music-video-subtitle-generator
 kind: style
 media: video
 title: 音乐 MV：歌词空间贴字与多镜头拼接

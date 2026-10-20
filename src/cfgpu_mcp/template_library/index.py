@@ -9,7 +9,9 @@ Built once per bundle, read-only afterwards. ``search`` is filter-then-score:
 3. a ``model`` boosts records verified on that model without excluding the rest — the
    content is model-neutral, so every record can be rendered for every model;
 4. ties break on ``rank`` then ``id``, so the same bundle and query always return the
-   same order (I-TL6).
+   same order (I-TL6);
+5. records of one ``family`` (rewritten from one source) collapse into the first-ranked
+   one, whose card lists the others that matched as ``related``.
 
 The result never carries ``dialect_variants`` or any dialect id (I-DL5).
 """
@@ -76,6 +78,10 @@ class TemplateIndex:
             self._latest_any[record.id] = record
             if record.status == "active":
                 self._latest_active[record.id] = record
+        self._families: dict[str, list[TemplateRecord]] = defaultdict(list)
+        for record in sorted(self._latest_active.values(), key=lambda r: (r.rank, r.id)):
+            if record.family:
+                self._families[record.family].append(record)
 
         # Only the latest active version of each id is searchable; older versions stay
         # reachable through get_template(id, version).
@@ -185,8 +191,18 @@ class TemplateIndex:
             scored.append((score, doc.record))
 
         scored.sort(key=lambda item: (-round(item[0], 9), item[1].rank, item[1].id))
-        total = len(scored)
-        page = scored[cursor : cursor + limit]
+        # One card per family, collapsed before paging so total and cursor stay consistent.
+        kept: list[tuple[float, TemplateRecord]] = []
+        related: dict[str, list[str]] = {}
+        for score, record in scored:
+            if record.family in related:
+                related[record.family].append(record.id)
+                continue
+            if record.family:
+                related[record.family] = []
+            kept.append((score, record))
+        total = len(kept)
+        page = kept[cursor : cursor + limit]
         next_cursor = cursor + limit if cursor + limit < total else None
         return {
             "available": True,
@@ -196,12 +212,17 @@ class TemplateIndex:
             "next_cursor": next_cursor,
             "matched_terms": [t for t in terms if t in matched_any],
             "missing_terms": [t for t in terms if t not in matched_any],
-            "results": [self._card(record, score if terms else None) for score, record in page],
+            "results": [
+                self._card(record, score if terms else None, related.get(record.family or ""))
+                for score, record in page
+            ],
         }
 
     @staticmethod
-    def _card(record: TemplateRecord, score: Optional[float]) -> dict[str, Any]:
+    def _card(record: TemplateRecord, score: Optional[float], related: Optional[list[str]]) -> dict[str, Any]:
         card = record.model_dump(mode="json", include=set(_CARD_FIELDS))
+        if related:
+            card["related"] = related
         card["cover"] = record.cover.model_dump(mode="json") if record.cover else None
         card["source"] = {"author": record.source.author, "origin": record.source.origin}
         if score is not None:
@@ -226,7 +247,12 @@ class TemplateIndex:
                 "withdrawn_reason": record.withdrawn_reason,
                 "catalog_version": self.catalog_version,
             }
-        data = record.model_dump(mode="json", exclude={"dialect_variants", "withdrawn_reason"})
+        data = record.model_dump(mode="json", exclude={"dialect_variants", "withdrawn_reason", "family"})
         data["cover"] = record.cover.model_dump(mode="json") if record.cover else None
+        data["related"] = [
+            {"id": r.id, "kind": r.kind, "media": r.media, "title": r.title}
+            for r in self._families.get(record.family or "", [])
+            if r.id != record.id
+        ]
         data["catalog_version"] = self.catalog_version
         return data

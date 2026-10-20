@@ -11,8 +11,12 @@ Two field groups behave differently on purpose:
   ``dialect_variants``. A Production that recorded ``id + version`` must get the same
   text back forever, so changing any of these means publishing a new version. The bundle
   builder enforces it by hashing exactly these fields (:func:`immutable_hash`).
-* **Editable metadata** — title, summary, facets, tags, rank, status. Retuning search or
-  deprecating a record must not force a new version.
+* **Editable metadata** — title, summary, facets, tags, rank, status, family. Retuning
+  search or deprecating a record must not force a new version.
+
+``family`` groups records rewritten from one source (a style and the templates taken from
+the same genre skill): search shows one card per family, so a user never sees the same
+example twice; the others stay reachable by id and are listed as ``related``.
 
 ``content`` is written in the caller-facing notation: plain prose, ``[slot]``
 placeholders, and on video (image: ``[[text]]`` only) the unified structure markers
@@ -111,6 +115,8 @@ class TemplateRecord(BaseModel):
     version: int = Field(ge=1)
     status: Status = "active"
     rank: int = Field(default=1000, ge=0)
+    #: Records rewritten from one source; search collapses a family into one card.
+    family: Optional[str] = None
     kind: Kind
     media: Media
     title: str = Field(min_length=1, max_length=200)
@@ -133,6 +139,13 @@ class TemplateRecord(BaseModel):
     def _id_shape(cls, v: str) -> str:
         if not _ID.match(v):
             raise ValueError(f"id {v!r} must match {_ID.pattern}")
+        return v
+
+    @field_validator("family")
+    @classmethod
+    def _family_shape(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not _ID.match(v):
+            raise ValueError(f"family {v!r} must match {_ID.pattern}")
         return v
 
     @field_validator("genres", "scenes", "styles")

@@ -1,6 +1,7 @@
 id: tpl-image-coop-game-menu
 version: 1
 rank: 370
+family: minimax-h3-co-op-game-intro-generator
 kind: template
 media: image
 title: 双人合作游戏主菜单：确认首图

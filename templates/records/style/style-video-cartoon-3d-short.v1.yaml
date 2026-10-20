@@ -1,6 +1,7 @@
 id: style-video-cartoon-3d-short
 version: 1
 rank: 350
+family: minimax-h3-3d-animation-short-generator
 kind: style
 media: video
 title: 风格化 3D 动画短片：皮克斯感渲染与镜头表规则

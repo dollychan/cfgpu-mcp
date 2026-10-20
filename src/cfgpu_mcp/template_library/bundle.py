@@ -225,7 +225,9 @@ def parse_bundle(text: str) -> Bundle:
         {"schema_version": SCHEMA_VERSION, "catalog_version": raw["catalog_version"], "facets": raw["facets"]}
     )
     records = _sorted(TemplateRecord.model_validate(item) for item in raw["records"])
-    checksum = _bundle_checksum(catalog.catalog_version, [r.model_dump(mode="json") for r in records])
+    # Checksum the records as stored, not as re-dumped: a field added to the schema later
+    # (with a default) must not make an older, intact bundle look tampered with.
+    checksum = _bundle_checksum(catalog.catalog_version, raw["records"])
     if checksum != raw.get("checksum"):
         raise BundleError(["bundle checksum does not match its records (corrupted or hand-edited)"])
     hashes: dict[tuple[str, int], str] = {}

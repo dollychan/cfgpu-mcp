@@ -1,6 +1,7 @@
 id: tpl-video-coop-game-intro-15s
 version: 2
 rank: 371
+family: minimax-h3-co-op-game-intro-generator
 kind: template
 media: video
 title: 双人合作游戏开场 15 秒：菜单 → 装备 → 加载 → 进入世界

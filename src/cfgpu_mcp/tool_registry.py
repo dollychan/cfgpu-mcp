@@ -1256,7 +1256,7 @@ TemplateMedia = Folded("image", "video", "audio")
 
 
 class SearchTemplatesInput(BaseModel):
-    """Search the shared library of official prompt templates, worked cases and style directions; returns cards, so call get_template for the full content."""
+    """Search the shared library of official prompt templates, worked cases and style directions; returns cards, so call get_template for the full content. Records rewritten from one source share a card, whose related lists the other ids."""
 
     query: Optional[str] = Field(
         default=None,

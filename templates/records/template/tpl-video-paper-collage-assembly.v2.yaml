@@ -1,6 +1,7 @@
 id: tpl-video-paper-collage-assembly
 version: 2
 rank: 331
+family: minimax-h3-paper-collage-explainer-generator
 kind: template
 media: video
 title: 纸拼贴定格组装（约 4 秒，图生视频）

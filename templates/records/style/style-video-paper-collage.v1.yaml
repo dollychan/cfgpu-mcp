@@ -1,6 +1,7 @@
 id: style-video-paper-collage
 version: 1
 rank: 330
+family: minimax-h3-paper-collage-explainer-generator
 kind: style
 media: video
 title: 半调纸拼贴讲解动画

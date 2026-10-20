@@ -1,6 +1,6 @@
 {
  "catalog_version": 2,
- "checksum": "39e65a075fb43a22e933ebe0e6ad7bfe43a866a891a39a55abab3b499a614964",
+ "checksum": "1c68ce10779419c3b0ae88bed5041c83de4afbd502ac128c61282674265ca951",
  "facets": {
   "genres": [
    "animation-short",
@@ -376,6 +376,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -415,6 +416,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -454,6 +456,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -493,6 +496,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -532,6 +536,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -571,6 +576,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -610,6 +616,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -649,6 +656,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -688,6 +696,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -727,6 +736,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -766,6 +776,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -805,6 +816,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "anime-manga"
    ],
@@ -844,6 +856,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -883,6 +896,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -922,6 +936,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -961,6 +976,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -1000,6 +1016,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -1039,6 +1056,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -1078,6 +1096,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -1117,6 +1136,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -1156,6 +1176,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -1195,6 +1216,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "gaming"
    ],
@@ -1234,6 +1256,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "retro-cyberpunk"
    ],
@@ -1273,6 +1296,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "retro-cyberpunk"
    ],
@@ -1312,6 +1336,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "retro-cyberpunk"
    ],
@@ -1351,6 +1376,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-animation"
    ],
@@ -1390,6 +1416,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-animation"
    ],
@@ -1429,6 +1456,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-animation"
    ],
@@ -1468,6 +1496,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-animation"
    ],
@@ -1507,6 +1536,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-animation"
    ],
@@ -1546,6 +1576,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "character-design"
    ],
@@ -1585,6 +1616,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "character-design"
    ],
@@ -1624,6 +1656,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1663,6 +1696,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1702,6 +1736,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1741,6 +1776,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1780,6 +1816,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1819,6 +1856,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1858,6 +1896,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1897,6 +1936,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1936,6 +1976,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -1975,6 +2016,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -2014,6 +2056,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -2053,6 +2096,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -2092,6 +2136,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -2131,6 +2176,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -2170,6 +2216,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -2209,6 +2256,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "watercolor"
    ],
@@ -2248,6 +2296,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "watercolor"
    ],
@@ -2287,6 +2336,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ink-chinese"
    ],
@@ -2326,6 +2376,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ink-chinese"
    ],
@@ -2365,6 +2416,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "pixel-art"
    ],
@@ -2404,6 +2456,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "pixel-art"
    ],
@@ -2443,6 +2496,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "isometric"
    ],
@@ -2482,6 +2536,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "isometric"
    ],
@@ -2521,6 +2576,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-food"
    ],
@@ -2560,6 +2616,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-food"
    ],
@@ -2599,6 +2656,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-food"
    ],
@@ -2638,6 +2696,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-food"
    ],
@@ -2677,6 +2736,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -2716,6 +2776,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -2755,6 +2816,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -2794,6 +2856,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "photography"
    ],
@@ -2833,6 +2896,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "photography"
    ],
@@ -2872,6 +2936,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "photography"
    ],
@@ -2911,6 +2976,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "photography"
    ],
@@ -2950,6 +3016,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides"
    ],
@@ -2989,6 +3056,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides"
    ],
@@ -3028,6 +3096,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides"
    ],
@@ -3067,6 +3136,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides"
    ],
@@ -3106,6 +3176,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides"
    ],
@@ -3145,6 +3216,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides"
    ],
@@ -3184,6 +3256,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides"
    ],
@@ -3223,6 +3296,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides"
    ],
@@ -3262,6 +3336,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3301,6 +3376,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3340,6 +3416,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3379,6 +3456,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3418,6 +3496,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3457,6 +3536,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3496,6 +3576,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3535,6 +3616,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3574,6 +3656,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3613,6 +3696,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3652,6 +3736,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3691,6 +3776,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3730,6 +3816,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3769,6 +3856,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3808,6 +3896,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3847,6 +3936,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3886,6 +3976,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3925,6 +4016,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -3964,6 +4056,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -4003,6 +4096,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -4042,6 +4136,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "research-paper-figures"
    ],
@@ -4081,6 +4176,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "case-gpt2-0096",
    "kind": "case",
@@ -4119,6 +4215,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "case-gpt2-0097",
    "kind": "case",
@@ -4157,6 +4254,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "case-gpt2-0098",
    "kind": "case",
@@ -4195,6 +4293,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "case-gpt2-0099",
    "kind": "case",
@@ -4233,6 +4332,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "case-gpt2-0100",
    "kind": "case",
@@ -4271,6 +4371,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "case-gpt2-0101",
    "kind": "case",
@@ -4309,6 +4410,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -4348,6 +4450,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -4387,6 +4490,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -4426,6 +4530,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -4465,6 +4570,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -4504,6 +4610,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "data-visualization"
    ],
@@ -4543,6 +4650,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "data-visualization"
    ],
@@ -4582,6 +4690,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "data-visualization"
    ],
@@ -4621,6 +4730,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "data-visualization"
    ],
@@ -4660,6 +4770,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "data-visualization"
    ],
@@ -4699,6 +4810,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "technical-illustration"
    ],
@@ -4738,6 +4850,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "technical-illustration"
    ],
@@ -4777,6 +4890,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "technical-illustration"
    ],
@@ -4816,6 +4930,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "technical-illustration"
    ],
@@ -4855,6 +4970,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "technical-illustration"
    ],
@@ -4894,6 +5010,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "architecture-interior"
    ],
@@ -4933,6 +5050,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "architecture-interior"
    ],
@@ -4972,6 +5090,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "architecture-interior"
    ],
@@ -5011,6 +5130,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "architecture-interior"
    ],
@@ -5050,6 +5170,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "architecture-interior"
    ],
@@ -5089,6 +5210,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scientific-educational"
    ],
@@ -5128,6 +5250,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scientific-educational"
    ],
@@ -5167,6 +5290,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scientific-educational"
    ],
@@ -5206,6 +5330,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scientific-educational"
    ],
@@ -5245,6 +5370,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scientific-educational"
    ],
@@ -5284,6 +5410,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scientific-educational"
    ],
@@ -5323,6 +5450,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scientific-educational"
    ],
@@ -5362,6 +5490,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fashion-editorial"
    ],
@@ -5401,6 +5530,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fashion-editorial"
    ],
@@ -5440,6 +5570,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fashion-editorial"
    ],
@@ -5479,6 +5610,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fashion-editorial"
    ],
@@ -5518,6 +5650,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fashion-editorial"
    ],
@@ -5557,6 +5690,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fashion-editorial"
    ],
@@ -5596,6 +5730,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fashion-editorial"
    ],
@@ -5635,6 +5770,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fine-art-painting"
    ],
@@ -5674,6 +5810,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fine-art-painting"
    ],
@@ -5713,6 +5850,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fine-art-painting"
    ],
@@ -5752,6 +5890,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fine-art-painting"
    ],
@@ -5791,6 +5930,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fine-art-painting"
    ],
@@ -5830,6 +5970,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -5869,6 +6010,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -5908,6 +6050,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -5947,6 +6090,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -5986,6 +6130,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -6025,6 +6170,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -6064,6 +6210,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-film-references"
    ],
@@ -6103,6 +6250,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-film-references"
    ],
@@ -6142,6 +6290,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-film-references"
    ],
@@ -6181,6 +6330,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-film-references"
    ],
@@ -6220,6 +6370,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-film-references"
    ],
@@ -6259,6 +6410,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-film-references"
    ],
@@ -6298,6 +6450,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "beauty-lifestyle"
    ],
@@ -6337,6 +6490,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "beauty-lifestyle"
    ],
@@ -6376,6 +6530,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "events-experience"
    ],
@@ -6415,6 +6570,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "events-experience"
    ],
@@ -6454,6 +6610,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "tattoo-design"
    ],
@@ -6493,6 +6650,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "tattoo-design"
    ],
@@ -6532,6 +6690,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "tattoo-design"
    ],
@@ -6571,6 +6730,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "tattoo-design"
    ],
@@ -6610,6 +6770,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "screen-photography"
    ],
@@ -6648,6 +6809,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "screen-photography"
    ],
@@ -6680,6 +6842,7 @@
    "content": "主角形象参考[人物参考图]，他身处[电梯场景图]中的电梯里，完全参考[运镜参考视频]的全部运镜效果和主角面部表情：主角惊恐时用希区柯克变焦，然后几个环绕镜头展示电梯内视角；电梯门打开，跟随镜头走出电梯，电梯外场景参考[电梯外场景图]；男人环顾四周，参考[运镜参考视频]以机械臂式多角度跟随人物视线。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "short-drama"
    ],
@@ -6734,6 +6897,7 @@
    "content": "[人物参考图]中的男人下班后疲惫地走在走廊，脚步变缓，最后停在家门口；脸部特写，他深呼吸调整情绪，收起负面情绪，变得轻松；特写他翻找出钥匙插入门锁；进门后他的小女儿和一只宠物狗欢快地跑过来迎接拥抱，室内非常温馨，全程自然对话。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "short-drama"
    ],
@@ -6772,6 +6936,7 @@
    "content": "将[漫画页图]按从左到右、从上到下的顺序进行漫画演绎，人物台词与图片上的一致；分镜切换和重点情节加入特殊音效，整体风格诙谐幽默；演绎方式参考[演绎参考视频]。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "animation-short"
    ],
@@ -6816,6 +6981,7 @@
    "content": "在「猫狗吐槽间」里的一段吐槽对话，要求情感丰沛，符合脱口秀表演：\n喵酱（猫主持，舔毛翻眼）说 [[say S1: 家人们谁懂啊，我身边这位，每天除了摇尾巴、拆沙发，就只会用那种‘我超乖求摸摸’的眼神骗人类零食……]]\n旺仔（狗主持，歪头晃尾巴）说 [[say S2: 你还好意思说我？你每天睡18个小时，醒了就蹭人类腿要罐头……]]",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "short-drama"
    ],
@@ -6850,6 +7016,7 @@
    "content": "将[源视频]中的人物换成[人物参考图]中的人物，并以[人物参考图]作为首帧。人物戴上虚拟科幻眼镜，参考[源视频]的运镜，用贴近的环绕镜头从第三人称视角切换为人物主观视角，在虚拟眼镜中穿梭；来到[宇宙场景图]所示深邃的蓝色宇宙，几架飞船穿梭向远方；镜头跟随飞船进入[像素世界图]所示的像素世界，低空掠过像素山林，树木以生长的形式出现；随后视角仰拍，急速穿梭到[星球场景图]所示浅绿色纹理的星球，掠过星球表面。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-animation"
    ],
@@ -6910,6 +7077,7 @@
    "content": "将[待延长视频]向后延长15秒，一镜到底按时间推进。\n1–5秒：光影透过百叶窗在木桌、杯身上缓缓滑过，树枝伴随轻微呼吸般的晃动。\n6–10秒：一粒咖啡豆从画面上方轻轻飘落，镜头向咖啡豆推进直至黑屏。\n11–15秒：英文逐行渐显，第一行 [[text: Lucky Coffee]]，第二行 [[text: Breakfast]]，第三行 [[text: AM 7:00-10:00]]。\n注意：生成时长选新增部分的时长（本例为 15 秒）。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-ad"
    ],
@@ -6951,6 +7119,7 @@
    "content": "将[产品参考图]中的汉堡进行拆解：镜头保持静止，汉堡悬浮在空中开始旋转，食材轻柔而精准地分离，保持形状和比例，动作流畅，无任何额外效果；汉堡向两边分开——顶部金黄色带芝麻的面包盖、鲜翠绿生菜叶、带水珠的新鲜红番茄切片、两层夹着融化切达芝士的厚实烤牛肉饼，以及最底部的松软面包底座——随后缓缓下落，完美组合成一个完整的豪华双层芝士汉堡。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-ad"
    ],
@@ -6992,6 +7161,7 @@
    "content": "[第一段视频]中由粒子组成的马逐渐具象化，粒子变密，逐渐过渡到[第二段视频]；[第二段视频]中的马在奔跑中逐渐变为[第三段视频]，并逐渐消散；画面唯美。[[sound: 马蹄声和科技感粒子音效]]",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-animation"
    ],
@@ -7047,6 +7217,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "cinematic-film-references"
    ],
@@ -7094,6 +7265,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scenes-storytelling"
    ],
@@ -7143,6 +7315,7 @@
    "content": "在[原视频]的基础上编辑，5 秒：原视频的人物样貌、构图、黄昏暖光、草坡和背景里的白色小羊全部保留，只让画面中央穿粉色西装、抱着小黑羊的金发年轻男人开口说话。原视频的背景音乐保留，压在台词下面持续播放；他的音色参考[音色参考音频]，平静温和。\n写实摄影风格，镜头缓慢推近。他望向前方，轻声说 [[say S1: Follow the wind, live free.]] 说话时重心微微移动，稳稳抱着怀里的小黑羊。接着说 [[say S1: Leave worries behind, enjoy the moment.]] 话音一落，嘴唇合上，露出放松的微笑，下巴不再动；随后他把目光转向远处的地平线，手指轻抚小黑羊的毛，镜头停在这个画面直到结束。\n[[sound: 原视频的背景音乐持续铺底，上面是他平静清晰的男声台词]]",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scenes-storytelling"
    ],
@@ -7196,6 +7369,7 @@
    "content": "谍战片风格，[首帧图]作为首帧画面。镜头正面跟拍穿红风衣的女特工向前走，全景跟随，不断有路人遮挡红衣女子；走到拐角处（拐角建筑参考[拐角建筑图]），固定镜头，红衣女子走出画面、在拐角处消失；一个戴面具的女孩在拐角处躲着恶狠狠地盯着她（形象参考[面具女孩图]）；镜头往前摇向红衣女特工，她走进一座豪宅消失不见（豪宅参考[豪宅图]）。全程不要切镜头，一镜到底。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "short-drama"
    ],
@@ -7250,6 +7424,7 @@
    "content": "[产品参考图]中的饮料罐 360 度高速旋转两圈后突然停住，蓄力分裂成上、中、下三部分展示；随后三部分快速向内旋转合成一罐完整的饮料。3D 渲染产品展示特效，动感产品特效。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-ad"
    ],
@@ -7290,6 +7465,7 @@
    "content": "改剧情：颠覆[源视频]里的剧情，男人眼神从温柔瞬间转为冰冷狠厉，在女主毫无防备时猛地把她从桥上推进水里；动作干脆利落，没有丝毫犹豫；女主坠水瞬间没有尖叫，只有难以置信的眼神，她抬头冲他嘶吼 [[say S1: 你从一开始就在骗我！]]\n换角色：把[源视频]中的女主唱换成[人物参考图]中的男主唱，动作完全模仿原视频，不要切镜，乐队演唱音乐。\n加元素：把[源视频]中女人的发型改成红色长发，[元素参考图]中的大白鲨在她身后缓缓浮出半个脑袋。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "case-video-targeted-edit",
    "kind": "case",
@@ -7338,6 +7514,7 @@
    "content": "适用：用于高级收藏玩具、头像公仔、潮玩角色和 3D 展示图。\nUse when: Use for premium collectible figures, avatar toys, blind-box characters, and 3D display renders.\n要点 / Guidance:\n- Preserve face and outfit anchors from the reference.\n- Specify material, packaging, base, lighting, and collectible scale.\n- 保留参考图中的脸和服装锚点。\n- 指定材质、包装、底座、光线和收藏比例。\n避坑 / Pitfalls:\n- Avoid generic toy bodies without identity details.\n- Keep packaging text minimal and accurate.\n- 避免没有身份细节的通用玩具。\n- 包装文字保持少量且准确。\n可配合的模板骨架 / Skeletons: tpl-style-character-1, tpl-style-character-2, tpl-style-character-3",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "character-design"
    ],
@@ -7382,6 +7559,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "architecture-interior"
    ],
@@ -7419,6 +7597,7 @@
    "content": "适用：音乐、创意工具、活动、接近游戏的产品、文化项目。\n画面：网点和显像管纹理、模拟印刷感、一个大胆的强调色、海报式的格子、出人意料的图像裁切。\nLogo 方向：定制文字标、有态度的图标、象征性的吉祥物、印刷感的标。\n情绪：好记、有创意、仍然受控——每格一个想法，不做拼贴墙。\n避免：随机彩虹、杂乱贴纸、无主次的涂鸦。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7458,6 +7637,7 @@
    "content": "适用：开发者工具、编程助手、基础设施、自动化、AI 构建平台。\n画面：近黑色面板，细微网格；等宽字作点缀；终端窗口、命令输入条、提示框、安装命令作为品牌应用；必要时加像素或显像管纹理。\n配色：近黑底配一个冷或亮的强调色（青、蓝、珊瑚或青柠），其余保持灰阶。\nLogo 方向：光标加框架、闪电表达构建速度、脚手架加首字母、终端符号与几何标结合、模块化构成标。\n情绪：精确、锋利、自信、像工程师自己做的。\n避免：满屏代码、假仪表盘、霓虹光晕、通用科技蓝紫渐变。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7496,6 +7676,7 @@
    "content": "适用：策略咨询、出行、健康、气候、安静的高端软件服务。\n画面：深绿底，青柠作唯一强调色；雾气中的山野风景；圆形图像遮罩；柔和的半透明叠层；安静的页码标签和深色编辑式网格。\nLogo 方向：路径、叶、月、地平线、指南针、门洞、折叠标。\n情绪：平静、可信、专注。\n避免：鲜艳的自然色堆砌、卡通植物、与品牌含义无关的风景。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7535,6 +7716,7 @@
    "content": "适用：业务工具、增长工具、销售助手、自动化流程、效率产品。\n画面：黑底配暗红或琥珀；少量发光的界面标签、卡片体系、分段的流程示意、图标行、奖励或进度母题；首屏文字极少。\nLogo 方向：信号、礼物、路径、操作者标记、开关、循环、指令系统。\n情绪：快、可操作、战术感、高级。\n避免：数据密集的大屏、过多发光、喧闹的营销口号。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7580,6 +7762,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7616,6 +7799,7 @@
    "content": "适用：法律、隐私、合规、文档类产品、以信任为核心的品牌。\n画面：暖象牙底和纸张纹理；小号衬线标签；印章、徽记、封蜡；色轮或色卡实物；安静的文具应用（信封、文件夹、名片）。\n配色：象牙底配深蓝、红、金中的一到两个。\nLogo 方向：印章、守护犬、盾、文件、图章、组合字母。\n情绪：可信、考究、机构感但不陈旧。\n避免：法槌天平等陈词滥调、仿古族徽、过多装饰花纹。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7656,6 +7840,7 @@
    "content": "适用：美妆、时尚、精品酒店、高端服务。\n画面：象牙、石色、深咖为主；衬线字标和优雅的组合字母；纸张颗粒、压印、烫印；产品标签；编辑式的局部裁切；柔和的阴影。\nLogo 方向：组合字母、印章、花瓣、器皿、仪式物件、精修的文字标。\n情绪：有品位、成熟、贵而不炫。\n避免：仿冒奢侈品纹样、金色滥用、廉价的光泽和闪粉。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7695,6 +7880,7 @@
    "content": "适用：网络安全、监控、威胁情报、网络产品。\n画面：黑或藏青底；盾的形态、雷达扫描线、威胁标签、细微的运动轨迹；红蓝警示标签点缀；受控的渐变。\nLogo 方向：盾、猛禽、眼、守望、边界、受保护的核心。\n情绪：严肃、警觉、精确。\n避免：骷髅、黑客兜帽人、绿色代码雨、恐吓式视觉。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7733,6 +7919,7 @@
    "content": "适用：新品牌的视觉方向提案、Logo 系统展示、品牌 VI 概览板。不适合单张 Logo 或海报。\n先回答五个问题再出图：品牌代表什么；核心隐喻是什么；Logo 怎么表达它；体系怎么延展到界面、印刷、图像和细节；为什么整体只属于这个品牌。\nLogo 构思最多组合两种方法：\n- 首字母加含义：用切口、折叠、负形把首字母和隐喻合成一个标，不做只有字母的图标。\n- 产品动作：把产品最核心的动作抽象成符号（构建→框架/脚手架，保护→边界/盾，转换→切换/箭头，说话→声波）。\n- 隐喻融合：两个有意义的概念合成一个简化的标，融合要含蓄但能读懂。\n- 负形：用空白藏出箭头、受保护的中心、内部路径。\n- 构成几何：圆、对角切、模块、轨道、十字准线，用一格展示构成逻辑。\n版面：深色或浅色的展示底，格子之间间距统一、对齐严格、大量留白。各格不要一样响：安静的封面格、功能性的界面格、情绪化的图像格、技术性的构成格、实物应用格、安静的口号格，形成起伏。\n配色：一个主色板——底色、主强调色、次强调色、中性色；强调色在各格重复出现，一个强调色就能撑起整套系统。\n文字：只有品牌名、一句口号、少量分区标签和极短的界面标签；不要段落、假小字、菜单、占位文字。\n细节：小页码、细线、对位标、构成线、低透明度纹理、网点处理，点到为止，让人凑近看才发现。\n避免：漂浮图标、通用渐变、过度设计的 Logo、无意义色块、拼贴式乱排、各格 Logo 不一致、颜色过多、廉价霓虹、模板感品牌板。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7778,6 +7965,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7816,6 +8004,7 @@
    "content": "适用：语音 AI、聊天、智能助手、语音识别、音频产品。\n画面：深靛底，淡紫或柔紫光晕；声波、话筒抽象、声音球体；手机局部裁切、指令输入框、App 图标作为应用。\nLogo 方向：声波加首字母、声音球、说话路径、话筒抽象、脉冲环。\n情绪：流畅、聪明、亲密。\n避免：写实麦克风、满屏频谱、过亮的霓虹紫。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -7861,6 +8050,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "character-design"
    ],
@@ -7904,6 +8094,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "style-concept-product-breakdown",
    "kind": "style",
@@ -7946,6 +8137,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -7989,6 +8181,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "documents-publishing"
    ],
@@ -8033,6 +8226,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "history-classical"
    ],
@@ -8078,6 +8272,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -8121,6 +8316,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides",
     "data-visualization"
@@ -8160,6 +8356,7 @@
    "content": "适用：用于诗意人像海报、水墨氛围和文化主题视觉。\nUse when: Use for poetic portrait posters, ink atmospheres, and layered cultural visuals.\n要点 / Guidance:\n- Blend portrait silhouette, ink texture, atmosphere, and negative space.\n- Keep composition quiet, premium, and readable.\n- 融合人像剪影、水墨质感、氛围和留白。\n- 保持构图克制、高级、可读。\n避坑 / Pitfalls:\n- Avoid cheap fantasy collage and overloaded scenery.\n- Use subtle text or no text unless required.\n- 避免廉价奇幻拼贴和景物堆叠。\n- 非必要时减少文字。\n可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -8199,6 +8396,7 @@
    "content": "适用：给一个主题、文章或脚本，做 30–60 秒的动态讲解或动态图形视频；也适用于 HTML/代码合成的确定性动画。\n核心：不从页面或卡片出发，从运动出发。先为主题找一个会动的视觉隐喻——河流、网络、分叉的树、轨道、流水线、蜂群、坍缩、压缩、扫描、交接、增长飞轮、地图路线、堆叠、波、时钟、透镜、机器。文字是锚点，不是主要载体。\n动效主张（一句话）：这支视频通过展示[隐喻]从[起始状态]变成[结束状态]，来证明[核心观点]。\n动效原语：描画、分叉、汇聚、环绕、交接、形变、扫描、堆叠、流动、断裂、镜头（推/摇/环绕/裁切/景深视差）、材质变化（纹理、发光、颗粒、模糊、阴影）。一支视频选 2–4 个原语反复使用，每次换一层含义。\n主题到隐喻：历史/演化——时间之河、家谱树、化石层、迁徙地图；AI/软件——光标分裂、任务图、工具环绕、接口路线；商业增长——飞轮、漏斗、复利曲线、管线；经济——压力场、被拉伸的价格网格、天平；教学——揭示透镜、装配线、步骤机器；策略——地形图、移动的前线、决策树；效率——杂乱坍缩、工作流传送带、能量电池。\n节拍字段：时间、叙事任务（钩子/揭示/对比/机制/后果/证明/收尾）、主运动物体、状态变化、镜头或图层运动、文字角色、素材需求、PPT 风险。至少 80% 的节拍要有淡入滑入以外的可见状态变化；每个节拍一个主原语加一个辅助原语。\n静态图片要动起来：裁切、遮罩、视差、揭示、扫光、景深分层或形变；静图加文字不算视频。\nPPT 味清单：反复居中标题加三条要点；空背景上的大卡片；切场景时清空全部视觉上下文；没有运动轨迹的装饰图标；不动的图库式图片；所有元素同一种淡入；关键帧像一组互不相关的海报。\n检查：把关键帧排成一张联系表，不读字也能看出演进；若像六张幻灯片缩略图，先改方案再渲染。",
    "cover": null,
    "dialect_variants": {},
+   "family": "pluviobyte-ai-motion-director",
    "genres": [
     "motion-graphics",
     "explainer"
@@ -8259,6 +8457,7 @@
    "content": "适用：教程、产品、评论、课程视频前的 2.4–7.5 秒开场；适合 HTML/代码合成，也可作为视频生成的描述。\n视觉：纯黑或近黑背景（#000000–#050505），白或近白文字（#ffffff–#f4f4f5）；只在整体是电影感暗色风格时加极轻微的颗粒或星点；不用彩色背景、重渐变、横向霓虹线或整屏彩色闪烁。\n字体：干净的无衬线体，一行强句或两行短句，主句字高约为画面高度的 9–15%，字距正常或略宽，手机上也要清楚。\n运动：从空行开始逐字打出整句，只给新出现的字加极轻的透明度或模糊软化；替换时先清掉或横向抹掉上一句，再逐字打出下一句，不整句淡入；替换不超过 3 次。\n时长档：\n- 短（2.4–3.2 秒）：0–0.2 纯黑；0.2–0.95 主句打出；0.95–1.7 停留或一次替换；1.7–2.5 最终句停留；2.5–3.2 抹出、擦除或切入正片。\n- 标准（4.8–5.8 秒，默认）：0–0.3 纯黑；0.3–1.35 第一句打出；1.2–2.2 停留；2.2–3.55 一到两次替换；3.55–4.7 最终句打出并停留；4.7–5.8 转场。\n- 慢（6.0–7.5 秒）：留更长的黑场与呼吸，替换时加横向模糊，结尾白色擦除或淡出。\n打字速度：默认每秒 14 字；中文密集时 12 字；英文短词或产品名 14–16 字；放不下就删字，不要超过每秒 16 字。\n声音：短而干的按键声，不用提示音；音量低（单独开场时峰值约 -18 到 -12 dB），轻微变化音高与音量；第一个字出现时开始，停留与转场时不响；空格、换行、纯标点停顿不配声；有背景音乐时把键盘声压在下面。\n转出：白色速度擦除、文字抹入黑暗、淡出到黑或停留后硬切。",
    "cover": null,
    "dialect_variants": {},
+   "family": "pluviobyte-black-white-text-opener",
    "genres": [
     "motion-graphics"
    ],
@@ -8297,6 +8496,7 @@
    "content": "适用：AI 工具、SaaS 产品的 8–60 秒介绍短片（风格层面，不是逐帧复刻某条参考视频）。\n色彩：近黑背景（不是蓝灰），低透明度灰白颗粒星点，画面底部深紫色地平线微光；前景字白色，次要文字灰色；行动渐变青 → 电光蓝 → 品红；面板为炭灰带细灰边。避免米色、暖橙、大面积紫蓝渐变背景和持续的横向霓虹线。\n字体：大号、自信的无衬线展示字；开场和结尾的主字非常大；界面标签小而清晰；按钮中等字重、圆角、发光。\n英雄画面（每个场景都要有一个可读的最大时刻）：一张大提示词卡片配右下角渐变按钮；屏幕中央一个大渐变按钮；模板卡片围绕一张主卡漂浮；底部被裁切的大应用窗口；一个大圆形节点四周排着服务商标签；一圈模型徽章围着中央短句；文件夹里迸出导出格式胶囊。不要把界面缩成远处的小道具，不要做成平铺网页。\n运动：文字以打字或半打出状态进入，关键名词横向拖影后定住；点击按钮触发闪光、光晕脉冲和换场；卡片带视差漂移，其中一张成为主角；徽章沿弧线或环形运动；导出胶囊从容器弹出再漂开；大转场用速度模糊、白色速度擦除或缩放冲刺。不要无缘由的整屏纯色闪烁。\n场景模块（按产品真实能力挑选）：动态承诺句 → 提示词召唤 → 生成结果场 → 本地/平台能力 → 连接生态 → 模型/能力环 → 导出迸发 → 最终主张（一个词逐步变成完整品类句并停留至少 1 秒）。\n真实性：不悄悄编造能力；不确定的写泛化表述（如\"在你工作的地方运行\"而不是\"本地运行\"）；没有官方标识时用文字胶囊，不画假 LOGO。",
    "cover": null,
    "dialect_variants": {},
+   "family": "pluviobyte-dark-saas-magic-video",
    "genres": [
     "motion-graphics",
     "brand-promo"
@@ -8343,6 +8543,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -8380,6 +8581,7 @@
    "content": "适用：用于美妆推荐、肤质报告、导购助手和生活方式商品卡片。\nUse when: Use for beauty recommendations, skin reports, shopping assistants, and lifestyle product cards.\n要点 / Guidance:\n- Use a report-like hierarchy with diagnosis, recommendation, and product cards.\n- Keep product images, labels, and ratings aligned.\n- 使用诊断、推荐和商品卡片的报告层级。\n- 对齐商品图、标签和评分。\n避坑 / Pitfalls:\n- Avoid medical claims and unreadable dense notes.\n- Keep recommendation logic simple.\n- 避免医疗化结论和难读小字。\n- 保持推荐逻辑清楚。\n可配合的模板骨架 / Skeletons: tpl-style-product-1, tpl-style-product-2",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-food"
    ],
@@ -8424,6 +8626,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -8467,6 +8670,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-food"
    ],
@@ -8505,6 +8709,7 @@
    "content": "适用：用于人像、街拍、商品摄影和电影感写实。\nUse when: Use for portraits, street photos, product photography, and cinematic realism.\n要点 / Guidance:\n- Specify camera distance, lens, light source, texture, background, and motion.\n- Use believable imperfections for documentary realism.\n- 指定机位、镜头、光源、质感、背景和动作。\n- 加入可信的小瑕疵增强纪实感。\n避坑 / Pitfalls:\n- Avoid over-polished plastic skin unless commercial beauty is required.\n- Add negative constraints for hands, text, and anatomy when needed.\n- 商业美妆之外，避免过度磨皮。\n- 需要时加入手部、文字、结构类负面约束。\n可配合的模板骨架 / Skeletons: tpl-style-photo-1, tpl-style-photo-2",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "photography"
    ],
@@ -8549,6 +8754,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scenes-storytelling"
    ],
@@ -8593,6 +8799,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides",
     "data-visualization"
@@ -8633,6 +8840,7 @@
    "content": "适用：用于运动品牌 Campaign、运动员海报和运动产品视觉。\nUse when: Use for sports brand campaigns, athlete posters, and product-led sport visuals.\n要点 / Guidance:\n- Define sport, athlete pose, hero prop, title, and brand palette.\n- Use dramatic light, clean composition, and readable data overlays.\n- 定义运动项目、姿态、核心道具、标题和品牌色。\n- 使用强光影、干净构图和可读数据层。\n避坑 / Pitfalls:\n- Avoid wrong equipment and noisy collage.\n- Keep the athlete and hero prop visually dominant.\n- 避免错误运动器材和杂乱拼贴。\n- 让运动员和核心道具占据主导。\n可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -8677,6 +8885,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "photography"
    ],
@@ -8715,6 +8924,7 @@
    "content": "适用：用于 App 截图、仪表盘、社媒截图和直播界面。\nUse when: Use for app screens, dashboards, social screenshots, and live interface mockups.\n要点 / Guidance:\n- Lock platform, aspect ratio, layout hierarchy, and exact visible text.\n- Specify UI chrome such as status bars, tabs, action rows, or comment layers.\n- 锁定平台、比例、层级和画面文字。\n- 明确状态栏、Tab、操作区、评论层等 UI 元素。\n避坑 / Pitfalls:\n- Avoid vague platform names and generic app mockups.\n- Constrain text readability and platform-specific details.\n- 避免平台描述过泛。\n- 约束文字可读性和平台特征。\n可配合的模板骨架 / Skeletons: tpl-style-ui-1, tpl-style-ui-2, tpl-style-ui-3",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -8752,6 +8962,7 @@
    "content": "适用：新品发布、官网展示、社媒推广的 15–30 秒品牌片。不适合长篇剧情片，也不适合在没有授权素材时仿造真实品牌标识。\n事实先行：LOGO、字体、品牌色、产品界面、包装、吉祥物等带身份识别的元素，只用用户提供或官方来源的原件；不重绘、不近似、不生成\"看起来像\"的替代品。产品名称、功能、指标、口号与官方一致，拿不准的写成概念文案并标注。\n叙事脊柱按产品类型：\n- AI / SaaS：用户意图 → 思考或规划 → 能力 → 执行 → 有用输出 → 证明 → LOGO。\n- 实体产品：英雄展示 → 交互 → 功能特写 → 使用场景 → 结果 → LOGO。\n- 服务 / 公司：背景 → 流程 → 证据 → 成果 → 承诺 → LOGO。\n- 图像主导品牌：真实影像 → 视觉母题 → 利益点 → 情绪回报 → LOGO。\n节拍：15 秒 5–8 个，30 秒 8–12 个；每个节拍写清起止时间、视觉主导元素、主要动作、展示的产品证明、文案与停留、色彩状态、入场与出场转场、动作意图（铺垫/预备/冲击/制动/稳定）。\n动效语言：由产品动作、光标路径、界面流、光线、滚动内容或物体边缘驱动转场；全片 2–5 个色彩状态；每个节拍一个主动作；2–3 个高能峰值配安静的制动时刻；LOGO 与文案保留安全区。\n避免：虚假 HUD、随意玻璃卡片、装饰性文字墙、未经证实的指标、全片同一种缓动、用抽象特效掩盖空洞的产品叙事。\n语言：旁白和画面文案按品牌受众与投放平台定，不机械跟随聊天语言。\n声音：默认用视频模型的原生音频生成品牌安全的纯音乐与界面音效；需要可替换的旁白或精确时长音乐时才单独生成，避免两条音轨重复。",
    "cover": null,
    "dialect_variants": {},
+   "family": "minimax-h3-brand-promo-video-generator",
    "genres": [
     "brand-promo"
    ],
@@ -8795,6 +9006,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-3d-animation-short-generator",
    "genres": [
     "animation-short"
    ],
@@ -8838,6 +9050,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-handdrawn-live-video-generator",
    "genres": [
     "cinematic-animation"
    ],
@@ -8876,6 +9089,7 @@
    "content": "适用：耳机、手表、数码配件、小家电、香薰、潮玩、食品等实体产品的 5–15 秒广告短片。不适合达人口播、复杂屏幕演示。\n叙事脊柱（三选一）：\n- 发布型（默认）：留白开场 → 主推款建立主视觉 → 材质/结构特写 → 产品自然动作 → 款式或色彩关系 → 文案收束。\n- 功能触感型：静置 → 触发交互 → 功能动作 → 细节放大 → 使用感受 → 收束。适合有开合、旋转、磁吸、灯光、折叠的产品。\n- 色彩家族型：主推款单独出场 → 其他颜色轻量进入 → 形成秩序 → 全套收束。适合多色多款。\n节奏：每个节拍只有一个主动作，次级元素延后出现。5 秒片 1 个小峰值 + 1 次稳定收束；10 秒片 1–2 个峰值 + 1–2 次停顿；15 秒片 2–3 个峰值 + 2 次停顿。\n转场：由产品自身驱动——边缘高光、开合、旋转、滑入、款式排列的几何变化；不用无意义闪白、随机粒子。\n产品本色是硬约束：所有画面保持原图的本体颜色、点缀色和材质；\"高级感\"只改背景、光线、构图，不把产品改成白色或银灰。\n开场：尽快给出有吸引力的产品动作或刁钻视角（例如从结构内部旋转露出、沿轮廓滑出），不要空白等待。\n背景：白色科技风用纯净白背景，不用镜面反光台面、玻璃台面；或黑底轮廓光。\n画面文字：\n- 英文短句，3–5 个词，单行，同一时刻只出现一条；不做上下两行、主副标题。\n- 两段配色：白底时前半黑或深灰、后半用产品主色；黑底时前半白、后半产品主色。\n- 进入方式：前半先淡入或轻滑入，后半随后进入，前半在同一行内轻微位移让位；不要完全静止，也不要弹跳霓虹。\n- 位置在画面上下居中区域，靠左或靠右成为构图的一部分，不放底部字幕位。\n- 文字容易出错时减少次数：10 秒片通常只保留一次中段文字和一次结尾文字。\n多款式：先定一个主推款，其余款式只在过渡或结尾出现；不做商品墙、九宫格、平铺。\n禁止：网格、分屏、拼贴、画框、分镜板式画面；伪科技界面；装饰性文字墙；未经确认的数据；全片同一种缓动。\n配乐方向：约 100 BPM 的科技感器乐，清脆 pluck、空气感底噪、kick 与 sub-bass 卡点、木质打击；结尾 0.5 秒内收住，只留 pluck 余音；无人声。",
    "cover": null,
    "dialect_variants": {},
+   "family": "minimax-h3-minimalist-product-ad-generator",
    "genres": [
     "product-ad"
    ],
@@ -8921,6 +9135,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-music-video-subtitle-generator",
    "genres": [
     "music-video"
    ],
@@ -8965,6 +9180,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-paper-collage-explainer-generator",
    "genres": [
     "explainer"
    ],
@@ -9009,6 +9225,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-papercraft-stop-motion-explainer",
    "genres": [
     "explainer",
     "scientific-educational"
@@ -9047,6 +9264,7 @@
    "content": "适用：任意文生视频、图生视频、参考生视频的提示词撰写与自查。\n结构：主体或人物设定 → 场景与环境 → 动作与运动 → 运镜 → 分时段描述 → 转场与特效 → 声音设计 → 风格与氛围。\n分时段：10 秒以上按时间段写，例如「0–3秒：开场画面、运镜、动作」「3–6秒：中段发展」「6–10秒：高潮或关键动作」「10–15秒：收尾、定格、品牌文字」。\n参考素材：每个参考素材都要写明用途——首帧、尾帧、人物形象、场景、运镜、动作编排、特效与转场、节奏、旁白音色、背景音乐、服装、产品外观、字体。只写\"参考某视频\"不够，要写参考它的什么。\n基础运镜：推镜头/慢推、拉镜头/后拉、左右摇、上下摇、跟拍、环绕、一镜到底。\n进阶运镜：希区柯克变焦（推拉与变焦反向，制造眩晕）、鱼眼、低角度仰拍（英雄感）、俯拍/鸟瞰、第一人称主观视角、快速摇镜（运动模糊）、机械臂式多角度跟随。\n景别：极致特写、面部特写、中近景、中景、全景、远景/建立镜头。\n画面修饰：电影级质感、胶片颗粒、浅景深；2.35:1 宽银幕、24fps；黑白水墨、动漫、超写实；高饱和霓虹、冷暖对比；超精细 CG。\n氛围：紧张悬疑、温暖治愈、史诗恢宏、喜剧夸张、纪录片式克制、暗黑奇幻、仙侠高燃。\n声音：写背景音乐情绪、环境音效（脚步、人群、车流）、转场与音乐节奏卡点、拟音与节拍贴合。\n避坑：\n- 参考用途含糊。\n- 同一段同时要求\"固定镜头\"和\"环绕镜头\"这类冲突指令。\n- 4–5 秒里塞入过多场景，超出物理可行。\n- 传了多个参考素材，却没有逐个说明用途。\n- 不写声音设计。\n- 提示词复杂度与生成时长不匹配。\n- 使用可清晰辨认的真人面部素材（多数视频模型会拦截）。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "explainer"
    ],
@@ -9084,6 +9302,7 @@
    "content": "适用：用户说\"工作室、创意机构、作品集\"。\n首屏：巨型陈述或极简小首屏，二选一要果断，不取中间。\n背景：大胆地变化——全幅作品图、色块对拼、双色调照片；可以用与品牌情绪一致的编辑式色彩晕染。\n构图：偏离网格、海报式堆叠叙事、作品图廊节奏；作品是主角，说明文字退后。\n字体：可以用富有表现力的展示字体或压缩的大字，但全站只保留一种情绪。\n避免：作品缩成小缩略图墙、每个项目同一种卡片、为了实验而牺牲可读性。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -9122,6 +9341,7 @@
    "content": "适用：用户说\"电影感、氛围、高端、奢华、大胆\"。\n首屏：巨型陈述式——超大字和大图占满第一屏，文字放在左下或画面下部 40% 的安全区。\n背景：全幅图加深色或色调遮罩保证文字可读；柔和径向暗角衬托产品局部；细噪点叠在渐变上增加触感。背景图的色调必须与色板一致，强调色不随背景变化。\n渐变：可以使用与色板匹配的电影感色调渐变。\n构图：图即画布，文字压在干净的安全区；区块之间用整屏影像和安静的文字区交替。\n避免：图片与色板打架、文字压在杂乱区域、霓虹光晕、每一屏都满幅导致没有呼吸。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -9161,6 +9381,7 @@
    "content": "适用：用户说\"电商、商店、产品页\"，页面目标是购买或加购。\n首屏：中等编辑式，产品是视觉中心，主按钮一眼可见。\n背景：全幅产品照、柔和径向暗角衬托产品局部、色块配材质或细节特写。\n渐变：细微，永远不和产品争夺注意力。\n构图：产品主导；卖点区块用产品局部特写配一句说明，而不是图标加文字的卡片排。\n价格、促销、评价和数据只用用户提供的；没有时不出现。\n避免：商品墙、九宫格平铺、与产品无关的场景图、闪烁的促销标签。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -9199,6 +9420,7 @@
    "content": "适用：用户说\"编辑感、杂志风、艺术指导、时尚\"。\n首屏：中等编辑式或巨型陈述式；主标题可以很大，配一张有强烈调色的照片。\n背景：编辑式分栏图（50/50、60/40 可左右翻转）、双色调处理的照片、单色调的氛围照片。\n渐变：只用细微的色调过渡。\n字体：优雅衬线配无衬线，大小对比强；可用竖排旁注、超大编号。\n构图：偏离网格的错位、非对称牵引、图片出血；但阅读顺序必须清楚。\n避免：所有区块同一种分栏、图片当装饰贴边、字体超过两种。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -9238,6 +9460,7 @@
    "content": "适用：落地页、营销页、作品集的分区设计稿，以及照着设计稿写页面。不适合后台、仪表盘、数据表格。\n出图：每个区块单独一张横版图，不把多个区块压进一张长图；所有图同一画幅、同一套色板，像同一个网站。\n每张图要让开发者看得出：版式、层级、间距、字号阶梯、按钮主次、组件样式、图片处理。不要画成抽象氛围图。\n首屏：一句 5–10 个词的有力主标题、简短副标题、一个主按钮，大量留白；不堆徽章、假数据、小 Logo 墙。左文右图是最常见的套路，不作为默认——可选居中陈述压在全幅图下部、左下或右下压图、图即画布、反向分栏、极简小首屏（小 Logo、一句话、细按钮）。\n构图：各区块的锚点要变化，全站至少三种；背景方式也要变化：纯色加小图、纸张或网格纹理、全幅图加色调遮罩、编辑式分栏图、色块对拼、低饱和色调渐变。\n主线：全站选一条叙事母题贯穿（珍藏品、旅程、精密工具、生长系统、舞台聚光、档案卷宗），再选一个只出现一次的\"第二眼\"细节（一个超大数字、一处材质切换、一条竖排旁注）。\n色板：一个主色、一个辅色、一个只用于按钮和高亮的强调色，加一组中性色；各区块换情绪也不换色板。渐变只用低饱和、与色板一致的色调渐变。\n文字：主标题用中等或细字重、紧字距、行数受控；不用渐变字冒充高级感。文案短、可信，不用\"赋能、颠覆、无缝、下一代\"这类空话，不编造品牌名。\n避免：一路居中到底、每个区块一排三张相同卡片、蓝紫 AI 渐变、满屏发光边、漂浮球体、无理由的毛玻璃叠层、读不清的合作方 Logo 跑马灯、三列假统计数字。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -9277,6 +9500,7 @@
    "content": "适用：用户说\"极简、干净、只要文字、瑞士风\"，或产品本身足够有说服力。\n首屏：极简小首屏——小 Logo、一句陈述、一个细按钮，大量负空间。\n背景：纯色面、极淡的纸张或网格纹理，最多一处色块对拼；不用全幅图。\n渐变：不用，或只用最柔和的同色渐变。\n字体：理性无衬线，字号对比极强，严格网格对齐；靠字号、字重和留白建立层级。\n构图：居中堆叠或严格分栏，节奏均匀但用尺度对比避免单调。\n避免：装饰性插画、阴影卡片堆叠、多种字体情绪混用。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -9316,6 +9540,7 @@
    "content": "适用：用户说\"SaaS、产品、金融科技、基础设施\"，或页面要讲清楚一个软件产品。\n首屏：中等编辑式——主标题、简短说明、主按钮，加一张清楚的产品界面框景。\n背景：纯色面加产品截图、色块加界面细节裁切，偶尔一屏编辑式分栏图。\n渐变：非常细微，只用色板内的颜色。\n构图：产品界面是主角，裁切到能看懂的局部，不画满屏假数据；信任区块只放用户提供的评价和数据。\n实现清晰度略高于其他风格：组件样式、间距、按钮主次一眼可读。\n避免：卡片套卡片、三列相同功能卡、假仪表盘图表、蓝紫渐变光球。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -9354,6 +9579,7 @@
    "content": "适用：公共服务、受监管行业（医疗、金融、保险）、教育、面向儿童或长者的产品。这类约束优先于审美偏好。\n版式：规整网格、对称或接近对称，区块职责清楚；信息密度可以略高，但每块只讲一件事。\n字体：大字号、高对比、行长适中；按钮和链接样式明显、可点击区域足够大。\n配色：沉稳的主色加一个清楚的操作色；状态色（成功、警告、错误）含义固定。\n图片：真实、温和的场景或清晰的示意图，不用炫技的视觉处理。\n避免：低对比的浅灰字、装饰性动效、图片压文字、模糊的行动号召。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -9404,6 +9630,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-co-op-game-intro-generator",
    "genres": [
     "game-intro",
     "gaming"
@@ -9513,6 +9740,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-papercraft-stop-motion-explainer",
    "genres": [
     "scientific-educational"
    ],
@@ -9584,6 +9812,7 @@
    "content": "动效主张：这支视频通过展示[视觉隐喻]从[起始状态]变成[结束状态]，来证明[核心观点]。\n画幅[画幅]，时长[时长]，动效原语：[主原语]、[辅助原语]。\n节拍1（[节拍1时间]）钩子：[节拍1主运动物体]，[节拍1状态变化]；镜头[节拍1镜头运动]；文字：[节拍1文字]。\n节拍2（[节拍2时间]）机制：[节拍2主运动物体]，[节拍2状态变化]；镜头[节拍2镜头运动]；文字：[节拍2文字]。\n节拍3（[节拍3时间]）后果或证明：[节拍3主运动物体]，[节拍3状态变化]；镜头[节拍3镜头运动]；文字：[节拍3文字]。\n节拍4（[节拍4时间]）收尾：同一视觉系统收束成[收尾画面]，停留可读。\n每个节拍都要有淡入滑入以外的状态变化；全片沿用同一个视觉系统，不切成互不相关的页面。",
    "cover": null,
    "dialect_variants": {},
+   "family": "pluviobyte-ai-motion-director",
    "genres": [
     "motion-graphics"
    ],
@@ -9745,6 +9974,7 @@
    "content": "约5.5秒开场，[画幅]，纯黑背景，大号白色无衬线字，一镜到底按时间推进，逐字打出并配轻微按键声。\n0–0.3秒：纯黑。\n0.3–1.35秒：逐字打出 [[text: [第一句]]]。\n1.35–2.2秒：停留。\n2.2–3.55秒：把 [[text: [被替换的词]]] 横向抹掉，逐字打出 [[text: [替换词]]]。\n3.55–4.7秒：逐字打出最终句 [[text: [最终句]]] 并停留可读。\n4.7–5.5秒：[转场方式]进入正片。\n按键声只在字出现时响，停留和转场时静音；不出现彩色闪烁或霓虹线。",
    "cover": null,
    "dialect_variants": {},
+   "family": "pluviobyte-black-white-text-opener",
    "genres": [
     "motion-graphics"
    ],
@@ -9811,6 +10041,7 @@
    "content": "约30秒，[画幅]，暗色 SaaS 魔术 UI 风格的[产品名称]介绍片。黑色空间舞台，底部弱紫色地平线光，大号白色无衬线动态字，青到品红的渐变按钮。\n[[shot 0-5.5]] 动态承诺——黑场中逐字打出 [[text: [承诺句]]]，关键名词横向拖影替换为 [[text: [替换名词]]]，速度擦除进入下一场。\n[[shot 5.5-9.5]] 提示词召唤——倾斜的大提示词卡片，打出 [[text: [示例提示词]]]，渐变按钮 [[text: [按钮文字]]] 发光，光标点击触发闪光换场。\n[[shot 9.5-14.5]] 生成结果——多张[产出类型]卡片在黑色空间视差漂浮，一张主卡横穿画面，最后汇成一块完整画布。\n[[shot 14.5-17]] 平台能力——应用窗口从底部升起，上方打出 [[text: [平台能力句]]]，下方出现平台胶囊。\n[[shot 17-20.5]] 连接生态——大圆形节点沿弧线进入，四周依次出现[集成服务]文字胶囊。\n[[shot 20.5-24.5]] 能力环——一圈[模型或能力]徽章环绕旋转，读清后中央出现短句。\n[[shot 24.5-30]] 导出迸发与主张——点击导出按钮，文件夹中迸出[导出格式]胶囊；随后单词逐步扩展为 [[text: [最终主张]]] 并停留至少1秒。\n不要：整屏纯色闪烁、持续横向霓虹线、远处的小界面、平铺网页布局、伪造的官方 LOGO。",
    "cover": null,
    "dialect_variants": {},
+   "family": "pluviobyte-dark-saas-magic-video",
    "genres": [
     "motion-graphics",
     "brand-promo"
@@ -9910,6 +10141,7 @@
    "content": "生成[空间类型]设计效果图，功能定位为[用途]。\n风格：[现代简约/工业/新中式]，材质：[木/石/金属/玻璃]。\n空间结构：[开敞/分区]，动线：[主通道说明]。\n光线：[自然采光/人工照明方案]，时间：[白天/夜景]。\n输出：写实建筑空间渲染图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "architecture-interior"
    ],
@@ -9982,6 +10214,7 @@
    "content": "为[品牌名]设计品牌视觉方案。\n品牌关键词：[关键词1]、[关键词2]、[关键词3]。\n包含：Logo方向[几何/字标/图形]、辅助图形、主辅色、应用示意。\n风格：[现代/高级/亲和]，行业：[行业]，受众：[受众]。\n输出：统一风格的品牌识别视觉图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -10054,6 +10287,7 @@
    "content": "你是顶级品牌代理创意总监，目标是为[业务/产品]交付一套覆盖 Logo、配色、字体、语调和应用触点的完整品牌身份系统。\n\n输入信息：\n业务名称：[业务名]\n业务描述：[一句话说明]\n行业：[行业]\n目标受众：[详细描述]\n竞争对手：[3-5个]\n品牌个性：[5个关键词]\n希望触发的感受：[信任 / 兴奋 / 奢华 / 亲近 / 力量 / 其他]\n喜欢的视觉身份：[3个参考]\n讨厌的视觉身份：[3个反例]\n设计预算：[免费 / 付费]\n\n请输出：\n1. 品牌战略基础：品牌原型、核心承诺、定位、差异化和唯一关键词。\n2. Logo 概念：生成 3-5 个完全不同的 Logo 方向，每个方向说明核心视觉理念、形状语言、象征意义、字体方向、第一眼情绪和适用触点。\n3. 配色系统：主色、辅助色、强调色、中性色、HEX 代码、心理学解释、使用规则和禁用搭配。\n4. 字体系统：标题字体、正文字体、强调字体、字号层级、字距、行高和免费替代方案。\n5. 应用触点：名片、App 图标、网站首页、社媒模板、广告牌或包装上的应用效果。\n6. 品牌规则：3 条永远不要打破的核心品牌规则。\n\n输出形式：\n结构化品牌手册，任何设计师、开发者或 AI 工具都能在 10 分钟内理解并复用。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -10141,6 +10375,7 @@
    "content": "为[品牌名]生成一张高端品牌触点系统视觉板，不是单张海报，而是一套完整品牌应用展示。\n\n品牌定位：[行业/生活方式/产品品类]\n核心气质：[关键词1]、[关键词2]、[关键词3]\n主视觉场景：[核心产品/服务/体验]，放在[材质表面/空间场景]中，使用[光线]和[镜头]呈现。\n\n触点系统必须包含：\n- 主产品 hero shot\n- 包装盒 / 手提袋 / 杯子 / 标签 / 贴纸 / 封签等品牌物料\n- 菜单卡 / 价目表 / 小型排版样张\n- 生活方式场景或用户使用片段\n- 配色、字体、图形语言在不同触点上的统一应用\n\n设计语言：\n[现代极简/日式留白/奢华编辑/科技品牌]，主色[颜色]，辅助色[颜色]，大量留白，细腻材质，真实阴影，微小文字清晰可读。\n\n构图要求：\n像顶级设计机构提案页，所有触点整齐但不死板，主视觉最突出，辅助物料层级清楚，整体有品牌系统感和可落地感。\n\n约束：\n不要只生成一个 logo；不要把所有物料挤成杂乱拼贴；不要使用随机乱码文字；不要让包装、菜单、贴纸彼此风格割裂。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -10228,6 +10463,7 @@
    "content": "输入：[产品图]、[品牌身份]、[输出格式]\n\nPHASE 1 / ANCHOR：用 2 行描述[品牌身份]，包括调色板、材质、光影和情绪。\nPHASE 2 / INJECT：把[产品]放入这个品牌世界中，产品要服从品牌气质和环境语言。\nPHASE 3 / FORMAT：指定[输出格式]，例如 hero 图、方形广告、竖版 story 或电商头图。\nPHASE 4 / SIGNATURE：加入[品牌元素]，例如颗粒、阴影、叠加纹理、包装符号或图形边框。\n\n变量：\n[品牌身份] / [产品] / [输出格式] / [品牌元素]\n\n目标：同一品牌下替换不同产品时，视觉世界保持一致，广告图仍然有明确主角和商业质感。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -10285,6 +10521,7 @@
    "content": "基于上传的[Logo/品牌视觉]，生成一张 4:5 竖版漫画信息图：“What This Brand Feels Like”。\n目标：把品牌变成一个可感知的人格角色，并解释它如何说话、行动、销售、回应竞争和处理批评。\n核心规则：所有颜色、服装、姿态、语气和图形元素都来自 Logo 与品牌关键词。\n主视觉：一个品牌人格化角色，服装、表情和姿态体现[品牌气质]。\n周围结构：6-8 个漫画小分镜，每格包含短标题、动作、气泡或内心独白。\n辅助模块：Voice tone、Energy level、Social behavior、Communication style、DO / DON'T。\n风格：漫画 + 编辑信息图，表达强但保持高级，文字短而有力，画面层级丰富。\n约束：不要通用营销词，不要空白区域，不要把品牌人格画成随机角色。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "brand-systems-identity"
    ],
@@ -10327,6 +10564,7 @@
    "content": "设计[角色身份]角色设定图。\n外观：[年龄/发型/服饰/配件]，性格：[关键词]。\n姿态：[站姿/动态动作]，表情：[情绪]。\n世界观：[时代/阵营/职业]，标志性元素：[元素]。\n输出：角色主视图 + 风格统一的人设图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "character-design"
    ],
@@ -10394,6 +10632,7 @@
    "content": "生成一张[角色/人物]动作分解参考表。\n风格：[黑白线稿/3D 灰阶/漫画分镜/教学图]，背景纯净，技术参考图气质。\n版式：4×4 网格，共 16 个等尺寸面板，细线分隔，每格左上角编号 1-16。\n角色一致性：所有面板使用同一角色，保持脸型、服装、比例和发型一致。\n每格结构：\n- 顶部：动作标题\n- 中央：完整身体动作姿态\n- 底部：3-4 行动作说明\n- 叠加：方向箭头、旋转箭头或运动轨迹线\n动作序列：[从基础站姿到结束动作的完整步骤]\n约束：不要复杂背景，不要新增角色，不要彩色干扰，不要改变角色身份。\n输出：清晰可读、可用于动画/舞蹈/游戏动作参考的角色动作表。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "character-design"
    ],
@@ -10441,6 +10680,7 @@
    "content": "将输入照片转换为高端 3D 收藏玩具形象。\n身份保持：保留原始人物/角色的脸部身份、主要发型、表情气质和服装识别点。\n造型比例：大头设计，五官轻微夸张，身体比例玩具化，但整体仍保持高级设计感。\n材质：哑光 vinyl / resin / collectible figure finish，皮肤和服饰材质要有细节。\n灯光与背景：柔和棚拍光，干净背景，[黑色/白色/品牌色]，主体居中，轮廓清晰。\n质感：超清锐度，真实材质反射，8K render，premium designer toy aesthetic。\n约束：不要改变身份，不要廉价塑料感，不要多角色，不要复杂背景，不要文字水印。\n输出：一张完整的高端收藏玩具渲染图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "character-design"
    ],
@@ -10478,6 +10718,7 @@
    "content": "制作[文档类型，如菜单/杂志内页/报纸版式]。\n版面结构：[栏数/页边距/标题层级]。\n内容模块：[封面区/正文区/图表区/脚注]。\n字体风格：[衬线/无衬线]，配色：[配色方案]。\n输出：可读性强、版式规范的出版物视觉稿。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "documents-publishing"
    ],
@@ -10535,6 +10776,7 @@
    "content": "请生成一套企业级商用画册视觉方案，主题为【品牌名称】的【行业 / 产品 / 解决方案】宣传画册。\n\n整体风格：高端、专业、具有强视觉冲击力；避免传统 Word 排版感和普通 PPT 感。采用【深色科技美学 / 白色极简商务 / 高端工业风 / 艺术化品牌画册】风格。\n\n画册内容包括：\n1、封面与封底\n2、企业介绍与品牌理念\n3、核心产品与技术优势\n4、应用场景与解决方案\n5、客户案例与合作方式\n6、全册系统预览图\n\n要求：\n版式要有设计感，图片、标题、数据、图标、留白和层级关系清晰；保持整套画册统一的品牌视觉系统；重点体现真实商业物料的完成度，避免简单文字排版。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "documents-publishing"
    ],
@@ -10566,6 +10808,7 @@
    "content": "生成[朝代/古风设定]题材画面，主题为[主题]。\n人物：[身份/服饰/器物]，场景：[宫廷/市井/山水]。\n美术风格：[工笔/写意/影视写实]，色调：[色调]。\n文化细节：[纹样/礼制/建筑要素]。\n输出：历史氛围准确的古风题材图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "history-classical"
    ],
@@ -10633,6 +10876,7 @@
    "content": "创作[题材]插画，主角为[角色/主体]。\n画风：[日漫/水彩/扁平/厚涂]，线条：[细腻/粗犷]。\n配色：[配色方案]，背景：[简洁/复杂场景]。\n构图：[近景/中景/远景]，重点表现[细节]。\n输出：可用于封面或社媒发布的高质量插画。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "illustration"
    ],
@@ -10705,6 +10949,7 @@
    "content": "生成[主题：明确、具体，避免宽泛。例如：“老年人日常健康管理指南”而非“健康”]信息图，目标读者为[人群:细化人群特征，如年龄段、职业、兴趣等]。\n结构：标题区 + [3-5]个模块（每模块含图标、短标题、1-2句说明,模块间逻辑：可用箭头、颜色区分或连接线提示信息流或关系等适当的方式）。\n图表类型：[流程图/对比图/关系图/时间线]。\n风格：[专业报告/科普插画/儿童教育等]，主色[颜色]，背景[浅色/深色]。\n输出：信息层级清晰、可读性高的中文信息图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides",
     "data-visualization"
@@ -10773,6 +11018,7 @@
    "content": "为[主题]生成一张科学尺度缩放信息图。\n结构：6-8 个圆形或六边形框，按从微观到宏观的尺度递进排列。\n每个框包含：尺度名称、3-5 个词的洞察、测量单位或放大倍率，以及该尺度下的高细节 3D 渲染。\n用细线连接各尺度，避免重复层级。标题使用“[主题]：AT EVERY SCALE”或“ZOOM: THE WORLD OF [主题]”。\n风格：科学编辑信息图、精准微距光、清晰层级、文字短而可读。\n约束：不要通用放大镜图标，不要把所有尺度画成同一大小，不要塞长段正文。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "infographics-field-guides",
     "data-visualization"
@@ -10811,6 +11057,7 @@
    "content": "任务目标：[你要生成的内容类型]。\n输入约束：主体[主体]，场景[场景]，风格[风格]，色彩[配色]。\n质量约束：清晰度[高清/4K]，比例[比例]，构图[构图方式]。\n输出约束：用于[用途]，需突出[核心信息]。\n请输出一版主方案 + 一版备选方案。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "tpl-style-other-1",
    "kind": "template",
@@ -10891,6 +11138,7 @@
    "content": "为[产品/家具/装置]生成一张完整的概念产品研发拆解板，而不是单张成品渲染图。\n\n核心概念：\n把[灵感来源，如揉皱纸团/贝壳/折纸/机械结构]转译成[产品类型]。\n设计哲学：[一句话说明功能与情绪，例如“把受控混乱转化为高舒适度座椅”]。\n\n画面结构：\n中心：高质量 hero render，展示最终产品的主要形态、材质和比例。\n左侧：观察与形态分析，包含灵感图、轮廓提取、结构线、折痕/纹理/受力方向标注。\n中部：形态迭代过程，展示从原始形态到产品外壳的 3-5 个演化步骤。\n下方：人体工学或使用场景验证，包含尺寸、角度、使用姿态和关键功能说明。\n右侧：结构集成与材料方案，展示内部骨架、外壳、软垫/面料/连接件等分层拆解。\n底部：最终材质、表面纹理、颜色方案和关键规格表。\n\n视觉风格：\n工业设计提案板，干净白底或浅灰背景，技术图纸 + 产品摄影混合风格，细线标注，清晰标题，真实阴影，材质细节可见。\n\n约束：\n不要只画一个漂亮产品；必须展示分析、迭代、人体工学、结构、材料和规格。\n不要让文字挤满画面；每个阶段只保留短标题和关键标签。\n产品外形应保留[灵感来源]的识别特征，但必须看起来可制造、可使用。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [],
    "id": "tpl-style-other-2",
    "kind": "template",
@@ -10946,6 +11194,7 @@
    "content": "拍摄主题：[人物/物品/街景]，场景为[地点]。\n摄影参数风格：[35mm/85mm]，[浅景深/深景深]，[纪实/电影感]。\n光线：[自然光/夜景霓虹/逆光]，情绪：[情绪词]。\n细节要求：[肤质/材质/颗粒感]。\n输出：高写实摄影风格图像。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "photography"
    ],
@@ -11018,6 +11267,7 @@
    "content": "生成一张竖版手机纪实照片，主题是[意外事件/日常瞬间]发生在[街头/室外地点]。\n主体：[物品/人物动作/现场痕迹]，必须呈现真实的材质状态，例如[液体扩散/冰块散落/纸张褶皱/灰尘颗粒]。\n环境：[地面材质/墙面/街景元素]，保留自然杂乱和生活痕迹。\n光线：[正午强光/阴天散射光/夜间路灯]，阴影要符合真实方向，可加入[人物影子/路牌影子/树影]。\n镜头：手持手机视角，略微俯拍或低角度，构图自然，像随手拍到的现场。\n画面质感：raw unedited photo look，自然色彩，真实纹理，高细节。\n负面约束：不要插画、动漫、CGI、棚拍光、过度干净、过度构图、假液体、漂浮物、品牌文字、水印、海报设计感。\n输出：一张可信的日常纪实摄影图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "photography"
    ],
@@ -11085,6 +11335,7 @@
    "content": "设计一张[活动/产品/电影]海报，主题为[主题词]。\n主视觉：[主体元素]，标题文案：[标题]，副标题：[副标题]。\n版式：[居中/左对齐/对角构图]，风格：[复古/未来/极简]。\n色彩：[主色 + 辅色]，氛围：[情绪关键词]。\n输出：可用于社媒传播的高分辨率海报。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -11162,6 +11413,7 @@
    "content": "设计一张[运动项目/健身品类]商业 Campaign 海报。\n主体：[运动员/模特/产品道具]，姿态：[坐姿/冲刺/挥拍/力量动作]。\n核心道具：[球拍/哑铃/球鞋/球衣]，以夸张比例或对角构图成为视觉锚点。\n版式：[单张强主视觉/三联画/数据涂鸦海报]。\n大字标题：\"[主标题]\"，辅助文案：\"[短句/数据/精神口号]\"。\n视觉风格：高端运动品牌广告，强光影，反光地面，干净构图，品牌化配色[主色+辅助色]。\n约束：主体清晰，文字可读，色调统一，不要杂乱拼贴，不要生成错误运动器材。\n输出：1:1 或 4:5，适合社媒传播的运动商业视觉。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -11234,6 +11486,7 @@
    "content": "Create ONE finished premium conceptual typography poster for the exact title:\n\n\"[标题/词语/短句]\"\n\nSingle poster only. No moodboard, grid, presentation board, mockup, captions, prompt text, process sheet, or sample labels.\n\nThe title must be the dominant visual structure of the poster: huge, readable, powerful, and spelled exactly. Do not translate, shorten, replace, or misspell it. Do not add other large readable text.\n\nSilently interpret the title's meaning, mood, cultural aura, symbolic associations, psychological tension, and visual rhythm. Turn that interpretation into one strong visual metaphor.\n\nTypography is the hero. Design custom-looking letterforms whose weight, width, contrast, spacing, rhythm, distortion, negative space, edge quality, and ink texture express the temperament of the title. The type should feel intentionally designed, not like a default font.\n\nIf the title refers to a widely known person, make a large editorial portrait or half-body figure a major visual presence, occupying roughly 40%-70% of the composition. The figure should interact with the typography: overlapping the letters, emerging from them, being framed by them, casting shadows on them, breaking through them, or being partially hidden behind them.\n\nFor abstract or non-person titles, use a human figure, landscape, object, or atmospheric setting only when it strengthens the meaning. It must interact with the typography and deepen the concept, not decorate it.\n\nUse a restrained 4-6 color system matched to the theme: dominant background color, primary typography color, figure / landscape tone, emotional accent color, muted support color, and subtle paper / ink texture tone.\n\nComposition style: high-end editorial poster, museum-quality graphic design, dramatic scale, strong hierarchy, few elements, intelligent whitespace, bold flat color areas, sharp cropping, silkscreen / lithograph / risograph grain, paper fibers, subtle ink imperfections, refined visual tension.\n\nAvoid generic word art, glossy 3D lettering, random icons, stock-photo realism, cluttered collage, excessive grunge, tourist clichés, official logos, copied slogans, copied campaign aesthetics, unrelated text, and misspelled typography.",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -11271,6 +11524,7 @@
    "content": "你是一个高端签名设计系统 + 风格人格视觉系统。\n\n输入：\n姓名：[姓名/昵称]\n\n任务：\n基于姓名自动生成一张 9:16 竖版「多风格签名选择海报」。\n目标是把姓名转译成 6 种具有笔势、气质和力量感的签名方案。\n\n隐藏分析：\n1. 分析姓名字形：疏密、横竖比例、重心、连笔空间、草写空间。\n2. 推断气质：清冷、张扬、克制、商业、文艺、松弛、锋利、高级。\n3. 为每个签名先设定书写行为：起笔、连笔、节奏、结构变形、收笔。\n\n版式：\n- 纯白或极浅灰渐变背景，留白不少于 40%\n- 顶部大标题：[姓名] · 签名风格选择\n- 副标题：不同笔势，不同气场\n- 中部使用 2 列 × 3 行卡片网格\n- 底部小字：选一个，作为你的专属签名。\n\n卡片规范：\n- 每张卡片统一尺寸、统一间距、整体对齐\n- 轻微圆角 8-16px\n- 极细描边或无边框\n- 极轻阴影\n- 纯白微差、极浅灰、宣纸或磨砂质感\n- 视觉目标接近高级杂志排版，避免强 UI 感\n\n6 种签名：\n1. 极简理性：接近品牌签名，笔画克制，留白清晰\n2. 狂放张力：强连笔，速度感强，尾笔拉伸\n3. 松弛随性：手写感明显，自然舒展，亲和轻松\n4. 东方行草：飞白、墨感、节奏起伏明显\n5. 锋利结构：几何切角，断裂感，冷静克制\n6. 实验风格：部分不可读，结构重塑，先锋个性\n\n每张卡片必须包含：\n- 编号\n- 风格名称\n- 大尺寸签名\n- 一句短气质说明\n- 一个极轻微点缀色\n\n光影与质感：\n高级棚拍光、柔光环境、细腻阴影、干净空气感。\n整体以黑、灰、白为主，点缀色克制。\n\n禁止项：\n不要字体拼贴，不要普通书法字，不要颜色杂乱，不要签名太小，不要排版松散，不要缺乏笔势，不要模板拼接感。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -11313,6 +11567,7 @@
    "content": "从输入图中的[位置/编号/风格名]签名里，提取该签名的核心笔势，生成一张纯签名图。\n\n要求：\n- 只保留签名主体，不生成海报卡片、标题、副标题或说明文字\n- 保留原签名的起笔、连笔、结构倾斜、飞白和收笔节奏\n- 背景为纯白或极浅米白\n- 签名居中，尺寸充足，边缘留白干净\n- 墨色为深黑或墨黑，带自然笔锋、轻微墨痕和真实手写压力变化\n- 输出适合继续临摹、收藏或二次设计的高清纯签名图\n\n避免：\n不要新增多种签名，不要变成字体展示，不要加边框，不要加装饰元素，不要弱化原有笔势。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -11350,6 +11605,7 @@
    "content": "基于输入的[签名图/签名风格]，生成一张签名练习拆解图。\n\n目标：\n帮助用户用黑笔在纸上练好这个签名，拆解每一笔的书写路径、顺序、力度和节奏。\n\n画面结构：\n- 竖版教学图或横版练习板\n- 顶部放最终签名小样\n- 中部用 8-12 个步骤拆解关键笔画\n- 每个步骤展示当前笔画、运动方向箭头、起笔点、停顿点、收笔点\n- 下方展示完整连写路径和 3-5 行练习建议\n\n拆解要求：\n- 每一笔都要对应签名主体中的真实笔势\n- 标出快写、慢写、重压、轻提、转折、回钩、飞白、长甩尾\n- 展示从基础骨架到完整签名的渐进过程\n- 说明字间连接逻辑和整体重心变化\n\n视觉风格：\n白纸背景、黑色手写线条、红色或蓝色教学箭头、清晰编号、练习册质感。\n\n避免：\n不要只给成品图，不要省略关键笔画，不要把步骤画成随机涂鸦，不要生成无关书法字帖。\n\n**中文版：概念字体海报模板**\n\n```text\n为以下标题生成一张完成度极高的高级概念字体海报，只需要一张。\n\n标题：「[标题/词语/短句]」\n\n只需要一张海报。不要 moodboard、不要网格排版、不要展示板、不要样机、不要说明文字、不要过程稿、不要样张标签。\n\n标题必须是海报的主视觉结构：巨大、可读、有力量、拼写完全正确。不要翻译、缩短、替换或拼错标题。不要添加其他大段可读文字。\n\n深入理解标题的含义、情绪、文化氛围、符号关联、心理张力和视觉节奏。把这种理解转化成一个强有力的视觉隐喻。\n\n字体是主角。设计定制的字形，其字重、字宽、对比度、间距、节奏、变形、负空间、边缘质感和墨迹纹理必须表达标题的气质。字体应该看起来经过精心设计，而不是一个默认字体。\n\n如果标题指向一个广为人知的人物，让一个大型编辑肖像或半身人物成为主要的视觉存在，占据构图的 40%-70%。人物必须与字体互动：重叠字母、从字母中浮现、被字母框住、在字母上投下阴影、打破字母、或部分隐藏在字母后面。\n\n对于抽象或非人物标题，只有当人像、风景、物体或氛围场景能强化意义时才使用。它必须与字体互动并深化概念，而不是装饰它。\n\n使用受限制的 4-6 色调色板来匹配主题：主背景色、主字体色、人物/风景色调、情感强调色、柔和辅助色、微妙的纸张/墨迹纹理色。\n\n构图风格：高端编辑海报、博物馆级平面设计、戏剧性尺度、强层级、少元素、聪明留白、大胆平色区域、锐利裁切、丝网/平版/孔版印刷颗粒、纸纤维、微妙油墨瑕疵、精炼视觉张力。\n\n避免：通用字效、光泽 3D 字体、随机图标、素材库写实、杂乱拼贴、过度脏旧、旅游明信片陈词滥调、官方标志、抄袭标语、抄袭 Campaign 美学、无关文字和拼写错误的字体。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -11392,6 +11648,7 @@
    "content": "生成一张[人物/角色/品牌主理人/运动员]的水墨双重曝光人物海报。\n画幅：9:16 竖版，高级电影海报构图。\n主体结构：\n- 上半区：放大的人物头部、面部轮廓或半身剪影，形成最强识别锚点。\n- 中下区：同一人物的全身或半身主体，姿态为[站姿/动作姿态/凝视镜头]。\n- 剪影内部：融合[关键场景]、[象征物]、[叙事片段]、[环境纹理]，形成双重曝光叙事。\n视觉连接：用云雾、水墨扩散、飞白边缘、负空间和柔和明暗过渡，把上方剪影、内部拼贴和下方主体连成一条从上到下的视觉动线。\n风格：东方水墨美学 + 写实电影感，克制、高级、留白充足，层次丰富但不杂乱。\n文字：可加入[标题/姓名/短句]，必须少量、可读、像海报题签而不是信息图说明。\n约束：不要硬拼贴，不要把背景塞满，不要廉价武侠特效，不要复制真实海报版式，不要让剪影和主体互相抢焦点。\n输出：海报级完成图，主体清晰，水墨边缘自然，叙事元素与人物身份强相关。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -11459,6 +11716,7 @@
    "content": "你是一个高端自然科普海报生成系统，目标是为稀有动物、昆虫、爬行动物、哺乳动物或其他小众生物生成 Apple keynote 风格的高级科普视觉海报。\n\n整体视觉方向：\n生成一张 9:16 竖版高级科普海报，画面采用极简、纯白、干净、现代、Apple 式产品发布海报语言。背景应为纯白或极浅灰白渐变，保持大量留白。整体设计应具备高级感、克制感、视觉冲击力和科学展示感。\n\n核心设计原则：\n1. 主体动物必须被极度放大，成为画面最强视觉中心。\n2. 主体应具有强烈立体感、真实质感、高清细节和柔和棚拍光影。\n3. 海报信息要少而准，避免拥挤。\n4. 不使用传统信息图的卡片、圆角框、复杂底纹、淡黄色纸张质感或装饰性边框。\n5. 底部信息区只使用四列极简 icon + 标题 + 短说明，通过细竖线分隔。\n6. 文字排版要像高端发布会视觉，标题巨大，副标题克制，正文小而清晰。\n7. 风格关键词：Apple-inspired, premium editorial, pure white background, hero subject, clean typography, minimal infographic, high-end science poster.\n\n画面结构：\n顶部左侧为标题区：\n中文大标题：{中文物种名}\n中文副标题：{一句有吸引力的物种定位}\n细短横线\n英文名：{英文物种名}\n分布信息：主要分布：{分布区域}\n\n中部与下中部为主体视觉：\n生成一个超高清、真实、具有强烈立体感的 {中文物种名}。\n主体应占据画面 50% 到 70% 的视觉面积。\n主体姿态应具有展示性、力量感或识别度。\n保持白色背景，不添加复杂自然环境。\n可以保留少量必要承托物，例如树枝、岩石、雪地、沙土或木皮，但必须简洁。\n主体要有真实阴影，使其像高级产品摄影一样立在画面中。\n\n底部信息区：\n用四个极简信息栏目展示科普信息。\n每个栏目包含：\n一个细线 icon\n一个彩色小标题\n一段 1 到 3 行短文字\n栏目之间用极细浅灰竖线分隔。\n不使用卡片框，不使用圆角背景，不使用大面积色块。\n\n四个信息栏目：\n栏目 1：\n标题：{重点特征1标题}\n说明：{重点特征1短说明}\n\n栏目 2：\n标题：{重点特征2标题}\n说明：{重点特征2短说明}\n\n栏目 3：\n标题：{重点特征3标题}\n说明：{重点特征3短说明}\n\n栏目 4：\n标题：{重点特征4标题}\n说明：{重点特征4短说明}\n\n底部总结句：\n在最底部居中放置一句灰色小字总结：\n{一句高级、克制、有记忆点的科普总结}\n\n字体与排版：\n中文标题使用大号黑色、高级、稳重、有力量感的字体。\n副标题使用灰色，中等字号，字距略宽。\n英文名使用小号灰色，简洁现代。\n正文使用清晰现代中文字体，保持可读。\n所有文字必须留有足够呼吸感。\n\n色彩规范：\n背景：纯白、极浅灰、轻微柔光渐变。\n主标题：黑色或深石墨色。\n副标题与正文：中性灰。\n底部四个信息标题可使用低饱和强调色：\n暖棕、冷蓝、松石绿、紫色、橙色。\n颜色只用于 icon 和小标题，不要大面积铺色。\n\n图像质量：\n2K 高清质感，细节清晰，主体锐利，光影真实。\n主体纹理必须可信，例如毛发、鳞片、甲壳、皮肤褶皱、羽毛或斑纹。\n避免变形、错误肢体、错误解剖结构、模糊主体、低质贴图、塑料感、卡通感。\n\n禁止项：\n不要使用淡黄色旧纸背景。\n不要使用复杂信息图网格。\n不要使用圆角卡片。\n不要使用厚边框。\n不要使用大面积装饰图形。\n不要添加无关 logo。\n不要添加多余小字。\n不要让主体太小。\n不要让文字压住主体。\n不要让底部信息区过度拥挤。\n不要出现儿童科普风、卡通风、低端展板风。\n\n最终输出：\n生成一张 9:16 竖版、高级、干净、强视觉冲击的 Apple 风自然科普海报。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "typography-posters"
    ],
@@ -11490,6 +11748,7 @@
    "content": "生成[商品名]电商主图，卖点为[卖点1]、[卖点2]。\n场景：[纯色棚拍/生活方式场景]，镜头：[特写/半身/全景]。\n材质细节：[材质关键词]，灯光：[柔光/侧光/轮廓光]。\n附加元素：[价格角标/卖点icon/促销文案]。\n输出：电商平台可直接使用的商品展示图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-food"
    ],
@@ -11562,6 +11821,7 @@
    "content": "你是一个专业美妆顾问 + 人脸分析系统 + 品牌视觉设计系统。\n目标：基于[用户自拍]与[口红品牌]，生成一张具有“分析 + 推荐 + 试色 + 场景建议”的竖版口红推荐报告信息图。\n\n输入参数：\n用户图像：[用户自拍]\n品牌：[Dior / YSL / Armani / Chanel / TF / 其他品牌]\n风格偏好（可选）：[通勤 / 温柔 / 气场 / 氛围感 / 显白优先]\n推荐数量：[3-5]\n\n分析层：\n- 判断肤色：冷 / 暖 / 中性（含明度）\n- 判断气质：清冷 / 温柔 / 明艳 / 干净 / 成熟\n- 判断唇部基础：唇色深浅、唇形、适合浓淡\n- 输出一句总结：「更适合 [色系] + [饱和度] + [质地] 的口红方向」\n\n推荐层：\n从[品牌]中筛选[3-5]个差异化色号，每个色号包含：\n- 色号名称\n- 色系标签\n- 上脸效果\n- 推荐场景\n\n品牌视觉层：\n根据[品牌]自动生成视觉调性，只用少量品牌强调色做标题、细线、小 icon 和局部点缀。\n示例：YSL 黑金强对比，Dior 法式柔光灰白，Armani 低饱和雾面，Chanel 极简黑白，TF 深色电影感。\n\n版式结构：\n左上：用户输入图 + 肤色分析\n右上：一句分析结论\n中部：3-5 个同一张脸的唇色试色矩阵，每列一个色号\n底部：有判断力的个人建议\n\n视觉要求：\n高端美妆编辑视觉，结构化信息可视化排版，真实皮肤质感，唇色精准，统一光影，9:16 竖版，8K。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-food"
    ],
@@ -11639,6 +11899,7 @@
    "content": "生成[故事主题]场景图，发生在[时间+地点]。\n主事件：[事件描述]，主角：[角色]，冲突点：[冲突]。\n镜头语言：[广角建立镜头/中景叙事/特写]。\n氛围：[紧张/温暖/悬疑]，色调：[冷/暖/高反差]。\n输出：具备叙事张力的场景概念图。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "scenes-storytelling"
    ],
@@ -11711,6 +11972,7 @@
    "content": "为[产品类型]生成一张[平台，如 iOS/Android/Web]界面图。\n核心功能：[功能点A]、[功能点B]、[功能点C]。\n视觉风格：[极简/科技/拟物]，主色[颜色]，强调色[颜色]。\n布局：[顶部导航/双栏/卡片流]，信息层级清晰，留白充足。\n输出：高保真UI截图，文字清晰可读，比例[9:16/16:9]。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -11788,6 +12050,7 @@
    "content": "生成一张[平台，如 X/抖音/小红书/微信朋友圈]内容截图，[深色/浅色]模式。\n整体比例：[9:16 / 3:4 / 1:1]，手机截图风格。\n\n核心内容：\n- 账号信息：[头像描述 / 用户名 / 认证标识]\n- 正文内容：[具体文本内容，包含指定中文]\n- 互动数据：[点赞/评论/转发/收藏数量]\n\n界面元素：\n- 顶部：[状态栏/导航栏/搜索栏]\n- 底部：[操作栏/Tab栏/输入框]\n- 附加：[浮窗/弹幕/礼物特效/购物车卡片]\n\n约束：文字必须准确显示指定的中文，禁止乱码和占位文本，比例固定。\n输出：高仿社交平台截图，文字清晰可读。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -11865,6 +12128,7 @@
    "content": "生成一张[平台，如抖音/快手/B站]直播界面截图。\n主播：[人物描述/名称]，姿态：[坐姿/站立/动作]，服装：[服装描述]。\n背景：[直播间背景描述]，灯光：[暖色/冷色/混合]。\n\nUI叠加层：\n- 顶部：主播头像 + 关注按钮 + 在线人数 + 排名/热值\n- 左下：弹幕/评论列表（[N]条，内容示例）\n- 右下或中部：商品卡片 / 礼物特效 / PK进度条\n- 底部：输入框 + 功能图标（分享/点赞/礼物/购物车）\n\n风格：[写实直播截图/高保真UI/暗黑系/粉嫩系]，比例 9:16。\n约束：文字清晰可读，弹幕内容合理，界面元素不遮挡主播面部。\n输出：高仿直播截图画面。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "ui-ux-mockups"
    ],
@@ -11937,6 +12201,7 @@
    "content": "把[图片组]按顺序作为[主题]的画面素材，参考[节奏参考视频]的画面节奏、转场风格和音乐节拍进行卡点。\n每次转场落在节拍上；可根据音乐需要调整景别、补充光影变化；画面中的人物更有动感，整体风格[整体风格]，画面张力强。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "music-video"
    ],
@@ -11993,6 +12258,7 @@
    "content": "[画幅]，15秒，[品牌名称]宣传短片，面向[目标受众]。品牌色[品牌色]，LOGO 使用[LOGO素材]原件，不重绘。\n[[shot 0-2]] 品牌钩子——[开场钩子]。\n[[shot 2-4]] 用户意图或场景建立——[使用场景]。\n[[shot 4-6.5]] 产品机制——[产品如何工作]，由[驱动转场的真实元素]带入下一镜。\n[[shot 6.5-9]] 能力或应用——[核心能力]。\n[[shot 9-11.5]] 输出或证明——[真实输出或证据]。\n[[shot 11.5-13]] 产品回报——[用户得到的结果]。\n[[shot 13-15]] LOGO 定格与行动号召 [[text: [行动号召]]]，留足安全区，停留可读。\n动效：每个节拍一个主动作，峰值放在[峰值节拍]；色彩状态不超过 5 个。\n[[sound: [声音方案]]]",
    "cover": null,
    "dialect_variants": {},
+   "family": "minimax-h3-brand-promo-video-generator",
    "genres": [
     "brand-promo"
    ],
@@ -12111,6 +12377,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-3d-animation-short-generator",
    "genres": [
     "animation-short"
    ],
@@ -12213,6 +12480,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-co-op-game-intro-generator",
    "genres": [
     "game-intro",
     "gaming"
@@ -12296,6 +12564,7 @@
    "content": "让[人物参考图]中的人物复刻[舞蹈参考视频]中的舞蹈动作和卡点节奏，生成一段[时长]秒的视频。\n动作流畅无卡顿，人物形象和服装与参考图保持一致，背景为[场景]。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "dance"
    ],
@@ -12350,6 +12619,7 @@
    "content": "15秒[题材]高燃战斗镜头，[主色调]。\n[[shot 0-3]] 低角度特写[主角]的[服饰细节]被热浪吹得猎猎飘动，双手紧握[武器]，[武器特效]持续爆闪，[环境危机]，远处[敌人]嘶吼着冲锋逼近，[主角]低喝 [[say S1: [台词1]]] [[sound: 兵器鸣响与环境声]]\n[[shot 4-8]] 环绕摇镜快切，[主角]旋身出招，[冲击效果]，前排[敌人]被击飞碎裂成灰烬。[[sound: 破空声与惨嚎]]\n[[shot 9-12]] 仰拍拉远并慢放定格，[主角]跃起腾空，[大招效果]劈向敌群，所过之处碎石与火光飞溅。\n[[shot 13-15]] 缓推特写[主角]落地收势，衣摆余波微动，[武器]残留光效闪烁，冷声道 [[say S1: [台词2]]]，镜头定格在[收尾意象]的剪影上。[[sound: 余音震颤与渐弱风声]]",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "fantasy-action"
    ],
@@ -12459,6 +12729,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-handdrawn-live-video-generator",
    "genres": [
     "cinematic-animation"
    ],
@@ -12571,6 +12842,7 @@
    "content": "[画幅]，10秒，[背景风格]的极简产品广告片。产品为[产品名称]，本体颜色严格保持[产品主色]，不重新上色。叙事：[叙事脊柱]。\n[[shot 0-1.5]] [开场产品动作]，干净留白，无文字。\n[[shot 1.5-4]] 主视角建立，[主视觉角度]，产品边缘高光滑过。\n[[shot 4-6]] 材质与功能特写，[材质或结构细节]；画面内出现单行英文 [[text: [中段文案]]]，前半[前半文字颜色]、后半[产品主色]，前半先淡入，后半随后轻滑入，前半在同一行内轻微让位。\n[[shot 6-8]] [产品自然动作]，动作完成后制动停顿。\n[[shot 8-10]] 单一全画幅产品收束，单行英文 [[text: [结尾文案]]] 稳定停留、清晰可读，位于画面上下居中区域靠[文字位置]。\n全程同一时刻只有一条单行文字；不出现网格、分屏、拼贴或商品墙；不用镜面反光台面。\n[[music: [配乐方向]]]，节拍与产品动作和文字出现对齐。",
    "cover": null,
    "dialect_variants": {},
+   "family": "minimax-h3-minimalist-product-ad-generator",
    "genres": [
     "product-ad"
    ],
@@ -12685,6 +12957,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-music-video-subtitle-generator",
    "genres": [
     "music-video"
    ],
@@ -12807,6 +13080,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-paper-collage-explainer-generator",
    "genres": [
     "explainer"
    ],
@@ -12880,6 +13154,7 @@
     "usage": "reference-only"
    },
    "dialect_variants": {},
+   "family": "minimax-h3-papercraft-stop-motion-explainer",
    "genres": [
     "scientific-educational"
    ],
@@ -12951,6 +13226,7 @@
    "content": "制作一段15秒的[产品名称]展示视频，产品外观以[产品参考图]为准。\n剪辑节奏与转场方式参考[风格参考视频]。\n[[shot 0-3]] 产品以动感旋转入场，特写表面材质和[标志性细节]。\n[[shot 4-8]] 多角度转场展示正面、侧面、背面，配合扫光效果。\n[[shot 9-12]] 产品在[使用场景]中展示实际用法。\n[[shot 13-15]] 产品主视觉定格，画面文字 [[text: [广告语]]] 出现，背景音乐推向高潮。\n[[music: [背景音乐风格]]] [[sound: 产品交互音效]]",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "product-ad"
    ],
@@ -13023,6 +13299,7 @@
    "content": "15秒[主题]科普短片，[视觉风格]。\n0–5秒：[正常状态]，镜头[开场运镜]。\n5–10秒：[变化因素]进入画面，镜头跟随[被追踪对象]前进，[变化过程]。\n10–15秒：[结果状态]，与开场形成「之前与现在」的对比，画面整体颜色变暗。\n氛围：教育性与警示性，冷色调的临床灯光。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "explainer",
     "scientific-educational"
@@ -13099,6 +13376,7 @@
    "content": "[[shot 0-5]] 特写[角色A]通红的眼眶，[角色A的动作]，情绪濒临崩溃。[角色A]以[角色A语气]说：[[say S1: [台词1]]]\n[[shot 6-10]] [角色B][角色B的反应]，镜头扫过背景细节作为伏笔。[角色B]以[角色B语气]说：[[say S2: [台词2]]]\n[[shot 11-15]] [反转揭示]，[角色A]瞬间僵住，眼神从愤怒转为震惊。\n[[sound: [氛围音效]，角色哽咽声，结尾混入模糊人声]]\n时长：精准15秒，节奏紧凑，无冗余。",
    "cover": null,
    "dialect_variants": {},
+   "family": null,
    "genres": [
     "short-drama"
    ],

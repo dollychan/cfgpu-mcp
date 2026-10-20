@@ -80,7 +80,7 @@ def register(mcp: FastMCP) -> None:
         limit: int = 10,
         cursor: int = 0,
     ) -> dict:
-        """Search the shared library of official prompt templates, worked cases and style directions; returns cards, so call get_template for the full content."""
+        """Search the shared library of official prompt templates, worked cases and style directions; returns cards, so call get_template for the full content. Records rewritten from one source share a card, whose related lists the other ids."""
         try:
             result = await template_service.search_templates(
                 query=query,

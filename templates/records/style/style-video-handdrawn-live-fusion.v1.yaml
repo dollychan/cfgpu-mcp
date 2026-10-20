@@ -1,6 +1,7 @@
 id: style-video-handdrawn-live-fusion
 version: 1
 rank: 320
+family: minimax-h3-handdrawn-live-video-generator
 kind: style
 media: video
 title: 手绘发光动画 × 实拍空间融合

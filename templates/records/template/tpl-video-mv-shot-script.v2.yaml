@@ -1,6 +1,7 @@
 id: tpl-video-mv-shot-script
 version: 2
 rank: 361
+family: minimax-h3-music-video-subtitle-generator
 kind: template
 media: video
 title: 音乐 MV 多镜头脚本骨架

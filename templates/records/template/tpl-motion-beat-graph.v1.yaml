@@ -1,6 +1,7 @@
 id: tpl-motion-beat-graph
 version: 1
 rank: 401
+family: pluviobyte-ai-motion-director
 kind: template
 media: video
 title: 动效优先视频：动效主张 + 节拍图

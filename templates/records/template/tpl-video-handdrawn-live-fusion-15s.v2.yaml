@@ -1,6 +1,7 @@
 id: tpl-video-handdrawn-live-fusion-15s
 version: 2
 rank: 321
+family: minimax-h3-handdrawn-live-video-generator
 kind: template
 media: video
 title: 手绘实拍融合 15 秒（16:9）
