@@ -814,6 +814,16 @@ covers:
     author: null
     url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-screen-photography.md
     usage: reference-only
+  case-video-h3-fleet-jump/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/t2va.mp4
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/t2va.mp4
+    usage: reference-only
+  case-video-h3-ramen-focus-pull/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/i2va.mp4
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/i2va.mp4
+    usage: reference-only
   style-architecture-space/1.jpg:
     origin: freestylefly/awesome-gpt-image-2 gallery case 331
     author: 苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）
@@ -893,4 +903,69 @@ covers:
     origin: freestylefly/awesome-gpt-image-2 gallery case 376
     author: '@Shinning1010'
     url: https://x.com/Shinning1010/status/2050693240253214894
+    usage: reference-only
+  style-video-cartoon-3d-short/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/3d-animation-short-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/3d-animation-short-generator.gif
+    usage: reference-only
+  style-video-handdrawn-live-fusion/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/handdrawn-live-video-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/handdrawn-live-video-generator.gif
+    usage: reference-only
+  style-video-mv-lyric-typography/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/music-video-subtitle-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/music-video-subtitle-generator.gif
+    usage: reference-only
+  style-video-paper-collage/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/paper-collage-explainer-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/paper-collage-explainer-generator.gif
+    usage: reference-only
+  style-video-papercraft-stop-motion/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/papercraft-stop-motion-explainer.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/papercraft-stop-motion-explainer.gif
+    usage: reference-only
+  tpl-image-coop-game-menu/1.jpg:
+    origin: MiniMax-AI/MiniMax-H3 assets/co-op-game-intro-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/co-op-game-intro-generator.gif
+    usage: reference-only
+  tpl-image-papercraft-keyframe/1.jpg:
+    origin: MiniMax-AI/MiniMax-H3 assets/papercraft-stop-motion-explainer.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/papercraft-stop-motion-explainer.gif
+    usage: reference-only
+  tpl-video-cartoon-3d-shot/2.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/3d-animation-short-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/3d-animation-short-generator.gif
+    usage: reference-only
+  tpl-video-coop-game-intro-15s/2.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/co-op-game-intro-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/co-op-game-intro-generator.gif
+    usage: reference-only
+  tpl-video-handdrawn-live-fusion-15s/2.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/handdrawn-live-video-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/handdrawn-live-video-generator.gif
+    usage: reference-only
+  tpl-video-mv-shot-script/2.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/music-video-subtitle-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/music-video-subtitle-generator.gif
+    usage: reference-only
+  tpl-video-paper-collage-assembly/2.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/paper-collage-explainer-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/paper-collage-explainer-generator.gif
+    usage: reference-only
+  tpl-video-papercraft-i2v-5s/2.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/papercraft-stop-motion-explainer.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/papercraft-stop-motion-explainer.gif
     usage: reference-only

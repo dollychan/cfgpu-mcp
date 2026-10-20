@@ -1,0 +1,38 @@
+id: case-video-h3-ramen-focus-pull
+version: 1
+rank: 381
+kind: case
+media: video
+title: 图生视频：拉面热气与焦点后移
+summary: 首帧图生视频，固定机位一镜到底，焦点从前景拉面移到背景家人，热气全程不断。
+genres:
+- scenes-storytelling
+scenes:
+- food
+- story
+styles:
+- cinematic
+- realistic
+tags:
+- 图生视频
+- 首帧
+- I2VA
+- 移焦
+- 浅景深
+- 拉面
+- 家庭聚餐
+- focus pull
+slots:
+- name: 首帧图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+source:
+  origin: first-party, rewritten from MiniMax-AI/MiniMax-H3 README (case-I2VA)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3#case-i2va
+content: |-
+  以[首帧图]为首帧，写实电影感，浅景深，8 秒固定机位一镜到底。
+  开场焦点在前景：光滑的长木桌上，一只青花大瓷碗盛着拉面，金黄油亮的汤底、卷曲的面条、两片带肥瘦纹理的叉烧，中间一撮葱花，碗边插着一片海苔；左侧一双木筷架在筷枕上，旁边一只青花小茶杯；右侧一盏竹骨纸灯笼。背景里一家七口围桌而坐，身后敞开的障子门外是明亮的绿树，此时只是一片柔和的虚影。
+  一开始拉面的白色热气明显变浓，翻滚着持续上升。中段焦点平稳地往房间深处移：前景的碗和热气逐渐虚成朦胧的一片，背景的家人变得清晰，热气在镜头和家人之间形成一层半透明的纱。焦点落定后一家人热闹起来——左边穿深蓝长袖衬衫的男人前倾着说话，旁边穿白 T 恤的小女孩笑着看向桌子中央，对面穿浅灰衬衫的女人眯眼大笑，后排穿深灰上衣的女人用筷子从中间的碟子里夹起一块红色腌菜。直到结尾，人们一直无声地交谈，前景虚化的热气始终不停上升。
+  [[sound: 安静的室内底噪里，有热气翻涌的轻微气流声和汤底细小的咕嘟声；焦点移到家人后，瓷碗相碰、筷子碰碟子的清脆声成为主角，还有茶杯放到木桌上的闷响和衣物摩擦的窸窣声]]
+  [[music: 温暖的木吉他旋律，日本筝轻轻点缀，慢速，舒适怀旧]]

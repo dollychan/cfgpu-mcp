@@ -1,6 +1,6 @@
 {
  "catalog_version": 2,
- "checksum": "195fecfc93f42a9f647a8904f593435ead7a079167ece754add7d5cf840d75d9",
+ "checksum": "39e65a075fb43a22e933ebe0e6ad7bfe43a866a891a39a55abab3b499a614964",
  "facets": {
   "genres": [
    "animation-short",
@@ -256,6 +256,9 @@
   "case-video-extend-forward@2": "53fd69314216edd45823731e90a35fc8c767b9d82b68aace72e6f6f64b6885fe",
   "case-video-food-exploded@1": "c9a63c3aefffd4ff99e6aa2025c3e58213b46ef88abaff73982572c2cece152b",
   "case-video-fusion-particles@2": "edf7755fa251e80a3823843a36b11886166ca12f99c8f332572cbbe867322c0b",
+  "case-video-h3-fleet-jump@1": "139027e10bdd57132e0da8745118f37d697c27a1adc75129b1e497229c3bf804",
+  "case-video-h3-ramen-focus-pull@1": "dd848aa98e0fad098c9575af74ee618adc9e746b34de3f8ac7d4af22a243d6f1",
+  "case-video-h3-voice-edit@1": "82b74dc30e901f5ea582543e0e864eccb0361d006d7e9f2a067194544ae3c1c5",
   "case-video-one-take-spy@1": "d9dc01bdb521d5ba2a0f7b9b677b32d2bf7304fcd1d99339b96334400b3366be",
   "case-video-product-spin-split@1": "192531e0be4097e6d6c3a7f22771056d2ffa01156f386c27d2989586c97e13d8",
   "case-video-targeted-edit@2": "80dc05a575556f56858a9a0a2a26694157c42fe06365f8235714e747288d8adb",
@@ -7035,6 +7038,161 @@
    "withdrawn_reason": null
   },
   {
+   "content": "电影感太空歌剧预告，10 秒，16:9。\n[[shot 0-4.5]] 中远景，镜头缓慢推进。幽暗宽阔的星舰舰桥，两侧金属控制台亮着琥珀色屏幕，正前方是一整面弧形观景窗。一位四十多岁的女舰长站在画面中央，银灰短发，深蓝高领军装、胸前银色徽章；她背对镜头，双手背在身后一动不动，被窗外冷色星光勾出剪影。窗外紫色星云前，一支棱角分明的深灰色无畏舰舰队列阵悬停，尾部推进器的蓝光越来越亮。\n[[shot 4.5-10]] 切到舰长面部特写，镜头剧烈晃动。舰队聚能的蓝白光映在她眼里；一道刺眼的白光吞没窗外，舰队跃迁离去，冲击让舰桥猛烈震动，她向前踉跄半步、肩膀绷紧稳住身体。白光骤然褪去，只剩空荡的紫色星云映在她脸上，她咬紧牙关，缓缓闭上眼。\n[[sound: 舰桥生命维持系统的低沉嗡鸣打底；舰队充能时高频电子啸声逐渐升高；白光闪起的瞬间一声低频爆响夹着噼啪声，舱壁金属吱嘎、震颤、闷响；冲击过后骤然回到空旷的室内底噪，只剩微弱的嗡鸣]]\n[[music: 太空歌剧管弦配乐，慢速，一支孤独哀伤的圆号旋律压在低沉持续的不协和弦乐上，音量和张力迅速堆到顶点，跃迁后立刻戛然而止]]",
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/t2va.mp4",
+    "path": "covers/case-video-h3-fleet-jump/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/t2va.mp4",
+    "usage": "reference-only"
+   },
+   "dialect_variants": {},
+   "genres": [
+    "cinematic-film-references"
+   ],
+   "id": "case-video-h3-fleet-jump",
+   "kind": "case",
+   "media": "video",
+   "rank": 380,
+   "scenes": [
+    "story"
+   ],
+   "slots": [],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, rewritten from MiniMax-AI/MiniMax-H3 README (case-T2VA)",
+    "url": "https://github.com/MiniMax-AI/MiniMax-H3#case-t2va"
+   },
+   "status": "active",
+   "styles": [
+    "cinematic"
+   ],
+   "summary": "太空歌剧预告感的两镜头文生视频，画面、声景、配乐分开写，第二镜切面部特写。",
+   "tags": [
+    "文生视频",
+    "T2VA",
+    "太空",
+    "科幻",
+    "跃迁",
+    "音画同出",
+    "sci-fi",
+    "space opera"
+   ],
+   "title": "文生视频：舰队跃迁，舰长独留舰桥",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "以[首帧图]为首帧，写实电影感，浅景深，8 秒固定机位一镜到底。\n开场焦点在前景：光滑的长木桌上，一只青花大瓷碗盛着拉面，金黄油亮的汤底、卷曲的面条、两片带肥瘦纹理的叉烧，中间一撮葱花，碗边插着一片海苔；左侧一双木筷架在筷枕上，旁边一只青花小茶杯；右侧一盏竹骨纸灯笼。背景里一家七口围桌而坐，身后敞开的障子门外是明亮的绿树，此时只是一片柔和的虚影。\n一开始拉面的白色热气明显变浓，翻滚着持续上升。中段焦点平稳地往房间深处移：前景的碗和热气逐渐虚成朦胧的一片，背景的家人变得清晰，热气在镜头和家人之间形成一层半透明的纱。焦点落定后一家人热闹起来——左边穿深蓝长袖衬衫的男人前倾着说话，旁边穿白 T 恤的小女孩笑着看向桌子中央，对面穿浅灰衬衫的女人眯眼大笑，后排穿深灰上衣的女人用筷子从中间的碟子里夹起一块红色腌菜。直到结尾，人们一直无声地交谈，前景虚化的热气始终不停上升。\n[[sound: 安静的室内底噪里，有热气翻涌的轻微气流声和汤底细小的咕嘟声；焦点移到家人后，瓷碗相碰、筷子碰碟子的清脆声成为主角，还有茶杯放到木桌上的闷响和衣物摩擦的窸窣声]]\n[[music: 温暖的木吉他旋律，日本筝轻轻点缀，慢速，舒适怀旧]]",
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/i2va.mp4",
+    "path": "covers/case-video-h3-ramen-focus-pull/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/i2va.mp4",
+    "usage": "reference-only"
+   },
+   "dialect_variants": {},
+   "genres": [
+    "scenes-storytelling"
+   ],
+   "id": "case-video-h3-ramen-focus-pull",
+   "kind": "case",
+   "media": "video",
+   "rank": 381,
+   "scenes": [
+    "food",
+    "story"
+   ],
+   "slots": [
+    {
+     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
+     "name": "首帧图",
+     "required": true
+    }
+   ],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, rewritten from MiniMax-AI/MiniMax-H3 README (case-I2VA)",
+    "url": "https://github.com/MiniMax-AI/MiniMax-H3#case-i2va"
+   },
+   "status": "active",
+   "styles": [
+    "cinematic",
+    "realistic"
+   ],
+   "summary": "首帧图生视频，固定机位一镜到底，焦点从前景拉面移到背景家人，热气全程不断。",
+   "tags": [
+    "图生视频",
+    "首帧",
+    "I2VA",
+    "移焦",
+    "浅景深",
+    "拉面",
+    "家庭聚餐",
+    "focus pull"
+   ],
+   "title": "图生视频：拉面热气与焦点后移",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
+   "content": "在[原视频]的基础上编辑，5 秒：原视频的人物样貌、构图、黄昏暖光、草坡和背景里的白色小羊全部保留，只让画面中央穿粉色西装、抱着小黑羊的金发年轻男人开口说话。原视频的背景音乐保留，压在台词下面持续播放；他的音色参考[音色参考音频]，平静温和。\n写实摄影风格，镜头缓慢推近。他望向前方，轻声说 [[say S1: Follow the wind, live free.]] 说话时重心微微移动，稳稳抱着怀里的小黑羊。接着说 [[say S1: Leave worries behind, enjoy the moment.]] 话音一落，嘴唇合上，露出放松的微笑，下巴不再动；随后他把目光转向远处的地平线，手指轻抚小黑羊的毛，镜头停在这个画面直到结束。\n[[sound: 原视频的背景音乐持续铺底，上面是他平静清晰的男声台词]]",
+   "cover": null,
+   "dialect_variants": {},
+   "genres": [
+    "scenes-storytelling"
+   ],
+   "id": "case-video-h3-voice-edit",
+   "kind": "case",
+   "media": "video",
+   "rank": 382,
+   "scenes": [
+    "social"
+   ],
+   "slots": [
+    {
+     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
+     "name": "原视频",
+     "required": true
+    },
+    {
+     "hint": "该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签",
+     "name": "音色参考音频",
+     "required": true
+    }
+   ],
+   "source": {
+    "author": null,
+    "license": "first-party",
+    "origin": "first-party, rewritten from MiniMax-AI/MiniMax-H3 README (case-Ref2VA)",
+    "url": "https://github.com/MiniMax-AI/MiniMax-H3#case-ref2va"
+   },
+   "status": "active",
+   "styles": [
+    "realistic"
+   ],
+   "summary": "编辑一段原视频，让画中人说新台词；保留原视频画面与背景音乐，音色取自参考音频。",
+   "tags": [
+    "参考生视频",
+    "Ref2VA",
+    "视频编辑",
+    "对口型",
+    "音色参考",
+    "台词",
+    "背景音乐保留",
+    "lip sync",
+    "voice reference"
+   ],
+   "title": "参考生视频：给原视频人物配新台词并锁定音色",
+   "verified_on": [],
+   "version": 1,
+   "withdrawn_reason": null
+  },
+  {
    "content": "谍战片风格，[首帧图]作为首帧画面。镜头正面跟拍穿红风衣的女特工向前走，全景跟随，不断有路人遮挡红衣女子；走到拐角处（拐角建筑参考[拐角建筑图]），固定镜头，红衣女子走出画面、在拐角处消失；一个戴面具的女孩在拐角处躲着恶狠狠地盯着她（形象参考[面具女孩图]）；镜头往前摇向红衣女特工，她走进一座豪宅消失不见（豪宅参考[豪宅图]）。全程不要切镜头，一镜到底。",
    "cover": null,
    "dialect_variants": {},
@@ -8629,7 +8787,13 @@
   },
   {
    "content": "适用：剧情动画、生日纪念、品牌故事、社媒短片等多镜头 3D 动画。不适合单图、写实真人或只要一个孤立镜头。\n视觉风格锁：皮克斯感 3D 卡通渲染，C4D + Octane 质感，动画电影品质；高概括几何形体、强剪影；可爱角色用 2.5–3 头身 Q 版比例；毛发块面清晰、边缘保留细丝；皮肤温润次表面散射，耳朵、脸颊、鼻尖可微微透红，避免塑料感；迪士尼式夸张表演，挤压与伸展、预备动作、过冲、跟随动作，眉眼嘴脸形变丰富。\n负向：写实摄影、扁平二次元、塑料玩具皮肤、僵硬姿势、无生命表情。\n角色卡：角色名与定位标注、3/4 主视角、正侧背三视图、表情、服装与道具细节、不可改特征（年龄段、身材、发型、服饰色、签名道具）。\n场景卡：只画环境，不出现任何人物；标出连续性地标（如门框、沙发、厨房中岛）及其在画面中的位置。\n镜头规则：\n- 单镜不超过 15 秒，单镜重要角色不超过 3 个。\n- 每镜写清承接上一镜的状态（道具位置、眼神、姿态、情绪），并为下一镜留钩子。\n- 每镜标一个钩子类型：视觉笑点、反转、悬念、温情、追逐、揭示、呼应、表情节拍；每连续 3 镜至少 1 个揭示、反转或呼应。\n- 同场景连续镜头保持地标位置和光位一致，要变就写明。\n- 逐秒指令覆盖整镜，每秒写：动作/姿态/表情、镜头运动、空间位置、音频线索、交给下一秒的状态。\n- 景别在特写/大特写与其他景别之间交替；追逐、失衡、惊吓节拍用荷兰角。\n- 有旁白时写明说话人嘴部开合。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/3d-animation-short-generator.gif",
+    "path": "covers/style-video-cartoon-3d-short/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/3d-animation-short-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "animation-short"
@@ -8666,7 +8830,13 @@
   },
   {
    "content": "适用：单场景、15 秒左右的超现实创意短片。不适合精致 CG、恐怖跳吓、毛绒角色或多场景剪辑。\n固定结构：实拍空间里出现平面的手绘发光动画；开头 3 秒内与真实的手或物体发生明确接触（缠住手指、落在掌心、被抓时逃跑、从指尖诞生）；同一个存在连续变形并逃跑；镜头总是慢半拍追赶。\n手绘质感：蜡笔、粉笔、彩铅、粉彩、粗糙笔刷；线条轻微抖动，涂抹不均、有毛边、逐帧重画感。\n变形：始终是同一个实体，在线条、小生物、记号、植物、交通工具、生活小物之间变化，每个新形态保留上一形态的线、尾巴、色彩拖痕或图案母题；不突然出现新角色。\n空间：全片在同一空间或相邻区域连续展开，像拍摄者边走边追，不剪辑跳地点。可选空间如雨天厨房水槽、旧阳台晾衣角、清晨玄关、小书店走廊、火车窗边小桌、浴室镜柜、温室通道、自助洗衣店长椅。\n拍摄者参与：伸手、抓、追、开门或开盒、接住、后退、被恶作剧。\n节奏：每个时间段都要有新的变形、移动、接触、发现或惊喜；结尾做空间级变形——线条扩散到墙、地板、天花板、窗户，变成巨大花朵、星空、夕阳、云或涂鸦小镇，留下感动余韵和一个可爱笑点。\n相机：手持手机质感，不把动画稳定居中，在实体已离开画面边缘后才平移、俯仰或前进。\n调性：可爱、生活感、怀旧、温柔，不是恐怖喜剧。\n禁止：3D CG、毛绒玩具感、均匀矢量线、平滑霓虹、恐怖怪物、巨大眼睛、裂口、牙齿、威吓、扑咬、突然黑屏、跳吓。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/handdrawn-live-video-generator.gif",
+    "path": "covers/style-video-handdrawn-live-fusion/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/handdrawn-live-video-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "cinematic-animation"
@@ -8743,7 +8913,13 @@
   },
   {
    "content": "适用：带歌词贴字的 AI MV、情绪短片。不适合普通字幕校对或照搬已有 IP。\n前期锁定：画幅（竖屏 9:16、横屏 16:9、方图 1:1、宽银幕 21:9）贯穿所有素材；目标时长必须先确认；上传的音乐长于目标时长时先选定片段（最强副歌或 hook）。\n歌词：用户给了歌词就逐字锁定，不改写；没有才原创并锁定。每镜的唱词和画面文字都来自同一份锁定歌词，有人声时画面文字逐字匹配正在唱的词；人物口型、下颌、呼吸、点头和手势重音跟随歌词节奏。\n参考图分工：文字参考卡只管字体质感与排版动效，不含人物和场景；人物卡只管形象、服装和气质；场景卡只管空间、影像质感和光影。三者互不混用。\n文字包装：文字是空间中的动态图形，可处于前景、中景、背景或被肩膀、手遮挡；不遮挡眼睛和主要表情，对嘴时不挡嘴；每个镜头只有一个主文字事件。\n剪辑（以 Dark-pop / Trap 为例）：只用硬切，不用淡入淡出或溶解；画面响应鼓点——hi-hat 微震跳帧、snare 放大或硬切、808 低频压屏错位；快节奏时在多个近景场景间切换，切点落在明确的音乐冲击上。\n质感（例）：写实高时装、90 年代末独立杂志与胶片扫描质感、粗颗粒、半色调网点、印刷毛边。\n超过单次生成时长（如 15 秒）：先锁定一条完整主音轨，再拆成 2–5 秒的镜头，映射到歌词时间和鼓点。\n衔接五锁：切点落在句间停顿或强鼓点，不在唱词中途切；剪辑点对齐 1/4 或 1/8 拍；每镜带同一段美学前缀（颗粒、色调、光向）；同场景延续用上一镜末帧作下一镜首帧，换景用同向运镜或动作匹配切；文字在切点随低音破碎扫出，下一镜在重音上砸入。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/music-video-subtitle-generator.gif",
+    "path": "covers/style-video-mv-lyric-typography/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/music-video-subtitle-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "music-video"
@@ -8781,7 +8957,13 @@
   },
   {
    "content": "适用：口播句、知识点、观点、故事节点的视觉隐喻 B-roll；单段约 4 秒，默认 16:9。不适合真人口播广告、需要可编辑图层或大量可读文字的画面。\n风格签名：扁平大色块纸背景、黑白半调照片剪影、选择性彩色卡纸点缀、暖白描边、柔和纸影、细腻未涂布纸纹、精致手撕边、轻微纤维毛边、层叠纸缝；高级编辑感拼贴。\n纸张质感：不能像扁平数字图层，也不能过旧、发黄、偏棕或皱脏（除非明确要求）。\n色彩：每段一个主色场，整批统一。参考含义——焦橙或红：劳动、时间压力、紧迫；芥末黄：工具、警示、累积错误；墨绿：认知、重置、判断、超现实平静；深紫：记忆、结构、神秘；青绿：协作、执行、系统流动；玫红：荒诞、仪式、戏剧张力。不把钴蓝当默认色。\n构图：3–6 个大而易读的纸片组，前景/中景/背景层次清楚，主体层级强，留白可控。\n画面里不出现可读文字、假字母、数字、界面、水印或 LOGO（除非明确要求）。\n运动：停格组装——逐片出现，滑入或弹入，轻微回弹，压平，停顿，锁定。不用快速旋转、混乱飞散、整体淡入、平滑的数字平移缩放或泛泛漂浮。\n开场：从与最终画面主色一致的干净纸色场开始，不用不匹配的牛皮纸底。\n声音：默认只有触感拼贴音效——纸片滑动、弹入、压平轻敲、轻微摩擦、小纸片脆响，与纸片动作同步；默认不加背景音乐、旁白和字幕。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/paper-collage-explainer-generator.gif",
+    "path": "covers/style-video-paper-collage/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/paper-collage-explainer-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "explainer"
@@ -8819,7 +9001,13 @@
   },
   {
    "content": "适用：科学、教育、泛知识讲解；剪纸、立体书、分层纸雕、微缩定格。不适合普通二维卡通、线稿涂鸦或真人写实。\n画风基因：手工纸艺定格动画感；微缩纸雕舞台或剧场箱布景；多层卡纸剪裁，可见纸片厚度；哑光纸纹、纤维、折痕、缝隙、剪裁边缘；纸偶由独立纸片叠压组装；层间有真实投影；微距摄影感、轻微景深、2.5D 视差；标签、箭头、卡片、图表也用纸做。\n层次：多数镜头 4–7 层（前景、中景、背景、远景）；用纸叶、云纹、门框、帘幕做前景遮挡；核心知识对象放在最醒目的中景；文字较多的标签放在稳定层；背景也要有纸艺机关动效（纸云沿滑轨移动、纸月亮沿轨道运动、纸叶落下、纸灯笼轻晃、纸门打开）。\n动作：小幅分段移动、短暂停顿、轻微回弹、铰链关节、拉片揭示、滑轨、转盘、翻页、纸片落定；不用丝滑 CG 动作或大幅角色运动。\n运镜：缓慢推近进入纸艺世界、横移展示多层视差、固定中景、微距特写纸纹与关键道具、轻微俯视展示剖面、层间穿梭；避免高速飞行、无布景支撑的 360° 环绕、数码故障、液体融化变形。\n转场：翻页、立体书展开、抽拉标签、纸牌遮挡、纸云滑过、圆形纸片遮罩、剪纸门打开、剖面层分开、纸屑飞散、胶带或贴纸揭示。\n剪辑节奏：15 秒 4–6 镜（每镜 2–4 秒），30 秒 6–8 镜，60 秒 8–12 镜；每镜只讲一个知识节拍，标签卡出现时短暂停顿。\n声音：翻纸、剪纸、卡纸滑动、纸张摩擦、小木头卡扣、轻微弹出、胶带撕拉、纸偶关节轻响、纸盒打开、纸屑散落；配乐匹配主题文化（如中秋用古筝、琵琶、竹笛；一般科学用木琴、马林巴、拨弦），旁白下方压低。\n反向提示：光滑塑料 3D、高亮 CG、真人实拍、扁平矢量插画、无纸纹卡通、金属科幻表面、玻璃材质、赛博朋克霓虹、数码故障、油画笔触、真实毛发皮肤、无剪裁边缘、无层间投影、高速环绕、融化变形。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/papercraft-stop-motion-explainer.gif",
+    "path": "covers/style-video-papercraft-stop-motion/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/papercraft-stop-motion-explainer.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "explainer",
@@ -9208,7 +9396,13 @@
   },
   {
    "content": "双人合作游戏主菜单 UI，高品质游戏宣传海报质感，UI 与角色深度融合，现代商业游戏 UI 设计，视觉冲击力强，画面简洁干净，[视觉风格]。\n色彩：[主体色]作为主体颜色，[UI主体色]作为 UI 主体颜色，[文字色]作为文字颜色，[强调色]作为功能强调色，红色作为危险提示色；整体不超过 5 种颜色，高对比撞色。按钮、图标、字体都沿用这套颜色。\n布局：16:9 横版，背景铺满；中央两位角色，UI 围绕角色不遮挡；左上角玩家信息卡，右侧纵向菜单，底部警戒胶带，四角少量涂鸦；Z 字阅读路径，视觉重心落在 CONTINUE。\n背景：纯[主体色]背景，轻微[背景纹理]，大面积留白，边缘少量喷漆；避免大量脏污、密集划痕、大面积泼溅。\n左侧角色：五官参考[玩家1参考图]，按所选风格重绘（保留脸型、发型、眼镜等身份特征，不保留照片质感）；双腿交叉坐地、双手撑地、身体微后仰、抬头看镜头；服装[玩家1服装]。\n右侧角色：五官参考[玩家2参考图]，按所选风格重绘；盘腿坐、双手放在腿前、身体略前倾、正视镜头；服装[玩家2服装]。\n灯光：顶部主光，左上补光，底部柔和环境反光，柔和阴影与接触阴影，轻微轮廓光。\n玩家信息卡：不规则描边卡片，左侧图标，右侧三行——「PLAYER 1」「[玩家1名字]」「READY」，另一张为「PLAYER 2」「[玩家2名字]」「READY」。\n菜单：统一尺寸的横向长条圆角按钮，略微倾斜，贴纸化；自上而下「START NEW GAME」「CONTINUE」「SETTINGS」「EXIT GAME」；CONTINUE 最大最亮，EXIT GAME 带红色危险点缀。标题「[游戏名字]」。\n字体：超粗无衬线、全部大写、字距紧凑；所有标题单行，严禁换行或两行标题。\n图标：单排横向、数量精简、统一尺寸，严禁换行或上下堆叠。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/co-op-game-intro-generator.gif",
+    "path": "covers/tpl-image-coop-game-menu/1.jpg",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/co-op-game-intro-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "game-intro",
@@ -9311,7 +9505,13 @@
   },
   {
    "content": "[主题]的纸艺定格动画风格主视觉，[画幅]。核心对象是[核心知识对象]，放在醒目的中景层。\n微缩纸雕舞台，多层卡纸剪裁，可见纸张纤维、折痕、缝隙、剪裁边缘和纸片厚度；层与层之间有真实物理投影；前景用[前景遮挡物]制造空间深度，背景是[背景布景]。\n用纸质标签、箭头或知识卡片标注[需要标注的要点]。微距摄影感，轻微景深，[主色调]。\n不要：光滑塑料 3D、高亮 CG、扁平矢量插画、金属或玻璃材质、霓虹。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/papercraft-stop-motion-explainer.gif",
+    "path": "covers/tpl-image-papercraft-keyframe/1.jpg",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/papercraft-stop-motion-explainer.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "scientific-educational"
@@ -11903,7 +12103,13 @@
   },
   {
    "content": "风格化 3D 动画镜头，[时长]秒，[画幅]。皮克斯感 3D 卡通渲染，C4D + Octane 质感，Q 版比例，温润次表面散射皮肤，夸张弹性表演。\n角色：[角色及其不可改特征]。场景：[场景与地标位置]。光位：[光位]。\n承接：[上一镜结束时的状态]。\n单镜头内逐秒推进，不切镜：\n0–1秒：[动作与表情]；镜头[镜头运动]；[空间位置]；[[sound: [音频线索]]]\n1–2秒：[动作与表情]；镜头[镜头运动]；[空间位置]；[[sound: [音频线索]]]\n2–3秒：[动作与表情]；镜头[镜头运动]；[空间位置]；[[sound: [音频线索]]]，并把[交给下一镜的状态]留给下一镜。\n对白：[[say: [对白]]]（没有对白时删去这一行）\n不要：写实摄影、扁平二次元、塑料玩具皮肤、僵硬姿势。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/3d-animation-short-generator.gif",
+    "path": "covers/tpl-video-cartoon-3d-shot/2.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/3d-animation-short-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "animation-short"
@@ -11999,7 +12205,13 @@
   },
   {
    "content": "双人合作游戏开场视频，15秒，16:9，[视觉风格]。画面构图、UI 层级、色彩和字体以[确认首图]为准；左侧玩家参考[玩家1参考图]，右侧玩家参考[玩家2参考图]，身份、发型和左右位置全程不变。全程一镜到底，按秒推进：\n0–2秒：高角度俯拍大全景，镜头缓慢下压推进；两人并排坐在中央抬头看镜头，只有呼吸和眨眼；左上信息卡显示 [[text: PLAYER 1]] [[text: [玩家1名字]]] [[text: READY]] 与 [[text: PLAYER 2]] [[text: [玩家2名字]]] [[text: READY]]，右侧菜单 [[text: START NEW GAME]] [[text: CONTINUE]] [[text: SETTINGS]] [[text: EXIT GAME]]，CONTINUE 高亮。[[sound: 菜单环境音、轻微悬停音]]\n2–4秒：镜头推近左侧玩家的手臂，菜单滑出，强调色装备面板滑入，显示 [[text: [玩家1装备名]]]；轻量机械结构从前臂展开并逐一锁定，指示灯依次亮起。[[sound: 精密机械展开与锁定声]]\n4–7秒：镜头横移到右侧玩家，暖色装备面板滑入，显示 [[text: [玩家2装备名]]]；厚重护甲分段替换并锁定，与左侧的轻量装备形成体型和力量对比。[[sound: 低沉电机与重型扣合声]]\n7–8.5秒：拉回双人构图，两个面板汇合成 [[text: CONFIRM CONFIG]] 按钮，点击后两色能量脉冲流过两人装备，面板收缩消失，两人调整坐姿。\n8.5–10秒：底部加载条 [[text: LOADING]] 从 0% 填到 100%，左半段用左侧玩家的强调色、右半段用右侧玩家的暖色；平面背景连续转化为游戏世界——警戒胶带变成道路标记，涂鸦扩展成墙面喷绘，不硬切、不用烟雾遮挡。\n10–15秒：两人同时起身，镜头下降绕到身后转为第三人称双人视角，并肩走进[游戏世界]；HUD 淡入，右上小地图，左下两条状态栏分别显示 [[text: [玩家1名字]]] [[text: [玩家2名字]]]。[[sound: 城市环境声、脚步声、HUD 提示音]]\n不要：第三个玩家、角色互换、名字互换、两人体型相同、换脸换发型、分屏、硬切、随机抖动。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/co-op-game-intro-generator.gif",
+    "path": "covers/tpl-video-coop-game-intro-15s/2.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/co-op-game-intro-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "game-intro",
@@ -12239,7 +12451,13 @@
   },
   {
    "content": "15秒，16:9横版视频。将实拍的[实拍空间]与手绘发光动画融合的影像，手持一镜到底，按秒推进。\n实拍空间与拍摄质感：[空间细节]，手持手机拍摄，自然光，轻微晃动。\n0–3秒：[初始形态]以[中心色彩]的发光笔触出现，[与手或实物的接触方式]。\n3–6秒：它变形为[第二形态]，保留上一形态的线条痕迹，沿[追逐路线]逃开，拍摄者伸手去抓。\n6–10秒：继续变形为[第三形态]，[一次恶作剧或发现]，拍摄者[拍摄者反应]。\n10–13秒：变形为[第四形态]，钻进或绕过[空间中的物件]，镜头慢半拍追上。\n13–15秒：线条扩散到整个空间，变成[空间级变形]，以[可爱笑点]收尾。\n手绘质感：蜡笔、粉笔、彩铅般的粗糙发光笔触，线条轻微抖动，逐帧重画感。\n相机：慢半拍的手持追拍，不把动画稳定居中。\n禁止：3D CG、毛绒感、平滑霓虹、恐怖元素、巨大眼睛、牙齿、跳吓、突然黑屏、突然出现新角色。\n[[sound: [环境音]，配合接触与变形的轻微音效]]",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/handdrawn-live-video-generator.gif",
+    "path": "covers/tpl-video-handdrawn-live-fusion-15s/2.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/handdrawn-live-video-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "cinematic-animation"
@@ -12459,7 +12677,13 @@
   },
   {
    "content": "全局美学与人物锁：[全局美学]；人物：[人物形象]；画幅[画幅]。\n[[shot [镜头1开始秒]-[镜头1结束秒]]] 唱：[[say S1: [镜头1唱词]]]\n画面文字：[[text: [镜头1唱词]]]，[文字动效]\n画面与动作：[镜头1画面与动作]\n运镜：[镜头1运镜]\n转出：[镜头1转出方式]\n[[shot [镜头2开始秒]-[镜头2结束秒]]] 唱：[[say S1: [镜头2唱词]]]\n画面文字：[[text: [镜头2唱词]]]，[文字动效]\n画面与动作：[镜头2画面与动作]\n运镜：[镜头2运镜]\n转出：[镜头2转出方式]\n（按同样格式继续，切点落在句间停顿或强鼓点上。）",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/music-video-subtitle-generator.gif",
+    "path": "covers/tpl-video-mv-shot-script/2.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/music-video-subtitle-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "music-video"
@@ -12575,7 +12799,13 @@
   },
   {
    "content": "纸拼贴定格组装动画，约4秒，[画幅]。最终画面以[最终静帧]为准。\n从与最终静帧主背景一致的干净[主色]纸色场开始；按可读顺序组装前景、中景、背景纸片组：先是[基础结构]，再是[主要隐喻元素]，最后是[次要物件]。每个纸片出现、滑入或弹入、轻微回弹、压平、停顿、锁定到位。\n保留半调网点、暖白描边、细微纤维撕边、层叠纸缝、柔和阴影和纸纹。结尾停留在与最终静帧一致的完整构图上。\n[[sound: 只有与纸片动作同步的触感拼贴音效：纸片滑动、弹入、压平轻敲、轻微摩擦、小纸片脆响]]；不加背景音乐、旁白或对白。\n不要：牛皮纸开场、发黄或偏棕的底、快速旋转、混乱飞散、平滑数字图层移动、切镜、运镜、变焦、形变、新增物件、文字、LOGO、水印、界面。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/paper-collage-explainer-generator.gif",
+    "path": "covers/tpl-video-paper-collage-assembly/2.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/paper-collage-explainer-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "explainer"
@@ -12642,7 +12872,13 @@
   },
   {
    "content": "以[纸艺参考图]为画面基础，生成5秒纸艺定格动画，保持纸张纹理、剪裁边缘、分层布景和真实投影不变。\n镜头[运镜]，前景和背景产生视差；[纸偶角色]做小幅定格式动作：[角色动作]；纸质[机关元素]轻微移动。\n动作像逐帧手工拨动：分段移动、短暂停顿、轻微回弹。\n[[sound: [纸艺音效]]] [[music: [配乐方向]]]\n避免：光滑 CG 变形、融化、塑料质感、高速镜头。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/papercraft-stop-motion-explainer.gif",
+    "path": "covers/tpl-video-papercraft-i2v-5s/2.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/papercraft-stop-motion-explainer.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "genres": [
     "scientific-educational"

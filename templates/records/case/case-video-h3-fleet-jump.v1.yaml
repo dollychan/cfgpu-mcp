@@ -1,0 +1,32 @@
+id: case-video-h3-fleet-jump
+version: 1
+rank: 380
+kind: case
+media: video
+title: 文生视频：舰队跃迁，舰长独留舰桥
+summary: 太空歌剧预告感的两镜头文生视频，画面、声景、配乐分开写，第二镜切面部特写。
+genres:
+- cinematic-film-references
+scenes:
+- story
+styles:
+- cinematic
+tags:
+- 文生视频
+- T2VA
+- 太空
+- 科幻
+- 跃迁
+- 音画同出
+- sci-fi
+- space opera
+source:
+  origin: first-party, rewritten from MiniMax-AI/MiniMax-H3 README (case-T2VA)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3#case-t2va
+content: |-
+  电影感太空歌剧预告，10 秒，16:9。
+  [[shot 0-4.5]] 中远景，镜头缓慢推进。幽暗宽阔的星舰舰桥，两侧金属控制台亮着琥珀色屏幕，正前方是一整面弧形观景窗。一位四十多岁的女舰长站在画面中央，银灰短发，深蓝高领军装、胸前银色徽章；她背对镜头，双手背在身后一动不动，被窗外冷色星光勾出剪影。窗外紫色星云前，一支棱角分明的深灰色无畏舰舰队列阵悬停，尾部推进器的蓝光越来越亮。
+  [[shot 4.5-10]] 切到舰长面部特写，镜头剧烈晃动。舰队聚能的蓝白光映在她眼里；一道刺眼的白光吞没窗外，舰队跃迁离去，冲击让舰桥猛烈震动，她向前踉跄半步、肩膀绷紧稳住身体。白光骤然褪去，只剩空荡的紫色星云映在她脸上，她咬紧牙关，缓缓闭上眼。
+  [[sound: 舰桥生命维持系统的低沉嗡鸣打底；舰队充能时高频电子啸声逐渐升高；白光闪起的瞬间一声低频爆响夹着噼啪声，舱壁金属吱嘎、震颤、闷响；冲击过后骤然回到空旷的室内底噪，只剩微弱的嗡鸣]]
+  [[music: 太空歌剧管弦配乐，慢速，一支孤独哀伤的圆号旋律压在低沉持续的不协和弦乐上，音量和张力迅速堆到顶点，跃迁后立刻戛然而止]]
