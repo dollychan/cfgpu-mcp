@@ -28,7 +28,7 @@ from cfgpu_mcp.template_library.bundle import (
 )
 from cfgpu_mcp.template_library.dialect_guard import find_dialect, markup_problems
 from cfgpu_mcp.template_library.index import TemplateIndex
-from cfgpu_mcp.template_library.schema import TemplateRecord
+from cfgpu_mcp.template_library.schema import COVER_MEDIA_TYPES, TemplateRecord
 from cfgpu_mcp.template_library.tokenize import query_terms
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -84,14 +84,14 @@ def test_committed_bundle_matches_the_source_tree():
 
 
 def test_every_cover_belongs_to_a_record_version():
-    """templates/covers/<id>/<version>.jpg mirrors the OSS key; an orphan would upload a dead file."""
+    """templates/covers/<id>/<version>.<ext> mirrors the OSS key; an orphan would upload a dead file."""
     keys = {(r.id, r.version) for r in load_bundle().records}
     covers = sorted((SOURCE / "covers").glob("*/*"))
     assert covers, "templates/covers is empty"
     orphans = [
         p
         for p in covers
-        if p.suffix != ".jpg" or (p.parent.name, int(p.stem)) not in keys
+        if p.suffix not in COVER_MEDIA_TYPES or (p.parent.name, int(p.stem)) not in keys
     ]
     assert not orphans, orphans
 
@@ -99,7 +99,7 @@ def test_every_cover_belongs_to_a_record_version():
 def test_every_cover_is_credited_as_reference_only():
     """Covers are third-party examples: each needs its source and the reference-only mark."""
     covers_dir = SOURCE / "covers"
-    files = {p.relative_to(covers_dir).as_posix() for p in covers_dir.glob("*/*.jpg")}
+    files = {p.relative_to(covers_dir).as_posix() for p in covers_dir.glob("*/*") if p.suffix in COVER_MEDIA_TYPES}
     credits = yaml.safe_load((covers_dir / "credits.yaml").read_text(encoding="utf-8"))
     assert "版权归" in credits["notice"] and "reference only" in credits["notice"]
     assert set(credits["covers"]) == files

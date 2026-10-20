@@ -88,6 +88,13 @@ def test_cover_is_not_part_of_the_immutable_fields(tmp_path):
         ({"case-test-0001/1.jpg": _CREDIT}, [], {}, "file is missing"),
         ({"case-test-0001/1.jpg": {**_CREDIT, "usage": "free"}}, ["case-test-0001/1.jpg"], {}, "usage"),
         ({"case-test-0001/1.jpg": {**_CREDIT, "origin": None}}, ["case-test-0001/1.jpg"], {}, "origin"),
+        ({"case-test-0001/1.png": _CREDIT}, ["case-test-0001/1.png"], {}, "cover type"),
+        (
+            {"case-test-0001/1.jpg": _CREDIT, "case-test-0001/1.webp": _CREDIT},
+            ["case-test-0001/1.jpg", "case-test-0001/1.webp"],
+            {},
+            "already has the cover",
+        ),
         (None, [], {"cover": {"path": "covers/case-test-0001/1.jpg", "origin": "x"}}, "not in the record"),
     ],
 )
@@ -101,10 +108,10 @@ def test_bad_cover_declarations_are_refused(tmp_path, credits, files, record_ext
 
 @pytest.fixture
 def client(tmp_path) -> TestClient:
-    keys = ["case-test-0001/1.jpg", "case-test-0002/1.jpg"]
+    keys = ["case-test-0001/1.jpg", "case-test-0002/1.jpg", "case-test-0004/1.webp", "case-test-0005/1.gif"]
     root = _tree(
         tmp_path,
-        [_record(), _record("case-test-0002"), _record("case-test-0003")],
+        [_record(), _record("case-test-0002"), _record("case-test-0003"), _record("case-test-0004"), _record("case-test-0005")],
         {k: _CREDIT for k in keys},
         keys,
     )
@@ -138,6 +145,17 @@ def test_serves_a_listed_cover_with_public_headers(client):
 )
 def test_anything_not_listed_is_404(client, path):
     assert client.get(path).status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("path", "media_type"),
+    [("/covers/case-test-0004/1.webp", "image/webp"), ("/covers/case-test-0005/1.gif", "image/gif")],
+)
+def test_animated_covers_carry_their_own_type(client, path, media_type):
+    """Video records use animated covers; the type follows the file, not a fixed JPEG."""
+    resp = client.get(path)
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == media_type
 
 
 def test_only_reads_are_allowed(client):

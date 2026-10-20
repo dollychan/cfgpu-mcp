@@ -56,11 +56,15 @@ class Slot(BaseModel):
     hint: Optional[str] = Field(default=None, max_length=200)
 
 
-_COVER_PATH = re.compile(r"^covers/[a-z0-9][a-z0-9-]{2,80}/[1-9][0-9]*\.jpg$")
+#: Cover file types and the Content-Type each is served with. Video records use an
+#: animated WebP (or GIF) so the card shows motion; image records use a JPEG.
+COVER_MEDIA_TYPES = {".jpg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif"}
+
+_COVER_PATH = re.compile(r"^covers/[a-z0-9][a-z0-9-]{2,80}/[1-9][0-9]*\.(jpg|webp|gif)$")
 
 
 class Cover(BaseModel):
-    """A record's example image, served by the public HTTP service (``public_http``).
+    """A record's example image (still or animated), served by ``public_http``.
 
     Never written in a record file: the bundle builder fills it from
     ``templates/covers/credits.yaml``. Every cover so far is a third-party example kept
@@ -69,7 +73,7 @@ class Cover(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    #: ``covers/<id>/<version>.jpg``, relative to ``public_http.public_base_url``.
+    #: ``covers/<id>/<version>.<jpg|webp|gif>``, relative to ``public_http.public_base_url``.
     path: str
     origin: str = Field(min_length=1)
     author: Optional[str] = None

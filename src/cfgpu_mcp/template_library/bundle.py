@@ -23,6 +23,7 @@ import yaml
 
 from cfgpu_mcp.template_library.dialect_guard import find_dialect, markup_problems
 from cfgpu_mcp.template_library.schema import (
+    COVER_MEDIA_TYPES,
     SCHEMA_VERSION,
     Catalog,
     Cover,
@@ -74,9 +75,10 @@ def _sorted(records: Iterable[TemplateRecord]) -> list[TemplateRecord]:
 def _attach_covers(source_dir: Path, records: dict[tuple[str, int], TemplateRecord]) -> list[str]:
     """Fill ``record.cover`` from ``covers/credits.yaml`` (the only place covers are declared).
 
-    Each credits key is ``<id>/<version>.jpg``; it must name a record version and an
-    existing file. A record file that sets ``cover`` itself is refused, so there is one
-    source for a cover and its credit.
+    Each credits key is ``<id>/<version>.<ext>`` with an extension from
+    ``COVER_MEDIA_TYPES``; it must name a record version and an existing file, and a
+    record version has at most one cover. A record file that sets ``cover`` itself is
+    refused, so there is one source for a cover and its credit.
     """
     problems = [
         f"{r.id}@{r.version}: cover is set from covers/credits.yaml, not in the record"
@@ -89,10 +91,16 @@ def _attach_covers(source_dir: Path, records: dict[tuple[str, int], TemplateReco
     covers = (yaml.safe_load(credits_path.read_text(encoding="utf-8")) or {}).get("covers") or {}
     for key, entry in covers.items():
         record_id, _, file_name = key.partition("/")
-        version = file_name.removesuffix(".jpg")
+        version, dot, ext = file_name.rpartition(".")
+        if f"{dot}{ext}" not in COVER_MEDIA_TYPES:
+            problems.append(f"covers/{key}: cover type must be one of {sorted(COVER_MEDIA_TYPES)}")
+            continue
         record = records.get((record_id, int(version))) if version.isdigit() else None
         if record is None:
             problems.append(f"covers/{key}: no record {record_id}@{version}")
+            continue
+        if record.cover is not None:
+            problems.append(f"covers/{key}: {record_id}@{version} already has the cover {record.cover.path}")
             continue
         if not (source_dir / COVERS_DIRNAME / key).is_file():
             problems.append(f"covers/{key}: credited but the file is missing")

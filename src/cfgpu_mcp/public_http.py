@@ -6,7 +6,8 @@ answers anonymous browsers. Sharing a process or middleware would put an
 unauthenticated public surface next to token handling for no gain.
 
 What it serves is fixed at startup: the cover paths of the shipped template bundle
-(``covers/<id>/<version>.jpg``), each mapped to its file under ``public_http.covers_dir``.
+(``covers/<id>/<version>.<jpg|webp|gif>``), each mapped to its file under
+``public_http.covers_dir``; the Content-Type follows the extension.
 A request is answered only when its path is exactly one of those keys, so there is no
 path joining, no directory listing and no way to reach any other file. Everything else
 is 404. A cover listed in the bundle whose file is missing is logged and left out.
@@ -27,6 +28,7 @@ from starlette.responses import FileResponse, PlainTextResponse, Response
 from starlette.routing import Route
 
 from cfgpu_mcp.template_library.bundle import Bundle, load_bundle
+from cfgpu_mcp.template_library.schema import COVER_MEDIA_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ _COVERS_PREFIX = "covers/"
 
 
 def cover_files(bundle: Bundle, covers_dir: Path) -> dict[str, Path]:
-    """Map each servable URL path (``covers/<id>/<version>.jpg``) to its file."""
+    """Map each servable URL path (``covers/<id>/<version>.<ext>``) to its file."""
     files: dict[str, Path] = {}
     for record in bundle.records:
         if record.cover is None or record.status == "withdrawn":
@@ -60,7 +62,7 @@ def build_public_app(files: dict[str, Path], *, cache_max_age: int = 86400) -> S
         file = files.get(_COVERS_PREFIX + request.path_params["rest"])
         if file is None:
             return PlainTextResponse("not found", status_code=404)
-        return FileResponse(file, media_type="image/jpeg", headers=headers)
+        return FileResponse(file, media_type=COVER_MEDIA_TYPES[file.suffix], headers=headers)
 
     async def healthz(request: Request) -> Response:
         return PlainTextResponse(f"ok {len(files)} covers")

@@ -17,6 +17,11 @@ which is not a project dependency — run it with any Python that has it:
 
     python3 scripts/templates/import_covers.py gpt-image2 ~/claude/Private/GPT-Image2-Skill
     python3 scripts/templates/import_covers.py awesome-styles ~/claude/Public/awesome-gpt-image-2
+    python3 scripts/templates/import_covers.py minimax-h3 ~/claude/Public/MiniMax-H3
+
+``minimax-h3`` covers video records, so they are animated: each GIF or MP4 is re-encoded
+as an animated WebP (long edge ≤ ``--anim-max-edge``, MP4s resampled to ``--anim-fps``).
+MP4s need an ``ffmpeg`` on PATH (or the ``imageio-ffmpeg`` package).
 """
 
 from __future__ import annotations
@@ -24,12 +29,15 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
 import yaml
-from PIL import Image
+from PIL import Image, ImageSequence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RECORDS = REPO_ROOT / "templates" / "records"
@@ -78,7 +86,35 @@ AWESOME_STYLE_COVERS: dict[str, int] = {
     "style-concept-product-breakdown": 370,
 }
 
-Found = dict[str, tuple[Path, dict[str, Any]]]
+# Record -> file under MiniMax-H3 ``assets/``, shown whole as an animated cover; an image
+# record instead gets one GIF frame as a still JPEG (``(file, frame index)``). The GIFs
+# are the demo clips of the H3 genre skills the style/template records were rewritten
+# from; the MP4s are the README case outputs. Left out on purpose:
+# brand-promo-video-generator (a MiniMax Hub product promo, i.e. a real brand),
+# minimalist-product-ad-generator (real consumer products), and case-video-h3-voice-edit
+# (live-action footage of a real person).
+H3_COVERS: dict[str, str | tuple[str, int]] = {
+    "style-video-cartoon-3d-short": "3d-animation-short-generator.gif",
+    "tpl-video-cartoon-3d-shot": "3d-animation-short-generator.gif",
+    "tpl-image-coop-game-menu": ("co-op-game-intro-generator.gif", 18),
+    "tpl-video-coop-game-intro-15s": "co-op-game-intro-generator.gif",
+    "style-video-handdrawn-live-fusion": "handdrawn-live-video-generator.gif",
+    "tpl-video-handdrawn-live-fusion-15s": "handdrawn-live-video-generator.gif",
+    "style-video-mv-lyric-typography": "music-video-subtitle-generator.gif",
+    "tpl-video-mv-shot-script": "music-video-subtitle-generator.gif",
+    "style-video-paper-collage": "paper-collage-explainer-generator.gif",
+    "tpl-video-paper-collage-assembly": "paper-collage-explainer-generator.gif",
+    "style-video-papercraft-stop-motion": "papercraft-stop-motion-explainer.gif",
+    "tpl-video-papercraft-i2v-5s": "papercraft-stop-motion-explainer.gif",
+    "tpl-image-papercraft-keyframe": ("papercraft-stop-motion-explainer.gif", 6),
+    "case-video-h3-fleet-jump": "t2va.mp4",
+    "case-video-h3-ramen-focus-pull": "i2va.mp4",
+}
+
+#: A source file and its cover form: animated (``True``), the image itself (``False``),
+#: or the still JPEG of one GIF frame (frame index).
+Source = tuple[Path, bool | int]
+Found = dict[str, tuple[Source, dict[str, Any]]]
 
 
 def latest_records() -> dict[str, Path]:
@@ -128,7 +164,7 @@ def gpt_image2_covers(repo: Path, records: dict[str, Path]) -> Found:
             "source"
         ]
         found[record_id] = (
-            src,
+            (src, False),
             {
                 "origin": "wuyoscar/GPT-Image2-Skill",
                 "author": source.get("author"),
@@ -152,7 +188,7 @@ def awesome_style_covers(repo: Path) -> Found:
     for record_id, case_id in AWESOME_STYLE_COVERS.items():
         case = cases[case_id]
         found[record_id] = (
-            data / case["image"].lstrip("/"),
+            (data / case["image"].lstrip("/"), False),
             {
                 "origin": f"freestylefly/awesome-gpt-image-2 gallery case {case_id}",
                 "author": case.get("sourceLabel"),
@@ -162,12 +198,76 @@ def awesome_style_covers(repo: Path) -> Found:
     return found
 
 
-def write_cover(src: Path, dest: Path, max_edge: int, quality: int) -> None:
-    with Image.open(src) as img:
+def minimax_h3_covers(repo: Path) -> Found:
+    found: Found = {}
+    for record_id, spec in H3_COVERS.items():
+        name, form = spec if isinstance(spec, tuple) else (spec, True)
+        found[record_id] = (
+            (repo / "assets" / name, form),
+            {
+                "origin": f"MiniMax-AI/MiniMax-H3 assets/{name}",
+                "author": "MiniMax",
+                "url": f"https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/{name}",
+            },
+        )
+    return found
+
+
+def _ffmpeg() -> str:
+    exe = shutil.which("ffmpeg")
+    if exe:
+        return exe
+    try:
+        import imageio_ffmpeg
+    except ImportError:
+        raise SystemExit("an MP4 cover needs ffmpeg on PATH or the imageio-ffmpeg package")
+    return imageio_ffmpeg.get_ffmpeg_exe()
+
+
+def _frames(src: Path, max_edge: int, fps: int) -> tuple[list[Image.Image], list[int]]:
+    """Frames (RGB, long edge ≤ ``max_edge``) and per-frame durations in ms."""
+    frames: list[Image.Image] = []
+    durations: list[int] = []
+    if src.suffix.lower() == ".gif":
+        with Image.open(src) as img:
+            for frame in ImageSequence.Iterator(img):
+                durations.append(frame.info.get("duration") or 100)
+                frames.append(frame.convert("RGB"))
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            subprocess.run(
+                [_ffmpeg(), "-v", "error", "-i", str(src), "-vf", f"fps={fps}", f"{tmp}/%05d.png"],
+                check=True,
+            )
+            for png in sorted(Path(tmp).glob("*.png")):
+                with Image.open(png) as img:
+                    frames.append(img.convert("RGB"))
+                durations.append(round(1000 / fps))
+    for frame in frames:
+        frame.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+    return frames, durations
+
+
+def cover_key(record_id: str, version: int, src: Source) -> str:
+    return f"{record_id}/{version}.{'webp' if src[1] is True else 'jpg'}"
+
+
+def write_cover(src: Source, dest: Path, args: argparse.Namespace) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    path, form = src
+    if form is True:
+        frames, durations = _frames(path, args.anim_max_edge, args.anim_fps)
+        frames[0].save(
+            dest, "WEBP", save_all=True, append_images=frames[1:], duration=durations,
+            loop=0, quality=args.anim_quality, method=6,
+        )
+        return
+    with Image.open(path) as img:
+        if form is not False:
+            img.seek(form)
         img = img.convert("RGB")
-        img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        img.save(dest, "JPEG", quality=quality, optimize=True, progressive=True)
+        img.thumbnail((args.max_edge, args.max_edge), Image.Resampling.LANCZOS)
+        img.save(dest, "JPEG", quality=args.quality, optimize=True, progressive=True)
 
 
 def load_credits() -> dict[str, Any]:
@@ -188,18 +288,23 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("source", choices=["gpt-image2", "awesome-styles"])
+    parser.add_argument("source", choices=["gpt-image2", "awesome-styles", "minimax-h3"])
     parser.add_argument("path", type=Path)
     parser.add_argument("--max-edge", type=int, default=1024)
     parser.add_argument("--quality", type=int, default=85)
+    parser.add_argument("--anim-max-edge", type=int, default=480)
+    parser.add_argument("--anim-fps", type=int, default=8)
+    parser.add_argument("--anim-quality", type=int, default=70)
     args = parser.parse_args()
 
     records = latest_records()
     repo = args.path.expanduser()
     if args.source == "gpt-image2":
         found = gpt_image2_covers(repo, records)
-    else:
+    elif args.source == "awesome-styles":
         found = awesome_style_covers(repo)
+    else:
+        found = minimax_h3_covers(repo)
 
     credits = load_credits()
     written = 0
@@ -207,12 +312,16 @@ def main() -> int:
         if record_id not in records:
             print(f"skip {record_id}: no record", file=sys.stderr)
             continue
-        if not src.is_file():
-            print(f"skip {record_id}: missing image {src}", file=sys.stderr)
+        if not src[0].is_file():
+            print(f"skip {record_id}: missing image {src[0]}", file=sys.stderr)
             continue
         version = int(_RECORD_FILE.match(records[record_id].name)["version"])
-        key = f"{record_id}/{version}.jpg"
-        write_cover(src, COVERS / key, args.max_edge, args.quality)
+        key = cover_key(record_id, version, src)
+        # One cover per record version: drop a previous one in another format.
+        for old in [k for k in credits if k.rpartition(".")[0] == f"{record_id}/{version}" and k != key]:
+            del credits[old]
+            (COVERS / old).unlink(missing_ok=True)
+        write_cover(src, COVERS / key, args)
         credits[key] = {**credit, "usage": "reference-only"}
         written += 1
     save_credits(credits)
