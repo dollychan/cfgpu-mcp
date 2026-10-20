@@ -7,7 +7,7 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, NamedTuple
 
-from cfgpu_mcp.adapters.regions import resolve_image_refs
+from cfgpu_mcp.adapters.prompt_render import RenderOutcome, render_for
 from cfgpu_mcp.client.cfgpu_client import CFGPUClient
 from cfgpu_mcp.client.repository import TaskRepository
 from cfgpu_mcp.errors import CFGPUError
@@ -94,6 +94,12 @@ _LABEL_KEY = "_label"
 # strip would leak an internal key into the payload every caller sees, silently.
 _ECHO_PAYLOAD_KEYS = (_REQUEST_ID_KEY, _CAPTION_KEY, _LABEL_KEY)
 
+#: How the prompt was rendered (``adapters/prompt_render.py``): the dialect key and the
+#: caller's model-neutral prompt. Row-only bookkeeping — stripped from every response,
+#: since the dialect is never shown to a caller (I-DL5).
+_PROMPT_DIALECT_KEY = "_prompt_dialect"
+_PROMPT_SOURCE_KEY = "_prompt_source"
+
 # The upstream's own ETA for this submission, captured from the POST response by
 # adapter.extract_eta(). Stashed like the keys above so the force-async return path
 # and later task_status calls can both surface it.
@@ -113,15 +119,22 @@ _ETA_KEY = "_eta"
 _FAILURE_TYPE_KEY = "_error_type"
 
 
-def _stash_internal(payload: dict, req: Any, *, aspect_ratio: bool) -> dict:
+def _stash_internal(
+    payload: dict, req: Any, *, aspect_ratio: bool, rendered: "RenderOutcome | None" = None
+) -> dict:
     """Return a copy of ``payload`` augmented with the reserved internal keys.
 
     Adds the caller's ``request_id`` / ``caption`` / ``label`` (when supplied) so
     task_status/task_wait can echo them, and — for async tasks (``aspect_ratio=True``) —
-    the requested aspect_ratio echo that poll() falls back to. Returns ``payload``
-    unchanged when nothing needs stashing.
+    the requested aspect_ratio echo that poll() falls back to. When the prompt was
+    rendered into a model dialect it also keeps the caller's own prompt and
+    ``<dialect>@<version>`` (I-DL8), so a rendered prompt stays explainable after the
+    dialect file changes. Returns ``payload`` unchanged when nothing needs stashing.
     """
     extra: dict[str, Any] = {}
+    if rendered is not None and rendered.dialect is not None:
+        extra[_PROMPT_DIALECT_KEY] = rendered.dialect
+        extra[_PROMPT_SOURCE_KEY] = rendered.source_prompt
     if aspect_ratio:
         extra[_ASPECT_RATIO_KEY] = getattr(req, "aspect_ratio", None)
     request_id = getattr(req, "request_id", None)
@@ -480,7 +493,10 @@ class Task:
         """
         return {
             k: v for k, v in self.payload.items()
-            if k not in (_ASPECT_RATIO_KEY, _FAILURE_TYPE_KEY, *_ECHO_PAYLOAD_KEYS)
+            if k not in (
+                _ASPECT_RATIO_KEY, _FAILURE_TYPE_KEY, _PROMPT_DIALECT_KEY, _PROMPT_SOURCE_KEY,
+                *_ECHO_PAYLOAD_KEYS,
+            )
         }
 
 
@@ -612,7 +628,7 @@ def validate_request(
         )
     # The same placeholder resolution create() applies, so the preflight's payload is
     # the prompt that would really be sent — and an unresolved [[...]] fails here, free.
-    payload = adapter.build_payload(resolve_image_refs(effective_req))
+    payload = adapter.build_payload(render_for(adapter, effective_req).req)
     return {
         "validated": True,
         # The concrete model, so `model="auto"` reports what routing actually picked —
@@ -683,10 +699,11 @@ class TaskManager:
         """
         # Placeholders resolve before the row is written: an unresolved one raises here,
         # with nothing inserted and nothing sent.
-        payload = adapter.build_payload(resolve_image_refs(req))
+        rendered = render_for(adapter, req)
+        payload = adapter.build_payload(rendered.req)
         request_id = getattr(req, "request_id", None)
         task_id = request_id or str(uuid.uuid4())
-        stored_payload = _stash_internal(payload, req, aspect_ratio=adapter.is_async)
+        stored_payload = _stash_internal(payload, req, aspect_ratio=adapter.is_async, rendered=rendered)
 
         inserted = await self._repo.insert_task(
             task_id, adapter.adapter_id, SUBMITTING, stored_payload,

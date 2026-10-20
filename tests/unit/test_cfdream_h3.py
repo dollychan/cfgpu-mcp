@@ -41,9 +41,28 @@ def r2v(registry) -> CfdreamH3RefAdapter:
     return registry.get("cfdream/minimax-h3-r2v")
 
 
-def _req(**kw) -> GenerateVideoInput:
+def _req(*, tag: bool = True, **kw) -> GenerateVideoInput:
+    """A request; with ``tag`` every reference gets a handle the prompt names.
+
+    The r2v weights ignore a reference the prompt does not tag (the server refuses
+    such a request, see ``test_r2v_refuses_a_reference_the_prompt_never_names``), so
+    a probe meant to test something else has to name what it passes.
+    """
     kw.setdefault("prompt", "a red panda in the snow")
     kw.setdefault("resolution", "480p")
+    if tag:
+        mentions = []
+        for slot, refs_name, stem in (
+            ("reference_images", "image_refs", "img"),
+            ("reference_videos", "video_refs", "vid"),
+            ("reference_audios", "audio_refs", "aud"),
+        ):
+            items = kw.get(slot) or []
+            if items and refs_name not in kw:
+                kw[refs_name] = [f"{stem}{i}" for i in range(len(items))]
+                mentions += [f"[[{h}]]" for h in kw[refs_name]]
+        if mentions:
+            kw["prompt"] = " ".join(mentions) + " " + kw["prompt"]
     return GenerateVideoInput(**kw)
 
 
@@ -321,8 +340,37 @@ def test_card_documents_the_silent_degradations(adapter_id):
 
 
 def test_r2v_card_spells_out_the_prompt_tag_rule():
-    """Materials that aren't referenced by <Picture N> are silently ignored by
-    the model — no error, just a video that used none of them."""
+    """Materials the prompt does not name are silently ignored by the model — no error,
+    just a video that used none of them. The card teaches the unified `[[handle]]`
+    notation and never the model's own tag: the card is agent-readable, and a tag the
+    agent reads is a tag it copies into the next model's prompt (I-DL5)."""
     card = (MODELS_DIR / "cfdream-minimax-h3-r2v" / "card.md").read_text()
-    assert "<Picture 1>" in card and "<Video 1>" in card and "<Audio 1>" in card
+    assert "[[hero]]" in card and "image_refs" in card and "audio_refs" in card
+    assert "<Picture" not in card and "<Audio" not in card and "<Video" not in card
     assert "24fps" in card             # reference videos are not resampled for you
+
+
+def test_r2v_refuses_a_reference_the_prompt_never_names(r2v):
+    """The r2v weights silently ignore an untagged reference and bill anyway, so the
+    request is refused before it is sent — and the refusal speaks only the unified
+    notation, never this model's own tag."""
+    ok, reason = r2v.supports(_req(tag=False, reference_images=["https://x/1.jpg"]))
+    assert not ok
+    assert "reference_images[0]" in reason and "[[" in reason
+    assert "<Picture" not in reason
+
+    # Naming it fixes it, and so does a caller still writing the model's own tag.
+    assert r2v.supports(_req(reference_images=["https://x/1.jpg"]))[0]
+    assert r2v.supports(_req(tag=False, prompt="<Picture 1> waves", reference_images=["https://x/1.jpg"]))[0]
+
+
+def test_r2v_names_only_what_is_missing(r2v):
+    req = _req(
+        tag=False,
+        prompt="[[hero]] dances",
+        reference_images=["https://x/1.jpg", "https://x/2.jpg"],
+        image_refs=["hero", "bg"],
+    )
+    ok, reason = r2v.supports(req)
+    assert not ok and "reference_images[1]" in reason and "[[bg]]" in reason
+    assert "reference_images[0]" not in reason

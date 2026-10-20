@@ -1,0 +1,35 @@
+id: style-web-trust-first
+version: 1
+rank: 670
+kind: style
+media: image
+title: 可信优先：公共服务与受监管行业的清晰页面
+summary: 低变化度、低动效、信息清晰，字号和对比度优先保证可读，适合政务、医疗、金融、教育和面向儿童的产品。
+genres:
+- ui-ux-mockups
+scenes:
+- education
+- tech
+styles:
+- ui
+- documents
+tags:
+- 公共服务
+- 可访问性
+- 医疗
+- 金融
+- 教育
+- 医院
+- 政务
+- 预约
+- 银行
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)
+  license: first-party
+content: |-
+  适用：公共服务、受监管行业（医疗、金融、保险）、教育、面向儿童或长者的产品。这类约束优先于审美偏好。
+  版式：规整网格、对称或接近对称，区块职责清楚；信息密度可以略高，但每块只讲一件事。
+  字体：大字号、高对比、行长适中；按钮和链接样式明显、可点击区域足够大。
+  配色：沉稳的主色加一个清楚的操作色；状态色（成功、警告、错误）含义固定。
+  图片：真实、温和的场景或清晰的示意图，不用炫技的视觉处理。
+  避免：低对比的浅灰字、装饰性动效、图片压文字、模糊的行动号召。

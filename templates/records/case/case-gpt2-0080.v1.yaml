@@ -1,0 +1,31 @@
+id: case-gpt2-0080
+version: 1
+rank: 80
+kind: case
+media: image
+title: Retrieval-Augmented Generation pipeline
+summary: Landscape 16:9 academic systems diagram of a RAG pipeline, 6-stage left-to-right flow.
+genres:
+- research-paper-figures
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-research-paper-figures.md
+content: |-
+  Landscape 16:9 academic systems diagram of a RAG pipeline, 6-stage left-to-right flow.
+
+  (1) "User query" box with placeholder text "What are the side effects of drug X?" and a small user silhouette.
+  (2) Hexagonal "Embedding encoder (BERT-style)", caption "dense vector d=768".
+  (3) Stylised database cylinder "Vector store" with "Index: 1.2M chunks"; arrow from (2) labeled "kNN, k=5".
+  (4) "Retrieved passages" — stack of 5 doc thumbnails; caption "top-k chunks + metadata".
+  (5) Hexagonal hub "Frozen LLM"; long curved arrow from (1) labeled "original query" also lands here; arrow from (4) labeled "retrieved context".
+  (6) "Grounded answer" with inline marker "[cite: doc#47]"; caption "with source citations".
+
+  Dashed outline around (2)-(3) labeled "OFFLINE — built once". Dashed outline around (4)-(5) labeled "ONLINE — per query".
+
+  Title: "Retrieval-Augmented Generation pipeline". Subtitle: "Lewis et al., 2020".

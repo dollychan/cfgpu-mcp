@@ -1,0 +1,35 @@
+id: style-architecture-space
+version: 1
+rank: 13
+kind: style
+media: image
+title: Architecture & Space / 建筑与空间
+summary: 用于室内、建筑表现、城市地图、空间规划和环境概念图。
+genres:
+- architecture-interior
+scenes:
+- travel
+- commerce
+styles:
+- architecture
+tags:
+- Architecture
+- Interior
+- Map
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于室内、建筑表现、城市地图、空间规划和环境概念图。
+  Use when: Use for interiors, architecture renders, city maps, spatial plans, and environment concepts.
+  要点 / Guidance:
+  - Define viewpoint, scale, material, lighting, and spatial function.
+  - For maps, specify landmarks, labels, border decoration, and visual accuracy level.
+  - 定义视角、尺度、材质、光线和空间功能。
+  - 地图需要指定地标、标签、边框装饰和准确度。
+  避坑 / Pitfalls:
+  - Avoid impossible perspectives unless the output is conceptual.
+  - Lock map label language and relative placement.
+  - 概念图之外要避免不合理透视。
+  - 锁定地图标签语言和相对位置。
+  可配合的模板骨架 / Skeletons: tpl-style-architecture-1

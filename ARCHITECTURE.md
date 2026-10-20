@@ -172,7 +172,9 @@ agent 选模型用 `list_model_profiles`（任务过滤 + 参数模板）。`tes
 `task_catalog` 发布给 agent。`reference_to_video` 收窄为 `any: [reference_images, reference_videos]`，描述里不再
 承诺音频；`audio_driven_video` 为 `all: [reference_audios], audio_role: driving`。测试要求 profile 声明的每个任务都被
 `inputs` 结构上覆盖，且 `supports()` 至少接受一个携带这些输入的请求；`audio_driven_video` 与 `role: driving` 双向蕴含，
-因为它是唯一完全由输入事实决定的任务。**测试证明不了语义能力**：MiniMax-H3 收参考视频，所以 `video_edit` 能过结构检查，
+因为它是唯一完全由输入事实决定的任务。`voice_reference_video`（2026-10-14，用样本的音色说 prompt 里的新台词）的
+`audio_role` 是列表 `[voice, reference]`，只**单向**检查：声明它 ⟹ 槽 role 在列表内且声明了 `synced_audio_output`。
+反方向不成立——`reference` 槽可能只用来带背景音乐或节奏——所以逐模型确认后 opt-in：`wan2.7-r2v`（`role: voice`）、Seedance 2.0 家族（2.0 / fast / mini / 2.5）与 MiniMax-H3 / `cfdream/minimax-h3-r2v`（参考音频支持音色克隆与锁定，2026-10-15）。**测试证明不了语义能力**：MiniMax-H3 收参考视频，所以 `video_edit` 能过结构检查，
 但它是否真的编辑得好仍只有卡片和实测能回答。
 
 **场景任务与 `supports()` 双向一致（2026-10-09）。** 有七个任务只描述素材的形状，因此是否具备完全由 `supports()`
@@ -388,7 +390,8 @@ service/image.py::generate_image()
     ▼
 TaskManager.create(adapter, req)
     │
-    ├─ resolve_image_refs(req)         [[句柄]] → 图N（无 regions 时，所有模型）；未解析的 [[...]] 直接报错
+    ├─ render_for(adapter, req)        [[句柄]] → 该模型方言的标签（图片工具：图N，同 resolve_image_refs；
+    │                                  generate_video：按 prompt_dialects.yaml 渲染）；结果只进 payload
     ├─ adapter.build_payload(req)      统一 schema → CFGPU API 格式（有 regions 时由区域 adapter 一并渲染）
     │
     ├─ insert_task(request_id or uuid4, "submitting")   ← ★ 行先落，POST 后发
@@ -416,6 +419,28 @@ service 返回 dict → 访问层格式化 → 用户
 入口（`create()` 与 `validate_request()`）都先调 `regions.resolve_image_refs(req)`，没有
 adapter 需要自己记得。带 `regions` 的请求原样放行：`supports()` 已把它限定在区域 adapter，
 那里句柄与标记必须一次性渲染，因为「既是句柄又是标记名」的歧义只有两者同时可见才能发现。
+
+**视频参考素材按模型方言渲染**（`adapters/dialect.py` + `adapters/prompt_render.py`，设计见
+`docs/template-library-and-dialect.md` §4）。`generate_video` 接受 `image_refs` / `video_refs` /
+`audio_refs`，prompt 里写 `[[句柄]]`，`render_for` 按 `adapter.yaml` 的 `prompt_dialect:` 渲染成
+`图片1` / `<Picture 1>` / `视频1 视频2 图片3`（万相 2.7 r2v 跨类型连续编号）/ `character1` / `[Image 1]`
+/ 自然语言。方言对调用方完全不可见：不进 schema、profile、card、错误文案；渲染后的 prompt 只在
+`structuredContent.payload`，任务行另存 `_prompt_dialect` 与 `_prompt_source`（对外剥离）。
+「某类素材该模型无法点名」与「`required` 方言下有参考素材没被点名」（H3 r2v 会静默忽略并照常计费）
+在 `supports()` 里拒绝，`model="auto"` 因而会绕开；手写模型标签只附 `prompt_note` 提醒，不拒绝。
+
+**分镜、台词、画面文字、声景同样走统一写法**（P2，`adapters/prompt_markup.py` 解析成与模型无关的节点）：
+`[[shot 0-3]]` / `[[say S1: 原话]]` / `[[text: 文字]]` / `[[sound: …]]` / `[[music: …]]`。语法错误、镜头时间
+倒序或重叠、镜头超出显式给定的时长属于模型无关的问题，在 schema 层拒绝；没给时长时镜头超出该模型的默认时长、方言写不出某个标记、渲染后超过
+`adapter.yaml` 的 `prompt_limits`（只对用了 `[[...]]` 的 prompt 量）属于 per-model 问题，在 `supports()` 拒绝。
+方言决定写法：Seedance `[0-3秒]：`，万相 `第1个镜头[0-3秒] `，自然语言兜底 `0–3 秒：`；H3 改用官方字段布局
+（`integrated_multimodal_description` / `overall_soundscape` / `non_diegetic_music`，r2v 用 `detailed_description`），
+`[Shot N] At MM:SS.mmm,` 切镜、`(S1) says: <d>[Chinese] …</d>` 台词，并按首帧/尾帧推出 I2VA / FL2VA / L2VA 模式头。
+调用方没写的声景字段直接省略、不填 `N/A`（官方指南里 `N/A` 表示全程无声）。`render_for` 顺带推出两个请求事实：
+D-DL10（带 `[[...]]` 且调用方未设置时，万相 2.7 的 `prompt_extend` 发 `false`；`prompt_extend` 因此改成三态）与
+万相 2.6 两个以上镜头时补 `parameters.shot_type=multi`（调用方设置过的一律不覆盖）。视频调用里手写的镜头头、
+时间段或台词标签只附 `prompt_note` 提醒，不拒绝。`generate_image` 只认 `[[text: 文字]]`（渲染成 `"文字"`，在区域渲染之前），
+其余结构标记在图片上拒绝。模板库正文也可以带这些结构标记（素材仍用 `[槽位]`），构建时用同一个解析器校验。
 
 未解析的 `[[...]]` **fail closed**（`invalid_params`，列出本次可用的占位符）。`[[...]]` 不会
 出现在正常行文里，剩下的必然是写错的句柄/标记；原样发出只会得到一张看似合理、已计费的错图。
@@ -1073,6 +1098,8 @@ class MyModelAdapter(ModelAdapter):
 
 > **`usage` 与计费口径**：`usage` 默认**原样透传**上游的 `usage` 对象（`resp.get("usage")`），因为各 API 的计费结构差异过大，归一化只会丢信息。按 token 计费的模型（Seedance / 万相 2.0 家族）读 `usage.totalTokens`；按秒计费的模型（万相 2.6 / 2.7、HappyHorse）读 `usage.duration` + `usage.sr`（分辨率短边），上游都已回传。
 >
+> **CF Image 2 / 2.5 Sunburst / 2.5 Flare**（`ImageGPTAdapter`）按 token 计费，但任务查询响应**没有顶层 `usage`**——用量在 `data.result.tokenUsage`（`{textInputTokens, imageInputTokens, imageOutputTokens, totalTokens}`，2026-10-15 对 gpt-image-2 与 gpt-image-2.5-flare 实测）。`parse_response` 先取顶层 `usage`，缺失时原样取 `tokenUsage`；此前只读顶层，三个模型的 `usage` 一直是 `null`。同基类的 Nano Banana 任务记录里没有任何用量字段（`task_type: nano_generation`，只有 `images` / `source_images` / `proxy_images`），所以只在 `ImageGPTAdapter` 上读 `tokenUsage`，Nano 的 `usage` 仍为 `null`。同一记录里的积分结算（`tokenBillingSettlement` / `data.token_billing_settlement`）不进 `usage`。
+>
 > 唯一的例外是**可灵**（`KlingVideoAdapter`）：它同样按秒 × 分辨率档位计费，但任务响应里**根本没有 `usage` 对象**——计费数值散落在顶层 `seconds`（字符串 `"5"`）与 `size`（`"1920x1080"`）中。因此 `_build_usage()` 把它们组装成与按秒计费同族一致的 `{duration, sr, ratio}`：`duration` 转为数字，缺失时（视频编辑任务时长跟随源视频，payload 不带 `seconds`）退回 `taskResult.videos[0].duration`；`sr` 取 `size` 的**短边**（档位按短边划分）；`ratio` 由 `_RATIO_BY_SIZE`（`_SIZE_MAP` 的反表）查得，未收录的 size 才退回 gcd 约分——直接 gcd 会把 `854x480` 算成 `427:240` 而非 `16:9`。三项全为 `None` 时返回 `None`，避免产出一条全空的计费记录。这也是可灵唯一能拿到解析后 `ratio` 的来源（响应只有像素 `size`），故 `aspect_ratio` 也复用它。
 
 > **`aspect_ratio` 回传**：`aspect_ratio` 是回传给客户端的宽高比元数据，取值**优先用上游响应实际返回的 `ratio`**——部分 API（如 WAN，响应里带 `"ratio": "9:16"`）会回传解析后的真实宽高比，这在请求传 `adaptive` 时尤其有意义。各 adapter 的 `parse_response()` 在响应含 `ratio` 时即填入 `result.aspect_ratio`；仅当响应未回传时，才由 `TaskManager` 兜底为**请求**的 `aspect_ratio`（`if not result.aspect_ratio: ...`——这里是真正的"缺省才兜底"，与上面 `model_used` 的无条件覆盖不同）。
@@ -1113,6 +1140,19 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 
 ---
 
+### 模板库：新增或修改模板
+
+模板库（`search_templates` / `get_template`）的内容不在代码里，在 git 目录 `templates/`：
+
+1. 新记录写成 `templates/records/<kind>/<id>.v1.yaml`（schema 见 `template_library/schema.py`）；批量导入先用 `scripts/templates/import_sources.py` 写进 `templates/_staging/`，人工审过再移入 `records/`。
+2. 运行 `python scripts/templates/build_bundle.py`：校验 schema、分类词表、正文无模型方言、`verified_on` 是真实模型、已发布版本未被改动，再编译 `template_library/templates.bundle.json`。
+3. 已发布记录的正文不能原地修改：改正文就发新版本 `<id>.v2.yaml`；下架用 `status: withdrawn` + `withdrawn_reason`，不删文件。
+4. 分类取值是封闭词表（`templates/catalog.yaml`）；新增取值要先加进词表，并避免与已有取值近义重复。
+
+运行时只读内存索引，没有写接口，也不查数据库。设计见 `docs/template-library-and-dialect.md` §6。
+
+---
+
 ### 修改工具参数
 
 工具参数定义在**四处**，需同步修改：
@@ -1133,7 +1173,9 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 - `n`：图片数量参数（全局 1-15），默认 1。声明了 `multi_image_group` 能力的模型才认 `n>1`，且都是**上限**：`gpt-image-2` 接受 **1-10**，以顶层 `n` 原样下发；Seedream 系写成 `sequential_image_generation=auto` + `sequential_image_generation_options.max_images=n`；`wan2.7-image` 写成 `parameters.enable_sequential=true` + `parameters.n`（上限 12，超出由 `supports()` 在发请求前拒绝），**两个键永远一起下发**——只发 `enable_sequential` 时上游的 `n` 默认值是 12，那是 12 张的账单。模型可返回少于请求值的图片。不支持该能力的图像模型（包括 Seedream 5.0 Pro / Flash、nano-banana）静默忽略 `n`（2026-09-30 起 Pro / Flash 也不再报错——d8aaf37 曾给 Pro 单独加过 `n must be 1`，分层拆解也曾拒绝 `n>1`，两处都与这条规则矛盾，已删除），继续发送其他参数并生成单张图片。
 - `resolution`（视频）：统一枚举是 `480p / 720p / 768p / 1080p / 2k / 4k`，**默认值是 `None`，不是某一档**。**分辨率是逐模型的取值集合**：能查到官方取值范围的模型在 `adapter.yaml` 用 `resolutions: [...]` 声明（Seedance 2.5 / 2.0 fast / 2.0 mini 均为 `[480p, 720p]`，Seedance 2.0 为 `[480p, 720p, 1080p, 4k]`，MiniMax-H3 为 `[480p, 768p, 2k]`），由 `ModelAdapter.supports()` 统一校验；未声明（`None`）= 不做本地限制，即该字段引入前的行为。否则上游会回 `the parameter resolution specified in the request is not valid for model X in i2v`。`1080p` 由 WAN 2.0 / Doubao Seedance 2.0 / Doubao Seedance 1.5 Pro / HappyHorse 支持（`happyhorse` 在 `build_payload` 中 `.upper()` 成 `1080P`；`happyhorse` 仍拒绝 `480p`）。**另一例外：WAN 2.0 Fast 文生视频（t2v）不支持 `1080p`，`supports()` 会拒绝（仅 480p/720p；带首帧/参考图视频的 i2v 场景才放行 1080p）；`model="auto"` 命中该组合时会自动回退到完整版 WAN 2.0。**
 
-- `with_audio`：统一开关，但**只有四个族真的会发它** —— 可灵（`sound: on/off`）、Seedance（`generate_audio`）、`cfdream/minimax-h3*`（`with_audio`）；万相 2.6/2.7 与 HappyHorse 压根不发，Grok 与 `MiniMax-H3` 恒出音频、没有开关。**可灵额外把它钉进 `corrected_args`**（`KlingVideoAdapter.validation_corrections`，2026-09-07）：上游 `sound` 默认 `off`，而统一 Schema 的 `with_audio: bool = True` 总会发送，起决定作用的是一个与模型自身相反的默认值 —— 而它是静默的。按调用方原始参数生成的审批卡上没有音频这一行，人却批准了一条自带配乐的片子。所以这是**钉住（pin）而非回退**，与 `model="auto"` 解析后回钉具体模型同形、同理由：审批只有在指明「到底会跑什么」时才有意义。**无条件钉**，因为它必须无条件：`with_audio` 是带具体默认值的裸 `bool`，传了 `True` 的调用方和什么都没传的调用方到这里完全一样，「只在缺省时补」根本不可表达，而猜错的那一半恰恰是唯一需要补的那一半。范围也是刻意只给可灵的 —— Seedance 同样认这个字段，要不要一并钉是逐个 card 该做的判断，不是改一个 adapter 的副作用（`test_only_kling_pins_with_audio` 钉住这条边界）。`with_audio` 原样映射为 `sound`，带参考视频时也不改写：上游参数说明称此时只能 `off`，但未经验证，且价格表列有「有视频输入的有声视频」一档，由上游裁决。可灵 `seconds` 取值 3–15，故声明 `min_duration_seconds: 3`。
+- `with_audio`：统一开关，但**只有四个族真的会发它** —— 可灵（`sound: on/off`）、Seedance（`generate_audio`）、`cfdream/minimax-h3*`（`with_audio`）；万相 2.6/2.7 与 HappyHorse 压根不发，Grok 与 `MiniMax-H3` 恒出音频、没有开关。**可灵额外把它钉进 `corrected_args`**（`KlingVideoAdapter.validation_corrections`，2026-09-07）：上游 `sound` 默认 `off`，而统一 Schema 的 `with_audio: bool = True` 总会发送，起决定作用的是一个与模型自身相反的默认值 —— 而它是静默的。按调用方原始参数生成的审批卡上没有音频这一行，人却批准了一条自带配乐的片子。所以这是**钉住（pin）而非回退**，与 `model="auto"` 解析后回钉具体模型同形、同理由：审批只有在指明「到底会跑什么」时才有意义。**无条件钉**，因为它必须无条件：`with_audio` 是带具体默认值的裸 `bool`，传了 `True` 的调用方和什么都没传的调用方到这里完全一样，「只在缺省时补」根本不可表达，而猜错的那一半恰恰是唯一需要补的那一半。范围也是刻意只给可灵的 —— Seedance 同样认这个字段，要不要一并钉是逐个 card 该做的判断，不是改一个 adapter 的副作用（`test_only_kling_pins_with_audio` 钉住这条边界）。`with_audio` 原样映射为 `sound`，带参考视频时也不改写：上游参数说明称此时只能 `off`，但未经验证，且价格表列有「有视频输入的有声视频」一档，由上游裁决。可灵 `seconds` 下限为 3，故声明 `min_duration_seconds: 3`；上限 O1 为 10（`max_duration_seconds: 10`），V3 Omni 为 15 —— V3 Omni `extends` O1，所以它显式重声明 `max_duration_seconds: 15`，否则会静默继承 O1 的 10。
+- `audio_format` / `sample_rate` / `bitrate` / `speed` / `volume` / `pitch`（`generate_audio`，seed-tts 2.0，2026-10-10）：按 `models/seed-tts-2-0/reference` 对齐。容器只有 `mp3` / `pcm` / `ogg_opus`（此前接受上游并不存在的 `wav` / `flac`，又把合法的 `pcm` 改成 `mp3`）；`ogg_opus` 是这次新加进 schema 的，字段描述要求模型**只在用户明确要求时**才换掉默认的 `mp3`，MiniMax 也接受它（上游写作 `opus`，见下一条）。采样率是封闭集合，`ogg_opus` 固定 48000 —— 所以缺省采样率随格式走，否则缺省请求本身就是一个会被拒的请求。`speed` / `volume` 线性映射为 `audio_params.speech_rate` / `loudness_rate`（`(倍数-1)*100`，倍数 0.5–2.0），`pitch` 进 `additions.post_process.pitch`，`bitrate` 进 `audio_params.bit_rate`（64000/160000，pcm 不收）；取默认值时一律不发，普通请求的 payload 与过去一字不差。`validation_corrections` 只修容器形状（格式、采样率、码率），语速/音量/音调越界仍是硬错误 —— 那是表达，夹到边界会改变意图。`additions` 在上游是 **JSON 字符串**，适配器先拼 dict 再 `json.dumps`；`model_specific` 因此改为按 payload 形状逐层合并（`req_params` → `audio_params` / `additions` → 其子对象，同 `wan_image` 的 `parameters`），原来的顶层 `update` 会让 `{"req_params": {...}}` 整个覆盖掉 `text` 和 `speaker`。上游提供发音词典（`additions.pronunciation_dict`），故与 MiniMax 同样声明 `pronunciation_control`。没有 `urlExpireTime` 时 `expires_at` 回退 1 小时（上游下载链接的真实有效期），而不是通用的 24 小时。测试：`tests/unit/test_audio_tts_adapter.py` 的 seed-tts 参数块。
+- 同一组参数在 **MiniMax speech-2.8 HD / Turbo**（2026-10-10）：按 `models/minimax-speech-2-8-hd/reference` 对齐，沿用 seed-tts 那次的同一套约定 —— 统一 schema 保持宽松，逐模型的取值只在 `supports()` 里，`validation_corrections` 只修容器形状。参考文档是 MiniMax 的异步接口（`audio_sample_rate`），CFGPU 中转用的是同步接口的字段名（`input.audio_setting.sample_rate`），所以**字段名沿用中转、取值采用文档**。要点：`pcm` 与 `ogg_opus` 现在被接受（后者在上游叫 `opus`，`MIME` 表补了 `audio/ogg`），不再被改成 `mp3`；`opus` 的采样率只取 {8000, 16000, 24000}，缺省随格式改为 24000 —— 文档列的是 8000/12000/16000/24000/48000，但实测（2026-10-10）中转先按通用集合（8000–44100）校验 `sample_rate`，48000 直接报 `invalid params: sample_rate`，而 32000 过了参数校验后在上游以不透明的 400（`HandlerLBLocalHttpReqWithRetry`）失败、却仍回报 `usage`，所以只有两套集合的交集能同时过两道校验（opus + 24000、不带 `bitrate` 已实测成功：返回以 `OggS` 开头、带 `OpusHead` 的完整 Ogg/Opus 文件，可直接播放，故不像 pcm 那样附加采样布局）；`bitrate` 只对 mp3 生效，所以只在 mp3 时发送，其他格式显式传入就拒绝，而不是发一个上游会默默忽略的值；`speed` [0.5, 2]、`vol` (0, 10]、`pitch` [-12, 12] 越界都是硬错误。`emotion` 去掉了 `whisper`：2.8 HD / Turbo 支持其余 8 种（含 `fluent`，已确认；reference 里把 `fluent` 与 `whisper` 并列为「仅 2.6 生效」的那句已过时），`whisper` 只有 2.6 支持。schema 的 `emotion` 枚举不动 —— 它是工具级的并集，2.6 支持 `whisper`。2013 的补救文案同步去掉了 `whisper`。`model_specific` 原来是顶层 `update`，CLIENT_GUIDE 里那个 `{"input": {"pronunciation_dict": ...}}` 示例会把整个 `input`（含 `text`）覆盖掉；现在 `input` 逐键合并，`voice_setting` / `audio_setting` / `voice_modify` 再深一层。`channel` 仍固定发 1（上游默认 2），可经 `model_specific` 改。文本长度**不做本地校验**：文档的 5 万字符是异步接口的数字，中转走同步接口，本地写一个数只能是猜，超长交给上游拒绝。实测（2026-10-10）pcm 经中转确实以内联十六进制返回，内容是**无文件头的 s16le** 裸采样（`audio_size` = 采样率 × 声道 × 2 × 秒数，按小端解码才是平滑波形）。原先标的 `audio/L16` 按 RFC 2586 是大端，且不带采样率与声道，宿主拿到既解错字节序又无从播放；现在改标 `audio/pcm`，并在 pcm 的 `inline_media` 项上附 `sample_format` / `sample_rate` / `channels`（后两者取自 `extra_info`，描述实际返回而非请求）。其他格式的描述符形状不变。测试：`tests/unit/test_audio_tts_adapter.py` 的 speech-2.8 参数块。
 - `voice`（`generate_audio`）：**缺省时也被钉进 `corrected_args`**（`audio_tts._voice_correction`）。不传 `voice` 等于把选择交给服务端，和 `model="auto"` 同形：适配器实际发送的默认音色只在 `payload` 里，而 `payload` 走 structuredContent，模型看不到，按调用方原始参数生成的审批卡也就没有音色这一行 —— 人批准的是一段谁都没选过的声音，MiniMax 的默认音色 `male-qn-qingse` 甚至不在 `list_voice_profiles` 的目录里。与 `with_audio` 不同，这里「只在缺省时补」是可表达的（`voice` 是 `Optional`，`None` 即委托），所以显式传入的音色从不改写，只去首尾空格。它有意偏离「缺省 `resolution` 不钉」的先例：分辨率是质量档位，音色是听众直接听到的东西。`model="auto"` 时每个候选都按**自己的**默认音色修正，而各适配器的本地校验都接受自己的默认音色，所以路由结果不变。
 
   **默认值为什么是 `None`（`default_resolution`，2026-09-07）。** `resolution` 是 `supports()` 会读的字段，所以一个写死的全队默认值等于「每个模型都必须支持这一档，否则会被一个调用方根本没提的参数挤出 `model="auto"`」。MiniMax-H3 恰好是这种模型：它有 480P / 768P / 2K 三档，却没有 720p。于是统一 Schema 的默认值改成 `None`（= 「你来定」），真实档位落在 `adapter.yaml` 的 `default_resolution`（缺省 `720p`，与改动前完全一致，只有 MiniMax-H3 写 `768p`），由 `ModelAdapter.resolve_resolution(req)` 解析 —— 与 `duration_seconds` → `default_duration_seconds` 完全同构。**所有 adapter 读的都是 `self.resolve_resolution(req)`，不是 `req.resolution`。** 不这么做的代价不是抽象缺失，而是最朴素的一次调用 `generate_video(prompt=...)` 会绕开 `MiniMax-H3` 的 `default_for: [balanced]` 声明，而显式点名 `model="MiniMax-H3"` 又会直接报「不支持 720p」—— 和 `_T2V_DEFAULT_RATIO` 当初躲开的是同一个坑。相应地 `validation_corrections` 对 `resolution is None` 返回 `{}`：那已经是该模型自己的档位，把它写进 `corrected_args` 等于把一个「交给模型决定」钉成调用方从没做过的选择。

@@ -1,0 +1,51 @@
+extends: gpt-image-2
+card_base: ~
+adapter_id: gpt-image-2-5-sunburst
+display_name: "CF Image 2.5 Sunburst"
+cfgpu_model_id: gpt-image-2.5-sunburst
+model_name: cf-image-2.5-sunburst
+provider: cfgpu
+
+task_type: image
+endpoint: /images/generations
+is_async: true
+poll_endpoint: /images/tasks/{task_id}
+
+tasks:
+  - text_to_image
+  - image_to_image
+  - multi_image_fusion
+
+# The API accepts a URL array and does not document a maximum count.
+inputs:
+  reference_images: {}
+
+# No output-count parameter is documented; n>1 must be rejected rather than
+# silently ignored by the upstream.
+max_images_per_request: 1
+
+# Same payload as GPT Image 2 (aspect_ratio + resolution + quality_tier mapping),
+# minus `n`, plus `background`.  The API's custom `image_size` is deliberately not
+# exposed: leaving it unset lets the upstream map aspect_ratio + resolution.
+sends_n: false
+# quality_tier xhigh / max / auto go up verbatim as quality (fast/balanced/best map
+# to low/medium/high as on CF Image 2).
+quality_tiers: [xhigh, max, auto]
+default_background: auto
+
+# Pricing and latency have not been supplied for the new variants.  Keep their
+# routing estimates neutral until CFGPU publishes those figures.
+cost_tier: 3
+speed_tier: 3
+
+# Do not inherit CF Image 2's auto-routing preferences.
+quality_rank: 0
+default_for: []
+
+poll_config:
+  base_interval: 3
+  max_interval: 15
+  backoff_factor: 1.3
+  default_timeout: 600
+
+aspect_ratios: ["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2"]

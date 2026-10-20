@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal
 
+from cfgpu_mcp.adapters.dialect import parse_prompt_limits, resolve_dialect_id
 from cfgpu_mcp.adapters.inputs import (
     LEGACY_INPUT_KEYS,
     InputSlot,
@@ -139,6 +140,11 @@ class PollConfig:
 #: typo in every adapter.yaml that named it.
 _QUALITY_TIERS = frozenset({"fast", "balanced", "best"})
 
+#: Image-only tiers a model must opt into via ``quality_tiers:`` (hand-copy of
+#: ``tool_registry.IMAGE_EXTRA_QUALITY_TIERS``, pinned by the same test). They are
+#: not valid ``default_for`` names: a routing default belongs to the shared three.
+_IMAGE_EXTRA_QUALITY_TIERS = frozenset({"xhigh", "max", "auto"})
+
 #: ``UnderstandVisionInput.analysis_depth`` has a separate vocabulary from media
 #: generation's quality tier. Keeping its defaults separate prevents an adapter's
 #: generation ``default_for`` declaration from affecting vision routing.
@@ -227,6 +233,9 @@ class ModelAdapter(ABC):
     #: older model outranked a newer flagship. The proxy remains for models that
     #: declare no rank. Default 0 = undeclared.
     quality_rank: int
+    #: Image-only extra quality tiers (``_IMAGE_EXTRA_QUALITY_TIERS``) this model
+    #: accepts. Empty = only fast / balanced / best.
+    extra_quality_tiers: frozenset[str]
     #: Quality tiers this model is the declared default landing spot for, e.g.
     #: ``["balanced"]``. Empty = undeclared, which is what every model did before
     #: this existed.
@@ -287,6 +296,16 @@ class ModelAdapter(ABC):
     #: means the shared request-schema limit is the only local restriction.
     max_images_per_request: int | None
     poll_config: PollConfig | None
+    #: Id in ``capabilities/prompt_dialects.yaml`` naming how ``[[handle]]`` references
+    #: in ``prompt`` are rendered for this model (``adapters/dialect.py``). Internal only:
+    #: never part of any agent-facing surface (I-DL5). ``None`` for audio models.
+    prompt_dialect: str | None
+    #: Prompt length ceilings from the card (``prompt_limits:`` in adapter.yaml): any of
+    #: ``chars`` (all characters), ``zh_chars`` (CJK characters), ``en_words`` (Latin
+    #: words). Measured on the *rendered* prompt, and only when the caller used
+    #: ``[[...]]`` markup — rendering changes the length, and a prompt the server did not
+    #: touch keeps whatever behaviour it had before. ``None`` = no declared limit.
+    prompt_limits: dict[str, int] | None
     extends: str | None          # parent adapter_id, or None
     card_base: str | None        # model dir to inherit card.md from; None = no inheritance
 
@@ -339,6 +358,16 @@ class ModelAdapter(ABC):
                 f"{sorted(unknown)} (valid: {sorted(_QUALITY_TIERS)})"
             )
         instance.default_for = frozenset(default_for)
+        extra_quality_tiers = config.get("quality_tiers") or []
+        unknown = set(extra_quality_tiers) - _IMAGE_EXTRA_QUALITY_TIERS
+        if unknown:
+            raise ValueError(
+                f"{instance.adapter_id}: quality_tiers has unknown tiers {sorted(unknown)} "
+                f"(valid: {sorted(_IMAGE_EXTRA_QUALITY_TIERS)}; fast/balanced/best are implicit)"
+            )
+        if extra_quality_tiers and instance.task_type != "image":
+            raise ValueError(f"{instance.adapter_id}: quality_tiers is declared for image models only")
+        instance.extra_quality_tiers = frozenset(extra_quality_tiers)
         analysis_depth_default_for = config.get("analysis_depth_default_for") or []
         if isinstance(analysis_depth_default_for, str):
             analysis_depth_default_for = [analysis_depth_default_for]
@@ -388,6 +417,10 @@ class ModelAdapter(ABC):
         instance.max_images_per_request = config.get("max_images_per_request")
         pc = config.get("poll_config")
         instance.poll_config = PollConfig.from_dict(pc) if pc else None
+        instance.prompt_dialect = resolve_dialect_id(
+            instance.adapter_id, instance.task_type, config.get("prompt_dialect")
+        )
+        instance.prompt_limits = parse_prompt_limits(instance.adapter_id, config.get("prompt_limits"))
         instance.extends = config.get("extends")
         # "card_base" key absent → inherit from extends; "card_base: ~" → None (no inheritance)
         instance.card_base = (
@@ -443,6 +476,17 @@ class ModelAdapter(ABC):
             ok, reason = self._check_aspect_ratio(req)
             if not ok:
                 return False, reason
+        if (
+            isinstance(req, GenerateImageInput)
+            and req.quality_tier in _IMAGE_EXTRA_QUALITY_TIERS
+            and req.quality_tier not in self.extra_quality_tiers
+        ):
+            return False, (
+                f"{self.model_name} does not support quality_tier {req.quality_tier} "
+                f"(supported: fast, balanced, best"
+                + "".join(f", {t}" for t in sorted(self.extra_quality_tiers))
+                + ")"
+            )
         if isinstance(req, GenerateImageInput) and (
             self.max_images_per_request is not None
             and req.n > self.max_images_per_request
@@ -484,6 +528,14 @@ class ModelAdapter(ABC):
                 ok, reason = check_declared_inputs(self.model_name, self.inputs, req)
                 if not ok:
                     return False, reason
+            # How this model names a reference in `prompt`, and whether it ignores one it
+            # is not told about. Here rather than at render time so model="auto" routes
+            # around a model that would refuse, instead of failing after routing.
+            from cfgpu_mcp.adapters.prompt_render import check_prompt_refs
+
+            ok, reason = check_prompt_refs(self, req)
+            if not ok:
+                return False, reason
             resolution = self.resolve_resolution(req)
             if self.resolutions is not None and resolution not in self.resolutions:
                 return False, (

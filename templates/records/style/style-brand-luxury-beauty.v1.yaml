@@ -1,0 +1,29 @@
+id: style-brand-luxury-beauty
+version: 1
+rank: 560
+kind: style
+media: image
+title: 奢华美妆时尚：克制的材质与仪式感
+summary: 象牙、石色、深咖，衬线字标与优雅组合字母，纸纹、压印和编辑式裁切，有品位、成熟、贵。
+genres:
+- brand-systems-identity
+scenes:
+- fashion
+- commerce
+styles:
+- brand
+- minimal
+tags:
+- 美妆
+- 时尚
+- 酒店
+- 奢华
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream brandkit skill
+  license: first-party
+content: |-
+  适用：美妆、时尚、精品酒店、高端服务。
+  画面：象牙、石色、深咖为主；衬线字标和优雅的组合字母；纸张颗粒、压印、烫印；产品标签；编辑式的局部裁切；柔和的阴影。
+  Logo 方向：组合字母、印章、花瓣、器皿、仪式物件、精修的文字标。
+  情绪：有品位、成熟、贵而不炫。
+  避免：仿冒奢侈品纹样、金色滥用、廉价的光泽和闪粉。

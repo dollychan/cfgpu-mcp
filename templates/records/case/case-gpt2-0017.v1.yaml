@@ -1,0 +1,20 @@
+id: case-gpt2-0017
+version: 1
+rank: 17
+kind: case
+media: image
+title: Retro Japanese town pixel RPG
+summary: Create an isometric pixel-art RPG screenshot of a traditional Japanese village during cherry blossom season.
+genres:
+- gaming
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: Unknown
+  url: https://www.reddit.com/r/midjourney/comments/1kozn4u/retro_video_games_in_japan_prompts_included/
+content: Create an isometric pixel-art RPG screenshot of a traditional Japanese village during cherry blossom season. Sakura petals drift through the air, a samurai player character practices sword moves in the square, villagers watch nearby, and the interface includes an inventory panel, stamina gauge, skill cooldown timers, and subtle quest UI. Cozy retro console feeling, soft ambient pastel lighting, crisp pixel details, 16:9 gameplay composition.

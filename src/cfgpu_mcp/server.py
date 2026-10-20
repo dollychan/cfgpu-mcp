@@ -7,7 +7,7 @@ from mcp.server.fastmcp import FastMCP
 
 from cfgpu_mcp import config
 from cfgpu_mcp.tool_registry import apply_media_annotations, apply_model_enum, get_field_descriptions
-from cfgpu_mcp.tools import generate, models, tasks, understand
+from cfgpu_mcp.tools import generate, models, tasks, templates, understand
 
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ generate.register(mcp)
 understand.register(mcp)
 tasks.register(mcp)
 models.register(mcp)
+templates.register(mcp)
 
 
 def _apply_disabled_tools(server: FastMCP) -> None:

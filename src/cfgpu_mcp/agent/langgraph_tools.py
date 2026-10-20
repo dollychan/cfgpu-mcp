@@ -13,6 +13,7 @@ def _get_service_coroutines() -> dict[str, Any]:
     from cfgpu_mcp.service import image as image_svc
     from cfgpu_mcp.service import model as model_svc
     from cfgpu_mcp.service import task as task_svc
+    from cfgpu_mcp.service import template as template_svc
     from cfgpu_mcp.service import video as video_svc
     from cfgpu_mcp.service import vision as vision_svc
 
@@ -27,6 +28,8 @@ def _get_service_coroutines() -> dict[str, Any]:
         "list_model_profiles": model_svc.list_model_profiles,
         "list_voice_profiles": model_svc.list_voice_profiles,
         "get_model_card": model_svc.get_model_card,
+        "search_templates": template_svc.search_templates,
+        "get_template": template_svc.get_template,
     }
 
 

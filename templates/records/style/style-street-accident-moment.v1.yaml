@@ -1,0 +1,36 @@
+id: style-street-accident-moment
+version: 1
+rank: 15
+kind: style
+media: image
+title: Street Accident Moment / 街头意外瞬间摄影
+summary: 用于街头抓拍、意外泼洒、手机纪实和快速动作。
+genres:
+- photography
+scenes:
+- travel
+- social
+styles:
+- photography
+- realistic
+tags:
+- Photography
+- Realistic
+- Scene
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于街头抓拍、意外泼洒、手机纪实和快速动作。
+  Use when: Use for candid street moments, accidental spills, documentary phone shots, and fast action.
+  要点 / Guidance:
+  - Describe the exact moment, camera height, motion blur, and street context.
+  - Add negative constraints for staged poses and fake ad lighting.
+  - 描述具体瞬间、机位高度、运动模糊和街景。
+  - 加入避免摆拍和广告棚拍感的限制。
+  避坑 / Pitfalls:
+  - Avoid too-clean compositions.
+  - Keep the event plausible and grounded.
+  - 避免画面过于干净。
+  - 让事件看起来可信。
+  可配合的模板骨架 / Skeletons: tpl-style-photo-1, tpl-style-photo-2

@@ -108,9 +108,9 @@ def test_undeclared_material_is_refused_by_the_base():
 
 def test_the_retired_region_key_is_refused_at_load():
     with pytest.raises(ValueError, match="moved into the inputs"):
-        from cfgpu_mcp.adapters.async_image import GptImage2Adapter
+        from cfgpu_mcp.adapters.async_image import ImageGPTAdapter
 
-        GptImage2Adapter.from_config({
+        ImageGPTAdapter.from_config({
             "adapter_id": "x", "cfgpu_model_id": "x", "task_type": "image",
             "endpoint": "/i", "max_regions_per_image": 2,
         })

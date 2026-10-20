@@ -35,10 +35,10 @@
 
 | 统一 Schema 字段 | wan2.7-t2v 字段 | 映射说明 |
 |------------------|-----------------|----------|
-| prompt | input.prompt | 文本提示词，支持分镜描述 |
+| prompt | input.prompt | 文本提示词，支持分镜描述：每个镜头以 `[[shot 起-止秒]]` 开头，MCP 渲染成上游的镜头写法 |
 | resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
 | aspect_ratio | parameters.ratio | `16:9` / `9:16` / `1:1` / `4:3` / `3:4`，默认 `16:9` |
-| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
+| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词；不传时默认开启，但 prompt 用了 `[[...]]` 写法时默认关闭（扩写会改动分镜、台词和素材指代），显式传 `true` / `false` 则按传入的来 |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
 | negative_prompt | input.negative_prompt | 最多 500 字符 |
@@ -55,6 +55,8 @@
 4. **获取结果**：任务完成后返回视频 URL（24 小时内有效）
 
 ## 请求示例
+
+> 以下是**上游请求体**，`prompt` 是 MCP 渲染之后的样子；调用 `generate_video` 时分镜写 `[[shot 0-3]]`、台词写 `[[say: …]]`、素材写 `[[句柄]]`，不要照抄这里的镜头编号与时间段写法。
 
 ```json
 {
@@ -116,10 +118,12 @@
 
 ## Prompt 优化建议
 
-支持电影级分镜叙事，可按镜头编排：
+支持电影级分镜叙事，按镜头编排，每个镜头用 `[[shot 起-止秒]]` 开头（时间递增、不重叠、不超过 `duration_seconds`）：
 
 ```
-第1个镜头[0-3秒] 全景：...
-第2个镜头[3-6秒] 中景：...
-第3个镜头[6-9秒] 特写：...
+[[shot 0-3]] 全景：...
+[[shot 3-6]] 中景：...
+[[shot 6-9]] 特写：...
 ```
+
+台词写 `[[say S1: 原话]]`，画面里要出现的文字写 `[[text: 文字]]`。镜头编号与时间段的上游写法由 MCP 生成，不要自己写。

@@ -1,0 +1,19 @@
+id: case-gpt2-0138
+version: 1
+rank: 138
+kind: case
+media: image
+title: 'Mid-Century Modern: The Blue Pool'
+summary: A flat, vibrant acrylic painting in the lineage of 1960s California modernism.
+genres:
+- fine-art-painting
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-fine-art-painting.md
+content: 'A flat, vibrant acrylic painting in the lineage of 1960s California modernism. The scene features a sparkling turquoise swimming pool in the foreground, with highly stylized white splash lines indicating a recent dive. In the background, a minimalist glass-and-steel house sits under a cloudless ''Cerulean'' sky, flanked by two perfectly manicured palm trees. The color palette is dominated by saturated primaries: ''Turquoise Blue'', ''Lemon Yellow'', and ''Terracotta''. The lighting is the flat, shadowless glare of a Los Angeles afternoon, emphasizing the geometric shapes and clean lines of the architecture. The composition is strictly horizontal and balanced, with a sense of artificial stillness and leisure. The texture is smooth and matte, avoiding any visible brushstrokes to maintain a clean, graphic quality. It is a portrait of a sunny, suburban utopia.'

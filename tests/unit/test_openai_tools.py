@@ -9,7 +9,7 @@ from cfgpu_mcp.agent.openai_tools import get_openai_tools, openai_dispatch_tool
 
 def test_no_filter_returns_all_tools():
     tools = get_openai_tools()
-    assert len(tools) == 10
+    assert len(tools) == 12
     assert "understand_vision" in {t["function"]["name"] for t in tools}
 
 
@@ -65,7 +65,7 @@ def test_generate_video_has_reference_fields():
     assert "reference_videos" in props
     assert "reference_audios" in props
     assert "reference_images" in props
-    assert props["prompt_extend"]["default"] is True
+    assert props["prompt_extend"]["default"] is None  # unset: on, off with [[...]] markup (D-DL10)
 
 
 # ── filtering ─────────────────────────────────────────────────────────────────

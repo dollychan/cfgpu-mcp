@@ -1,0 +1,20 @@
+id: case-gpt2-0071
+version: 1
+rank: 71
+kind: case
+media: image
+title: Modular encyclopedia infographic card
+summary: Generate a high-quality vertical science encyclopedia card about "雪豹 Snow Leopard".
+genres:
+- infographics-field-guides
+tags:
+- portrait
+- 1024x1536
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: Unknown
+  url: https://www.xiaohongshu.com/explore/69e832170000000023012116
+content: 'Generate a high-quality vertical science encyclopedia card about "雪豹 Snow Leopard". It should feel like a collectible modular knowledge infographic rather than a normal poster. Include one beautiful hero illustration, several zoomed-in detail callouts, rounded information modules, clear title hierarchy, compact encyclopedia content, rating cards, and a Top 5 facts module. Suggested sections: basic profile, habitat, appearance, hunting behavior, conservation risks, climate adaptation, suitable environment, and quick scorecard. Visual style: clean light background, soft palette, subtle shadows, refined icons, rounded info boxes, dense but readable information, polished editorial layout, high collection value.'

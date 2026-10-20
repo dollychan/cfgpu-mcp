@@ -1,0 +1,34 @@
+id: style-brand-identity-package
+version: 1
+rank: 11
+kind: style
+media: image
+title: Brand Identity Package / 品牌身份包
+summary: 用于 Logo 系统、品牌板、VI 套件和应用样机。
+genres:
+- brand-systems-identity
+scenes:
+- commerce
+styles:
+- brand
+tags:
+- Brand
+- Logo
+- Identity
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于 Logo 系统、品牌板、VI 套件和应用样机。
+  Use when: Use for logo systems, brand boards, visual identity kits, and application mockups.
+  要点 / Guidance:
+  - Define brand name, positioning, palette, typography, logo usage, and touchpoints.
+  - Ask for a coherent board with aligned applications.
+  - 定义品牌名、定位、配色、字体、Logo 用法和触点。
+  - 要求视觉板中的应用统一对齐。
+  避坑 / Pitfalls:
+  - Avoid unrelated logo variants and inconsistent palettes.
+  - Keep brand text accurate.
+  - 避免无关 Logo 变体和混乱配色。
+  - 保持品牌文字准确。
+  可配合的模板骨架 / Skeletons: tpl-style-brand-1, tpl-style-brand-2, tpl-style-brand-3, tpl-style-brand-4, tpl-style-brand-5

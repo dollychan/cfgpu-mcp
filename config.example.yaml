@@ -19,6 +19,14 @@ http:                          # only used when transport=streamable-http
                                # false freezes one caller's token into the session
                                # (cross-tenant leak) and the server refuses to start.
 
+public_http:                   # public read-only cover service: its own process and port
+  host: 0.0.0.0                #   (cfgpu-mcp-public / python -m cfgpu_mcp.public_http),
+  port: 8090                   #   never the MCP port above. No auth, GET/HEAD only.
+  # public_base_url: https://assets.example.com   # what browsers reach; also read by the MCP
+  #                            #   process to build cover URLs. Unset → tools return no cover.
+  # covers_dir: /srv/cfgpu/covers                 # default: the checkout's templates/covers
+  # cache_max_age: 86400       # short on purpose: a takedown must clear caches within a day
+
 cfgpu_api:
   base_url: https://www.cfgpu.com/userapi/v1
   http_timeout: 120            # per-request total timeout (seconds)

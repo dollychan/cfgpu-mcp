@@ -1,0 +1,40 @@
+id: tpl-style-other-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: 其他应用场景 · 常规
+summary: 任务目标：[你要生成的内容类型]。
+tags:
+- 其他应用场景
+- 常规
+slots:
+- name: 你要生成的内容类型
+  required: true
+- name: 主体
+  required: true
+- name: 场景
+  required: true
+- name: 风格
+  required: true
+- name: 配色
+  required: true
+- name: 高清/4K
+  required: true
+- name: 比例
+  required: true
+- name: 构图方式
+  required: true
+- name: 用途
+  required: true
+- name: 核心信息
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  任务目标：[你要生成的内容类型]。
+  输入约束：主体[主体]，场景[场景]，风格[风格]，色彩[配色]。
+  质量约束：清晰度[高清/4K]，比例[比例]，构图[构图方式]。
+  输出约束：用于[用途]，需突出[核心信息]。
+  请输出一版主方案 + 一版备选方案。

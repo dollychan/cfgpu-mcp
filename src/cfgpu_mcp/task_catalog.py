@@ -64,10 +64,13 @@ def _validate_task_requires(task_id: str, task: dict[str, Any]) -> None:
         if not isinstance(slots, list) or not set(slots) <= set(VIDEO_INPUT_SLOTS):
             raise ValueError(f"media_tasks.yaml task {task_id!r}: requires.{key} must list input slots")
     role = requires.get("audio_role")
-    if role is not None and (role not in AUDIO_ROLES or "reference_audios" not in requires.get("all", [])):
+    if role is None:
+        return
+    roles = role if isinstance(role, list) else [role]
+    if not roles or not set(roles) <= set(AUDIO_ROLES) or "reference_audios" not in requires.get("all", []):
         raise ValueError(
             f"media_tasks.yaml task {task_id!r}: requires.audio_role must be one of "
-            f"{list(AUDIO_ROLES)} and needs reference_audios in requires.all"
+            f"{list(AUDIO_ROLES)} or a non-empty list of them, and needs reference_audios in requires.all"
         )
 
 

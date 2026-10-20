@@ -1,0 +1,31 @@
+id: style-web-minimal-swiss
+version: 1
+rank: 610
+kind: style
+media: image
+title: 极简瑞士：字体即版式，留白即结构
+summary: 纯色或细纹理底，强层级的理性无衬线字体，居中堆叠或严格网格，几乎不用图，适合“干净、简单”的诉求。
+genres:
+- ui-ux-mockups
+scenes:
+- tech
+- creative
+styles:
+- ui
+- minimal
+tags:
+- 极简
+- 瑞士风格
+- 字体排印
+- 留白
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)
+  license: first-party
+content: |-
+  适用：用户说"极简、干净、只要文字、瑞士风"，或产品本身足够有说服力。
+  首屏：极简小首屏——小 Logo、一句陈述、一个细按钮，大量负空间。
+  背景：纯色面、极淡的纸张或网格纹理，最多一处色块对拼；不用全幅图。
+  渐变：不用，或只用最柔和的同色渐变。
+  字体：理性无衬线，字号对比极强，严格网格对齐；靠字号、字重和留白建立层级。
+  构图：居中堆叠或严格分栏，节奏均匀但用尺度对比避免单调。
+  避免：装饰性插画、阴影卡片堆叠、多种字体情绪混用。

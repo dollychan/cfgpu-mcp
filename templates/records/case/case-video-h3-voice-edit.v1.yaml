@@ -1,0 +1,38 @@
+id: case-video-h3-voice-edit
+version: 1
+rank: 382
+kind: case
+media: video
+title: 参考生视频：给原视频人物配新台词并锁定音色
+summary: 编辑一段原视频，让画中人说新台词；保留原视频画面与背景音乐，音色取自参考音频。
+genres:
+- scenes-storytelling
+scenes:
+- social
+styles:
+- realistic
+tags:
+- 参考生视频
+- Ref2VA
+- 视频编辑
+- 对口型
+- 音色参考
+- 台词
+- 背景音乐保留
+- lip sync
+- voice reference
+slots:
+- name: 原视频
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 音色参考音频
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+source:
+  origin: first-party, rewritten from MiniMax-AI/MiniMax-H3 README (case-Ref2VA)
+  license: first-party
+  url: https://github.com/MiniMax-AI/MiniMax-H3#case-ref2va
+content: |-
+  在[原视频]的基础上编辑，5 秒：原视频的人物样貌、构图、黄昏暖光、草坡和背景里的白色小羊全部保留，只让画面中央穿粉色西装、抱着小黑羊的金发年轻男人开口说话。原视频的背景音乐保留，压在台词下面持续播放；他的音色参考[音色参考音频]，平静温和。
+  写实摄影风格，镜头缓慢推近。他望向前方，轻声说 [[say S1: Follow the wind, live free.]] 说话时重心微微移动，稳稳抱着怀里的小黑羊。接着说 [[say S1: Leave worries behind, enjoy the moment.]] 话音一落，嘴唇合上，露出放松的微笑，下巴不再动；随后他把目光转向远处的地平线，手指轻抚小黑羊的毛，镜头停在这个画面直到结束。
+  [[sound: 原视频的背景音乐持续铺底，上面是他平静清晰的男声台词]]

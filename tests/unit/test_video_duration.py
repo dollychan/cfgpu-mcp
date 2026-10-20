@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit._video_refs import tag_references
+
 from cfgpu_mcp.adapters.registry import AdapterRegistry
 from cfgpu_mcp.adapters.seedance_video import SeedanceVideoAdapter
 from cfgpu_mcp.tool_registry import GenerateVideoInput
@@ -37,9 +39,11 @@ def video_adapters():
 
 
 def _scenario(adapter) -> dict:
+    """The first baseline request the model accepts, prompt included (references tagged)."""
     for kwargs in _SCENARIOS:
+        kwargs = tag_references({"prompt": "x", **kwargs})
         ok, _ = adapter.supports(
-            GenerateVideoInput(prompt="x", duration_seconds=5, aspect_ratio="16:9", **kwargs)
+            GenerateVideoInput(duration_seconds=5, aspect_ratio="16:9", **kwargs)
         )
         if ok:
             return kwargs
@@ -59,7 +63,7 @@ def test_minus_one_is_refused_with_the_models_own_range(video_adapters):
         if adapter.accepts_smart_duration:
             continue
         ok, reason = adapter.supports(GenerateVideoInput(
-            prompt="x", duration_seconds=-1, aspect_ratio="16:9", **_scenario(adapter)
+            duration_seconds=-1, aspect_ratio="16:9", **_scenario(adapter)
         ))
         assert not ok, adapter.model_name
         assert f"{adapter.min_duration_seconds}–{adapter.max_duration_seconds} seconds" in reason
@@ -71,7 +75,7 @@ def test_over_maximum_suggests_minus_one_only_where_it_is_accepted(video_adapter
         if adapter.max_duration_seconds >= 30:
             continue
         ok, reason = adapter.supports(GenerateVideoInput(
-            prompt="x", duration_seconds=30, aspect_ratio="16:9", **_scenario(adapter)
+            duration_seconds=30, aspect_ratio="16:9", **_scenario(adapter)
         ))
         assert not ok, adapter.model_name
         assert ("or -1" in reason) == adapter.accepts_smart_duration, reason
@@ -81,7 +85,7 @@ def test_two_second_duration_is_available_to_documented_wan_models(video_adapter
     """The shared schema permits 2 seconds; adapters retain their own lower bound."""
     for adapter in video_adapters:
         ok, _ = adapter.supports(GenerateVideoInput(
-            prompt="x", duration_seconds=2, aspect_ratio="16:9", **_scenario(adapter)
+            duration_seconds=2, aspect_ratio="16:9", **_scenario(adapter)
         ))
         assert ok == (adapter.model_name in {
             "wan2.7-i2v", "wan2.6-i2v", "wan2.6-t2v", "wan2.6-r2v",

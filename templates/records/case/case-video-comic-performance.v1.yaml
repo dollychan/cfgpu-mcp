@@ -1,0 +1,27 @@
+id: case-video-comic-performance
+version: 1
+rank: 279
+kind: case
+media: video
+title: 漫画分格演绎
+summary: 按阅读顺序把一页漫画演成视频，台词与原图一致。
+genres:
+- animation-short
+scenes:
+- story
+tags:
+- 漫改
+- 分镜演绎
+slots:
+- name: 漫画页图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 演绎参考视频
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+source:
+  origin: dexhunter/seedance2-skill
+  license: MIT
+  author: Dex
+  url: https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md
+content: 将[漫画页图]按从左到右、从上到下的顺序进行漫画演绎，人物台词与图片上的一致；分镜切换和重点情节加入特殊音效，整体风格诙谐幽默；演绎方式参考[演绎参考视频]。

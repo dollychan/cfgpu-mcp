@@ -1,0 +1,35 @@
+id: style-illustration-art-style
+version: 1
+rank: 16
+kind: style
+media: image
+title: Illustration & Art Style / 插画与艺术风格
+summary: 用于动漫、水彩、水墨、装饰画和风格实验。
+genres:
+- illustration
+scenes:
+- story
+- creative
+styles:
+- illustration
+tags:
+- Illustration
+- Art
+- Style
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于动漫、水彩、水墨、装饰画和风格实验。
+  Use when: Use for anime, watercolor, ink, decorative art, and style experiments.
+  要点 / Guidance:
+  - Define composition, subject, palette, brush material, mood, and rendering depth.
+  - For reference images, state what must be preserved.
+  - 定义构图、主体、配色、笔触材质、情绪和完成度。
+  - 参考图任务需要说明保留哪些特征。
+  避坑 / Pitfalls:
+  - Avoid style-only prompts without composition.
+  - Lock character identity when using references.
+  - 避免只写风格，不写构图。
+  - 使用参考图时锁定角色识别。
+  可配合的模板骨架 / Skeletons: tpl-style-illustration-1

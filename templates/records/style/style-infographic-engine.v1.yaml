@@ -1,0 +1,37 @@
+id: style-infographic-engine
+version: 1
+rank: 2
+kind: style
+media: image
+title: Infographic Engine / 信息图引擎
+summary: 用于解释图、技术图解、时间线和知识卡片。
+genres:
+- infographics-field-guides
+- data-visualization
+scenes:
+- education
+- tech
+styles:
+- infographic
+- charts
+tags:
+- Infographic
+- Chart
+- Education
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于解释图、技术图解、时间线和知识卡片。
+  Use when: Use for explainer graphics, technical diagrams, timelines, and knowledge cards.
+  要点 / Guidance:
+  - Define 3-5 modules, information flow, visual hierarchy, and short labels.
+  - Use color groups, arrows, icons, and clean spacing to reduce clutter.
+  - 定义 3-5 个模块、信息流、层级和短标签。
+  - 用色块、箭头、图标和留白控制复杂度。
+  避坑 / Pitfalls:
+  - Avoid long paragraphs inside the image.
+  - Limit module count before adding visual detail.
+  - 避免把长段正文塞进画面。
+  - 先限制模块数量，再补视觉细节。
+  可配合的模板骨架 / Skeletons: tpl-style-infographic-1, tpl-style-infographic-2

@@ -58,8 +58,9 @@ def generate() -> None:
               default="balanced", show_default=True)
 @click.option("--watermark/--no-watermark", default=False,
               help="Add/remove watermark (default: no watermark)")
-@click.option("--prompt-extend/--no-prompt-extend", default=True,
-              help="Enable/disable WAN 2.6/2.7 LLM prompt expansion")
+@click.option("--prompt-extend/--no-prompt-extend", default=None,
+              help="Enable/disable WAN 2.6/2.7 LLM prompt expansion (default: on, "
+                   "off when the prompt uses [[...]] notation)")
 @click.option("--no-wait", is_flag=True,
               help="Return task_id immediately without waiting for completion")
 @click.option("--timeout", type=int, default=None,

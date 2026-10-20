@@ -79,6 +79,7 @@ def media_field(
     role: Literal["image", "video", "audio", "region"],
     arity: Literal["one", "many"],
     accepts: list[str],
+    refs: Optional[str] = None,
 ) -> Any:
     """Declare a material slot: a Field carrying ``x-cfgpu-media`` + generated prose.
 
@@ -96,6 +97,9 @@ def media_field(
     / ``requires`` key; such limits are owned by adapter validation. The agent-facing
     profile catalog is selection guidance, not a substitute for that enforcement.
 
+    ``refs`` names the sibling caller-handle list for a ``many`` slot (``image_refs`` for
+    ``reference_images``); see the inline comment below.
+
     Every media slot is optional and defaults to ``None`` (kept here rather than at each
     call site so the eight declarations stay comparable; the schema-consistency test pins
     this against the FastMCP wrapper signatures).
@@ -104,6 +108,13 @@ def media_field(
     if unknown:
         raise ValueError(f"unknown media wire form(s) {unknown}; known: {sorted(_WIRE_FORMS)}")
     spec: dict[str, Any] = {"role": role, "arity": arity, "accepts": list(accepts), "slot": slot}
+    if refs is not None:
+        # The sibling field holding one caller handle per item of this slot — the list
+        # that gives `[[<handle>]]` in `prompt` its meaning. Named here rather than left to
+        # a naming convention so a host can fill it from its own ids without guessing
+        # which slot pairs with which list. A permissive fact like the others: it says
+        # where handles may go, never that they must.
+        spec["refs"] = refs
     return Field(
         default=None,
         description=_compose_media_description(slot, accepts, arity),
@@ -286,21 +297,140 @@ def _validate_regions(
         )
 
 
-def image_refs_field(image_slot: str) -> Any:
-    """Declare the per-image caller-handle list (kept in one place for both tools)."""
+#: Characters a handle may not contain: ``#`` qualifies a region, and brackets would
+#: let a handle close or open a placeholder of its own.
+_HANDLE_FORBIDDEN = set("#[]")
+
+
+def _validate_video_refs(req: Any) -> None:
+    """Check ``generate_video``'s three handle lists and every ``[[...]]`` in its prompt.
+
+    Model-independent, so it lives at the schema layer where no routing can get around
+    it: a handle list must pair with its slot item for item, a handle may name only one
+    item across all three lists, and every placeholder must name one of them. A
+    placeholder that resolves to nothing would reach the model as literal text — a
+    request naming a material the model cannot see, billed anyway — so it is refused
+    here, exactly as ``regions.render_prompt`` refuses one on the image tools.
+
+    Whether the selected model can name a given kind at all, and whether it ignores an
+    unnamed reference, are per-model facts and are checked in ``supports()``.
+    """
+    from cfgpu_mcp.adapters import prompt_markup as markup
+    from cfgpu_mcp.adapters.dialect import REFS_FIELD, SLOT_KIND
+
+    owner: dict[str, str] = {}
+    for slot, kind in SLOT_KIND.items():
+        refs_name = REFS_FIELD[kind]
+        refs = getattr(req, refs_name)
+        if refs is None:
+            continue
+        items = getattr(req, slot) or []
+        if len(refs) != len(items):
+            raise ValueError(
+                f"{refs_name} has {len(refs)} entry/entries but {slot} has {len(items)} — "
+                f"{refs_name} is one handle per item, in the same order, so the two must be "
+                f"the same length (use an empty string for an item you will not refer to, "
+                f"or omit {refs_name} entirely)."
+            )
+        for i, handle in enumerate(refs):
+            if not handle:
+                continue
+            if handle != handle.strip() or _HANDLE_FORBIDDEN & set(handle):
+                raise ValueError(
+                    f"{refs_name}[{i}] = {handle!r} is not a usable handle: no surrounding "
+                    f"whitespace and none of '#', '[' or ']'."
+                )
+            if markup.is_reserved(handle):
+                raise ValueError(
+                    f"{refs_name}[{i}] = {handle!r} is not a usable handle: "
+                    f"{', '.join(sorted(markup.KEYWORDS))} are reserved prompt keywords "
+                    f"([[shot ...]], [[say ...]], ...), so a handle may not be one of them or start "
+                    f"with one followed by a space, colon or '='."
+                )
+            if handle in owner:
+                raise ValueError(
+                    f"handle {handle!r} names both {owner[handle]} and {slot}[{i}]; a "
+                    f"`[[{handle}]]` in prompt could then mean either, so each handle must "
+                    f"name exactly one item."
+                )
+            owner[handle] = f"{slot}[{i}]"
+
+    try:
+        nodes = markup.parse(req.prompt or "")
+    except markup.MarkupError as exc:
+        raise ValueError(f"prompt markup is malformed: {exc} Nothing was sent.") from None
+    # An explicit duration is the same on every model, so a shot past it is a
+    # model-independent mistake; with the duration unset each model resolves its own and
+    # supports() judges it per model.
+    duration = getattr(req, "duration_seconds", None)
+    if isinstance(duration, int) and duration > 0:
+        for shot in markup.shots(nodes):
+            if shot.end > duration:
+                raise ValueError(
+                    f"[[shot {markup.format_seconds(shot.start)}-{markup.format_seconds(shot.end)}]] "
+                    f"ends after the video does (duration_seconds={duration}); keep every shot "
+                    f"within the duration, or raise duration_seconds to fit them. Nothing was sent."
+                )
+    for node in nodes:
+        if not isinstance(node, markup.Ref):
+            continue
+        token = node.token
+        if "#" in token:
+            raise ValueError(
+                f"prompt placeholder [[{token}]] names a region, but generate_video takes "
+                f"no regions; refer to the whole material with [[<handle>]] and describe "
+                f"the part you mean in words."
+            )
+        if token in owner:
+            continue
+        available = ", ".join(f"[[{h}]]" for h in owner)
+        hint = (
+            f"available here: {available}."
+            if available
+            else "this call has no image_refs / video_refs / audio_refs, so nothing can "
+            "resolve; give each reference a handle in the list that pairs with its slot "
+            "(same order, same length) and write [[<handle>]]."
+        )
+        raise ValueError(
+            f"prompt placeholder [[{token}]] names no handle in image_refs / video_refs / "
+            f"audio_refs — {hint} If [[{token}]] is a material, also pass it in the "
+            f"reference_* list for its kind. An unresolved [[...]] would reach the model "
+            f"as literal text, so nothing was sent."
+        )
+
+
+def media_refs_field(slot: str, kind: str = "image") -> Any:
+    """Declare the per-item caller-handle list for one media slot.
+
+    One description for every slot and every tool, so how a handle is written cannot
+    differ between them. It deliberately names no model's own way of writing a
+    reference: the server renders `[[<handle>]]` into that form, and a form the caller
+    can read is a form the caller will copy into the next model's prompt (I-DL5).
+    """
     return Field(
         default=None,
-        description=f"Optional: your own handle for each image in `{image_slot}`, in the "
-        f"same order and the same length. Its only job is to let `prompt` refer to a "
-        f"whole image by name — write `[[<handle>]]` and the adapter renders it as that "
-        f"model's own image ordinal. Use it instead of writing '图1' / 'the second "
-        f"image' yourself: ordinals shift whenever the image list is rebuilt, and a "
-        f"sentence that hard-codes one then points at the wrong picture without any "
-        f"error. Handles are also the qualified half of a `[[<handle>#<label>]]` region "
-        f"placeholder. A `[[...]]` that matches no handle or label is refused before "
-        f"anything is sent, since it would otherwise reach the model as literal text. "
-        f"Passed through untouched — never fetched, never sent upstream.",
+        description=f"Optional: your own handle for each {kind} in `{slot}`, in the same "
+        f"order and the same length. Its only job is to let `prompt` refer to that {kind} "
+        f"by name — write `[[<handle>]]` and the server renders it in whatever form the "
+        f"selected model reads. Use it instead of numbering {kind}s yourself ('the second "
+        f"{kind}'): positions shift whenever a list is rebuilt or another model is chosen, "
+        f"and a sentence that hard-codes one then points at the wrong material without "
+        f"any error. Use an empty string for an item you will not refer to. A `[[...]]` "
+        f"that matches no handle is refused before anything is sent, since it would "
+        f"otherwise reach the model as literal text. Passed through untouched — never "
+        f"fetched, never sent upstream.",
     )
+
+
+def image_refs_field(image_slot: str) -> Any:
+    """``media_refs_field`` for an image slot, which is also the qualified half of a
+    ``[[<handle>#<label>]]`` region placeholder."""
+    field = media_refs_field(image_slot, "image")
+    field.description += (
+        " On image tools a handle is also the qualified half of a `[[<handle>#<label>]]` "
+        "region placeholder."
+    )
+    return field
 
 
 # ── Caption / label (artifact description and name) ─────────────────────────
@@ -435,6 +565,12 @@ def Folded(*choices: str, ratio: bool = False) -> Any:
 _IMAGE_RESOLUTIONS = ("1K", "1.5K", "2K", "3K", "4K")
 _VIDEO_RESOLUTIONS = ("480p", "720p", "768p", "1080p", "2k", "4k")
 QualityTier = Folded("fast", "balanced", "best")
+# Image-only tiers past "best". They name upstream quality levels only some models
+# have (CF Image 2.5: quality=xhigh/max/auto), so a model must declare them in
+# adapter.yaml ``quality_tiers`` — every other model refuses them rather than
+# silently downgrading, the same policy as an unsupported resolution tier.
+IMAGE_EXTRA_QUALITY_TIERS = ("xhigh", "max", "auto")
+ImageQualityTier = Folded("fast", "balanced", "best", *IMAGE_EXTRA_QUALITY_TIERS)
 AnalysisDepth = Folded("fast", "balanced", "thorough")
 VoiceGender = Folded("male", "female", "neutral")
 VoiceAge = Folded("child", "young", "middle_aged", "senior")
@@ -503,7 +639,9 @@ class GenerateImageInput(BaseModel):
     prompt: str = Field(
         description="Text description of the image to generate. Required by the tool; "
         "pass an empty string for documented image-analysis modes such as Seedream 5.0 "
-        "layer decomposition, which works from one input image.",
+        "layer decomposition, which works from one input image. Text that must appear "
+        "in the picture verbatim (a headline, a sign, a label) is written "
+        "`[[text: words]]`; the server renders it in the form the selected model reads.",
     )
     model: str | list[str] = Field(
         default="auto",
@@ -511,7 +649,7 @@ class GenerateImageInput(BaseModel):
         "a list of model_ids to restrict automatic selection to those candidates "
         "or 'auto' to choose from all available models",
     )
-    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", ratio=True) = Field(default="1:1")
+    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2", ratio=True) = Field(default="1:1")
     resolution: Folded(*_IMAGE_RESOLUTIONS) = Field(
         default="2K",
         description="Output resolution tier. Each model supports a subset of these "
@@ -524,6 +662,7 @@ class GenerateImageInput(BaseModel):
         role="image",
         arity="many",
         accepts=["https_url"],
+        refs="image_refs",
     )
     regions: Optional[list[RegionSpec]] = media_field(
         slot="Regions of `reference_images` to edit, as boxes the user marked. Supply "
@@ -565,7 +704,13 @@ class GenerateImageInput(BaseModel):
                 f"n={v} is out of range. Image group size must be between 1 and 15."
             )
         return v
-    quality_tier: QualityTier = Field(default="balanced")
+    quality_tier: ImageQualityTier = Field(
+        default="balanced",
+        description="Output quality. fast / balanced / best work on every model (and steer "
+        "model='auto'). xhigh / max (above best) and auto (the model decides) exist only "
+        "on models whose list_model_profiles row includes them in quality_tiers "
+        "(currently CF Image 2.5 Sunburst / Flare); other models reject them.",
+    )
     watermark: bool = Field(
         default=False,
         description="Add an 'AI generated' watermark. Defaults to false and is sent "
@@ -621,7 +766,16 @@ class GenerateVideoInput(BaseModel):
     prompt: str = Field(
         default="",
         description="Text description of the video. Required for text-to-video; optional "
-        "for model-supported image, reference, or audio-driven workflows.",
+        "for model-supported image, reference, or audio-driven workflows. Write it in "
+        "plain language plus this one notation, which the server renders into whatever "
+        "form the selected model reads: `[[<handle>]]` names a reference material (see "
+        "image_refs / video_refs / audio_refs); `[[shot 0-3]]` starts a shot covering "
+        "seconds 0–3 (decimals allowed; shots in time order, within the duration); "
+        "`[[say S1: words]]` is a spoken line kept verbatim (speaker optional: "
+        "`[[say: words]]`); `[[text: words]]` is text that must appear in the picture; "
+        "`[[sound: …]]` / `[[music: …]]` describe ambient sound / background music. "
+        "Do not write shot headers, timecodes, dialogue tags or material numbers in any "
+        "model's own format — they differ per model and are generated for you.",
     )
     model: str | list[str] = Field(
         default="auto",
@@ -652,6 +806,7 @@ class GenerateVideoInput(BaseModel):
         role="image",
         arity="many",
         accepts=["https_url", "asset_url"],
+        refs="image_refs",
     )
     reference_videos: Optional[list[str]] = media_field(
         slot="Reference videos that guide the generation. Model-specific support and limits "
@@ -659,6 +814,7 @@ class GenerateVideoInput(BaseModel):
         role="video",
         arity="many",
         accepts=["https_url", "asset_url"],
+        refs="video_refs",
     )
     reference_audios: Optional[list[str]] = media_field(
         slot="Audio supplied to the generation. Models use it differently — as the "
@@ -669,7 +825,11 @@ class GenerateVideoInput(BaseModel):
         role="audio",
         arity="many",
         accepts=["https_url", "asset_url"],
+        refs="audio_refs",
     )
+    image_refs: Optional[list[str]] = media_refs_field("reference_images", "image")
+    video_refs: Optional[list[str]] = media_refs_field("reference_videos", "video")
+    audio_refs: Optional[list[str]] = media_refs_field("reference_audios", "audio")
     duration_seconds: Optional[int] = Field(
         default=None,
         description="Video duration in seconds. None uses the selected model's default "
@@ -716,10 +876,12 @@ class GenerateVideoInput(BaseModel):
         description="Add a watermark. Defaults to false and is sent explicitly by models "
         "whose upstream API supports it; models with no watermark request field ignore it.",
     )
-    prompt_extend: bool = Field(
-        default=True,
-        description="Use an LLM to rewrite and expand the prompt before generation. "
-        "When supported, disabling it reduces latency and preserves the original prompt.",
+    prompt_extend: Optional[bool] = Field(
+        default=None,
+        description="Use an LLM to rewrite and expand the prompt before generation, on "
+        "models that support it. Leave unset for the default: on, except off when the "
+        "prompt uses [[...]] notation, since a rewrite would reword the shots, lines and "
+        "material references you wrote. Set true or false to decide yourself.",
     )
     wait: bool = Field(
         default=True,
@@ -753,9 +915,21 @@ class GenerateVideoInput(BaseModel):
     label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
+    @model_validator(mode="after")
+    def _validate_reference_handles(self) -> "GenerateVideoInput":
+        _validate_video_refs(self)
+        return self
+
 
 class GenerateAudioInput(BaseModel):
-    """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
+    """Generate speech audio from text (text-to-speech) using CFGPU voice models.
+
+    Speaks only in a catalog voice from `list_voice_profiles`. It takes no audio sample
+    and cannot clone a voice from a supplied clip. When the user supplies a clip as the
+    voice, do not substitute a catalog voice and present it as theirs. For video, use
+    `generate_video` with a model from `required_tasks=["voice_reference_video"]`; for
+    audio alone, tell the user voice cloning is not available.
+    """
 
     text: str = Field(description="Text to synthesize into speech")
     model: str | list[str] = Field(
@@ -767,10 +941,13 @@ class GenerateAudioInput(BaseModel):
     voice: Optional[str] = Field(
         default=None,
         description="Voice/speaker id supported by the selected model, copied verbatim from "
-        "the `voice` field of list_voice_profiles. None uses that model's default voice.",
+        "the `voice` field of list_voice_profiles. None uses that model's default voice. "
+        "Must be a catalog voice id: a material id, URL or uploaded clip is not a voice.",
     )
-    audio_format: Folded("mp3", "wav", "pcm", "flac") = Field(
-        default="mp3", description="Output audio container/format"
+    audio_format: Folded("mp3", "wav", "pcm", "flac", "ogg_opus") = Field(
+        default="mp3",
+        description="Output audio container/format. Leave it at mp3 unless the user "
+        "explicitly asked for another format; support for the others varies by model.",
     )
     sample_rate: Optional[int] = Field(
         default=None,
@@ -871,6 +1048,7 @@ class UnderstandVisionInput(BaseModel):
         role="image",
         arity="many",
         accepts=["https_url"],
+        refs="image_refs",
     )
     video: Optional[str] = media_field(
         slot="A single video to understand (long video supported). Use this for ANY video "
@@ -984,6 +1162,7 @@ CanonicalTaskId = Literal[
     "video_extend",
     "synced_audio_output",
     "audio_driven_video",
+    "voice_reference_video",
     "text_to_image",
     "image_to_image",
     "multi_image_fusion",
@@ -1004,7 +1183,9 @@ class ListModelProfilesInput(BaseModel):
     """Find models by canonical capabilities and return agent-facing profiles only.
 
     Video models also list ``inputs``: the material slots they accept, item limits,
-    and how they use a supplied audio track (``role``).
+    and how they use a supplied audio track (``role``). Image models that accept
+    quality_tier values beyond fast / balanced / best list them all in
+    ``quality_tiers``; a model without that field takes fast / balanced / best only.
     """
 
     media_type: Optional[MediaType] = Field(
@@ -1068,6 +1249,56 @@ class GetModelCardInput(BaseModel):
     """Get detailed model information, parameters, and usage examples."""
 
     model_name: str = Field(description="A model_id from list_models")
+
+
+TemplateKind = Folded("case", "style", "template")
+TemplateMedia = Folded("image", "video", "audio")
+
+
+class SearchTemplatesInput(BaseModel):
+    """Search the shared library of official prompt templates, worked cases and style directions; returns cards, so call get_template for the full content. Records rewritten from one source share a card, whose related lists the other ids."""
+
+    query: Optional[str] = Field(
+        default=None,
+        description="Keywords in any language, such as '产品详情页' or 'isometric city'. "
+        "Words like 封面 / 模板 / poster only narrow; a record must match a subject word. "
+        "If a specific subject finds nothing (a dish name, say), retry with its category "
+        "(美食). Omit to browse the curated order",
+    )
+    kind: Optional[TemplateKind] = Field(
+        default=None,
+        description="'case' is a complete worked prompt, 'template' is a skeleton with "
+        "[placeholders] to fill, 'style' is a visual direction with guidance and pitfalls",
+    )
+    media: Optional[TemplateMedia] = Field(default=None, description="Output media of the template")
+    genres: Optional[list[str]] = Field(
+        default=None,
+        description="Category filter, any-of. An unknown value is rejected with the valid list",
+    )
+    scenes: Optional[list[str]] = Field(
+        default=None, description="Usage-context filter, any-of, such as 'commerce' or 'education'"
+    )
+    styles: Optional[list[str]] = Field(
+        default=None, description="Visual-style filter, any-of, such as 'realistic' or '3d'"
+    )
+    model: Optional[str] = Field(
+        default=None,
+        description="The model you plan to generate with; templates tested on it rank higher, "
+        "and every template still works with any model",
+    )
+    limit: int = Field(default=10, ge=1, le=20, description="Cards per page (1-20)")
+    cursor: int = Field(default=0, ge=0, description="Offset returned as next_cursor by the previous page")
+
+
+class GetTemplateInput(BaseModel):
+    """Get one template's full content by id; fill each [placeholder] with the user's specifics and keep the user's own decisions. Keep any [[shot …]] / [[say …]] / [[text: …]] / [[sound: …]] / [[music: …]] markers as they are (fill the [placeholder] inside them); generation renders them for the chosen model."""
+
+    template_id: str = Field(description="The id of a search_templates result")
+    version: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="A specific version to reproduce earlier work; omit for the latest",
+    )
 
 
 # ── NormalizedResult ────────────────────────────────────────────────────────
@@ -1431,6 +1662,8 @@ _REGISTRY: list[tuple[str, type[BaseModel]]] = [
     ("list_model_profiles", ListModelProfilesInput),
     ("list_voice_profiles", ListVoiceProfilesInput),
     ("get_model_card",  GetModelCardInput),
+    ("search_templates", SearchTemplatesInput),
+    ("get_template",    GetTemplateInput),
 ]
 
 _TOOL_TASK_TYPE: dict[str, str] = {

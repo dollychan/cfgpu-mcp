@@ -6,11 +6,11 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan2.7-r2v` |
-| 任务（tasks） | reference_to_video, synced_audio_output |
+| 任务（tasks） | reference_to_video, synced_audio_output, voice_reference_video |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
-万相 2.7 参考生视频模型：输入参考视频和/或参考图片 + 文本提示词，生成视频。提示词中可用「视频1」「视频2」「图片3」等引用各参考媒体。
+万相 2.7 参考生视频模型：输入参考视频和/或参考图片 + 文本提示词，生成视频。提示词中用 `[[句柄]]` 引用各参考媒体（句柄放在 `video_refs` / `image_refs` 里）；上游的编号是视频、图片连续计数的，由 MCP 渲染，不要自己写序号。参考音频是各主体的音色，不在 prompt 里点名。
 
 ## 价格
 
@@ -40,7 +40,7 @@
 | reference_audios | input.media[].reference_voice | 按参考视频/图片顺序附加音色样本 |
 | resolution | parameters.resolution | 分辨率档位，大写后透传（720p → 720P） |
 | aspect_ratio | parameters.ratio | `16:9` / `9:16` / `1:1` / `4:3` / `3:4`，默认 `16:9` |
-| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
+| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词；不传时默认开启，但 prompt 用了 `[[...]]` 写法时默认关闭（扩写会改动分镜、台词和素材指代），显式传 `true` / `false` 则按传入的来 |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
 | negative_prompt | input.negative_prompt | 最多 500 字符 |
@@ -56,6 +56,8 @@
 4. **获取结果**：任务完成后返回视频 URL（24 小时内有效）
 
 ## 请求示例
+
+> 以下是**上游请求体**，`prompt` 是 MCP 渲染之后的样子；调用 `generate_video` 时用 `[[句柄]]` 点名素材，不要照抄这里的序号写法。
 
 ```json
 {

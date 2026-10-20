@@ -10,7 +10,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `doubao-seedance-2-0-260128` |
-| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output, voice_reference_video |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -40,6 +40,7 @@
 | **video_edit** | 基于参考视频进行编辑（替换元素、修改内容） |
 | **video_extend** | 延长已有视频时长 |
 | **synced_audio_output** | 生成与画面同步的有声视频（人声、音效、背景音乐） |
+| **voice_reference_video** | 音色与语音克隆：用参考音频的音色说 prompt 里的台词，样本内容不出现在成片里 |
 
 ## 模型版本对比
 
@@ -59,7 +60,7 @@
 | `last_frame` | `content[].role=last_frame` | 尾帧图片（需与 first_frame 同用） |
 | `reference_images` | `content[].role=reference_image` | 参考图片（0-9，与首/尾帧互斥） |
 | `reference_videos` | `content[].role=reference_video` | 参考视频（0-3） |
-| `reference_audios` | `content[].role=reference_audio` | 参考音频（0-3） |
+| `reference_audios` | `content[].role=reference_audio` | 参考音频（0-3）：音色、节奏、音画同步参考 |
 | `aspect_ratio` | 顶层 `ratio` | 宽高比，`adaptive` 自动匹配 |
 | `duration_seconds` | 顶层 `duration` | 时长 4–15 秒，`-1` 为智能时长 |
 | `resolution` | 顶层 `resolution` | 480p / 720p / 1080p / 4k，默认 720p |
@@ -67,6 +68,8 @@
 | `watermark` | 顶层 `watermark` | 是否添加水印 |
 
 > 参考音频不可单独输入；使用 `reference_audios` 时，至少还需传入 1 张参考图片或 1 个参考视频。
+
+**参考音频的用途**（由 prompt 指定，如「小姚的音色参考音频1」「背景 BGM 参考音频1」）：原生音画同步、节奏适配，以及音色与语音克隆 —— 用样本的音色说 prompt 里的新台词，样本本身的内容不会出现在成片里（`voice_reference_video`）。参考音频不会原样保留为成片音轨；要原声当音轨、口型跟着对，用 `audio_driven_video` 的模型。
 
 ## 示例
 

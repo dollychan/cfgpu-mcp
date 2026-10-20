@@ -433,8 +433,17 @@ def test_supports_rejects_reference_audios():
     assert reason == "kling-video-o1 does not accept reference_audios"
 
 
-@pytest.mark.parametrize("seconds, ok", [(2, False), (3, True), (15, True), (16, False)])
-def test_registered_duration_range_is_3_to_15(seconds, ok):
+@pytest.mark.parametrize(
+    "name, seconds, ok",
+    [
+        ("kling-video-o1", 2, False), ("kling-video-o1", 3, True),
+        ("kling-video-o1", 10, True), ("kling-video-o1", 11, False),
+        # V3 Omni extends O1 but keeps its own 15s ceiling
+        ("kling-v3-omni", 2, False), ("kling-v3-omni", 3, True),
+        ("kling-v3-omni", 15, True), ("kling-v3-omni", 16, False),
+    ],
+)
+def test_registered_duration_ranges(name, seconds, ok):
     from pathlib import Path
 
     import cfgpu_mcp
@@ -442,9 +451,8 @@ def test_registered_duration_range_is_3_to_15(seconds, ok):
 
     registry = AdapterRegistry(model_dir=Path(cfgpu_mcp.__file__).parent / "models")
     registry.load()
-    for name in ("kling-video-o1", "kling-v3-omni"):
-        adapter = registry.get(name)
-        assert adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=seconds))[0] is ok
+    adapter = registry.get(name)
+    assert adapter.supports(GenerateVideoInput(prompt="x", duration_seconds=seconds))[0] is ok
 
 
 def test_supports_rejects_smart_duration():

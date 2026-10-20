@@ -1,0 +1,29 @@
+id: tpl-style-brand-5
+version: 1
+rank: 505
+kind: template
+media: image
+title: 品牌与标志 · 品牌人格漫画信息图
+summary: 基于上传的[Logo/品牌视觉]，生成一张 4:5 竖版漫画信息图：“What This Brand Feels Like”。
+genres:
+- brand-systems-identity
+tags:
+- 品牌与标志
+- 品牌人格漫画信息图
+slots:
+- name: Logo/品牌视觉
+  required: true
+- name: 品牌气质
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  基于上传的[Logo/品牌视觉]，生成一张 4:5 竖版漫画信息图：“What This Brand Feels Like”。
+  目标：把品牌变成一个可感知的人格角色，并解释它如何说话、行动、销售、回应竞争和处理批评。
+  核心规则：所有颜色、服装、姿态、语气和图形元素都来自 Logo 与品牌关键词。
+  主视觉：一个品牌人格化角色，服装、表情和姿态体现[品牌气质]。
+  周围结构：6-8 个漫画小分镜，每格包含短标题、动作、气泡或内心独白。
+  辅助模块：Voice tone、Energy level、Social behavior、Communication style、DO / DON'T。
+  风格：漫画 + 编辑信息图，表达强但保持高级，文字短而有力，画面层级丰富。
+  约束：不要通用营销词，不要空白区域，不要把品牌人格画成随机角色。

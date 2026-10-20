@@ -37,10 +37,10 @@ speed_tier: 2
 resolutions: [480p, 720p, 1080p]
 # Accepted aspect_ratio values (upstream aspect_ratio enum (kling-v3-omni/reference); adaptive → 16:9). adaptive is always accepted.
 aspect_ratios: ["16:9", "9:16", "1:1"]
-# seconds: 3–15 (upstream enum); the fleet default minimum is 4.
-# O1's ranges and defaults are taken from the V3 Omni doc (kling-v3-omni/reference),
-# assumed identical until O1's own doc is available.
+# seconds: 3–10 on O1 (V3 Omni, which extends this file, re-declares its own 3–15).
+# The fleet default minimum is 4 and maximum 15.
 min_duration_seconds: 3
+max_duration_seconds: 10
 
 poll_config:
   base_interval: 5

@@ -21,6 +21,9 @@ inputs:
   reference_images: {max: 5}
   reference_videos: {max: 3, role: reference}
 
+# How [[handle]] references in `prompt` are rendered for this model (capabilities/prompt_dialects.yaml).
+prompt_dialect: wan26-r2v
+
 # Canonical tasks (capabilities/media_tasks.yaml) — what this model can do, for
 # both the code gates and the agent-facing profile catalog.
 tasks:

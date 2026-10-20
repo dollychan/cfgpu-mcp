@@ -1,0 +1,29 @@
+id: style-brand-voice
+version: 1
+rank: 570
+kind: style
+media: image
+title: 语音与沟通：流动的声波与亲密感
+summary: 深靛底配淡紫光晕，声波、话筒母题、手机局部和指令输入框，流畅、聪明、亲密。
+genres:
+- brand-systems-identity
+scenes:
+- tech
+- social
+styles:
+- brand
+- ui
+tags:
+- 语音
+- 对话
+- 助手
+- 音频
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream brandkit skill
+  license: first-party
+content: |-
+  适用：语音 AI、聊天、智能助手、语音识别、音频产品。
+  画面：深靛底，淡紫或柔紫光晕；声波、话筒抽象、声音球体；手机局部裁切、指令输入框、App 图标作为应用。
+  Logo 方向：声波加首字母、声音球、说话路径、话筒抽象、脉冲环。
+  情绪：流畅、聪明、亲密。
+  避免：写实麦克风、满屏频谱、过亮的霓虹紫。

@@ -1,0 +1,20 @@
+id: case-gpt2-0013
+version: 1
+rank: 13
+kind: case
+media: image
+title: Hitman gameplay OpenAI HQ
+summary: A Hitman level where you are in the OpenAI HQ and your mission is to steal GPT-6 without getting caught
+genres:
+- gaming
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@flowersslop'
+  url: https://x.com/flowersslop
+content: A Hitman level where you are in the OpenAI HQ and your mission is to steal GPT-6 without getting caught

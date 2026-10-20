@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.unit._video_refs import tag_references
+
 from cfgpu_mcp.adapters.inputs import (
     AUDIO_ROLES,
     InputSlot,
@@ -44,7 +46,7 @@ def _candidate_counts(slot: str, spec: InputSlot | None) -> list[int]:
     return sorted(counts)
 
 
-def _request(counts: dict[str, int]) -> GenerateVideoInput:
+def _request(counts: dict[str, int], adapter=None) -> GenerateVideoInput:
     kwargs: dict = {"prompt": "a cat walks"}
     for slot, n in counts.items():
         if not n:
@@ -54,7 +56,7 @@ def _request(counts: dict[str, int]) -> GenerateVideoInput:
         else:
             ext = {"reference_images": "png", "reference_videos": "mp4", "reference_audios": "mp3"}[slot]
             kwargs[slot] = [f"https://example.com/{slot}/{i}.{ext}" for i in range(n)]
-    return GenerateVideoInput(**kwargs)
+    return GenerateVideoInput(**tag_references(kwargs, adapter))
 
 
 def _accepted_combinations(adapter) -> list[dict[str, int]]:
@@ -64,7 +66,7 @@ def _accepted_combinations(adapter) -> list[dict[str, int]]:
     accepted = []
     for combo in itertools.product(*axes):
         counts = dict(zip(VIDEO_INPUT_SLOTS, combo))
-        ok, _ = adapter.supports(_request(counts))
+        ok, _ = adapter.supports(_request(counts, adapter))
         if ok:
             accepted.append(counts)
     return accepted
@@ -216,7 +218,8 @@ def test_declared_tasks_are_carried_by_the_declared_inputs(adapter):
             )
         if requires.get("audio_role"):
             role = adapter.inputs["reference_audios"].role
-            assert role == requires["audio_role"], (
+            roles = requires["audio_role"]
+            assert role in (roles if isinstance(roles, list) else [roles]), (
                 f"{adapter.adapter_id} claims {task}, which needs audio role "
                 f"{requires['audio_role']!r}, but its audio role is {role!r}"
             )
@@ -252,6 +255,32 @@ def test_a_driving_audio_track_and_audio_driven_video_imply_each_other(adapter):
     )
 
 
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=lambda a: a.adapter_id)
+def test_voice_reference_video_speaks_in_the_output(adapter):
+    """Checked one way only: a `voice` or `reference` slot does not by itself prove the
+    model can imitate a voice (a `reference` track may only steer music or rhythm), so
+    each model opts in after it is verified. What a claim must not lack is the speech
+    it promises — the clip has to have sound."""
+    if "voice_reference_video" not in adapter.tasks:
+        return
+    assert "synced_audio_output" in adapter.tasks, (
+        f"{adapter.adapter_id} claims voice_reference_video but not synced_audio_output"
+    )
+
+
+def test_soundtrack_and_voice_sample_tasks_take_disjoint_audio_roles():
+    """A driving model plays the sample itself — the exact failure voice_reference_video
+    exists to rule out — so no model may qualify for both."""
+    catalog = _task_catalog()
+
+    def roles(task):
+        role = catalog[task]["requires"]["audio_role"]
+        return set(role if isinstance(role, list) else [role])
+
+    assert roles("audio_driven_video") == {"driving"}
+    assert roles("voice_reference_video") == {"voice", "reference"}
+
+
 def test_reference_to_video_no_longer_promises_audio():
     task = _task_catalog()["reference_to_video"]
     assert "reference_audios" not in task["requires"].get("any", [])
@@ -266,7 +295,7 @@ def test_refusals_name_the_public_model_never_the_adapter_id(adapter):
     inputs = adapter.inputs or {}
     axes = [_candidate_counts(slot, inputs.get(slot)) for slot in VIDEO_INPUT_SLOTS]
     for combo in itertools.product(*axes):
-        ok, reason = adapter.supports(_request(dict(zip(VIDEO_INPUT_SLOTS, combo))))
+        ok, reason = adapter.supports(_request(dict(zip(VIDEO_INPUT_SLOTS, combo)), adapter))
         if not ok:
             assert adapter.adapter_id not in reason, reason
             assert "capabilit" not in reason, reason
@@ -364,7 +393,7 @@ def test_synced_audio_output_is_claimed_exactly_when_the_output_has_sound(adapte
 def test_with_audio_reaches_the_payload_exactly_when_declared_switchable(adapter, accepted):
     """``switchable`` is a promise that the flag decides; anything else says it cannot."""
     counts = accepted[adapter.adapter_id][0]
-    base = _request(counts)
+    base = _request(counts, adapter)
     on = adapter.build_payload(base.model_copy(update={"with_audio": True}))
     off = adapter.build_payload(base.model_copy(update={"with_audio": False}))
     honoured = on != off
@@ -388,3 +417,22 @@ def test_malformed_outputs_are_rejected(raw, message):
 
     with pytest.raises(ValueError, match=message):
         parse_outputs("m", raw)
+
+
+@pytest.mark.parametrize("audio_role", ["driving", ["voice", "reference"]])
+def test_task_audio_role_takes_one_role_or_a_list(audio_role):
+    from cfgpu_mcp.task_catalog import _validate_task_requires
+
+    _validate_task_requires("t", {"media_type": "video", "requires": {
+        "all": ["reference_audios"], "audio_role": audio_role,
+    }})
+
+
+@pytest.mark.parametrize("audio_role", ["speech", [], ["voice", "speech"]])
+def test_task_audio_role_rejects_unknown_or_empty_roles(audio_role):
+    from cfgpu_mcp.task_catalog import _validate_task_requires
+
+    with pytest.raises(ValueError, match="audio_role"):
+        _validate_task_requires("t", {"media_type": "video", "requires": {
+            "all": ["reference_audios"], "audio_role": audio_role,
+        }})

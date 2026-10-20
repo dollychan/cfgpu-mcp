@@ -1,0 +1,32 @@
+id: tpl-style-document-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: 文档与出版物 · 常规
+summary: 制作[文档类型，如菜单/杂志内页/报纸版式]。
+genres:
+- documents-publishing
+tags:
+- 文档与出版物
+- 常规
+slots:
+- name: 文档类型，如菜单/杂志内页/报纸版式
+  required: true
+- name: 栏数/页边距/标题层级
+  required: true
+- name: 封面区/正文区/图表区/脚注
+  required: true
+- name: 衬线/无衬线
+  required: true
+- name: 配色方案
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  制作[文档类型，如菜单/杂志内页/报纸版式]。
+  版面结构：[栏数/页边距/标题层级]。
+  内容模块：[封面区/正文区/图表区/脚注]。
+  字体风格：[衬线/无衬线]，配色：[配色方案]。
+  输出：可读性强、版式规范的出版物视觉稿。

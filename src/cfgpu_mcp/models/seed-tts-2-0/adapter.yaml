@@ -12,6 +12,7 @@ poll_endpoint: /voice/tasks/{task_id}
 # both the code gates and the agent-facing profile catalog.
 tasks:
   - text_to_speech
+  - pronunciation_control
 
 cost_tier: 3
 speed_tier: 3

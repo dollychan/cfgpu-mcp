@@ -1,0 +1,29 @@
+id: style-web-agency-portfolio
+version: 1
+rank: 650
+kind: style
+media: image
+title: 工作室与作品集：海报式构图和果断的取舍
+summary: 巨型陈述或极简小首屏二选一，背景大胆变化，偏离网格的海报式版式，适合创意工作室、设计师和个人作品集。
+genres:
+- ui-ux-mockups
+scenes:
+- creative
+styles:
+- ui
+- poster
+tags:
+- 作品集
+- 创意工作室
+- 海报式
+- 设计师
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)
+  license: first-party
+content: |-
+  适用：用户说"工作室、创意机构、作品集"。
+  首屏：巨型陈述或极简小首屏，二选一要果断，不取中间。
+  背景：大胆地变化——全幅作品图、色块对拼、双色调照片；可以用与品牌情绪一致的编辑式色彩晕染。
+  构图：偏离网格、海报式堆叠叙事、作品图廊节奏；作品是主角，说明文字退后。
+  字体：可以用富有表现力的展示字体或压缩的大字，但全站只保留一种情绪。
+  避免：作品缩成小缩略图墙、每个项目同一种卡片、为了实验而牺牲可读性。

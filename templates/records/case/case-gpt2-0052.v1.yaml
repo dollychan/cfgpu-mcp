@@ -1,0 +1,20 @@
+id: case-gpt2-0052
+version: 1
+rank: 52
+kind: case
+media: image
+title: Pixel art car sprite sheet
+summary: A 10x10 pixel art sprite sheet of retro video game cars, 16-bit era aesthetic.
+genres:
+- pixel-art
+tags:
+- square
+- 1024x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@RoundtableSpace'
+  url: https://x.com/RoundtableSpace
+content: 'A 10x10 pixel art sprite sheet of retro video game cars, 16-bit era aesthetic. Ten rows by ten columns of small vehicle sprites on a clean light-grey grid background, each cell 64x64 pixels. Variety across sprites: sedans, sports cars, muscle cars, SUVs, pickup trucks, vans, taxi cabs, police cruisers, convertibles, and hot rods, in a full rainbow of colors. All sprites rendered in a consistent 3/4 top-down perspective with matching shading, crisp pixel edges, no anti-aliasing, palette limited to ~16 tones per sprite, SNES / Super Nintendo cart-racing game tradition.'

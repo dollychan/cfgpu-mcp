@@ -34,6 +34,8 @@ _VIDEO_MATERIAL = (
     {"first_frame": "https://example.com/f.png"},
     {"reference_images": ["https://example.com/r.png"]},
     {"reference_videos": ["https://example.com/v.mp4"]},
+    # A model that ignores an untagged reference refuses the bare shapes above.
+    {"reference_images": ["https://example.com/r.png"], "image_refs": ["r"], "prompt": "[[r]] a cat"},
 )
 
 
@@ -41,8 +43,9 @@ def _request(adapter, ratio):
     if adapter.task_type == "image":
         return GenerateImageInput(prompt="a cat", aspect_ratio=ratio)
     for material in _VIDEO_MATERIAL:   # the first material shape this model takes at all
-        if adapter.supports(GenerateVideoInput(prompt="a cat", **material))[0]:
-            return GenerateVideoInput(prompt="a cat", aspect_ratio=ratio, **material)
+        kw = {"prompt": "a cat", **material}
+        if adapter.supports(GenerateVideoInput(**kw))[0]:
+            return GenerateVideoInput(aspect_ratio=ratio, **kw)
     raise AssertionError(f"{adapter.adapter_id} accepts no probe request")
 
 
@@ -97,7 +100,7 @@ def test_audio_models_cannot_declare_ratios():
         _parse_aspect_ratios("m", "audio", ["1:1"])
 
 
-@pytest.mark.parametrize("model", ["doubao-seedream-5-0-lite", "wan2.7-image", "cf-pro"])
+@pytest.mark.parametrize("model", ["doubao-seedream-5-0-lite", "wan2.7-image", "cf-banana-pro"])
 def test_the_billed_path_now_refuses_what_used_to_be_squared_or_passed_on(model):
     registry = AdapterRegistry(MODELS_DIR)
     registry.load()

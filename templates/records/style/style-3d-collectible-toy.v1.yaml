@@ -1,0 +1,36 @@
+id: style-3d-collectible-toy
+version: 1
+rank: 18
+kind: style
+media: image
+title: 3D Collectible Toy / 3D 收藏玩具
+summary: 用于高级收藏玩具、头像公仔、潮玩角色和 3D 展示图。
+genres:
+- character-design
+scenes:
+- commerce
+- creative
+styles:
+- 3d
+- character
+tags:
+- Character
+- 3D
+- Style
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于高级收藏玩具、头像公仔、潮玩角色和 3D 展示图。
+  Use when: Use for premium collectible figures, avatar toys, blind-box characters, and 3D display renders.
+  要点 / Guidance:
+  - Preserve face and outfit anchors from the reference.
+  - Specify material, packaging, base, lighting, and collectible scale.
+  - 保留参考图中的脸和服装锚点。
+  - 指定材质、包装、底座、光线和收藏比例。
+  避坑 / Pitfalls:
+  - Avoid generic toy bodies without identity details.
+  - Keep packaging text minimal and accurate.
+  - 避免没有身份细节的通用玩具。
+  - 包装文字保持少量且准确。
+  可配合的模板骨架 / Skeletons: tpl-style-character-1, tpl-style-character-2, tpl-style-character-3

@@ -1,0 +1,30 @@
+id: style-web-saas-product
+version: 1
+rank: 640
+kind: style
+media: image
+title: SaaS 产品：清晰的产品框景与信任感
+summary: 纯色面加产品界面截图、色块加细节裁切，中等首屏，构图服务于理解产品，适合软件、金融科技和基础设施。
+genres:
+- ui-ux-mockups
+scenes:
+- tech
+styles:
+- ui
+- product
+tags:
+- SaaS
+- 软件
+- 金融科技
+- 产品截图
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream web skills (imagegen-frontend-web / image-to-code / design-taste-frontend)
+  license: first-party
+content: |-
+  适用：用户说"SaaS、产品、金融科技、基础设施"，或页面要讲清楚一个软件产品。
+  首屏：中等编辑式——主标题、简短说明、主按钮，加一张清楚的产品界面框景。
+  背景：纯色面加产品截图、色块加界面细节裁切，偶尔一屏编辑式分栏图。
+  渐变：非常细微，只用色板内的颜色。
+  构图：产品界面是主角，裁切到能看懂的局部，不画满屏假数据；信任区块只放用户提供的评价和数据。
+  实现清晰度略高于其他风格：组件样式、间距、按钮主次一眼可读。
+  避免：卡片套卡片、三列相同功能卡、假仪表盘图表、蓝紫渐变光球。

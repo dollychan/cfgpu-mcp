@@ -1,0 +1,36 @@
+id: style-brand-touchpoint-board
+version: 1
+rank: 12
+kind: style
+media: image
+title: Brand Touchpoint Board / 品牌触点视觉板
+summary: 用于多触点 Campaign 展示和品牌落地预览。
+genres:
+- brand-systems-identity
+scenes:
+- commerce
+- social
+styles:
+- brand
+- product
+tags:
+- Brand
+- Identity
+- Campaign
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于多触点 Campaign 展示和品牌落地预览。
+  Use when: Use for multi-touchpoint campaign boards and brand rollout previews.
+  要点 / Guidance:
+  - Specify touchpoint list, shared visual rules, and mockup arrangement.
+  - Use one palette and one typography logic across all panels.
+  - 指定触点清单、统一视觉规则和样机排列。
+  - 让所有面板共享配色和字体逻辑。
+  避坑 / Pitfalls:
+  - Avoid mixing many unrelated campaign styles.
+  - Limit touchpoints if readability drops.
+  - 避免混入多个无关 Campaign 风格。
+  - 可读性下降时减少触点数量。
+  可配合的模板骨架 / Skeletons: tpl-style-brand-1, tpl-style-brand-2, tpl-style-brand-3, tpl-style-brand-4, tpl-style-brand-5

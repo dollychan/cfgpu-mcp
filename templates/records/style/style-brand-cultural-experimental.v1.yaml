@@ -1,0 +1,29 @@
+id: style-brand-cultural-experimental
+version: 1
+rank: 580
+kind: style
+media: image
+title: 文化实验：网点、印刷感和有态度的标
+summary: 网点、显像管纹理、模拟印刷、大胆的强调色和海报式格子，好记、有创意，但依然受控。
+genres:
+- brand-systems-identity
+scenes:
+- creative
+- social
+styles:
+- brand
+- poster
+tags:
+- 音乐
+- 活动
+- 创意工具
+- 印刷感
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream brandkit skill
+  license: first-party
+content: |-
+  适用：音乐、创意工具、活动、接近游戏的产品、文化项目。
+  画面：网点和显像管纹理、模拟印刷感、一个大胆的强调色、海报式的格子、出人意料的图像裁切。
+  Logo 方向：定制文字标、有态度的图标、象征性的吉祥物、印刷感的标。
+  情绪：好记、有创意、仍然受控——每格一个想法，不做拼贴墙。
+  避免：随机彩虹、杂乱贴纸、无主次的涂鸦。

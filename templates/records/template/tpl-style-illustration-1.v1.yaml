@@ -1,0 +1,38 @@
+id: tpl-style-illustration-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: 插画与艺术 · 常规
+summary: 创作[题材]插画，主角为[角色/主体]。
+genres:
+- illustration
+tags:
+- 插画与艺术
+- 常规
+slots:
+- name: 题材
+  required: true
+- name: 角色/主体
+  required: true
+- name: 日漫/水彩/扁平/厚涂
+  required: true
+- name: 细腻/粗犷
+  required: true
+- name: 配色方案
+  required: true
+- name: 简洁/复杂场景
+  required: true
+- name: 近景/中景/远景
+  required: true
+- name: 细节
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  创作[题材]插画，主角为[角色/主体]。
+  画风：[日漫/水彩/扁平/厚涂]，线条：[细腻/粗犷]。
+  配色：[配色方案]，背景：[简洁/复杂场景]。
+  构图：[近景/中景/远景]，重点表现[细节]。
+  输出：可用于封面或社媒发布的高质量插画。

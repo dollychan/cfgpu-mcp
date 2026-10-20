@@ -1,0 +1,37 @@
+id: case-video-effect-replica
+version: 1
+rank: 272
+kind: case
+media: video
+title: 特效复刻：戴上虚拟眼镜穿越多个世界
+summary: 把参考视频里的人物换成新角色，并沿用它的运镜做多世界穿梭。
+genres:
+- cinematic-animation
+scenes:
+- creative
+tags:
+- 特效复刻
+- 主观视角
+- 穿梭
+slots:
+- name: 源视频
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 人物参考图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 宇宙场景图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 像素世界图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+- name: 星球场景图
+  required: true
+  hint: 该素材在 prompt 中的引用；只写调用方约定的素材写法，不写任何模型专用标签
+source:
+  origin: dexhunter/seedance2-skill
+  license: MIT
+  author: Dex
+  url: https://github.com/dexhunter/seedance2-skill/blob/main/zh/SKILL.md
+content: 将[源视频]中的人物换成[人物参考图]中的人物，并以[人物参考图]作为首帧。人物戴上虚拟科幻眼镜，参考[源视频]的运镜，用贴近的环绕镜头从第三人称视角切换为人物主观视角，在虚拟眼镜中穿梭；来到[宇宙场景图]所示深邃的蓝色宇宙，几架飞船穿梭向远方；镜头跟随飞船进入[像素世界图]所示的像素世界，低空掠过像素山林，树木以生长的形式出现；随后视角仰拍，急速穿梭到[星球场景图]所示浅绿色纹理的星球，掠过星球表面。

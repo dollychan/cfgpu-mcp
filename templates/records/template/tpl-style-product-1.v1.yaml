@@ -1,0 +1,38 @@
+id: tpl-style-product-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: 商品与电商 · 常规
+summary: 生成[商品名]电商主图，卖点为[卖点1]、[卖点2]。
+genres:
+- product-food
+tags:
+- 商品与电商
+- 常规
+slots:
+- name: 商品名
+  required: true
+- name: 卖点1
+  required: true
+- name: 卖点2
+  required: true
+- name: 纯色棚拍/生活方式场景
+  required: true
+- name: 特写/半身/全景
+  required: true
+- name: 材质关键词
+  required: true
+- name: 柔光/侧光/轮廓光
+  required: true
+- name: 价格角标/卖点icon/促销文案
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  生成[商品名]电商主图，卖点为[卖点1]、[卖点2]。
+  场景：[纯色棚拍/生活方式场景]，镜头：[特写/半身/全景]。
+  材质细节：[材质关键词]，灯光：[柔光/侧光/轮廓光]。
+  附加元素：[价格角标/卖点icon/促销文案]。
+  输出：电商平台可直接使用的商品展示图。

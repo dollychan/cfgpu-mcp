@@ -1,0 +1,38 @@
+接口参数 
+
+prompt	必填	string	一只可爱的猫咪	文本提示词，描述希望生成或编辑的图片内容
+image_size	可选	string		选填，留空由后端按宽高比和分辨率自动映射尺寸。仅需自定义时填写宽x高（如 1920x1088），优先于比例/分辨率；宽高须为 16 的倍数，比例不超过 3:1，总像素 655,360 到 8,294,400
+aspect_ratio	可选	string	1:1	宽高比。image_size 为 auto 或不传时生效
+quality	可选	string	auto	渲染质量，auto 按 medium 预估，完成后按实际用量结算
+resolution	可选	string	1K	分辨率档位。image_size 为 auto 或不传时配合 aspect_ratio 映射输出尺寸
+reference_images	可选	array		参考图片 URL 数组。
+background	可选	string	auto	背景模式
+
+aspect_ratio :[    "1:1",
+        "3:2",
+        "2:3",
+        "4:3",
+        "3:4",
+        "16:9",
+        "9:16",
+        "21:9",
+        "9:21",
+        "3:1",
+        "1:3",
+        "2:1",
+        "1:2"
+    ], 
+    
+quality:[      "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "auto"
+    ],
+
+background: [        "auto",
+        "opaque",
+        "transparent"
+    ],
+

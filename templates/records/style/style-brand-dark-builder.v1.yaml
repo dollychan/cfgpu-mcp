@@ -1,0 +1,29 @@
+id: style-brand-dark-builder
+version: 1
+rank: 510
+kind: style
+media: image
+title: 深色建造者：开发工具、基础设施与自动化品牌
+summary: 近黑底、等宽字点缀、命令行和终端窗口作为品牌应用，精确、锋利、懂行。
+genres:
+- brand-systems-identity
+scenes:
+- tech
+styles:
+- brand
+- dark-tech
+tags:
+- 开发者工具
+- 终端
+- 基础设施
+- 深色
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream brandkit skill
+  license: first-party
+content: |-
+  适用：开发者工具、编程助手、基础设施、自动化、AI 构建平台。
+  画面：近黑色面板，细微网格；等宽字作点缀；终端窗口、命令输入条、提示框、安装命令作为品牌应用；必要时加像素或显像管纹理。
+  配色：近黑底配一个冷或亮的强调色（青、蓝、珊瑚或青柠），其余保持灰阶。
+  Logo 方向：光标加框架、闪电表达构建速度、脚手架加首字母、终端符号与几何标结合、模块化构成标。
+  情绪：精确、锋利、自信、像工程师自己做的。
+  避免：满屏代码、假仪表盘、霓虹光晕、通用科技蓝紫渐变。

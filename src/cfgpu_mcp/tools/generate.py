@@ -67,6 +67,9 @@ def register(mcp: FastMCP) -> None:
         reference_images: Optional[list[str]] = None,
         reference_videos: Optional[list[str]] = None,
         reference_audios: Optional[list[str]] = None,
+        image_refs: Optional[list[str]] = None,
+        video_refs: Optional[list[str]] = None,
+        audio_refs: Optional[list[str]] = None,
         duration_seconds: Optional[int] = None,
         negative_prompt: Optional[str] = None,
         aspect_ratio: str = "adaptive",
@@ -74,7 +77,7 @@ def register(mcp: FastMCP) -> None:
         with_audio: bool = True,
         quality_tier: str = "balanced",
         watermark: bool = False,
-        prompt_extend: bool = True,
+        prompt_extend: Optional[bool] = None,
         wait: bool = True,
         timeout: Optional[int] = None,
         return_metadata: bool = True,
@@ -104,6 +107,9 @@ def register(mcp: FastMCP) -> None:
                 reference_images=reference_images,
                 reference_videos=reference_videos,
                 reference_audios=reference_audios,
+                image_refs=image_refs,
+                video_refs=video_refs,
+                audio_refs=audio_refs,
                 duration_seconds=duration_seconds,
                 negative_prompt=negative_prompt,
                 aspect_ratio=aspect_ratio,
@@ -146,7 +152,14 @@ def register(mcp: FastMCP) -> None:
         label: Optional[str] = None,
         validate_only: bool = False,
     ) -> dict:
-        """Generate speech audio from text (text-to-speech) using CFGPU voice models."""
+        """Generate speech audio from text (text-to-speech) using CFGPU voice models.
+
+        Speaks only in a catalog voice from `list_voice_profiles`. It takes no audio sample
+        and cannot clone a voice from a supplied clip. When the user supplies a clip as the
+        voice, do not substitute a catalog voice and present it as theirs. For video, use
+        `generate_video` with a model from `required_tasks=["voice_reference_video"]`; for
+        audio alone, tell the user voice cloning is not available.
+        """
         try:
             return split_structured(annotate_artifact(await audio_service.generate_audio(
                 text=text,

@@ -69,6 +69,7 @@ Issues = "https://github.com/dollychan/cfgpu-mcp/issues"
 [project.scripts]
 cfgpu-mcp = "cfgpu_mcp.server:main"
 cfgpu = "cfgpu_mcp.cli.main:cli"
+cfgpu-mcp-public = "cfgpu_mcp.public_http:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cfgpu_mcp"]

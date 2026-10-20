@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import base64
 import difflib
-from datetime import UTC, datetime
+import json
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
@@ -62,7 +63,14 @@ _AUDIO_MIME_BY_FORMAT = {
     "mp3": "audio/mpeg",
     "wav": "audio/wav",
     "flac": "audio/flac",
-    "pcm": "audio/L16",
+    # Not audio/L16: that type is big-endian (RFC 2586) and MiniMax's pcm is
+    # little-endian. Raw PCM has no header, so the descriptor also carries the
+    # sample layout (see _extract_inline_audio).
+    "pcm": "audio/pcm",
+    # MiniMax names Ogg/Opus ``opus``; the unified schema calls the same container
+    # ``ogg_opus`` (seed-tts's spelling). Both may come back in extra_info.
+    "opus": "audio/ogg",
+    "ogg_opus": "audio/ogg",
 }
 
 
@@ -86,8 +94,11 @@ _SEED_DEFAULT_VOICE = "zh_female_xiaohe_uranus_bigtts"
 _MINIMAX_DEFAULT_VOICE = "male-qn-qingse"
 _SEED_SYSTEM_VOICES = _system_voice_ids("seed-tts-2-0", _SEED_DEFAULT_VOICE)
 _MINIMAX_SYSTEM_VOICES = _system_voice_ids("minimax-speech-2-8-hd", _MINIMAX_DEFAULT_VOICE)
+# speech-2.8 hd/turbo accept eight of the nine schema emotions — every one except
+# ``whisper``, which is 2.6-only. ``fluent`` is supported (confirmed 2026-10-10; the
+# reference's sentence grouping fluent with whisper as 2.6-only is outdated).
 _MINIMAX_EMOTIONS = frozenset(
-    {"happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent", "whisper"}
+    {"happy", "sad", "angry", "fearful", "disgusted", "surprised", "calm", "fluent"}
 )
 
 
@@ -141,11 +152,24 @@ def _extract_inline_audio(resp: dict) -> dict | None:
         return None
     fmt = _dig(resp, "output.extra_info.audio_format")
     fmt = fmt.lower() if isinstance(fmt, str) and fmt else "mp3"
-    return {
+    media = {
         "data": base64.b64encode(raw).decode("ascii"),
         "mime_type": _AUDIO_MIME_BY_FORMAT.get(fmt, "application/octet-stream"),
         "filename": f"speech.{fmt}",
     }
+    if fmt == "pcm":
+        # Headerless samples: without the layout the bytes cannot be played. Observed
+        # from the relay (2026-10-10): 16-bit little-endian, audio_size equal to
+        # rate x channels x 2 x seconds. Rate and channels are read from extra_info
+        # rather than from the request, so they describe what was actually returned.
+        media["sample_format"] = "s16le"
+        rate = _dig(resp, "output.extra_info.audio_sample_rate")
+        channels = _dig(resp, "output.extra_info.audio_channel")
+        if isinstance(rate, int):
+            media["sample_rate"] = rate
+        if isinstance(channels, int):
+            media["channels"] = channels
+    return media
 
 
 # ── MiniMax business-error translation ───────────────────────────────────────
@@ -164,7 +188,7 @@ def _extract_inline_audio(resp: dict) -> dict | None:
 #   ``系统音色列表``. The remedy points there, plus the two mistakes that produce
 #   most of these — reusing a seed-tts speaker on MiniMax, and "normalising" an id
 #   that legitimately contains odd bytes (trailing space, full-width bracket).
-# * **2013 (emotion)** has a fixed nine-value enum. The remedy lists it and also
+# * **2013 (emotion)** has a fixed eight-value enum on 2.8 (no ``whisper``). The remedy lists it and also
 #   preserves the automatic-inference option for callers that do not need explicit
 #   control. The model card carries the same authoritative list.
 #
@@ -181,9 +205,9 @@ _MINIMAX_VOICE_REMEDY = (
 )
 
 _MINIMAX_EMOTION_REMEDY = (
-    "emotion 仅支持 happy / sad / angry / fearful / disgusted / surprised / "
-    "calm / fluent / whisper。也可以省略 emotion，让模型按文本自动推断语气，"
-    "或把情绪写进 text 的内嵌标记（如「今天真开心(laughs)」）。"
+    "speech-2.8 的 emotion 仅支持 happy / sad / angry / fearful / disgusted / surprised / "
+    "calm / fluent，不支持 whisper。也可以省略 emotion，让模型按文本自动推断语气，"
+    "或在 text 中插入语气词标签（如「今天真开心(laughs)」）。"
 )
 
 # status_msg 里出现的字段名 → 该字段的专用建议；先按字段匹配，命中即用。
@@ -214,13 +238,43 @@ def _minimax_remedy(status_code: str, status_msg: str) -> tuple[str, bool]:
     return _MINIMAX_CODE_REMEDIES.get(status_code, ("", True))
 
 
+# ── seed-tts 2.0 audio parameters (models/seed-tts-2-0/reference) ───────────────
+#
+# Output containers are mp3 / pcm / ogg_opus; wav and flac do not exist upstream.
+# ogg_opus is fixed at 48 kHz, so its default sample rate is not the 24 kHz the other
+# two use — sending 24000 with ogg_opus is a rejected request, not a fallback.
+_SEED_FORMATS = frozenset({"mp3", "pcm", "ogg_opus"})
+_SEED_SAMPLE_RATES = (8000, 16000, 22050, 24000, 32000, 44100, 48000)
+_SEED_OGG_SAMPLE_RATE = 48000
+# pcm takes no bit_rate at all. Upstream widens the set to 16000/32000 only behind
+# additions.disable_default_bit_rate, which stays a model_specific matter.
+_SEED_BIT_RATES = (64000, 160000)
+_SEED_MAX_TEXT_CHARS = 100_000
+# speech_rate / loudness_rate are ints on [-50, 100] where 100 = 2.0x and -50 = 0.5x,
+# i.e. linear in the multiplier: rate = (multiplier - 1) * 100.
+_SEED_MULTIPLIER_RANGE = (0.5, 2.0)
+_SEED_PITCH_RANGE = (-12, 12)
+# The download link lives one hour (the audio itself seven days; re-polling the task
+# returns a fresh link). Used only when the poll response carries no urlExpireTime.
+_SEED_URL_TTL = timedelta(hours=1)
+
+
+def _nearest(value: int, allowed: tuple[int, ...]) -> int:
+    return min(allowed, key=lambda candidate: (abs(candidate - value), candidate))
+
+
+def _multiplier_to_rate(multiplier: float) -> int:
+    return round((multiplier - 1) * 100)
+
+
 @register_python_adapter
 class SeedTTSAdapter(ModelAdapter):
     """Python Adapter for Doubao seed-tts-2.0 (asynchronous text-to-speech).
 
-    Payload uses the ``req_params`` envelope with a ``speaker`` voice id and a
-    nested ``audio_params`` block. Submit returns a task id; the result URL is
-    fetched by polling ``/voice/tasks/{task_id}``.
+    Payload uses the ``req_params`` envelope with a ``speaker`` voice id, a nested
+    ``audio_params`` block, and ``additions`` — a JSON-encoded *string*, not an object.
+    Submit returns a task id; the result URL is fetched by polling
+    ``/voice/tasks/{task_id}``.
     """
 
     adapter_id = "seed-tts-2-0"
@@ -229,9 +283,25 @@ class SeedTTSAdapter(ModelAdapter):
     _DEFAULT_SAMPLE_RATE = 24000
 
     def validation_corrections(self, req: "GenerateAudioInput") -> dict[str, Any]:
+        # Output-shape fallbacks only. speed / volume / pitch out of range stay hard
+        # errors: they are delivery, not container, and clamping them changes intent.
         corrected: dict[str, Any] = {}
-        if req.audio_format == "pcm":
-            corrected["audio_format"] = "mp3"
+        fmt = req.audio_format
+        if fmt not in _SEED_FORMATS:
+            fmt = "mp3"
+            corrected["audio_format"] = fmt
+        if req.sample_rate is not None:
+            rate = (
+                _SEED_OGG_SAMPLE_RATE
+                if fmt == "ogg_opus"
+                else _nearest(req.sample_rate, _SEED_SAMPLE_RATES)
+            )
+            if rate != req.sample_rate:
+                corrected["sample_rate"] = rate
+        if req.bitrate is not None:
+            bitrate = None if fmt == "pcm" else _nearest(req.bitrate, _SEED_BIT_RATES)
+            if bitrate != req.bitrate:
+                corrected["bitrate"] = bitrate
         corrected.update(_voice_correction(req.voice, self._DEFAULT_VOICE))
         if req.emotion is not None:
             corrected["emotion"] = None
@@ -243,27 +313,67 @@ class SeedTTSAdapter(ModelAdapter):
             return False, reason
         if not req.text.strip():
             return False, f"{self.model_name} requires non-empty text"
+        if len(req.text) > _SEED_MAX_TEXT_CHARS:
+            return False, (
+                f"{self.model_name} accepts at most {_SEED_MAX_TEXT_CHARS} characters of "
+                f"text (got {len(req.text)}); split it into several requests"
+            )
         if req.voice is not None and req.voice not in _SEED_SYSTEM_VOICES:
             return False, _invalid_voice_reason(self.model_name, req.voice, _SEED_SYSTEM_VOICES)
-        if req.audio_format not in {"mp3", "wav", "flac"}:
-            return False, f"{self.model_name} supports audio_format mp3, wav, or flac"
-        if req.sample_rate is not None and req.sample_rate <= 0:
-            return False, "sample_rate must be a positive integer"
+        if req.audio_format not in _SEED_FORMATS:
+            return False, f"{self.model_name} supports audio_format mp3, pcm, or ogg_opus"
+        if req.sample_rate is not None:
+            if req.audio_format == "ogg_opus" and req.sample_rate != _SEED_OGG_SAMPLE_RATE:
+                return False, f"{self.model_name} supports only sample_rate 48000 for ogg_opus"
+            if req.sample_rate not in _SEED_SAMPLE_RATES:
+                return False, (
+                    f"{self.model_name} supports sample_rate "
+                    f"{', '.join(str(r) for r in _SEED_SAMPLE_RATES)}"
+                )
         if req.bitrate is not None:
-            return False, f"{self.model_name} does not support bitrate"
-        if req.speed != 1.0 or req.volume != 1.0 or req.pitch != 0 or req.emotion is not None:
-            return False, f"{self.model_name} does not support speed, volume, pitch, or emotion"
+            if req.audio_format == "pcm":
+                return False, f"{self.model_name} does not support bitrate for pcm; omit bitrate"
+            if req.bitrate not in _SEED_BIT_RATES:
+                return False, f"{self.model_name} supports bitrate 64000 or 160000"
+        low, high = _SEED_MULTIPLIER_RANGE
+        if not low <= req.speed <= high:
+            return False, f"{self.model_name} supports speed from {low} to {high}"
+        if not low <= req.volume <= high:
+            return False, f"{self.model_name} supports volume from {low} to {high}"
+        low_pitch, high_pitch = _SEED_PITCH_RANGE
+        if not low_pitch <= req.pitch <= high_pitch:
+            return False, f"{self.model_name} supports pitch from {low_pitch} to {high_pitch}"
+        if req.emotion is not None:
+            return False, (
+                f"{self.model_name} does not support emotion; omit it, or describe the "
+                f"delivery in the text"
+            )
         return True, ""
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput") -> dict:
         assert isinstance(req, GenerateAudioInput)
+        default_rate = (
+            _SEED_OGG_SAMPLE_RATE if req.audio_format == "ogg_opus" else self._DEFAULT_SAMPLE_RATE
+        )
+        audio_params: dict = {
+            "format": req.audio_format,
+            "sample_rate": req.sample_rate or default_rate,
+        }
+        # Neutral values are omitted rather than sent as 0: the payload for a plain
+        # request stays exactly what it was before these fields were mapped.
+        if req.bitrate is not None:
+            audio_params["bit_rate"] = req.bitrate
+        if req.speed != 1.0:
+            audio_params["speech_rate"] = _multiplier_to_rate(req.speed)
+        if req.volume != 1.0:
+            audio_params["loudness_rate"] = _multiplier_to_rate(req.volume)
+        additions: dict = {}
+        if req.pitch != 0:
+            additions["post_process"] = {"pitch": req.pitch}
         req_params: dict = {
             "text": req.text,
             "speaker": req.voice or self._DEFAULT_VOICE,
-            "audio_params": {
-                "format": req.audio_format,
-                "sample_rate": req.sample_rate or self._DEFAULT_SAMPLE_RATE,
-            },
+            "audio_params": audio_params,
             "callback_url": "",
         }
         payload: dict = {
@@ -271,8 +381,48 @@ class SeedTTSAdapter(ModelAdapter):
             "req_params": req_params,
         }
         if req.model_specific:
-            payload.update(req.model_specific)
+            # Shaped like the payload and merged level by level, so a caller can set one
+            # field (e.g. {"req_params": {"additions": {"explicit_language": "en"}}})
+            # without restating — and wiping — text and speaker. A plain top-level
+            # update replaced the whole req_params.
+            for key, value in req.model_specific.items():
+                if key == "req_params" and isinstance(value, dict):
+                    self._merge_req_params(req_params, audio_params, additions, value)
+                else:
+                    payload[key] = value
+        if additions:
+            req_params["additions"] = json.dumps(additions, ensure_ascii=False)
         return payload
+
+    @staticmethod
+    def _merge_req_params(req_params: dict, audio_params: dict, additions: dict, override: dict) -> None:
+        for key, value in override.items():
+            if key == "audio_params" and isinstance(value, dict):
+                audio_params.update(value)
+            elif key == "additions":
+                # Upstream wants a JSON string; accept either spelling from the caller.
+                if isinstance(value, str):
+                    try:
+                        value = json.loads(value) if value.strip() else {}
+                    except ValueError as exc:
+                        raise CFGPUError(
+                            error_type="invalid_params",
+                            user_message="model_specific req_params.additions is not valid JSON",
+                            original={"additions": value},
+                        ) from exc
+                if not isinstance(value, dict):
+                    raise CFGPUError(
+                        error_type="invalid_params",
+                        user_message="model_specific req_params.additions must be an object",
+                        original={"additions": value},
+                    )
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, dict) and isinstance(additions.get(sub_key), dict):
+                        additions[sub_key].update(sub_value)
+                    else:
+                        additions[sub_key] = sub_value
+            else:
+                req_params[key] = value
 
     def extract_task_id(self, resp: dict) -> str | None:
         # Create response nests the id under `data`:
@@ -308,7 +458,7 @@ class SeedTTSAdapter(ModelAdapter):
         expires_at = (
             datetime.fromtimestamp(expire, UTC)
             if isinstance(expire, (int, float))
-            else _default_expires_at()
+            else datetime.now(UTC) + _SEED_URL_TTL
         )
         return NormalizedResult(
             urls=[url] if url else [],
@@ -318,6 +468,37 @@ class SeedTTSAdapter(ModelAdapter):
             seed=None,
             usage=usage,
         )
+
+
+# ── MiniMax speech-2.8 audio parameters (models/minimax-speech-2-8-hd/reference) ──
+#
+# The reference is MiniMax's own T2A API; CFGPU relays it under an ``input`` envelope
+# with the sync API's field names (``audio_setting.sample_rate``, not the async API's
+# ``audio_sample_rate``). Values below are the reference's.
+#
+# Unified schema format -> MiniMax format. pcmu_raw / pcmu_wav (G.711) have no unified
+# spelling and stay reachable through model_specific.
+_MINIMAX_FORMATS = {"mp3": "mp3", "wav": "wav", "flac": "flac", "pcm": "pcm", "ogg_opus": "opus"}
+_MINIMAX_SAMPLE_RATES = (8000, 16000, 22050, 24000, 32000, 44100)
+# Opus: the reference lists 8000/12000/16000/24000/48000, but the relay checks
+# sample_rate against the general set first (observed 2026-10-10: opus + 48000 ->
+# "invalid params: sample_rate"), and opus + 32000 passes that check only to fail
+# upstream with an opaque 400 that still reported usage. Only the intersection
+# can pass both.
+_MINIMAX_OPUS_SAMPLE_RATES = (8000, 16000, 24000)
+_MINIMAX_OPUS_DEFAULT_SAMPLE_RATE = 24000
+# bitrate only takes effect on mp3, so it is sent only there and refused elsewhere: a
+# parameter that reads as a request and is silently ignored is one a reader trusts.
+_MINIMAX_BITRATES = (32000, 64000, 128000, 256000)
+_MINIMAX_SPEED_RANGE = (0.5, 2.0)
+_MINIMAX_MAX_VOLUME = 10.0          # (0, 10]
+_MINIMAX_PITCH_RANGE = (-12, 12)
+# No local text-length cap: the reference's 50,000 is the async API's figure and the
+# relay serves the sync one, so a local number would be a guess. Upstream rejects
+# over-long text itself.
+# Objects inside ``input`` that model_specific merges field by field rather than
+# replacing — the caller sets one key without restating the typed ones.
+_MINIMAX_MERGED_INPUT_OBJECTS = frozenset({"voice_setting", "audio_setting", "voice_modify"})
 
 
 @register_python_adapter
@@ -337,11 +518,27 @@ class MiniMaxSpeechAdapter(ModelAdapter):
     _DEFAULT_BITRATE = 128000
 
     def validation_corrections(self, req: "GenerateAudioInput") -> dict[str, Any]:
+        # Output-shape fallbacks only (container, sample rate, bitrate), as on seed-tts.
+        # speed / volume / pitch / emotion out of range stay hard errors.
         corrected: dict[str, Any] = {}
-        if req.audio_format == "pcm":
-            corrected["audio_format"] = "mp3"
+        fmt = req.audio_format
+        if fmt not in _MINIMAX_FORMATS:
+            fmt = "mp3"
+            corrected["audio_format"] = fmt
+        if req.sample_rate is not None:
+            rate = _nearest(req.sample_rate, self._sample_rates(fmt))
+            if rate != req.sample_rate:
+                corrected["sample_rate"] = rate
+        if req.bitrate is not None:
+            bitrate = _nearest(req.bitrate, _MINIMAX_BITRATES) if fmt == "mp3" else None
+            if bitrate != req.bitrate:
+                corrected["bitrate"] = bitrate
         corrected.update(_voice_correction(req.voice, self._DEFAULT_VOICE))
         return corrected
+
+    @staticmethod
+    def _sample_rates(fmt: str) -> tuple[int, ...]:
+        return _MINIMAX_OPUS_SAMPLE_RATES if fmt == "ogg_opus" else _MINIMAX_SAMPLE_RATES
 
     def supports(self, req: "GenerateAudioInput") -> tuple[bool, str]:
         ok, reason = super().supports(req)
@@ -354,16 +551,33 @@ class MiniMaxSpeechAdapter(ModelAdapter):
         if req.emotion is not None and req.emotion not in _MINIMAX_EMOTIONS:
             return False, (
                 f"{self.model_name} does not support emotion {req.emotion!r} "
-                f"(supported: {', '.join(sorted(_MINIMAX_EMOTIONS))})"
+                f"(supported: {', '.join(sorted(_MINIMAX_EMOTIONS))}); omit it to let the "
+                f"model infer the delivery from the text"
             )
-        if req.audio_format not in {"mp3", "wav", "flac"}:
-            return False, f"{self.model_name} supports audio_format mp3, wav, or flac"
-        if req.sample_rate is not None and req.sample_rate <= 0:
-            return False, "sample_rate must be a positive integer"
-        if req.bitrate is not None and req.bitrate <= 0:
-            return False, "bitrate must be a positive integer"
-        if req.speed <= 0 or req.volume <= 0:
-            return False, "speed and volume must be positive"
+        if req.audio_format not in _MINIMAX_FORMATS:
+            return False, f"{self.model_name} supports audio_format {', '.join(_MINIMAX_FORMATS)}"
+        rates = self._sample_rates(req.audio_format)
+        if req.sample_rate is not None and req.sample_rate not in rates:
+            return False, (
+                f"{self.model_name} supports sample_rate {', '.join(str(r) for r in rates)}"
+                f" for {req.audio_format}"
+            )
+        if req.bitrate is not None:
+            if req.audio_format != "mp3":
+                return False, f"{self.model_name} applies bitrate only to mp3; omit bitrate"
+            if req.bitrate not in _MINIMAX_BITRATES:
+                return False, (
+                    f"{self.model_name} supports bitrate "
+                    f"{', '.join(str(b) for b in _MINIMAX_BITRATES)}"
+                )
+        low, high = _MINIMAX_SPEED_RANGE
+        if not low <= req.speed <= high:
+            return False, f"{self.model_name} supports speed from {low} to {high}"
+        if not 0 < req.volume <= _MINIMAX_MAX_VOLUME:
+            return False, f"{self.model_name} supports volume above 0 and up to {_MINIMAX_MAX_VOLUME:g}"
+        low_pitch, high_pitch = _MINIMAX_PITCH_RANGE
+        if not low_pitch <= req.pitch <= high_pitch:
+            return False, f"{self.model_name} supports pitch from {low_pitch} to {high_pitch}"
         return True, ""
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput | GenerateAudioInput") -> dict:
@@ -376,22 +590,43 @@ class MiniMaxSpeechAdapter(ModelAdapter):
         }
         if req.emotion:
             voice_setting["emotion"] = req.emotion
+        is_opus = req.audio_format == "ogg_opus"
+        default_rate = _MINIMAX_OPUS_DEFAULT_SAMPLE_RATE if is_opus else self._DEFAULT_SAMPLE_RATE
+        audio_setting: dict = {
+            "sample_rate": req.sample_rate or default_rate,
+            "format": _MINIMAX_FORMATS.get(req.audio_format, req.audio_format),
+            # Upstream defaults to stereo; speech is mono, and this was always sent.
+            "channel": 1,
+        }
+        if req.audio_format == "mp3":
+            audio_setting["bitrate"] = req.bitrate or self._DEFAULT_BITRATE
         inp: dict = {
             "text": req.text,
             "voice_setting": voice_setting,
-            "audio_setting": {
-                "sample_rate": req.sample_rate or self._DEFAULT_SAMPLE_RATE,
-                "bitrate": req.bitrate or self._DEFAULT_BITRATE,
-                "format": req.audio_format,
-                "channel": 1,
-            },
+            "audio_setting": audio_setting,
         }
         payload: dict = {
             "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
             "input": inp,
         }
         if req.model_specific:
-            payload.update(req.model_specific)
+            # Shaped like the payload: ``input`` is merged key by key, and its
+            # voice_setting / audio_setting / voice_modify objects one level further,
+            # so {"input": {"pronunciation_dict": ...}} adds a field instead of
+            # replacing text and voice_setting (which the old top-level update did).
+            for key, value in req.model_specific.items():
+                if key == "input" and isinstance(value, dict):
+                    for sub_key, sub_value in value.items():
+                        if (
+                            sub_key in _MINIMAX_MERGED_INPUT_OBJECTS
+                            and isinstance(sub_value, dict)
+                            and isinstance(inp.get(sub_key), dict)
+                        ):
+                            inp[sub_key].update(sub_value)
+                        else:
+                            inp[sub_key] = sub_value
+                else:
+                    payload[key] = value
         return payload
 
     def parse_response(self, resp: dict) -> NormalizedResult:

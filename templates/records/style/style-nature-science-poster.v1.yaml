@@ -1,0 +1,35 @@
+id: style-nature-science-poster
+version: 1
+rank: 8
+kind: style
+media: image
+title: Nature Science Poster / 自然科普海报
+summary: 用于自然主题的高级、干净科普海报。
+genres:
+- typography-posters
+scenes:
+- education
+styles:
+- poster
+- infographic
+tags:
+- Poster
+- Education
+- Style
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于自然主题的高级、干净科普海报。
+  Use when: Use for natural subjects that need a premium, clean science poster feel.
+  要点 / Guidance:
+  - Use a clear subject, minimal copy, soft shadows, and disciplined whitespace.
+  - Keep the scientific label short and visible.
+  - 使用清晰主体、少量文案、柔和阴影和充足留白。
+  - 让科普标签短而清楚。
+  避坑 / Pitfalls:
+  - Avoid heavy advertising language.
+  - Avoid dense encyclopedia blocks.
+  - 避免广告感太重。
+  - 避免密集百科正文。
+  可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8

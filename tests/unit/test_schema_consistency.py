@@ -102,3 +102,27 @@ def test_service_signature_defaults_match_pydantic(tool_name, model, svc):
             f"{svc.__name__}.{name}: service default {p.default!r} != "
             f"Pydantic default {field.default!r}"
         )
+
+
+def test_generate_audio_says_it_cannot_clone_a_supplied_voice():
+    """generate_audio has no audio-sample input, so a user's clip cannot be the voice.
+
+    Only saying what the tool does let an agent announce "using your clip as the voice",
+    then send a catalog voice with the clip's id in `caption`. The refusal has to be in
+    the text the agent always reads — the advertised tool description, the Mode-B model
+    docstring and the `voice` field — and has to name the route that does work.
+    """
+    from cfgpu_mcp.server import mcp
+
+    tools = asyncio.run(mcp.list_tools())
+    advertised = next(t for t in tools if t.name == "generate_audio").description
+    for text in (advertised, GenerateAudioInput.__doc__):
+        assert "cannot clone a voice from a supplied clip" in text
+        assert "do not substitute a catalog voice" in text
+        assert 'required_tasks=["voice_reference_video"]' in text
+    assert " ".join(advertised.split()) == " ".join(GenerateAudioInput.__doc__.split())
+
+    voice = _mcp_input_schema("generate_audio")["properties"]["voice"]["description"]
+    assert "uploaded clip is not a voice" in voice
+    # The claim above holds only while the tool truly has no sample slot.
+    assert not [f for f in GenerateAudioInput.model_fields if f.startswith("reference_")]

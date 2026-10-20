@@ -1,0 +1,38 @@
+id: tpl-style-scene-1
+version: 1
+rank: 501
+kind: template
+media: image
+title: 场景与叙事 · 常规
+summary: 生成[故事主题]场景图，发生在[时间+地点]。
+genres:
+- scenes-storytelling
+tags:
+- 场景与叙事
+- 常规
+slots:
+- name: 故事主题
+  required: true
+- name: 时间+地点
+  required: true
+- name: 事件描述
+  required: true
+- name: 角色
+  required: true
+- name: 冲突
+  required: true
+- name: 广角建立镜头/中景叙事/特写
+  required: true
+- name: 紧张/温暖/悬疑
+  required: true
+- name: 冷/暖/高反差
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  生成[故事主题]场景图，发生在[时间+地点]。
+  主事件：[事件描述]，主角：[角色]，冲突点：[冲突]。
+  镜头语言：[广角建立镜头/中景叙事/特写]。
+  氛围：[紧张/温暖/悬疑]，色调：[冷/暖/高反差]。
+  输出：具备叙事张力的场景概念图。

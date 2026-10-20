@@ -1,0 +1,37 @@
+id: style-ink-double-exposure-poster
+version: 1
+rank: 7
+kind: style
+media: image
+title: Ink Double Exposure Poster / 水墨双重曝光海报
+summary: 用于诗意人像海报、水墨氛围和文化主题视觉。
+genres:
+- typography-posters
+scenes:
+- story
+- history
+styles:
+- poster
+- illustration
+- classical
+tags:
+- Poster
+- Classical
+- Style
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于诗意人像海报、水墨氛围和文化主题视觉。
+  Use when: Use for poetic portrait posters, ink atmospheres, and layered cultural visuals.
+  要点 / Guidance:
+  - Blend portrait silhouette, ink texture, atmosphere, and negative space.
+  - Keep composition quiet, premium, and readable.
+  - 融合人像剪影、水墨质感、氛围和留白。
+  - 保持构图克制、高级、可读。
+  避坑 / Pitfalls:
+  - Avoid cheap fantasy collage and overloaded scenery.
+  - Use subtle text or no text unless required.
+  - 避免廉价奇幻拼贴和景物堆叠。
+  - 非必要时减少文字。
+  可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8

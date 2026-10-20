@@ -32,18 +32,20 @@
 
 | 统一 Schema 字段 | wan2.6-t2v 字段 | 映射说明 |
 |------------------|-----------------|----------|
-| prompt | input.prompt | 文本提示词，支持分镜描述 |
+| prompt | input.prompt | 文本提示词，支持分镜描述：每个镜头以 `[[shot 起-止秒]]` 开头，MCP 渲染成上游的镜头写法 |
 | resolution | parameters.size | `720p` → `1280*720`；`1080p` → `1920*1080` |
 | aspect_ratio | - | 此模型的公开规格仅提供 16:9 尺寸；`adaptive` 按 16:9 处理 |
 | reference_audios[0] | input.audio_url | 可选驱动音频；未提供时模型自动生成音频 |
 | negative_prompt | parameters.negative_prompt | 负向提示词 |
-| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
+| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，不传时默认 `true`（多镜头需要它开启） |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 视频时长（秒），需显式指定（不支持 -1 智能时长） |
-| model_specific.parameters.shot_type | parameters.shot_type | `single` / `multi`；仅 `prompt_extend=true` 时生效 |
+| model_specific.parameters.shot_type | parameters.shot_type | `single` / `multi`；仅 `prompt_extend=true` 时生效。prompt 里写了两个及以上 `[[shot]]` 而未设置时，自动发 `multi` |
 | model_specific.parameters.seed | parameters.seed | 0–2147483647；与基础 parameters 深度合并 |
 
 ## 请求示例
+
+> 以下是**上游请求体**，`prompt` 是 MCP 渲染之后的样子；调用 `generate_video` 时分镜写 `[[shot 0-3]]`、台词写 `[[say: …]]`、素材写 `[[句柄]]`，不要照抄这里的镜头编号与时间段写法。
 
 ```json
 {

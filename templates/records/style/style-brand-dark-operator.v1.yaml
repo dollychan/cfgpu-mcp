@@ -1,0 +1,29 @@
+id: style-brand-dark-operator
+version: 1
+rank: 520
+kind: style
+media: image
+title: 深色运营者：业务工具与增长产品品牌
+summary: 黑配暗红或琥珀，发光的界面标签、卡片体系和分段流程，快速、战术感、高级。
+genres:
+- brand-systems-identity
+scenes:
+- tech
+- commerce
+styles:
+- brand
+- dark-tech
+tags:
+- 业务工具
+- 增长
+- 销售
+- 效率
+source:
+  origin: first-party, directions adapted from DeerFlow cf-dream brandkit skill
+  license: first-party
+content: |-
+  适用：业务工具、增长工具、销售助手、自动化流程、效率产品。
+  画面：黑底配暗红或琥珀；少量发光的界面标签、卡片体系、分段的流程示意、图标行、奖励或进度母题；首屏文字极少。
+  Logo 方向：信号、礼物、路径、操作者标记、开关、循环、指令系统。
+  情绪：快、可操作、战术感、高级。
+  避免：数据密集的大屏、过多发光、喧闹的营销口号。

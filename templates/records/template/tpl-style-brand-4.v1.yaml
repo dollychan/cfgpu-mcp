@@ -1,0 +1,38 @@
+id: tpl-style-brand-4
+version: 1
+rank: 504
+kind: template
+media: image
+title: 品牌与标志 · 品牌包络产品广告
+summary: 输入：[产品图]、[品牌身份]、[输出格式]
+genres:
+- brand-systems-identity
+tags:
+- 品牌与标志
+- 品牌包络产品广告
+slots:
+- name: 产品图
+  required: true
+- name: 品牌身份
+  required: true
+- name: 输出格式
+  required: true
+- name: 产品
+  required: true
+- name: 品牌元素
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  输入：[产品图]、[品牌身份]、[输出格式]
+
+  PHASE 1 / ANCHOR：用 2 行描述[品牌身份]，包括调色板、材质、光影和情绪。
+  PHASE 2 / INJECT：把[产品]放入这个品牌世界中，产品要服从品牌气质和环境语言。
+  PHASE 3 / FORMAT：指定[输出格式]，例如 hero 图、方形广告、竖版 story 或电商头图。
+  PHASE 4 / SIGNATURE：加入[品牌元素]，例如颗粒、阴影、叠加纹理、包装符号或图形边框。
+
+  变量：
+  [品牌身份] / [产品] / [输出格式] / [品牌元素]
+
+  目标：同一品牌下替换不同产品时，视觉世界保持一致，广告图仍然有明确主角和商业质感。

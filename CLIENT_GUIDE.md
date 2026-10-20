@@ -147,11 +147,21 @@ disabled_tools:
   - understand_vision
 ```
 
-可用的名字：`generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`task_status`、`task_wait`、`list_models`、`get_model_card`。写错名字会在启动时报错 —— 这个字段的意义就是「某个工具不暴露」，拼错却静默通过，恰好等于没生效。
+可用的名字：`generate_image`、`generate_video`、`generate_audio`、`understand_vision`、`task_status`、`task_wait`、`list_models`、`list_model_profiles`、`list_voice_profiles`、`get_model_card`、`search_templates`、`get_template`。写错名字会在启动时报错 —— 这个字段的意义就是「某个工具不暴露」，拼错却静默通过，恰好等于没生效。
 
 被禁用的工具是**注销**而非隐藏：客户端硬调它会得到 "unknown tool"。注意 `task_status` / `task_wait` 是异步任务取结果的唯一入口，和 `generate_video` 一起留着才有意义。
 
 该配置只作用于 MCP（Mode A）。Mode B / Mode C 直接调 service 层，用 `get_anthropic_tools(tools=[...])` 自行筛选。
+
+### 模板库：`search_templates` / `get_template`
+
+官方模板库是全租户共享的只读知识库，检索不带用户身份。三类记录：`case`（完整案例 prompt）、`template`（带 `[占位符]` 的骨架）、`style`（视觉方向：适用场景、要点、避坑）。
+
+- `search_templates(query?, kind?, media?, genres?, scenes?, styles?, model?, limit=10, cursor=0)` 返回卡片：`id / version / kind / title / summary / 分类 / tags / verified_on / cover / source`，外加 `total`、`next_cursor`、`matched_terms` / `missing_terms`、`catalog_version`。不带 `query` 是浏览模式，按人工排序。分类过滤同一维度内任一命中、跨维度同时满足；写了词表外的取值会报错并列出合法取值。传 `model` 时，实测过该模型的记录排在前面，其余记录照常返回。
+- `get_template(template_id, version?)` 返回整条记录；不传 `version` 取最新版本。要复现旧作品就传当时记下的版本号——已发布版本的内容永远不变；被下架的记录只返回下架原因。
+- 返回 `available: false` 表示模板库没加载成功，**不等于**没有匹配结果。
+- 正文是与模型无关的写法，不含任何模型专用的标签或分镜语法；按目标模型改写由服务端在生成时完成。
+- `cover` 是示例图：`{url, usage: "reference-only", origin, author, source_url}`，没有封面或部署没配公共地址时为 `null`。封面都是第三方示例图，**只作参考**：展示时注明来源和「版权归原作者」，不要把它当生成素材传给 `generate_*`。图片由独立的公共服务提供（`cfgpu-mcp-public` / `python -m cfgpu_mcp.public_http`，配置见 `config.example.yaml` 的 `public_http`），与 MCP 端口分开、无鉴权、只读；`url` 用的就是那里配置的 `public_base_url`。
 
 ### 使用 MCP Inspector 调试
 
@@ -341,6 +351,57 @@ await image_svc.generate_image(
 对不上任何句柄或标记名的 `[[...]]` 会以 `invalid_params` 拒绝（错误信息列出可用占位符），
 请求不发送、不计费；`validate_only=True` 预检时同样会报。宿主若有自己的素材 id（如 `m_31b5b08b`），
 直接把它当句柄传进 `image_refs` 即可，不必自己换算序号——素材列表一重排，写死的序号就会悄悄指错图。
+
+`generate_video` 同样接受句柄：`image_refs` / `video_refs` / `audio_refs` 分别与 `reference_images` /
+`reference_videos` / `reference_audios` 同序等长（不打算点名的素材填空串 `""`）。服务端按所选模型的写法
+渲染 `[[句柄]]`——各模型写法与编号规则不同（有的按类型各自编号，有的视频、图片连续编号），换模型不用改 prompt：
+
+```python
+await video_svc.generate_video(
+    prompt="[[hero]] 抱着 [[guitar]] 弹琴，[[friend]] 在旁边看着",
+    reference_videos=["https://.../friend.mp4", "https://.../hero.mp4"],
+    video_refs=["friend", "hero"],
+    reference_images=["https://.../guitar.png"],
+    image_refs=["guitar"],
+)
+```
+
+两条只在视频上有的规则：有些模型**只使用 prompt 里点名的参考素材**，没点名的会被静默忽略、照常计费，
+这类模型会在发出前拒绝「有参考素材没被点名」的请求（`model="auto"` 时改选别的模型）；有些素材类型在某些
+模型上只有固定用途（例如作为主体的音色），不能在 prompt 里点名，写了 `[[句柄]]` 也会被拒绝。prompt 里手写
+序号（「图片1」「视频2」之类）不会被拒绝，但结果里会多一条 `prompt_note` 提醒改用 `[[句柄]]`。
+
+媒体槽的 `x-cfgpu-media` 注解带 `refs` 字段，指明该槽对应的句柄列表名（`reference_videos` → `video_refs`），
+宿主可以据此用自己的素材 id 自动填写，无需按名字猜。
+
+视频 prompt 的结构也用同一套写法，服务端按所选模型渲染成它认的镜头、台词格式：
+
+| 写法 | 含义 |
+|---|---|
+| `[[shot 0-3]]` | 一个镜头开始，0–3 秒（可写小数；镜头按时间顺序、不重叠、不超过视频时长） |
+| `[[say S1: 原话]]` | 说出来的台词，逐字保留；说话人可省（`[[say: 原话]]`），语言可指定（`[[say S1 lang=en: …]]`） |
+| `[[text: 文字]]` | 画面里要出现的文字，逐字、不翻译 |
+| `[[sound: …]]` / `[[music: …]]` | 环境声 / 背景音乐 |
+
+```python
+await video_svc.generate_video(
+    prompt="[[shot 0-3]] [[hero]] 在雨夜街头行走 [[sound: 雨声]] "
+           "[[shot 3-6]] 她抬头看向招牌 [[text: 营业中]]，说 [[say S1: 就是这里。]]",
+    reference_images=["https://.../hero.png"],
+    image_refs=["hero"],
+    duration_seconds=6,
+)
+```
+
+写错语法（`[[shot 6-3]]`、`[[say]]` 缺冒号）或镜头重叠会直接以 `invalid_params` 拒绝；镜头超出所选模型的时长、
+模型不支持某个标记、渲染后超过模型的 prompt 长度上限，则是该模型不可用（`model="auto"` 时改选别的模型）。
+句柄不能叫 `shot` / `say` / `text` / `sound` / `music`。
+
+`prompt_extend`（服务端扩写 prompt）不传时默认开启，但 prompt 用了 `[[...]]` 写法时默认关闭，因为扩写会改动
+写好的镜头、台词和素材指代；显式传 `true` / `false` 则按传入的来。不需要自己写任何模型的镜头编号或时间码格式。`[[shot]]` 表示切到新镜头；一镜到底里的逐秒节拍直接用文字写（「0–1秒：…」）。
+
+`generate_image` 同样认 `[[text: 文字]]`（画面里要逐字出现的文字），其余结构标记只用于视频，写在图片 prompt 里会被拒绝。
+模板库（`get_template`）返回的正文里也可能带这些标记：填好里面的 `[槽位]`、保留标记本身即可。
 
 ### 轮询异步任务
 
@@ -630,7 +691,7 @@ cfgpu generate video "将视频中女孩的衣服替换为图片中的衣服" \
 # 万相 2.6 — 与 2.7 的 input 形态不同（扁平字段，非 media 数组），但 CLI 用法一致
 cfgpu generate video "侦探追查故事，电影级分镜..." --model wan-2-6-t2v -r 720p -d 5
 # 2.6 图生视频：首帧 → img_url，可选音频（reference_audios[0]）→ audio_url（如音频驱动 rap）；支持 2–15 秒，默认 1080P
-# 多镜头仅在 prompt_extend=true 时生效：model_specific={"parameters":{"shot_type":"multi"}}
+# 多镜头：prompt 里写两个以上 [[shot a-b]] 时自动发 shot_type=multi（2.6 仅在 prompt_extend 开启时出多镜头，不传即开启）
 cfgpu generate video "少年说唱 rap" --model wan-2-6-i2v \
   --first-frame https://example.com/rap.png \
   --reference-audios https://example.com/rap.mp3 -r 720p -d 5
@@ -675,17 +736,30 @@ cfgpu generate audio "今天是不是很开心呀(laughs)，当然了！" \
   --model minimax-speech-2-8-hd --voice male-qn-qingse --emotion happy
 cfgpu generate audio "更快更省的合成" --model minimax-speech-2-8-turbo --speed 1.2
 
-# 调整输出格式与采样率（MiniMax 还可设 --bitrate）
+# 调整输出格式与采样率（wav/flac 仅 MiniMax；pcm/ogg_opus 两族都支持；不指定时一律 mp3）
 cfgpu generate audio "..." --format wav --sample-rate 24000
 
-# pronunciation_dict / subtitle_enable 等 MiniMax 专有字段走 --model-specific
+# seed-tts 的语速/音量/音调/码率：--speed/--volume 取 0.5–2.0，--pitch 取 -12–12，--bitrate 取 64000/160000
+cfgpu generate audio "慢一点读" --model seed-tts-2-0 --speed 0.8 --pitch -2
+
+# seed-tts 的其余上游字段（ssml、explicit_language、发音词典……）走 --model-specific，按 payload 形状逐层合并；
+# additions 写成对象即可（适配器负责序列化成上游要求的 JSON 字符串）
+cfgpu generate audio "我在北京用 mobile 说 omg" --model seed-tts-2-0 \
+  --model-specific '{"req_params": {"additions": {"pronunciation_dict": {"tone": ["北京/(bei3)(jing1)", "omg/oh my god"]}}}}'
+
+# pronunciation_dict / language_boost / voice_modify 等 MiniMax 专有字段走 --model-specific，
+# 按 payload 形状逐层合并（input → voice_setting / audio_setting / voice_modify），不会覆盖 text
 cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
-  --model-specific '{"input": {"pronunciation_dict": {"tone": ["处理/(chu3)(li3)"]}}}'
+  --model-specific '{"input": {"pronunciation_dict": {"tone": ["处理/(chu3)(li3)"]}, "voice_modify": {"sound_effects": "spacious_echo"}}}'
 ```
 
 > `seed-tts-2-0` 为异步（提交后轮询 `/voice/tasks/{task_id}`，产物是音频 URL），MiniMax 两款为同步（POST 直接返回结果）。
 > **MiniMax 不返回 URL**：音频以十六进制字符串内联在 `output.data.audio`，服务端解码后放进 `inline_media`（见 §返回值格式），`urls` 为空数组。
-> `--speed/--volume/--pitch/--emotion` 仅 MiniMax 生效，seed-tts 会忽略；音频链接 24 小时内有效。
+> `--emotion` 仅 MiniMax 支持，seed-tts 收到会在本地拒绝（`model="auto"` 时改路由到 MiniMax）；MiniMax speech-2.8 的取值是 `happy/sad/angry/fearful/disgusted/surprised/calm/fluent`，**不支持 `whisper`**。`--speed/--volume/--pitch/--bitrate` 两族都支持，取值范围各不相同，越界在本地拒绝，不会被悄悄夹到边界。
+> MiniMax speech-2.8：`speed` 0.5–2，`volume` (0, 10]，`pitch` -12–12；`audio_format` 支持 `mp3/wav/flac/pcm/ogg_opus`（`ogg_opus` 发给上游时写作 `opus`）；`sample_rate` 取 8000/16000/22050/24000/32000/44100，`ogg_opus` 只能取 8000/16000/24000（缺省 24000；文档列出的 12000/48000 过不了中转的参数校验）；`bitrate` 取 32000/64000/128000/256000 且**只对 mp3 有效** —— 其他格式不发送，显式传入会被拒绝；文本长度不做本地校验，超长由上游拒绝。`text` 可插入 22 种语气词标签，如 `(laughs)`、`(sighs)`、`(breath)`。
+> seed-tts 的 `audio_format` 只有 `mp3` / `pcm` / `ogg_opus`，`sample_rate` 只能取 8000/16000/22050/24000/32000/44100/48000，`ogg_opus` 固定 48000（缺省时自动用 48000），`pcm` 不接受 `bitrate`；文本上限 10 万字符。`validate_only` 会把不支持的格式改回 `mp3`、采样率/码率改到最近的合法值，并写进 `corrected_args`。
+> **默认输出 mp3**：`audio_format` 的字段描述要求模型只在用户明确要求时才换格式。
+> seed-tts 的下载链接有效期 **1 小时**（音频在服务端保留 7 天，过期后再查一次 `task_status` 即可拿到新链接）；`expires_at` 优先取上游的 `urlExpireTime`。
 
 **选音色：`list_voice_profiles`。** 返回每个音色的 `voice`（原样填进 `generate_audio.voice`）、`label`（仅展示，不能当 voice 传）、`languages`（语言代码，如 `zh` / `yue` / `en-US` / `pt-BR`）、`gender`（`male` / `female` / `neutral` / `unknown`）、`age`（`child` / `young` / `middle_aged` / `senior`）、`tags`（风格特质与适用场景）、`model_ids`（哪些模型接受它），有的还带 `description`（音色描述）和 `accent`（语言代码表达不了的口音），模型默认音色另带 `default: true`。音色数据来自平台的 `model_audio_voices` 导出。筛选参数：
 
@@ -799,6 +873,10 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 用户给的是一段**语音**、要求「让人把这段话说出来」，就用 `required_tasks=["audio_driven_video"]`
 > 找模型 —— 它只返回 `role: driving` 的模型。用 `reference` 模型做这件事也会成功、也会计费，
 > 但得到的是一条口型对不上、甚至听不到原声的视频。只是拿一段音乐当背景，`reference` 模型就够了。
+>
+> 用户给的语音只是**音色样本**、台词另有脚本（「小姚的声音用这个，台词是……」），就用
+> `required_tasks=["voice_reference_video"]`（`wan2.7-r2v`、Seedance 2.0 / fast / mini / 2.5、`MiniMax-H3`、`cfdream/minimax-h3-r2v`）—— 它绝不会返回 `driving` 模型（那会把样本原样播出来）。
+> 台词写进 `prompt`，样本放 `reference_audios`，与说话角色的参考图同序。
 > `standalone: false` 表示音频不能单独传，至少还要带一张图或一段视频。
 >
 > `reference_to_video` 从此只表示「图像或视频参考」，不再包含音频：Kling、Grok、HappyHorse 等模型
@@ -957,13 +1035,13 @@ done
 |------|------|:--------:|------|
 | `urls` | `list[str]` | ✓ | 生成的资源 URL 列表 |
 | `expires_at` | `str \| null` | ✓ | URL 过期时间（ISO 8601），通常 24 小时后失效 |
-| `inline_media` | `list[object]` | ✓（有才出现） | **内联产物**：部分模型不给下载链接，直接把媒体内容返回（目前仅 MiniMax 语音）。每项为 `{data, mime_type, filename}`，`data` 是 base64 编码的文件内容，可直接解码落盘。此时 `urls` 为空数组 —— `inline_media` 就是本次产物本身，因此与 `urls` 同级、**不受 `return_metadata` 影响**；无内联产物的模型不会出现该字段。MCP 下它走 `structuredContent` 侧信道（不进模型上下文），见 §content / structuredContent 拆分 |
+| `inline_media` | `list[object]` | ✓（有才出现） | **内联产物**：部分模型不给下载链接，直接把媒体内容返回（目前仅 MiniMax 语音）。每项为 `{data, mime_type, filename}`，`data` 是 base64 编码的文件内容，可直接解码落盘。**`audio_format="pcm"` 时例外**：`data` 是无文件头的裸采样（16-bit 小端），`mime_type` 为 `audio/pcm`，并额外带 `sample_format: "s16le"`、`sample_rate`、`channels`（取自上游返回的实际值）—— 不按这三项包装（如加 WAV 头）就无法播放。此时 `urls` 为空数组 —— `inline_media` 就是本次产物本身，因此与 `urls` 同级、**不受 `return_metadata` 影响**；无内联产物的模型不会出现该字段。MCP 下它走 `structuredContent` 侧信道（不进模型上下文），见 §content / structuredContent 拆分 |
 | `request_id` | `str` | ✓（传了才有） | 你在 generate_* 里传的那个值，原样回显。它**就是任务主键**，所以传了它的调用不会再拿到 `task_id`——见下方「单一句柄」 |
 | `task_id` | `str` | | **仅当本次调用没传 `request_id` 时出现**：服务端为这一行生成的 id，作用与 `request_id` 完全相同（拿它调 `task_status` / `task_wait`）。它**不是**上游服务自己的任务 id，那个是内部字段，任何返回里都不出现 |
 | `model_used` | `str \| null` | | 实际使用的模型公开标识（`model_name`，与 `list_models()`/`model` 参数同一套 id 空间；从不是内部的 `cfgpu_model_id`）。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
-| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null`。**例外：可灵（`kling-video-o1` / `kling-v3-omni`）与 Grok（`cf-imagine-video` / `cf-imagine-video-1.5`）按秒计费但响应里没有 `usage` 对象**，计费数值散落在可灵的顶层 `seconds` / `size`、Grok 的 `data.videoLength` / `data.resolutionName`，故由 adapter 组装为 `{duration, sr, ratio}`（与万相 / HappyHorse 的按秒计费字段同形）—— 详见下方说明 |
+| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null`。**例外：可灵（`kling-video-o1` / `kling-v3-omni`）与 Grok（`cf-imagine-video` / `cf-imagine-video-1.5`）按秒计费但响应里没有 `usage` 对象**，计费数值散落在可灵的顶层 `seconds` / `size`、Grok 的 `data.videoLength` / `data.resolutionName`，故由 adapter 组装为 `{duration, sr, ratio}`（与万相 / HappyHorse 的按秒计费字段同形）；**CF Image 2 / 2.5 Sunburst / 2.5 Flare** 的用量在上游 `data.result.tokenUsage`，原样作为 `usage` 返回（`{textInputTokens, imageInputTokens, imageOutputTokens, totalTokens}`）—— 详见下方说明 |
 | `payload` | `object` | ✓ | **真实发送给该模型专属 API 的请求体**（即 `adapter.build_payload(req)` 的产物，而非通用工具入参）。便于 agent 看到底层 API 实际收到的字段（含 `cfgpu_model_id`、各模型私有字段等）。**始终返回，不受 `return_metadata` 影响**。内部用于异步轮询回显的 `_requested_aspect_ratio` 键不会出现在此 |
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。

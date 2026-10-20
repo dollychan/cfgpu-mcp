@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
+from cfgpu_mcp.adapters.prompt_render import with_prompt_note
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.task_manager import _ETA_KEY, Task
 from cfgpu_mcp.tool_registry import GenerateVideoInput, lean_result, pending_result, stamp_echo
@@ -33,6 +34,7 @@ def _handle(task: "Task", *, forced: bool) -> dict[str, Any]:
     return out
 
 
+@with_prompt_note
 async def generate_video(
     prompt: str = "",
     model: str | list[str] = "auto",
@@ -41,6 +43,9 @@ async def generate_video(
     reference_images: list[str] | None = None,
     reference_videos: list[str] | None = None,
     reference_audios: list[str] | None = None,
+    image_refs: list[str] | None = None,
+    video_refs: list[str] | None = None,
+    audio_refs: list[str] | None = None,
     duration_seconds: int | None = None,
     negative_prompt: str | None = None,
     aspect_ratio: str = "adaptive",
@@ -48,7 +53,7 @@ async def generate_video(
     with_audio: bool = True,
     quality_tier: str = "balanced",
     watermark: bool = False,
-    prompt_extend: bool = True,
+    prompt_extend: Optional[bool] = None,
     wait: bool = True,
     timeout: int | None = None,
     return_metadata: bool = True,
@@ -70,6 +75,9 @@ async def generate_video(
         reference_images=reference_images,
         reference_videos=reference_videos,
         reference_audios=reference_audios,
+        image_refs=image_refs,
+        video_refs=video_refs,
+        audio_refs=audio_refs,
         duration_seconds=duration_seconds,
         negative_prompt=negative_prompt,
         aspect_ratio=aspect_ratio,

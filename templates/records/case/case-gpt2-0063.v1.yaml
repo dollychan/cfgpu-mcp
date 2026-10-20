@@ -1,0 +1,20 @@
+id: case-gpt2-0063
+version: 1
+rank: 63
+kind: case
+media: image
+title: RAW iPhone 42nd Street subway
+summary: Create a completely RAW quality, unprocessed, unedited image with full iPhone camera quality.
+genres:
+- photography
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@WolfRiccardo'
+  url: https://x.com/WolfRiccardo
+content: Create a completely RAW quality, unprocessed, unedited image with full iPhone camera quality. A subway station in USA, a momentary blur. The subway is in motion. In front of the subway, there is an elderly woman and man.

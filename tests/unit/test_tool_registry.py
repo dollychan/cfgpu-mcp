@@ -5,7 +5,7 @@ from cfgpu_mcp.tool_registry import _REGISTRY, get_anthropic_tools, get_field_de
 def test_no_filter_returns_all_tools():
     tools = get_anthropic_tools()
     names = {t["name"] for t in tools}
-    assert len(tools) == 10
+    assert len(tools) == 12
     assert "understand_vision" in names
 
 
@@ -85,7 +85,7 @@ def test_generate_video_schema_has_reference_fields():
     assert "reference_videos" in props
     assert "reference_audios" in props
     assert "reference_images" in props
-    assert props["prompt_extend"]["default"] is True
+    assert props["prompt_extend"]["default"] is None  # unset: on, off with [[...]] markup (D-DL10)
 
 
 def test_generate_image_schema_has_model_specific():

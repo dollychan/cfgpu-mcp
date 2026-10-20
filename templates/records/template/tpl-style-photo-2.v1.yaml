@@ -1,0 +1,39 @@
+id: tpl-style-photo-2
+version: 1
+rank: 502
+kind: template
+media: image
+title: 摄影与写实 · 街头意外瞬间写实摄影
+summary: 生成一张竖版手机纪实照片，主题是[意外事件/日常瞬间]发生在[街头/室外地点]。
+genres:
+- photography
+tags:
+- 摄影与写实
+- 街头意外瞬间写实摄影
+slots:
+- name: 意外事件/日常瞬间
+  required: true
+- name: 街头/室外地点
+  required: true
+- name: 物品/人物动作/现场痕迹
+  required: true
+- name: 液体扩散/冰块散落/纸张褶皱/灰尘颗粒
+  required: true
+- name: 地面材质/墙面/街景元素
+  required: true
+- name: 正午强光/阴天散射光/夜间路灯
+  required: true
+- name: 人物影子/路牌影子/树影
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  生成一张竖版手机纪实照片，主题是[意外事件/日常瞬间]发生在[街头/室外地点]。
+  主体：[物品/人物动作/现场痕迹]，必须呈现真实的材质状态，例如[液体扩散/冰块散落/纸张褶皱/灰尘颗粒]。
+  环境：[地面材质/墙面/街景元素]，保留自然杂乱和生活痕迹。
+  光线：[正午强光/阴天散射光/夜间路灯]，阴影要符合真实方向，可加入[人物影子/路牌影子/树影]。
+  镜头：手持手机视角，略微俯拍或低角度，构图自然，像随手拍到的现场。
+  画面质感：raw unedited photo look，自然色彩，真实纹理，高细节。
+  负面约束：不要插画、动漫、CGI、棚拍光、过度干净、过度构图、假液体、漂浮物、品牌文字、水印、海报设计感。
+  输出：一张可信的日常纪实摄影图。

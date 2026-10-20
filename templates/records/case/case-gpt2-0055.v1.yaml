@@ -1,0 +1,20 @@
+id: case-gpt2-0055
+version: 1
+rank: 55
+kind: case
+media: image
+title: Isometric fantasy village map
+summary: Create a vibrant isometric fantasy village map with a clean grid-based layout using 3x3 meter tiles.
+genres:
+- isometric
+tags:
+- square
+- 1024x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: Unknown
+  url: https://www.reddit.com/r/midjourney/comments/1hkqr4x/isometric_maps_prompts_included/
+content: Create a vibrant isometric fantasy village map with a clean grid-based layout using 3x3 meter tiles. Include wooden houses with thatched roofs, cobblestone paths, and a central stone fountain. One corner of the map rises into a small grassy hill about 2 meters high with stairs connecting to the lower ground. Keep the isometric angle precise and game-ready. Warm sunlight sends clear rays and long shadows across the rooftops. Make the scene readable like a handcrafted strategy-game map, with crisp tile logic, charming environmental detail, and rich but controlled color.

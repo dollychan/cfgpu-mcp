@@ -6,6 +6,8 @@ display_name: "Kling V3 Omni (可灵 V3 全能版)"
 cfgpu_model_id: kling-v3-omni
 model_name: kling-v3-omni
 
+# seconds: 3–15 (upstream enum). Re-declared because O1, the parent, stops at 10.
+max_duration_seconds: 15
 
 cost_tier: 5
 speed_tier: 2

@@ -37,10 +37,10 @@
 | first_frame | input.img_url | 首帧图片 URL（必填） |
 | reference_audios[0] | input.audio_url | 驱动音频 URL（可选，取第一个） |
 | resolution | parameters.resolution | `720P` 或 `1080P`，默认 `1080P` |
-| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，默认 `true` |
+| prompt_extend | parameters.prompt_extend | 是否在生成前用大语言模型扩写提示词，不传时默认 `true`（多镜头需要它开启） |
 | watermark | parameters.watermark | 是否添加水印，默认 `false` |
 | duration_seconds | parameters.duration | 整数 2–15 秒，默认 5，不支持 -1 智能时长 |
-| model_specific.parameters.shot_type | parameters.shot_type | `single` 或 `multi`；仅 `prompt_extend=true` 时生效 |
+| model_specific.parameters.shot_type | parameters.shot_type | `single` 或 `multi`；仅 `prompt_extend=true` 时生效。prompt 里写了两个及以上 `[[shot 起-止秒]]` 而未设置时，自动发 `multi` |
 | model_specific.parameters.seed | parameters.seed | 0–2147483647；相同参数和种子仅产生相似结果 |
 | model_specific | `parameters` 子对象与已生成参数合并；其余顶层键透传 | 示例：`{"parameters":{"shot_type":"multi","seed":12345}}` |
 

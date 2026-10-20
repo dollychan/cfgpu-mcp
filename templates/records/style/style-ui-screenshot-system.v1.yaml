@@ -1,0 +1,35 @@
+id: style-ui-screenshot-system
+version: 1
+rank: 1
+kind: style
+media: image
+title: UI Screenshot System / UI 截图系统
+summary: 用于 App 截图、仪表盘、社媒截图和直播界面。
+genres:
+- ui-ux-mockups
+scenes:
+- tech
+- social
+styles:
+- ui
+tags:
+- UI
+- Dashboard
+- Screenshot
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于 App 截图、仪表盘、社媒截图和直播界面。
+  Use when: Use for app screens, dashboards, social screenshots, and live interface mockups.
+  要点 / Guidance:
+  - Lock platform, aspect ratio, layout hierarchy, and exact visible text.
+  - Specify UI chrome such as status bars, tabs, action rows, or comment layers.
+  - 锁定平台、比例、层级和画面文字。
+  - 明确状态栏、Tab、操作区、评论层等 UI 元素。
+  避坑 / Pitfalls:
+  - Avoid vague platform names and generic app mockups.
+  - Constrain text readability and platform-specific details.
+  - 避免平台描述过泛。
+  - 约束文字可读性和平台特征。
+  可配合的模板骨架 / Skeletons: tpl-style-ui-1, tpl-style-ui-2, tpl-style-ui-3

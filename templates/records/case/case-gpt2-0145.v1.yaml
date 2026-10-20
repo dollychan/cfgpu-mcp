@@ -1,0 +1,20 @@
+id: case-gpt2-0145
+version: 1
+rank: 145
+kind: case
+media: image
+title: 'Kawaii sticker pack: Mexico icons'
+summary: Design a cute kawaii sticker pack featuring famous things from Mexico, including iconic food, landmarks, and traditional objects, all with adorable faces, soft pastel colors, rounded shapes, minimal shading, chibi style…
+genres:
+- illustration
+tags:
+- square
+- 1024x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  author: '@aleenaamiir'
+  url: https://x.com/aleenaamiir/status/2046875573574877663
+content: Design a cute kawaii sticker pack featuring famous things from Mexico, including iconic food, landmarks, and traditional objects, all with adorable faces, soft pastel colors, rounded shapes, minimal shading, chibi style, glossy sticker finish, high resolution, arranged as a sticker sheet.

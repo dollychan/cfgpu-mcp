@@ -1,0 +1,33 @@
+id: case-gpt2-0003
+version: 1
+rank: 3
+kind: case
+media: image
+title: Shōnen manga two-page spread (basketball slam dunk)
+summary: A black-and-white shōnen manga two-page spread (landscape 16:9 as a single composition, with a faint centre-gutter line).
+genres:
+- anime-manga
+tags:
+- landscape
+- 1536x1024
+verified_on:
+- cf-image-2
+source:
+  origin: wuyoscar/GPT-Image2-Skill
+  license: MIT
+  url: https://github.com/wuyoscar/GPT-Image2-Skill/blob/main/skills/gpt-image/references/gallery-anime-and-manga.md
+content: |-
+  A black-and-white shōnen manga two-page spread (landscape 16:9 as a single composition, with a faint centre-gutter line). High-contrast ink plus screentone, Weekly Shōnen Jump basketball-manga tradition (Inoue's Slam Dunk / Fujimaki's Kuroko no Basuke).
+
+  Composition: 5 irregular panels plus one large diagonal panel spanning both pages at bottom-right for the climactic slam dunk.
+
+  - Top-left: close-up of the protagonist's intense eyes, sweat beading, headband tied tight
+  - Top-centre: wide shot of a packed high-school gymnasium, scoreboard reading "42 — 40 · 4Q 0:03"
+  - Top-right: rival team captain's shocked face, mouth agape
+  - Centre-left: protagonist leaping skyward with both hands gripping a basketball
+  - Centre-right-small: sound-effect katakana "バッ" in thick black letters
+  - Large diagonal bottom-right (half of both pages): protagonist slamming the ball through the hoop, rim bending, massive ink-brushed kanji "決" (decide) filling the negative space
+
+  Art direction: professional mangaka quality — confident inking, dramatic screentone gradients, speed lines radiating from the dunk, varied line-weights, off-white paper texture with faint page-edge shading.
+
+  Dialogue balloons intentionally blank; only the two sound effects are visible.

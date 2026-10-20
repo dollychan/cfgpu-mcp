@@ -18,6 +18,8 @@ from cfgpu_mcp.tool_registry import (
     ListModelProfilesInput,
     ListVoiceProfilesInput,
     GetModelCardInput,
+    GetTemplateInput,
+    SearchTemplatesInput,
 )
 
 
@@ -32,6 +34,8 @@ _EXPECTED_SCHEMAS = {
     "list_model_profiles": ListModelProfilesInput,
     "list_voice_profiles": ListVoiceProfilesInput,
     "get_model_card": GetModelCardInput,
+    "search_templates": SearchTemplatesInput,
+    "get_template": GetTemplateInput,
 }
 
 
@@ -104,7 +108,7 @@ def test_generate_video_schema_has_reference_fields():
     props = _json_schema(tool)["properties"]
     assert "reference_videos" in props
     assert "reference_audios" in props
-    assert props["prompt_extend"]["default"] is True
+    assert props["prompt_extend"]["default"] is None  # unset: on, off with [[...]] markup (D-DL10)
 
 
 # ── coroutine is async ────────────────────────────────────────────────────────

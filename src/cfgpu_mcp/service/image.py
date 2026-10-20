@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from cfgpu_mcp.adapters.prompt_render import with_prompt_note
 from cfgpu_mcp.errors import CFGPUError
 from cfgpu_mcp.tool_registry import GenerateImageInput, RegionSpec, lean_result, pending_result, stamp_echo
 
 
+@with_prompt_note
 async def generate_image(
     prompt: str,
     model: str | list[str] = "auto",

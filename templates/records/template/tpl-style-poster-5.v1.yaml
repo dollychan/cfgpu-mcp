@@ -1,0 +1,31 @@
+id: tpl-style-poster-5
+version: 1
+rank: 505
+kind: template
+media: image
+title: 海报与排版 · 单款签名提取
+summary: 从输入图中的[位置/编号/风格名]签名里，提取该签名的核心笔势，生成一张纯签名图。
+genres:
+- typography-posters
+tags:
+- 海报与排版
+- 单款签名提取
+slots:
+- name: 位置/编号/风格名
+  required: true
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  从输入图中的[位置/编号/风格名]签名里，提取该签名的核心笔势，生成一张纯签名图。
+
+  要求：
+  - 只保留签名主体，不生成海报卡片、标题、副标题或说明文字
+  - 保留原签名的起笔、连笔、结构倾斜、飞白和收笔节奏
+  - 背景为纯白或极浅米白
+  - 签名居中，尺寸充足，边缘留白干净
+  - 墨色为深黑或墨黑，带自然笔锋、轻微墨痕和真实手写压力变化
+  - 输出适合继续临摹、收藏或二次设计的高清纯签名图
+
+  避免：
+  不要新增多种签名，不要变成字体展示，不要加边框，不要加装饰元素，不要弱化原有笔势。

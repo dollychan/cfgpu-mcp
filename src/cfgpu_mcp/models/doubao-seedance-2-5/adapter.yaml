@@ -21,6 +21,10 @@ speed_tier: 2
 # single-shot, 50 reference materials, multilingual narration — at cost 4.
 quality_rank: 3
 
+# The 500/1000 prompt ceiling inherited from wan-2-0 is the 2.0 card's; the 2.5 card
+# states none (30-second, time-segmented prompts), so no limit is enforced here.
+prompt_limits: ~
+
 max_duration_seconds: 30
 default_duration_seconds: -1
 

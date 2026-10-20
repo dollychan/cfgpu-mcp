@@ -1,0 +1,35 @@
+id: style-character-design-sheet
+version: 1
+rank: 17
+kind: style
+media: image
+title: Character Design Sheet / 角色设定表
+summary: 用于角色设定表、动作网格、动作拆解和一致性参考。
+genres:
+- character-design
+scenes:
+- story
+styles:
+- character
+- illustration
+tags:
+- Character
+- Pose
+- Style
+source:
+  origin: DeerFlow gpt-image-2-style-library (awesome-gpt-image-2)
+  license: MIT
+content: |-
+  适用：用于角色设定表、动作网格、动作拆解和一致性参考。
+  Use when: Use for character sheets, pose grids, action breakdowns, and identity references.
+  要点 / Guidance:
+  - Define identity anchors, outfit, proportions, pose count, and sheet layout.
+  - Keep face, hairstyle, and costume details consistent.
+  - 定义身份锚点、服装、比例、动作数量和版式。
+  - 保持脸、发型和服装细节一致。
+  避坑 / Pitfalls:
+  - Avoid changing costume details between poses.
+  - Limit pose count if the sheet becomes crowded.
+  - 避免不同动作里服装细节变化。
+  - 画面拥挤时减少动作数量。
+  可配合的模板骨架 / Skeletons: tpl-style-character-1, tpl-style-character-2, tpl-style-character-3

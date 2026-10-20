@@ -10,7 +10,7 @@ Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性�
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `Doubao-Seedance-2.0-mini` |
-| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output, voice_reference_video |
 | 成本档位 | 1/5 |
 | 速度档位 | 3/5 |
 
@@ -27,7 +27,7 @@ Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性�
 
 ## 能力说明
 
-与 Seedance 2.0 完全相同（text_to_video / image_to_video / first_last_frame / reference_to_video / video_edit / video_extend / synced_audio_output），更低门槛、更高性价比，适合高频、规模化场景。
+与 Seedance 2.0 完全相同（text_to_video / image_to_video / first_last_frame / reference_to_video / video_edit / video_extend / synced_audio_output / voice_reference_video），更低门槛、更高性价比，适合高频、规模化场景。
 
 ## 参数与统一 Schema 映射
 
@@ -40,7 +40,7 @@ Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性�
 | `last_frame` | `content[].role=last_frame` | 尾帧图片（需与 first_frame 同用） |
 | `reference_images` | `content[].role=reference_image` | 参考图片（0-9，与首/尾帧互斥） |
 | `reference_videos` | `content[].role=reference_video` | 参考视频（0-3） |
-| `reference_audios` | `content[].role=reference_audio` | 参考音频（0-3） |
+| `reference_audios` | `content[].role=reference_audio` | 参考音频（0-3）：音色、节奏、音画同步参考 |
 | `aspect_ratio` | 顶层 `ratio` | 宽高比，`adaptive` 自动匹配 |
 | `duration_seconds` | 顶层 `duration` | 时长 4–15 秒，`-1` 为智能时长 |
 | `resolution` | 顶层 `resolution` | **仅 480p / 720p**，默认 720p（无 1080p，需要 1080p 请用 Seedance 2.0） |
@@ -48,6 +48,8 @@ Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性�
 | `watermark` | 顶层 `watermark` | 是否添加水印 |
 
 > 参考音频不可单独输入；使用 `reference_audios` 时，至少还需传入 1 张参考图片或 1 个参考视频。
+
+**参考音频的用途**（由 prompt 指定，如「小姚的音色参考音频1」「背景 BGM 参考音频1」）：原生音画同步、节奏适配，以及音色与语音克隆 —— 用样本的音色说 prompt 里的新台词，样本本身的内容不会出现在成片里（`voice_reference_video`）。参考音频不会原样保留为成片音轨；要原声当音轨、口型跟着对，用 `audio_driven_video` 的模型。
 
 ## 示例
 
