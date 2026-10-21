@@ -1,0 +1,18 @@
+id: case-evolink-poster-342
+version: 1
+kind: case
+media: image
+title: Semi-3D Fashion Editorial Avatar
+summary: Create a premium high-resolution vector-cartoon / semi-3D illustration of the person from the reference image.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@AIwithSynthia'
+  url: https://x.com/AIwithSynthia/status/2063299903582003607
+content: 'Create a premium high-resolution vector-cartoon / semi-3D illustration of the person from the reference image. Reimagine them in a stylish modern fashion-editorial look, sitting confidently on a sleek designer chair. Outfit: trendy T-shirt, fashionable skirt/pants, stylish sneakers, and bold sunglasses as the hero accessory. Exaggerate key facial features while maintaining recognizable likeness. Clean flat-colored background (single vibrant color), smooth lines, sharp details, soft studio lighting, luxury advertising aesthetic, centered composition with ample negative space for branding and headlines. Ultra-detailed, print-ready, billboard-quality, modern eyewear campaign style.'

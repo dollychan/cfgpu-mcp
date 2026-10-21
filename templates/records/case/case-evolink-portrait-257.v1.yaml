@@ -1,0 +1,18 @@
+id: case-evolink-portrait-257
+version: 1
+kind: case
+media: image
+title: Sage Field Editorial Portrait
+summary: Create a 3:4 cinematic, atmospheric editorial portrait using the attached photo as the exact face and identity reference.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@heyfatema'
+  url: https://x.com/heyfatema/status/2058594937307115532
+content: Create a 3:4 cinematic, atmospheric editorial portrait using the attached photo as the exact face and identity reference. A solitary person stands alone in vast wind-swept sage green grass fields, surrounded by tall grass moving in strong wind, muted natural palette, soft overcast daylight, realistic skin texture, fashion-editorial framing, subtle melancholy, quiet luxury tone, and photorealistic detail.

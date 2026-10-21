@@ -1,0 +1,18 @@
+id: case-evolink-portrait-240
+version: 1
+kind: case
+media: image
+title: Outdoor Lifestyle Open Sky Portrait
+summary: 'Vibe: outdoor lifestyle · introspective · open sky'
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Shorelyn_'
+  url: https://x.com/Shorelyn_/status/2057304323047240086
+content: 'Vibe: outdoor lifestyle · introspective · open sky'

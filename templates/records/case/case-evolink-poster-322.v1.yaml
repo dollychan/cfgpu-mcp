@@ -1,0 +1,25 @@
+id: case-evolink-poster-322
+version: 1
+kind: case
+media: image
+title: Chibi Fashion Infographic
+summary: Create a fashion infographic based on the reference image.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@chi_vc_'
+  url: https://x.com/chi_vc_/status/2061619597821022407
+content: |-
+  Create a fashion infographic based on the reference image. Use the reference image mainly to understand the character’s identity, hairstyle, facial features, color impression, personality, and overall mood.
+
+  Transform the character into a polished 3D chibi character with a large head, small body, expressive eyes, and soft cute proportions. Keep the character’s recognizable features, such as hairstyle, hair color, eye color, facial impression, and overall aura, while designing a new original outfit that naturally suits the character’s atmosphere.
+
+  Do not simply copy the clothing from the reference image. Instead, create a coordinated fashion style that feels appropriate for this character’s personality, color palette, and visual mood. The outfit may include thoughtfully chosen clothing, shoes, accessories, textures, and silhouettes that enhance the character’s charm.
+
+  Show a full-body main pose in the center, surrounded by editorial callouts: outfit concept, clothing item breakdown, fabric texture swatches, styling points, accessory close-ups, color palette, and a small pose guide. Use a clean white background, soft lighting, premium lookbook layout, ultra-detailed 3D rendering, stylish fashion editorial design, cute but refined.

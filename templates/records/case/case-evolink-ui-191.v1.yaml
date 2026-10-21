@@ -1,0 +1,117 @@
+id: case-evolink-ui-191
+version: 1
+kind: case
+media: image
+title: 北欧食谱书配方版式
+summary: '{ "style": "Clean minimalist recipe infographic", "visual_aesthetic": { "photography_style": "Top-down and 3-quarter angle food photography", "design_language": "Nordic editorial cookbook aesthetic", "background": "Warm…'
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2069197657147638241
+content: |-
+  {
+    "style": "Clean minimalist recipe infographic",
+    "visual_aesthetic": {
+      "photography_style": "Top-down and 3-quarter angle food photography",
+      "design_language": "Nordic editorial cookbook aesthetic",
+      "background": "Warm beige / cream neutral",
+      "lighting": "Soft diffused light with gentle shadows",
+      "detail_level": "Photorealistic, ultra-sharp, 8K quality"
+    },
+    "layout": {
+      "composition": "Hero dish centered on a white ceramic plate or bowl",
+      "elements": [
+        "Ingredient icons in soft rounded frames",
+        "Minimal vector-style ingredient illustrations",
+        "Ingredient labels with quantities",
+        "Numbered step-by-step cooking flow with icons"
+      ],
+      "typography": "Modern sans-serif, high readability",
+      "spacing": "Airy, balanced, uncluttered"
+    },
+    "recipes": [
+      {
+        "dish_name": "Traditional Polish Pierogi",
+        "dish_presentation": "Golden boiled dumplings stuffed with potato and farmer cheese, finished with butter and fresh chives",
+        "ingredients": [
+          { "name": "All-purpose flour", "quantity": "2.5 cups" },
+          { "name": "Potatoes", "quantity": "3 medium" },
+          { "name": "Farmer cheese", "quantity": "200g" },
+          { "name": "Onion", "quantity": "1 medium" },
+          { "name": "Butter", "quantity": "40g" },
+          { "name": "Salt", "quantity": "1 tsp" },
+          { "name": "Water", "quantity": "0.75 cups" }
+        ],
+        "steps": [
+          "Make the dough",
+          "Cook and mash the filling",
+          "Fill and fold pierogi",
+          "Boil until tender",
+          "Finish with butter"
+        ],
+        "meta": {
+          "calories": "270 kcal / serving",
+          "time": "70 min",
+          "servings": 4
+        }
+      },
+      {
+        "dish_name": "Vinaigrette Salad",
+        "dish_presentation": "Vibrant diced root vegetables tossed in a light dressing, shaped and garnished with fresh herbs",
+        "ingredients": [
+          { "name": "Beetroot", "quantity": "2 medium" },
+          { "name": "Potatoes", "quantity": "2 medium" },
+          { "name": "Carrots", "quantity": "1 medium" },
+          { "name": "Pickled cucumbers", "quantity": "2 pcs" },
+          { "name": "Green peas", "quantity": "1 cup" },
+          { "name": "Sunflower oil", "quantity": "2 tbsp" },
+          { "name": "Fresh dill", "quantity": "1 bunch" }
+        ],
+        "steps": [
+          "Boil the vegetables",
+          "Cool and dice",
+          "Combine all ingredients",
+          "Dress the salad",
+          "Refrigerate and serve"
+        ],
+        "meta": {
+          "calories": "180 kcal / serving",
+          "time": "30 min + chill",
+          "servings": 4
+        }
+      },
+      {
+        "dish_name": "Solyanka Soup",
+        "dish_presentation": "Hearty soup loaded with sliced mixed meats, briny olives, lemon, and fresh herbs, served in a ceramic bowl",
+        "ingredients": [
+          { "name": "Mixed meats", "quantity": "400g" },
+          { "name": "Onion", "quantity": "1 large" },
+          { "name": "Pickles", "quantity": "3 pcs" },
+          { "name": "Tomato paste", "quantity": "2 tbsp" },
+          { "name": "Olives", "quantity": "0.5 cup" },
+          { "name": "Garlic", "quantity": "2 cloves" },
+          { "name": "Bay leaf", "quantity": "1 pc" },
+          { "name": "Lemon", "quantity": "for serving" }
+        ],
+        "steps": [
+          "Prepare the broth",
+          "Saute aromatics",
+          "Add meats and pickles",
+          "Season and simmer",
+          "Serve with lemon"
+        ],
+        "meta": {
+          "calories": "320 kcal / serving",
+          "time": "90 min",
+          "servings": 5
+        }
+      }
+    ]
+  }

@@ -1,0 +1,16 @@
+id: case-evolink-case-100
+version: 1
+kind: case
+media: image
+title: Tang Dynasty Chang'an Lantern Festival Panorama
+summary: 唐代长安城元宵灯会全景，万盏花灯照亮夜空，工笔重彩长卷
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@songguoxiansen'
+  url: https://x.com/songguoxiansen/status/2047122441454096527
+content: 唐代长安城元宵灯会全景，万盏花灯照亮夜空，工笔重彩长卷

@@ -1,0 +1,59 @@
+id: case-evolink-character-20
+version: 1
+kind: case
+media: image
+title: Vertical Character Concept Sheet
+summary: 'prompt: Design a high-resolution vertical character concept poster with a luxurious pink and white aesthetic that blends elegance with edgy modern fashion.'
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2065118633198829601
+content: |-
+  prompt:
+
+  Design a high-resolution vertical character concept poster with a luxurious pink and white aesthetic that blends elegance with edgy modern fashion. The layout should feel like a premium magazine profile with clean sections and precise grid alignment.
+
+  Main subject: An original young woman (not based on any real person), with long silky dark hair featuring subtle pink highlights. She has a confident, calm expression with a slightly mysterious aura. She wears a black and pink hybrid outfit (merging streetwear with idol fashion) featuring glossy textures, lace details, and metallic accents. Lighting is soft but dramatic, with a neon pink glow set against dark tones.
+
+  Top section:
+  Large hero portrait on one side. On the opposite side, a sleek profile panel with refined English text:
+
+  Name: Nyra Vale
+  Age: 23
+  Height: 170 cm
+  Style: Dark Elegance
+
+  Short bio:
+  "She doesn't follow trends, she sets them. Quiet strength, sharp vision, and a presence that speaks without words."
+
+  Include a Traits section with stylized progress bars:
+
+  Confidence
+  Creativity
+  Discipline
+  Charisma
+  Emotional Depth
+
+  Middle section:
+  A grid of 5-6 small portraits capturing different expressions (soft smile, intense gaze, playful smirk, thoughtful, confident).
+
+  Lower sections:
+
+  Full-body poses (front view, side view, walking pose, power stance, casual stance).
+  Outfit variations (street luxe, stage outfit, minimal chic).
+  Accessories panel (heels, boots, chains, rings, handbags, hairstyles).
+
+  Text tone:
+  Bold, meaningful, and confident, emphasizing individuality, self-worth, and quiet power. No filler text.
+
+  Style:
+  Ultra-detailed, 4K quality, glossy magazine finish, cinematic lighting, sharp focus, balanced contrast, modern editorial layout, perfectly aligned grid.
+
+  #AIart #GPTImage2

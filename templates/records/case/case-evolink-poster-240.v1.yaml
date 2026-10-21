@@ -1,0 +1,21 @@
+id: case-evolink-poster-240
+version: 1
+kind: case
+media: image
+title: Minimalist City Line-Art Travel Poster
+summary: Create a minimalist travel-poster style line art illustration of [CITY NAME], in a vertical poster format.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamsofiaijaz'
+  url: https://x.com/iamsofiaijaz/status/2053474337404117220
+content: |-
+  Create a minimalist travel-poster style line art illustration of [CITY NAME], in a vertical poster format. Use clean architectural ink drawing lines with a monochrome palette (black, sepia, or muted red tones) on an off-white background. Feature an iconic landmark of the city centered in the distance, with detailed urban street perspective leading toward it. Include pedestrians crossing the street, cyclists, cars, storefronts, traffic lights, street signs, subway/metro signs, and local cultural details unique to the city. Add realistic building facades with fine line detail and light shading.
+  At the top, place the city name in very large bold modern sans-serif typography. At the bottom, add the country name and native-language text in a minimalist layout. Keep the composition symmetrical and balanced like a premium vintage travel poster mixed with modern Japanese editorial design.
+  Style keywords: ultra detailed line art, architectural sketch, urban perspective drawing, clean vector ink illustration, travel poster aesthetic, minimal monochrome, cinematic street scene, soft beige paper texture, highly detailed cityscape, contemporary poster design, elegant typography, Muji-style minimalism.

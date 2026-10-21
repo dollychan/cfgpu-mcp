@@ -1,0 +1,79 @@
+id: case-evolink-ui-172
+version: 1
+kind: case
+media: image
+title: AAA Game Loading Screen Portrait
+summary: Step 1.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@yulikay'
+  url: https://x.com/yulikay/status/2062850006537953367
+content: |-
+  Step 1. Uploaded a reference selfie to Higgsfield.
+
+  Generated the still loading screen using GPT Image 2.
+
+  Prompt (you can adjust the details with your name, bio, etc.):
+
+  Generate a hyper-realistic in-game cinematic still from a fictional unreleased AAA video game, rendered in Unreal Engine 5 with MetaHuman-quality character fidelity, Nanite-level environment detail, and full ray-traced lighting. The result should look indistinguishable from a real 4K screenshot pulled directly from a modern AAA title like Death Stranding 2, Hellblade 2: Senua's Saga, The Last of Us Part 2, Cyberpunk 2077, or Black Myth: Wukong.
+
+  The character (right two-thirds of the frame)
+
+  Render the uploaded person Image 1 as the playable protagonist of this fictional game. Keep the person's exact facial likeness, skin tone, eye colour, and hair colour as the anchor (the digital double must read as them, not a generic model).
+
+  Photoreal skin: visible pores, subsurface scattering through the cheeks and ears, micro-detail on the lips, faint natural blemishes preserved. Hair rendered with individual strand detail, soft physics, slight backlit halo. Eyes with full catchlight, wet sheen, subtle iris detail, faint moisture in the lower lid line.
+
+  Wardrobe: contemporary cinematic styling that fits the game's world.
+  - A tailored cropped leather jacket over a fitted silk top, with delicate gold chain jewellery
+
+  Pose: three-quarter angle, head turned slightly toward camera, calm confident posture. Subtle stylized stance, not theatrical.
+
+  The environment (background)
+
+  A photoreal AAA game environment behind the character. Pick ONE based on mood:
+  - Golden-hour rooftop of a fictional cinematic Tokyo, neon signs in soft bokeh, distant skyline, warm haze
+  - Misty forest with shafts of god rays cutting through canopy, soft moss detail, distant fog
+  - Rain-slick neon-lit alley in a Cyberpunk-style city, puddles reflecting magenta and teal, drifting steam
+  - A coastal cliff at golden hour, wildflowers in the foreground, ocean haze on the horizon
+
+  Full Lumen global illumination, ray-traced reflections, photoreal depth of field with character in sharp focus and background in cinematic soft blur. Photoreal volumetric lighting and atmospheric haze.
+
+  UI overlay (left third of the screen)
+
+  A minimalist modern AAA game UI panel, semi-transparent matte black with thin warm-gold accent lines (inspired by Death Stranding's clean menu aesthetic). The panel feels expensive, technical, and restrained.
+
+  Display the following character profile, rendered in a custom game-UI typeface (clean modern serif for headings, fine sans-serif for body):
+
+  - CHARACTER: YULI
+  - TITLE: The Soft-Power Heroine
+  - CLASS: Wanderer · Creator · Aesthete
+  - LEVEL: 30
+  - REGION: Currently exploring · Asia
+  - AFFINITY: Light & Warmth
+  - BIO: Main Character Energy
+
+  Each field separated by a thin gold dividing line. Subtle text glow.
+
+  Game title bar (top of frame)
+
+  At the top centre, a fictional AAA game title in refined serif: "AETHER · A Soft Power Adventure"
+  Below it, in fine all-caps tracked text: "CHAPTER ONE · NOW LOADING..."
+
+  Loading bar (bottom of frame)
+
+  A horizontal minimalist loading bar at 73% complete. The filled portion glows faint warm gold. Below the bar in small italic text: "TIP: Beauty is data. Travel often. Save your screenshots."
+
+  Visual treatment (post-processing)
+
+  Cinematic AAA post-processing stack: subtle chromatic aberration at edges, soft film grain, gentle vignette, faint lens dirt on the highlights, warm-cool colour grading. The image should feel like a 4K screenshot taken from a $200 million production game, not a graphic poster.
+
+  Output
+
+  4K resolution, 16:9 aspect ratio, photoreal AAA quality, screenshot-authentic. Looks like a frame pulled from a real high-end console game running on a PS5 Pro or high-end PC.

@@ -1,0 +1,18 @@
+id: case-evolink-portrait-98
+version: 1
+kind: case
+media: image
+title: Portrait of a Gentle Woman with Glasses
+summary: A {argument name="style" default="photobook-style portrait"} of a {argument name="character" default="gentle woman with glasses"}
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@megane_onesan'
+  url: https://x.com/megane_onesan/status/2047989490153926848
+content: A {argument name="style" default="photobook-style portrait"} of a {argument name="character" default="gentle woman with glasses"}

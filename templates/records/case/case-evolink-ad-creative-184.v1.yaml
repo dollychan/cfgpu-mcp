@@ -1,0 +1,48 @@
+id: case-evolink-ad-creative-184
+version: 1
+kind: case
+media: image
+title: Adidas Futuristic Drop Ad Poster 9:16
+summary: 'Full prompt: Design a striking premium vertical advertising poster (9:16 format) for a fictional ultra-limited Adidas sneaker called "ADIDAS AEROBLADE X - LIMITED DROP".'
+genres:
+- product-ad
+tags:
+- 广告创意
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2065133774413906004
+content: |-
+  Full prompt:
+
+  Design a striking premium vertical advertising poster (9:16 format) for a fictional ultra-limited Adidas sneaker called "ADIDAS AEROBLADE X - LIMITED DROP". The creative direction should feel like a world-class agency campaign — original, futuristic, visually explosive.
+
+  Main visual:
+  A single hero sneaker floating center-frame, captured at a dramatic low angle as if levitating above a dark obsidian running track split by glowing energy cracks. The shoe combines knit mesh, sculpted foam, translucent panels, reflective stripes, and a carbon-fiber sole plate. Neon light trails swirl around it like captured speed. Particles and mist add motion and intensity. Background features faint silhouettes of elite sprinters frozen mid-dash, blurred enough to keep focus on the shoe.
+
+  Color palette:
+  Matte black, electric red, silver, deep charcoal, with subtle neon blue highlights.
+
+  Typography and copy (sharp, clean, strong visual hierarchy):
+  Main headline: "OWN THE SPEED"
+  Product title: "ADIDAS AEROBLADE X"
+  Subheadline: "Built for the ones who never run ordinary."
+  Feature callouts in elegant boxed layout:
+  - "Featherlight Adaptive Knit Upper"
+  - "Carbon Energy Return Plate"
+  - "Precision Grip Traction"
+  - "Limited Collector Release"
+  Price: "$280"
+  Primary CTA: "DROP LIVE NOW"
+  Secondary CTA: "Only at
+  Footer text: "Performance innovation meets futuristic street identity."
+
+  Layout:
+  Bold oversized headline partially integrated into background. Product name near shoe in refined premium placement. Feature callouts stacked vertically along one side. Add a "LIMITED SERIES" badge. The composition blends luxury sports campaign with futuristic editorial design.
+
+  Style: Ultra-detailed hyper-realistic product photography, cinematic studio lighting, premium advertising aesthetics, sharp focus, rich textures, subtle atmosphere, dynamic motion energy, high-end commercial poster feel. Aspect ratio 9:16.
+
+  #AIart #GPTImage2

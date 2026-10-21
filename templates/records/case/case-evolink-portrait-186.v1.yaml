@@ -1,0 +1,21 @@
+id: case-evolink-portrait-186
+version: 1
+kind: case
+media: image
+title: LEGO Miniature City Editorial
+summary: Use the uploaded reference image as the primary character reference.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@frametheory058'
+  url: https://x.com/frametheory058/status/2056561951610921186
+content: |-
+  Use the uploaded reference image as the primary character reference.
+  Create a premium vertical 4:5 editorial illustration of the same character from the reference image, sitting at a cozy craft table and building a LEGO-style miniature diorama of [CITY NAME].
+  Only the character remains organic and natural. Everything else must be built entirely from visible LEGO-style bricks: landmarks, streets, bridges, rivers, lakes, trees, vehicles, trains, people, cafés, shops, food stalls, parks, signs, boa

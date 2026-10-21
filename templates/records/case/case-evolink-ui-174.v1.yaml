@@ -1,0 +1,56 @@
+id: case-evolink-ui-174
+version: 1
+kind: case
+media: image
+title: Anime Short Film Dev Board
+summary: '"Create a single vertical anime development board for an original emotional short film titled "One More Player".'
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@HeyAbhishek'
+  url: https://x.com/HeyAbhishek/status/2063271070426435756
+content: |-
+  "Create a single vertical anime development board for an original emotional short film titled "One More Player". Output ONE combined image with 2 sections: top section = character design sheet, bottom section = cinematic storyboard page.
+  STYLE: ultra high-quality nostalgic late 90s / early 2000s anime movie look, premium hand-drawn animation style, beautifully painted backgrounds, rich environmental detail, cinematic composition, soft but highly refined shading, natural character anatomy, expressive faces, subtle texture, realistic wet ground reflections, warm cloudy sunset lighting, atmospheric depth, polished old-anime film aesthetic, visually stunning frame quality, clean studio-level pre-production presentation. Make it feel like a premium old anime film, not modern glossy anime.
+  IMPORTANT: create fully original characters. Do not copy any existing anime, manga, game, or sports anime characters, faces, hairstyles, outfits, or famous designs.
+  SECTION A: CHARACTER DESIGN SHEET
+  Show 5 original characters clearly and consistently.
+  Main child:
+  A shy little boy around 8 years old with short messy dark hair, large warm eyes, slim build, oversized yellow T-shirt, blue shorts, and small sneakers. He feels nervous at first, then happy and accepted.
+  Show:
+  - front view
+  - side view
+  - back view
+  - 3/4 view
+  - expressions: nervous, scared, surprised, soft smile, happy
+  - poses: holding soccer ball, standing shyly, running with ball
+  Teen group:
+  Four teenage boys around 14 to 16, sporty and friendly, each with different hairstyles and casual soccer outfits. They should look slightly intimidating at first from the little boy’s perspective, but actually kind and welcoming. One teen is the warm leader.
+  Show for the teen group:
+  - simple front, side, back, and 3/4 views
+  - relaxed poses
+  - soccer poses
+  - smiling expressions
+  Keep them original, visually distinct, and cohesive.
+  Add small handwritten design notes and simple color swatches.
+  SECTION B: STORYBOARD PAGE
+  Create 8 cinematic storyboard panels in a clean grid. Use red panel borders, blue motion arrows, handwritten camera notes, timing notes, and short action notes. Keep all characters consistent.
+  Story beats:
+  1. Four teenagers playing soccer on a neighborhood ground after light rain, warm cloudy sunset, wet reflections on the field.
+  2. The soccer ball flies away toward the sitting area beside the field.
+  3. A shy little boy sitting alone notices the ball and picks it up.
+  4. The teenage boys walk toward him together. From the little boy’s view, they look a little scary.
+  5. Close-up of the little boy holding the ball with a nervous face.
+  6. The warm leader smiles kindly and gestures with his hand, inviting the boy to come play.
+  7. The little boy’s face changes from scared to relieved, then he smiles and runs toward them.
+  8. Final wide shot: the little boy happily plays soccer with the four teens under warm sunset light.
+  ENVIRONMENT:
+  Neighborhood soccer ground, wet dusty field, simple goalpost, sitting area beside the field, chain-link fence, trees, cloudy sunset sky, calm old-anime mood.
+  FINAL GOAL:
+  Make this a clean, highly polished, premium-quality anime pre-production board with beautiful cinematic presentation, emotional storytelling, strong readability, and a heartwarming ending. The image should look visually rich, refined, and high-end."

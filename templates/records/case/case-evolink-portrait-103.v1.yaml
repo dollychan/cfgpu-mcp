@@ -1,0 +1,25 @@
+id: case-evolink-portrait-103
+version: 1
+kind: case
+media: image
+title: Rainy Bus Stop Portrait
+summary: A cinematic nighttime photo of [your photo as reference] sitting alone at a wet bus stop bench, eating a burger.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@harboriis'
+  url: https://x.com/harboriis/status/2049081194156020046
+content: |-
+  A cinematic nighttime photo of [your photo as reference] sitting alone at a wet bus
+
+  stop bench, eating a burger. Rain-soaked street with orange bokeh city lights
+
+  reflecting on the ground. Neon tube lights overhead. Red jacket, tan corduroy
+
+  pants. Moody, dark, atmospheric street photography.

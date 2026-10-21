@@ -1,0 +1,18 @@
+id: case-evolink-poster-173
+version: 1
+kind: case
+media: image
+title: Fast Food Character Poster
+summary: Use the character in image 1 as the main subject.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@LoovaAI'
+  url: https://x.com/LoovaAI/status/2049085173015425354
+content: Use the character in image 1 as the main subject. Create a vertical poster ad in American fast food diner style. Low angle, wide lens. Red / yellow / white palette with ketchup splashes, melting cheese graphics, comic burst shapes, retro diner typography, and bold fast food poster collage aesthetic.

@@ -1,0 +1,18 @@
+id: case-evolink-poster-33
+version: 1
+kind: case
+media: image
+title: Journey to the West Chinese Comic
+summary: 以中国连环画（小人书）的风格帮我绘制大闹天空
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@overseas58'
+  url: https://x.com/overseas58/status/2046271877577097376
+content: 以中国连环画（小人书）的风格帮我绘制大闹天空

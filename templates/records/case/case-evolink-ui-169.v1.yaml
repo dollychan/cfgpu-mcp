@@ -1,0 +1,31 @@
+id: case-evolink-ui-169
+version: 1
+kind: case
+media: image
+title: Embossed Metal Logo Bas-Relief
+summary: Replace [BRAND NAME] with your brand and [COLOR] with your preferred metal tone.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2063065673740497022
+content: |-
+  Replace [BRAND NAME] with your brand and [COLOR] with your preferred metal tone.
+
+  Act as a Senior CGI Artist. Create a premium bas-relief logo visualization where the brand mark appears embossed outward from a metallic surface, like a coin, hallmark stamp, or luxury seal. The logo rises as a unified raised form from the surface itself.
+
+  Surface: One continuous material plane filling the entire canvas. Use the metal tone from [COLOR]: silver/grey becomes brushed steel, gold becomes warm brushed metal, black becomes anodized aluminum, white becomes matte ceramic, saturated colors become anodized colored metal. Apply radial brushed grain and fine film grain for tactility.
+
+  Emboss: The brand's primary logo mark rises as a full bas-relief, like a coin die-stamp. The entire filled silhouette pushes outward as one solid mass at uniform height. Top face is slightly convex, catching key light. Smooth beveled edge transitions from flat surface to raised form. Interior negative spaces recess back to surface level. Substantial raised height like a thick coin.
+
+  Lighting: Primary soft area light from upper-left (10-11 o'clock), broad and diffused. Light temperature matches [COLOR]: cool white for silver/grey/blue, warm amber for gold/copper, neutral for white/black. Subtle fill light from lower-right at 10-15% intensity. No hard shadows.
+
+  Typography: Below the embossed mark, minimal lockup on the same surface. Small flat brand icon, brand name in spaced geometric caps, one light italic descriptor line (founding year, category, or tagline). Centered, vertically stacked.
+
+  Render: Ray tracing enabled for self-shadowing. Full sharpness edge to edge. Uniform film grain. No chromatic aberration. The mark must read as PUSHED OUTWARD from the surface.

@@ -1,0 +1,45 @@
+id: case-evolink-poster-384
+version: 1
+kind: case
+media: image
+title: Polish PRL Era Magazine Spread
+summary: Create a full two-page spread from a fictional Polish color weekly magazine from the PRL era, late 1950s to early 1960s.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Riccardo_Nero'
+  url: https://x.com/Riccardo_Nero/status/2065193845222944844
+content: |-
+  Create a full two-page spread from a fictional Polish color weekly magazine from the PRL era, late 1950s to early 1960s. The image should look like an authentic vintage printed magazine: yellowed paper, offset printing, halftone dots, slight ink misregistration, muted aged colors, retro Polish typography, visible center gutter, margins, page numbers, captions and column layout.
+  Theme: a Syrena 105 proudly showcased in modern-day North Korea, presented as a satirical alternate-history Polish PRL magazine artifact.
+  The spread must be clearly split into two pages.
+  LEFT PAGE:
+  A Polish illustrated magazine article about the official presentation of the Syrena 105 in Pyongyang. Show a large main photo of the Syrena 105 on a ceremonial platform or red carpet, surrounded by officials, spectators, North Korean flags, banners and monumental North Korean architecture.
+  The car must clearly look like a classic Syrena 105: compact body, rounded Eastern Bloc styling, simple practical proportions, modest chrome trim, characteristic front fascia, small wheels, realistic Polish car design language, slightly heroic but still humble and utilitarian.
+  Use a bold Polish headline:
+  “SYRENA zza ŻELAZNEJ KURTYNY”
+  Add a subheadline:
+  “Sensacyjna prezentacja w Pjongjangu: polska legenda motoryzacji w niezwykłej odsłonie.”
+  Add several columns of Polish-looking article text, a red drop cap, small captions, and one or two inset images showing the rear of the Syrena 105 and the interior. The page should feel like a serious but slightly absurd PRL-era illustrated report. Include a believable Polish magazine masthead similar to a 1960s illustrated weekly.
+  RIGHT PAGE:
+  A classic 1950s-1960s Polish print advertisement for the same Syrena 105. Show the car large, heroic and glamorous, in a polished three-quarter view, with a dramatic retro city background inspired by Pyongyang. Use bold vintage ad typography, decorative colored blocks, stars, slogans and product badges.
+  Main ad headline:
+  “Nowa SYRENA 105 — duma nowoczesnej motoryzacji!”
+  Add smaller Polish advertising copy:
+  “Niezawodny silnik”
+  “Praktyczna i oszczędna”
+  “Komfort i elegancja”
+  “Solidność konstrukcji”
+  “Przyjaźń narodów”
+  Add a fictional manufacturer line:
+  “FSO”
+  “Fabryka Samochodów Osobowych, Warszawa-Żerań”
+  “Produkt przyjaźni Polska — Korea”
+  The right page should look cleaner and more aspirational than the article page, like a period car advertisement. The whole image should feel like a convincing satirical alternate-history artifact: Polish PRL magazine design, Syrena 105 automotive fantasy, North Korean ceremonial propaganda and vintage print realism.
+  Make all visible Polish text as clean and readable as possible.

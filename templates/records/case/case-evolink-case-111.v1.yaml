@@ -1,0 +1,19 @@
+id: case-evolink-case-111
+version: 1
+kind: case
+media: image
+title: Autobots Assembled at Lunar Base
+summary: 第1张：汽车人全员月球基地集结，地球悬于身后星空，赛博坦旗帜飘扬 第2张：霸天虎全员列阵外星战舰甲板，威震天坐于王座俯视全军
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@songguoxiansen'
+  url: https://x.com/songguoxiansen/status/2046952548469530716
+content: |-
+  第1张：汽车人全员月球基地集结，地球悬于身后星空，赛博坦旗帜飘扬
+
+  第2张：霸天虎全员列阵外星战舰甲板，威震天坐于王座俯视全军

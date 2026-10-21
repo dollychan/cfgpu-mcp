@@ -1,0 +1,33 @@
+id: case-evolink-poster-219
+version: 1
+kind: case
+media: image
+title: Tokyo Revengers Propaganda Poster
+summary: '{ "type": "image_prompt", "title": "Tokyo revengers propaganda poster", "subject": { "character": " Takemichi Hanagaki", "source": Tokyo revengera", "focus": "iconic propaganda-style artistic reinterpretation" }, "compo…'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@im_shahid7'
+  url: https://x.com/im_shahid7/status/2052775670720397616
+content: |-
+  {
+    "type": "image_prompt",
+    "title": "Tokyo revengers propaganda poster",
+    "subject": {
+      "character": " Takemichi Hanagaki",
+      "source": Tokyo revengera",
+      "focus": "iconic propaganda-style artistic reinterpretation"
+    },
+    "composition": {
+      "structure": {
+        "top_section": {
+          "description": "Large iconic visual of  Takemichi Hanagaki head, facial features, mask-like framing or half-body silhouette",
+          "purpose": "dominant symbolic focal point"
+        },
+        "middl

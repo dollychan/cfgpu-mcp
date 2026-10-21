@@ -1,0 +1,18 @@
+id: case-evolink-ui-8
+version: 1
+kind: case
+media: image
+title: King Taejo Yi Seong-gye's X Page
+summary: 태조 이성계의 X 페이지(위화도 회군을 벌이기 직전- 최영 장군과 서로 디스하는 내용이 담긴 게시글들)을 만들어 주세요.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@SKA_Neotype'
+  url: https://x.com/SKA_Neotype/status/2044637900978217334
+content: 태조 이성계의 X  페이지(위화도 회군을 벌이기 직전- 최영 장군과 서로 디스하는 내용이 담긴 게시글들)을 만들어 주세요.

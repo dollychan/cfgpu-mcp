@@ -1,0 +1,18 @@
+id: case-evolink-ui-193
+version: 1
+kind: case
+media: image
+title: 远征规划指挥板
+summary: A strategic command board for an expedition leader planning [JOURNEY / MISSION] to [DESTINATION / ERA].
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2069104692098130014
+content: 'A strategic command board for an expedition leader planning [JOURNEY / MISSION] to [DESTINATION / ERA]. Left panel: detailed topographic route map with labeled waypoints, annotated danger zones, and a timeline running along the edge. Center panel: overhead flat lay of every piece of kit in neat organized rows, each item tagged by weight and function, redundancies flagged, nothing unnecessary included. Right panel: the expedition in motion or the destination reached, small human figures against a vast landscape, scale unmistakable. Visual language shifts from cartographic precision through functional inventory documentation to sweeping epic environmental photography. Title block reads: "[EXPEDITION NAME] — [ROUTE], [DATE], [OBJECTIVE]".'

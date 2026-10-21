@@ -1,0 +1,18 @@
+id: case-evolink-portrait-227
+version: 1
+kind: case
+media: image
+title: Bold Monochrome Identity Portrait
+summary: Use my uploaded image as the face reference.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@harboriis'
+  url: https://x.com/harboriis/status/2057475687276253495
+content: Use my uploaded image as the face reference.

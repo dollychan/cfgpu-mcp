@@ -1,0 +1,83 @@
+id: case-evolink-ui-179
+version: 1
+kind: case
+media: image
+title: INNER SIGNAL Brand Poster Series
+summary: '👇 { "project_title": "INNER SIGNAL", "concept_type": "Brand Identity Poster Series", "brand_name": "SIGNAL", "tagline": "FEED THE INNER SIGNAL", "style": { "look": "bold experimental editorial branding", "mood": "myster…'
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@bmx_ai13'
+  url: https://x.com/bmx_ai13/status/2063726489905123489
+content: |-
+  👇
+  {
+    "project_title": "INNER SIGNAL",
+    "concept_type": "Brand Identity Poster Series",
+    "brand_name": "SIGNAL",
+    "tagline": "FEED THE INNER SIGNAL",
+    "style": {
+      "look": "bold experimental editorial branding",
+      "mood": "mysterious, powerful, rebellious, premium",
+      "colors": ["black", "crimson red", "white"],
+      "lighting": "hard red light, deep shadows, high contrast",
+      "texture": "film grain, halftone, motion blur"
+    },
+    "design_rules": {
+      "typography": "bold uppercase sans-serif, Swiss-style layout",
+      "layout": "clean grid, strong negative space, recurring minimal logo mark",
+      "visual_language": "cinematic, fashion-forward, dark, sharp, minimal"
+    },
+    "brand_message": "Build identities that do not blend in. Designed for ambitious brands that want presence, confidence, and creative impact.",
+    "poster_series": [
+      {
+        "title": "The Two Selves",
+        "subject": "dark human silhouette with two blurred side profiles behind the head",
+        "meaning": "inner conflict, identity, duality",
+        "text_overlay": "FEED THE INNER SIGNAL.",
+        "prompt": "A bold branding poster with a lone dark silhouette against a glowing crimson red background. Two blurred shadow profiles appear behind the head, suggesting dual identity and inner voices. High contrast red and black lighting, minimal white logo mark, bold uppercase typography, cinematic editorial style, film grain, clean Swiss layout."
+      },
+      {
+        "title": "The Crowd Signal",
+        "subject": "crowd silhouettes facing a giant glowing red screen",
+        "meaning": "presence, influence, voice rising above noise",
+        "text_overlay": "SIGNALS RISE ABOVE NOISE.",
+        "prompt": "A premium poster showing a dark crowd in silhouette facing a large glowing red screen with abstract geometric shapes. The scene feels cinematic and intense, with black shadows, crimson atmosphere, subtle haze, white typography, and a modern branding layout."
+      },
+      {
+        "title": "The Focused Face",
+        "subject": "close-up portrait with a red line crossing the eyes",
+        "meaning": "clarity, vision, self-definition",
+        "text_overlay": "DESIGNED TO BE SEEN.",
+        "prompt": "A close-up fashion portrait of a person in deep shadow against a solid crimson background. A thin red band crosses the eyes, creating a futuristic and psychological feel. High-end editorial lighting, minimal white text, black clothing, premium poster design."
+      },
+      {
+        "title": "The Instinct",
+        "subject": "aggressive black dog or wolf under red light",
+        "meaning": "raw creative power, instinct, fearless energy",
+        "text_overlay": "RAISING THE STANDARD OF CREATIVE INSTINCT.",
+        "prompt": "A dark animal portrait poster featuring a black dog or wolf emerging from shadow under intense red lighting. Teeth visible, powerful expression, black background, white typography, bold brand aesthetic, gritty film texture, luxury editorial composition."
+      },
+      {
+        "title": "The Connection",
+        "subject": "black carabiner linking thick ropes",
+        "meaning": "systems, structure, trust, connection",
+        "text_overlay": "BRAND SYSTEMS. CREATIVE DIRECTION.",
+        "prompt": "A clean branding poster with a black metal carabiner connecting two thick ropes against a pure crimson red background. Glossy highlights, product-style lighting, centered composition, minimal white logo mark, Swiss typography, sleek premium design."
+      },
+      {
+        "title": "The Hidden Beast",
+        "subject": "abstract halftone tiger or leopard face",
+        "meaning": "ambition, hidden force, controlled danger",
+        "text_overlay": "FOR AMBITIOUS BRANDS THAT MOVE WITH INTENT.",
+        "prompt": "An abstract poster showing a tiger or leopard face formed with red halftone texture emerging from deep black space. Mysterious and intense mood, experimental print look, minimal white typography, strong contrast, premium creative studio identity."
+      }
+    ],
+    "master_prompt": "Create a 6-poster brand identity series for a fictional creative studio named SIGNAL. Use only black, crimson red, and white. The posters should feel cinematic, premium, rebellious, and intelligent. Use high-contrast editorial visuals, deep shadows, red lighting, film grain, halftone texture, bold uppercase typography, and minimal logo repetition. Themes include dual identity, influence, vision, instinct, connection, and ambition."
+  }

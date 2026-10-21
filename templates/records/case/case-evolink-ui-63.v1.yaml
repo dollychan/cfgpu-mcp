@@ -1,0 +1,18 @@
+id: case-evolink-ui-63
+version: 1
+kind: case
+media: image
+title: based on the generated character help me generate a screenshot of screenshot ...
+summary: 'based on the generated character help me generate a screenshot of screenshot of an pvp game themed around *zelda: wind breaker*'
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@khaiinit'
+  url: https://x.com/khaiinit/status/2047219694130827273
+content: 'based on the generated character help me generate a screenshot of screenshot of an pvp game themed around *zelda: wind breaker*'

@@ -1,0 +1,18 @@
+id: case-evolink-portrait-214
+version: 1
+kind: case
+media: image
+title: Korean Beauty Ultra-Realistic Portrait
+summary: low quality, blurry, distorted anatomy, extra fingers, bad hands, unrealistic smile, messy hair, cartoon, anime, watermark, logo, text, noisy image, oversaturated colors, poorly drawn face, low resolution, bad proportio…
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ZephyraLeigh'
+  url: https://x.com/ZephyraLeigh/status/2057315596862370103
+content: low quality, blurry, distorted anatomy, extra fingers, bad hands, unrealistic smile, messy hair, cartoon, anime, watermark, logo, text, noisy image, oversaturated colors, poorly drawn face, low resolution, bad proportions. 1744x2336

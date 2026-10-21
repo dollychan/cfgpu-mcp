@@ -1,0 +1,21 @@
+id: case-evolink-poster-152
+version: 1
+kind: case
+media: image
+title: E-commerce Main Image - Traditional Chinese Art and Porcelain Vases
+summary: A scarf inspired by 'A Thousand Li of Rivers and Mountains', surrounded by Wang Ximeng's blue-green landscape, with a silky texture and soft lighting.
+genres:
+- product-food
+tags:
+- 电商
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@songguoxiansen'
+  url: https://x.com/songguoxiansen/status/2048046906585280977
+content: |-
+  A scarf inspired by 'A Thousand Li of Rivers and Mountains', surrounded by Wang Ximeng's blue-green landscape, with a silky texture and soft lighting.
+
+  A famille rose porcelain vase featuring Lady Yang Guifei enjoying flowers, with peony and butterfly patterns in the style of imperial kilns.

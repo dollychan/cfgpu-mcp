@@ -1,0 +1,92 @@
+id: case-evolink-portrait-275
+version: 1
+kind: case
+media: image
+title: Identity-Locked Portrait Edit
+summary: Use the uploaded portrait as the identity reference for the subject's face, hairstyle, facial structure, skin tone, expression, and overall impression.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Kashberg_0'
+  url: https://x.com/Kashberg_0/status/2064022776600760625
+content: |-
+  Use the uploaded portrait as the identity reference for the subject's face, hairstyle, facial structure, skin tone, expression, and overall impression.
+
+  Create a high-quality realistic emotional portrait of the same person with a soft sad mood and visible tears.
+
+  Core concept:
+  - a delicate, emotionally touching close-up portrait
+  - the subject looks quietly sad, as if holding back emotions
+  - the mood should feel fragile, intimate, soft, and beautiful
+  - the image should feel like a polished Korean-style emotional portrait
+
+  Identity:
+  - preserve the subject's recognizable identity
+  - keep the same face shape, eyes, nose, lips, jawline, hairstyle, and overall vibe
+  - do not make the face look generic or overly different
+  - keep the beauty natural and believable
+
+  Expression:
+  - slightly sad expression
+  - soft watery eyes
+  - one or two visible tear streaks running down the cheek
+  - lips softly closed or slightly parted
+  - emotional but restrained, not exaggerated
+  - the sadness should feel quiet, longing, and delicate
+
+  Styling:
+  - long dark hair with soft natural texture
+  - a few loose strands falling across the face
+  - clean natural makeup
+  - luminous skin
+  - simple dark top or minimal clothing visible
+  - overall styling should remain clean and understated so the face is the focus
+
+  Lighting:
+  - soft, moody lighting
+  - gentle highlights on the eyes, nose, lips, and tear tracks
+  - subtle shadow depth
+  - dark or muted background
+  - the lighting should feel intimate and cinematic, not harsh
+
+  Composition:
+  - vertical portrait composition
+  - close-up framing
+  - place the face in the upper half of the frame
+  - the center of the face should sit slightly above the vertical midpoint
+  - the eyes should fall around the upper-middle area of the image
+  - avoid placing the face too low in the frame
+  - keep the composition visually balanced and elegant
+
+  Mood and style:
+  - Korean emotional beauty portrait
+  - soft, melancholic, dreamy, intimate
+  - elegant and photogenic
+  - emotionally expressive without looking dramatic
+  - beautiful but slightly heartbreaking
+
+  Important visual priority:
+  - preserve identity clearly
+  - the face must remain the main focus
+  - tears should be visible but subtle
+  - expression should feel naturally sad and emotionally convincing
+  - the portrait should look beautiful, soft, and emotionally immersive
+
+  Negative prompt:
+  - no exaggerated crying
+  - no distorted face
+  - no cartoon style
+  - no anime style
+  - no harsh flash
+  - no messy background
+  - no over-retouched plastic skin
+  - no exaggerated smile
+  - no low-resolution image
+  - no text
+  - no watermark

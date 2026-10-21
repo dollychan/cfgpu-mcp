@@ -1,0 +1,18 @@
+id: case-evolink-character-12
+version: 1
+kind: case
+media: image
+title: GTA 6 Shinjuku Bar Scene
+summary: '{argument name="game" default="GTA 6"} in {argument name="bar name" default="La Jetée Bar"} (that pays homage to Chris Marker) in {argument name="location" default="Shinjuku, Tokyo"}'
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ismajc'
+  url: https://x.com/ismajc/status/2048166630933282995
+content: '{argument name="game" default="GTA 6"} in {argument name="bar name" default="La Jetée Bar"} (that pays homage to Chris Marker) in {argument name="location" default="Shinjuku, Tokyo"}'

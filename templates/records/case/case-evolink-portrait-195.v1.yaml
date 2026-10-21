@@ -1,0 +1,18 @@
+id: case-evolink-portrait-195
+version: 1
+kind: case
+media: image
+title: Summer Campus Tesla Lifestyle Poster
+summary: Create a premium summer campus lifestyle Tesla poster focused mainly on an adult East Asian female model with a casual cute campus look.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Shinning1010'
+  url: https://x.com/Shinning1010/status/2056334868963881144
+content: 'Create a premium summer campus lifestyle Tesla poster focused mainly on an adult East Asian female model with a casual cute campus look. Use the uploaded portrait photo only for appearance and hairstyle, preserving face shape, facial features, hairstyle, skin tone, body proportion, and overall temperament. Scene: sunny summer university campus, clean tree-lined walkway, bright greenery, warm daylight, relaxed youthful lifestyle atmosphere. The model is the visual center, clear face, natural swee'

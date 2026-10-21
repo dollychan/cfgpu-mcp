@@ -1,0 +1,40 @@
+id: case-evolink-ad-creative-188
+version: 1
+kind: case
+media: image
+title: 奢华运动鞋编辑网格
+summary: Louis Vuitton luxury leather sneaker campaign.
+genres:
+- product-ad
+tags:
+- 广告创意
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2065964253505585436
+content: |-
+  Louis Vuitton luxury leather sneaker campaign. High-fashion editorial, avant-garde aesthetic. Aspect ratio 3:4.
+
+  Materials: Full-grain calf leather, Monogram Embossed Canvas, Polished Gold Hardware.
+  Color palette: Cognac Brown, Deep Obsidian, Champagne Gold.
+  Lighting: High-contrast Chiaroscuro with soft-box key lighting.
+
+  9-cell editorial grid:
+
+  Row 1, Heritage:
+  - Hero side-profile: sneaker resting on a vintage LV trunk, side-lit to reveal the leather grain texture.
+  - Extreme macro close-up: gold-tone "LV" lace aglets and precision stitching detail.
+  - Dynamic shot: gold dust particles swirling around the sole as the shoe steps into frame.
+
+  Row 2, Innovation:
+  - Minimalist: sneaker balanced on top of an abstract, floating glass "V" sculpture.
+  - Floating deconstructed view: sole and upper suspended in a void.
+  - Sensory: a gloved hand adjusting the tongue, highlighting the softness of the leather.
+
+  Row 3, Surrealism:
+  - Monochromatic scene in LV Havane brown with liquid silk drapes.
+  - Abstract: rubber sole pattern reimagined as a geometric desert landscape.
+  - Fusion: sneaker walking on a mirror-still lake reflecting a Parisian sunset skyline.

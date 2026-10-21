@@ -1,0 +1,18 @@
+id: case-evolink-poster-59
+version: 1
+kind: case
+media: image
+title: 1900 Istiklal Street Panorama Prompt
+summary: 360 equirectangular image of Istiklal Street, Istanbul in 1900
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ai_gezgini'
+  url: https://x.com/ai_gezgini/status/2046903631509705030
+content: 360 equirectangular image of Istiklal Street, Istanbul in 1900

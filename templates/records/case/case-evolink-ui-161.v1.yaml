@@ -1,0 +1,18 @@
+id: case-evolink-ui-161
+version: 1
+kind: case
+media: image
+title: Sitcom Intro Storyboard Sheet
+summary: Create a professional film production storyboard for a 15-second sitcom intro montage in a premium pitch deck presentation.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@KimAkiyama81'
+  url: https://x.com/KimAkiyama81/status/2059390326578511931
+content: 'Create a professional film production storyboard for a 15-second sitcom intro montage in a premium pitch deck presentation. Use multi-panel storyboard sheet layout, cinematic 16:9 framing per panel, clean panel borders, shot descriptions beneath each frame, timing notes, and transition indicators between panels. Maintain strict character consistency for Super Mei, Edvard, and Fenrir across all panels. Include a complete sequence of title flash, living room, backyard walkies, kitchen powers, convenience store raid, monster battle, bonus domestic comedy beats, closing hero shot, and logo slam. Visual style: cinematic sitcom, high-budget live-action network comedy, production-ready fidelity, not animated or illustrated.'

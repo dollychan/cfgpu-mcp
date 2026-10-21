@@ -1,0 +1,19 @@
+id: case-evolink-comparison-91
+version: 1
+kind: case
+media: image
+title: Era Cube Visualizer Grid
+summary: I love these cube prompts for visualizing different eras.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Gdgtify'
+  url: https://x.com/Gdgtify/status/2062903770087084107
+content: |-
+  I love these cube prompts for visualizing different eras. Pretty short but GPT Image 2 figures it out
+
+  2x2 grid, do this for different years of vastly different eras:  ERA_TO_CUBE_SOLVER  INPUT ::= [TOPIC], [ERA]  STEP_1 :: infer era identity - time period or stage - dominant materials - key tools or artifacts - social/technical/cultural context - built environment or natural environment - representative agents or figures if relevant  STEP_2 :: compress into cube - large objects define cuboid edges - medium objects build internal scenes - small objects fill gaps - top, side, and front faces remain visible - everything stays inside a strict rectangular volume  STEP_3 :: create module text - large era label - short subtitle - compact bullet list - no fixed facts unless supplied  STEP_4 :: repeat across eras - preserve identical visual grammar - increase or transform complexity chronologically

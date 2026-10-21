@@ -1,0 +1,16 @@
+id: case-evolink-case-67
+version: 1
+kind: case
+media: image
+title: Generate an image of the most significant event of 2001
+summary: Generate an image of the most significant event of 2001
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Rufus87078959'
+  url: https://x.com/Rufus87078959/status/2047210051216011682
+content: Generate an image of the most significant event of 2001

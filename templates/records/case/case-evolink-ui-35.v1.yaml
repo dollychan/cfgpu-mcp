@@ -1,0 +1,18 @@
+id: case-evolink-ui-35
+version: 1
+kind: case
+media: image
+title: Japanese Gacha Game Screen
+summary: 日本のソシャゲのガチャ画面を生成して、
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@the_wheel_2024'
+  url: https://x.com/the_wheel_2024/status/2046519658166317160
+content: 日本のソシャゲのガチャ画面を生成して、

@@ -1,0 +1,46 @@
+id: case-evolink-character-24
+version: 1
+kind: case
+media: image
+title: 韩式舞蹈动作分解表
+summary: '[STYLE] black and white grayscale illustration, 3D rendered character, clean instructional reference sheet, white background, comic panel grid layout, technical diagram aesthetic [LAYOUT] 4x4 grid, 16 panels total, each…'
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2066659127485718574
+content: |-
+  [STYLE]
+  black and white grayscale illustration, 3D rendered character, clean instructional reference sheet,
+  white background, comic panel grid layout, technical diagram aesthetic
+
+  [LAYOUT]
+  4x4 grid, 16 panels total, each panel divided by thin black borders,
+  cells numbered 1 through 16, uniform panel dimensions
+
+  [CHARACTER]
+  young female dancer, athletic build, ponytail hairstyle, crop top and baggy pants, sneakers — same character across all panels
+
+  [PANEL STRUCTURE - per cell]
+  top-left: bold number badge + Korean title text
+  center: full-body character pose illustration
+  bottom-left: Korean description text (3-4 lines)
+  overlay: motion arrows showing movement direction
+
+  [ARROWS / MOTION INDICATORS]
+  curved arrows, straight arrows, circular rotation markers,
+  placed around the character to indicate movement flow and direction
+
+  [RENDERING STYLE]
+  high-detail 3D sculpt style, soft studio lighting, subtle shadows,
+  no color, grayscale shading, clean linework, game concept art quality
+
+  [NEGATIVE]
+  no background scenery, no color tones, no extra characters,
+  no cluttered backgrounds

@@ -1,0 +1,18 @@
+id: case-evolink-ui-158
+version: 1
+kind: case
+media: image
+title: Die-Cut Sticker Illustration
+summary: Transform the uploaded image into a premium die-cut sticker illustration while keeping the main subject fully recognizable.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Ciri_ai'
+  url: https://x.com/Ciri_ai/status/2056616223547548106
+content: Transform the uploaded image into a premium die-cut sticker illustration while keeping the main subject fully recognizable. Remove or simplify the original background and cleanly isolate the primary subject. Add a thick soft cream or beige sticker border around the entire silhouette with a subtle realistic drop shadow to create a floating sticker effect. Preserve important textures and details while slightly stylizing the image with enhanced colors, cinematic contrast, and a polished editorial l

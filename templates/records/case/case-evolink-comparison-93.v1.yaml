@@ -1,0 +1,52 @@
+id: case-evolink-comparison-93
+version: 1
+kind: case
+media: image
+title: Innovation Reliquary Diagram
+summary: Have done so many of these prompts on inventions.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Gdgtify'
+  url: https://x.com/Gdgtify/status/2062720059575783713
+content: |-
+  Have done so many of these prompts on inventions. Here is another way to  visualize them with GPT Image 2
+
+  Function DrawInventionReliquary(input invention)
+
+  Input Variable: [INSERT INVENTION]
+
+  System Instruction:
+  Generate a hyper-realistic "Innovation Reliquary Exploded Diagram."
+
+  1. Semantic Extraction:
+  AI infers:
+  - Core problem solved
+  - Mechanism
+  - Historical era
+  - Inventor culture
+  - Materials
+  - Failure points
+  - Social impact
+
+  2. Container:
+  Structure: floating exploded object inside a glass museum case.
+  Every part is suspended on brass rods and fine tension wires.
+
+  3. Background:
+  Patent-paper wall with faint diagrams, tolerances, labels, and archive stamps.
+
+  4. Integration:
+  The invention’s key insight becomes a central glowing mechanism.
+
+  5. Visual Syntax:
+  Materials: brushed steel, glass, brass, aged paper, black ink.
+  Lighting: luxury product photography.
+  No cheap blueprint clichés.
+
+  Output:
+  2x2 grid, 16:9, four world-changing inventions.

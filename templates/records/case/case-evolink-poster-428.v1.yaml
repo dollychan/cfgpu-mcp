@@ -1,0 +1,31 @@
+id: case-evolink-poster-428
+version: 1
+kind: case
+media: image
+title: 霓虹暗影缪斯
+summary: Use the uploaded photo as the exact identity reference.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamrealsnow'
+  url: https://x.com/iamrealsnow/status/2071080066751312345
+content: |-
+  Use the uploaded photo as the exact identity reference. Preserve the facial structure, hairstyle, beard, skin tone, facial proportions, eyebrows, lips, jawline, and overall likeness with photorealistic accuracy. Do not alter the identity.
+
+  Convert the portrait into a premium high-contrast monochrome vector illustration with clean comic-book linework and sharp cel shading.
+
+  The subject faces directly toward the camera with a confident expression and slight chin lift.
+
+  Add vivid red neon rim lighting around the hair, ears, shoulders, and jawline.
+
+  Wear an oversized black open shirt layered over a plain white crew-neck t-shirt, a thin silver square pendant necklace, luxury watch, and black sunglasses resting on top of the head.
+
+  Pure black background with subtle floating particles and dramatic shadows.
+
+  Ultra-clean vector lines, premium poster composition, luxury editorial style, crisp facial details, cinematic contrast, minimal color palette using only black, white, and glowing red.

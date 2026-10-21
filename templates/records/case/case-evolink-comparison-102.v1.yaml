@@ -1,0 +1,75 @@
+id: case-evolink-comparison-102
+version: 1
+kind: case
+media: image
+title: Food Anime Storyboard Generator
+summary: Create a professional anime production storyboard sheet for a **15-second cooking animation featuring authentic Edo-style Sushi (江戸前寿司 / 握り寿司)**.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@tanabe_fragm'
+  url: https://x.com/tanabe_fragm/status/2064510342328353143
+content: |-
+  Create a professional anime production storyboard sheet for a **15-second cooking animation featuring authentic Edo-style Sushi (江戸前寿司 / 握り寿司)**.
+
+  The cooking process should accurately reflect professional Tokyo high-end sushi restaurant techniques while delivering elegant anime-style food presentation and a **calm early summer atmosphere in a refined Tokyo sushi counter setting (初夏・静謐な高級寿司店の空気感)**.
+
+  The storyboard should depict the complete preparation process of **maguro (tuna), toro (fatty tuna), and unagi (eel)** sushi while maintaining strict visual continuity across all panels.
+
+  ---
+
+  # Workflow Adaptation Rule
+
+  Before creating the storyboard:
+
+  1. Follow authentic Edo-mae sushi counter workflow
+  2. Separate fish preparation, rice shaping, and nigiri assembly stages
+  3. Emphasize craftsmanship and hand technique
+  4. Highlight maguro, toro, and unagi equally
+  5. Build toward final plated sushi as the hero composition
+  6. Maintain strict continuity of counter, lighting, and tools
+
+  ---
+
+  # Realism and Culinary Accuracy Rules
+
+  Prioritize authentic sushi craftsmanship:
+
+  * Precise slicing of maguro and toro
+  * Hand-formed sushi rice (shari)
+  * Clean, minimal unagi handling
+  * Realistic weight, pressure, and texture of food
+
+  Avoid all exaggerated or stylized effects.
+
+  ---
+
+  ## Ingredient Preparation Rules
+
+  * Maguro: clean block slicing into uniform nigiri portions
+  * Toro: delicate slicing emphasizing marbling texture
+  * Unagi: already grilled kabayaki, cut into sushi topping size
+
+  ---
+
+  ## Unagi Correct Technique Rule (FINAL)
+
+  For unagi nigiri:
+
+  * Grilled eel (kabayaki) is placed on top of hand-formed sushi rice
+  * After the nigiri is fully formed, the chef applies tare sauce **using a brush directly on the surface of the eel**
+  * Brush movement is slow, precise, and minimal
+  * No pre-dipping in sauce
+  * No cutting during final assembly
+  * Focus on glossy finish and craftsmanship, not drama
+
+  ---
+
+  ## Liquid Realism Rules
+
+  * Sauce is applied as a thin controlled glaze via brush
+  * No drip

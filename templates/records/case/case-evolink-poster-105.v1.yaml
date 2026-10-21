@@ -1,0 +1,18 @@
+id: case-evolink-poster-105
+version: 1
+kind: case
+media: image
+title: generate an image of a racing car poster with its spec and pricing
+summary: generate an image of a racing car poster with its spec and pricing
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@verysmallwoods'
+  url: https://x.com/verysmallwoods/status/2047033599229137126
+content: generate an image of a racing car poster with its spec and pricing

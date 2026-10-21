@@ -1,0 +1,20 @@
+id: case-evolink-portrait-165
+version: 1
+kind: case
+media: image
+title: Vintage Classroom Golden-Light Portrait
+summary: Cinematic portrait of the man in the picture (preserve 100% facial details of this man), vintage classroom.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@harboriis'
+  url: https://x.com/harboriis/status/2053301168026050805
+content: |-
+  Cinematic portrait of the man in the picture (preserve 100% facial details of this man), vintage classroom. The camera is shot from a distance, with a small section of the chair's back visible in front, as if the photographer was taking the portrait discreetly or in a quiet moment. Soft, golden-yellow lighting reflects from a small window or gap in the right wall, forming diagonal lines of light that fall directly on the man's face, creating a dramatic and emotional contrast.
+  The man sits alone in a chair, his feet resting on the desk, with a relaxed and cool expression, as if lost in thought.

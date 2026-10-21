@@ -1,0 +1,18 @@
+id: case-evolink-ui-159
+version: 1
+kind: case
+media: image
+title: Rider-Waite Tarot Card
+summary: Create a Tarot card based on what you know about me, in the classic style of Rider-Waite.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@itsphotogptai'
+  url: https://x.com/itsphotogptai/status/2056400494709690591
+content: Create a Tarot card based on what you know about me, in the classic style of Rider-Waite. Portray me as a drawn figure with an expressive, but slightly uneven black line of ink, with vivid fluctuations and variations in the stroke, with flat colors without shading. Add delicate visual elements of the Tarot around the figure. convey the texture of the paper and the feeling of a printed impression.

@@ -1,0 +1,35 @@
+id: case-evolink-portrait-77
+version: 1
+kind: case
+media: image
+title: analyze this photo and give me a detailed JSON prompt that recreates it. brea...
+summary: analyze this photo and give me a detailed JSON prompt that recreates it.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@pavellaslov'
+  url: https://x.com/pavellaslov/status/2047182214304055339
+content: |-
+  analyze this photo and give me a detailed JSON prompt that recreates it. break down the color grading and every exact color in the photo
+
+  (use Opus, not Sonnet. Opus has stronger visual analysis and writes more detailed JSON)
+
+  paste that JSON into ChatGPT
+  upload your product image and prompt:
+  using this JSON as reference, generate a person holding my product
+  save that generated photo as your character reference
+
+  attach it to every future generation for facial consistency
+
+  you now have a consistent UGC model that works across any product
+
+  the JSON controls the lighting and color grading. GPT image-2 handles the character. you control the product placement.
+
+  the #1 tell on AI photos is flat colors and a grainy look. this method removes both.
+  5 minutes to set up. unlimited variations after.

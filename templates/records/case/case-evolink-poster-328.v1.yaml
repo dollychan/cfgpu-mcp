@@ -1,0 +1,18 @@
+id: case-evolink-poster-328
+version: 1
+kind: case
+media: image
+title: Ink Noir Portrait
+summary: Dark, high-contrast noir-style portrait of [SUBJECT], drawn entirely with bold black ink lines and deliberate splatter.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2062325077912519045
+content: Dark, high-contrast noir-style portrait of [SUBJECT], drawn entirely with bold black ink lines and deliberate splatter. Deep shadows dominate the frame, with bright highlights carved out through empty white space. A subtle paper grain shows through. The mood is brooding, cinematic, and intense, like the most gripping panel in a graphic novel.

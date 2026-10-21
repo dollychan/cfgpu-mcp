@@ -1,0 +1,18 @@
+id: case-evolink-character-8
+version: 1
+kind: case
+media: image
+title: Saint Seiya Gold Saints Card Grid
+summary: 生成圣斗士星矢12个黄金圣斗士的12宫格卡牌图片,每张卡牌上写上对应的中文名,每行4个,宽高比16:9。
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@songguoxiansen'
+  url: https://x.com/songguoxiansen/status/2046476566537080849
+content: 生成圣斗士星矢12个黄金圣斗士的12宫格卡牌图片,每张卡牌上写上对应的中文名,每行4个,宽高比16:9。

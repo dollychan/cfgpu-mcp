@@ -1,0 +1,18 @@
+id: case-evolink-ad-creative-196
+version: 1
+kind: case
+media: image
+title: 逆向重组产品特效广告
+summary: '[PRODUCT] reassembling in midair from scattered pieces, reverse-disintegration effect, mechanical precision, each component suspended at a different depth, dark void background, high-concept product advertising, cinemat…'
+genres:
+- product-ad
+tags:
+- 广告创意
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2067399156596175345
+content: '[PRODUCT] reassembling in midair from scattered pieces, reverse-disintegration effect, mechanical precision, each component suspended at a different depth, dark void background, high-concept product advertising, cinematic VFX.'

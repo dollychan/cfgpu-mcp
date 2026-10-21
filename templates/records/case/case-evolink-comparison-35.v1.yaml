@@ -1,0 +1,19 @@
+id: case-evolink-comparison-35
+version: 1
+kind: case
+media: image
+title: Sam Altman Bear Selfie
+summary: 'generate image: Selfie of Sam Altman riding a bear Edit prompt: Remove the background make it transparent'
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@JustinGorya'
+  url: https://x.com/JustinGorya/status/2046510831832006970
+content: |-
+  generate image: Selfie of Sam Altman riding a bear
+
+  Edit prompt: Remove the background make it transparent

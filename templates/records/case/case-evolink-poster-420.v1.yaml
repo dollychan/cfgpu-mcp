@@ -1,0 +1,30 @@
+id: case-evolink-poster-420
+version: 1
+kind: case
+media: image
+title: 等轴测机器剖面微缩场景
+summary: Generate a crisp isometric 3D diorama at a 45° top-down angle revealing the interior of [MACHINE / DEVICE] as a miniature cutaway model.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2069014486707798113
+content: |-
+  Generate a crisp isometric 3D diorama at a 45° top-down angle revealing the interior of [MACHINE / DEVICE] as a miniature cutaway model.
+
+  Apply smooth refined surface textures, physically-based (PBR) materials, and sharp clean technical lighting.
+
+  Build a raised platform exposing internal parts, circuitry, mechanical gears, or energy pathways.
+  Add tiny stylized worker figures interacting with the equipment (omit facial details).
+
+  Set against a flat solid [BACKGROUND COLOR] background.
+
+  Position [MACHINE NAME] in large bold typography at the top-center, followed by a concise technical tagline, with a minimalist engineering icon placed just below.
+
+  All text color must automatically adapt for maximum contrast against the background (white or black as needed).

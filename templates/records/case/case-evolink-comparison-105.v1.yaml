@@ -1,0 +1,16 @@
+id: case-evolink-comparison-105
+version: 1
+kind: case
+media: image
+title: 硬币金额编辑测试
+summary: Modify this photo so the total adds up to 244.5 baht.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2065994787094983151
+content: Modify this photo so the total adds up to 244.5 baht. Adjust the number of coins in each stack until the combined value hits the target.

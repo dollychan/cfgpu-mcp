@@ -1,0 +1,18 @@
+id: case-evolink-portrait-233
+version: 1
+kind: case
+media: image
+title: Pixel Art Character Portrait
+summary: 'Create a cute and stylish pixel-art illustration based on the uploaded image in the style of:'
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@oggii_0'
+  url: https://x.com/oggii_0/status/2057504810598089187
+content: 'Create a cute and stylish pixel-art illustration based on the uploaded image in the style of:'

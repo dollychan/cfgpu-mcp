@@ -1,0 +1,16 @@
+id: case-evolink-comparison-81
+version: 1
+kind: case
+media: image
+title: Apartment Drama Animation Storyboard Sheet
+summary: Create a new animation sheet, but this time it's a storyboard between an Indian man and an Indian woman in a dramatic scene inside an apartment.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@CurieuxExplorer'
+  url: https://x.com/CurieuxExplorer/status/2049709975040401601
+content: Create a new animation sheet, but this time it's a storyboard between an Indian man and an Indian woman in a dramatic scene inside an apartment. Ensure the elements of the apartment are in the scene, and include dialogue boxes, this is for 15 seconds so be careful of the cadence (sentences not too long), when a character speaks they should be the only one in frame.

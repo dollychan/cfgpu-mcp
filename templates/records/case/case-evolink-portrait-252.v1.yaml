@@ -1,0 +1,21 @@
+id: case-evolink-portrait-252
+version: 1
+kind: case
+media: image
+title: Futuristic Neon Fashion Editorial
+summary: Using the provided reference image, create an ultra-realistic futuristic fashion editorial portrait of a stylish young woman standing in vibrant neon lighting.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ZephyraLeigh'
+  url: https://x.com/ZephyraLeigh/status/2058489835040682296
+content: |-
+  Using the provided reference image, create an ultra-realistic futuristic fashion editorial portrait of a stylish young woman standing in vibrant neon lighting. She wears an oversized crisp white shirt with minimalist luxury styling, reflective pastel holographic sunglasses with pink-orange gradient lenses, silver geometric hoop earrings, and a delicate gold chain necklace.
+
+  She has sleek shoulder-length dark brown hair, flawless glowing skin, soft glossy lips,

@@ -1,0 +1,21 @@
+id: case-evolink-poster-106
+version: 1
+kind: case
+media: image
+title: Charlie Chaplin Product Poster Redesign
+summary: 重新生成一张海报，卓别林拿着商品图里的止痒膏，面露微笑。风格要简约干净。
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@chenenpei'
+  url: https://x.com/chenenpei/status/2046985783715025135
+content: |-
+  重新生成一张海报，卓别林拿着商品图里的止痒膏，面露微笑。风格要简约干净。
+
+  左边是 GPT-image-2 右边是

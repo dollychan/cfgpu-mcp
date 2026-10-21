@@ -1,0 +1,35 @@
+id: case-evolink-poster-411
+version: 1
+kind: case
+media: image
+title: 莫斯科瑞士风格社论海报
+summary: Design a contemporary Swiss Style editorial poster for Moscow, Russia.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Naiknelofar788'
+  url: https://x.com/Naiknelofar788/status/2067991181376868462
+content: |-
+  Design a contemporary Swiss Style editorial poster for Moscow, Russia. Use a large bold sans-serif capital letter “M” as the main typographic structure. The “M” must be very clear, clean, geometric, solid, and dominant, with no stroke outline, no border, no shadow outline, and no decorative treatment. The silhouette of the letter “M” must remain easy to read at first glance. Do not let the illustration obscure or distort the shape of the letter. The poster should follow a precise left-aligned Swiss grid system with generous negative space.
+
+  Inside the “M”, create a simple, logical, and restrained flat illustration of Moscow’s city landscape character. Use only a few essential visual elements: simplified modern skyscrapers inspired by Moscow City business district, the calm curve of the Moscow River, a subtle silhouette of the Kremlin walls and towers, onion domes of Saint Basil’s Cathedral in a simplified geometric form, a soft green park landscape inspired by Gorky Park or Zaryadye Park, and two pedestrians on a clean riverside walkway. Keep the composition minimal, spacious, and easy to understand. Do not add too many landmarks, people, signs, vehicles, monuments, statues, fountains, trains, buses, or small decorative objects.
+
+  The illustration should suggest Moscow’s identity as a capital city where imperial history, Soviet monumental scale, modern glass skyscrapers, riverfront public spaces, and vast urban rhythm coexist in a clean contemporary way. Use flat vector shapes, clean silhouettes, minimal linework, simplified architecture, and believable scale relationships. Keep the scene lightly lively but not busy. The illustration should support the letter “M”, not compete with it.
+
+  Allow only extremely subtle overlap outside the “M” frame using simple organic or atmospheric elements only: a few leaves from riverside trees or soft atmospheric mist over the river may slightly extend beyond the letter edge. Keep 97% of the illustration inside the “M”. Do not let people, buildings, domes, towers, vehicles, faces, paths, signage, or complex objects overlap outside the letter. The “M” must remain clearly readable and visually dominant.
+
+  Place the headline “Moscow” below the letter in bold sans-serif type, title case, not all caps, left aligned to the same grid. Under the headline, add this short body paragraph in small regular sans-serif text, also left aligned, with clean spacing and refined editorial hierarchy:
+
+  “Moscow moves through grand historic layers, monumental architecture, river bends, and a dense modern skyline. Between imperial heritage, Soviet scale, and contemporary urban energy, the city holds a character that is powerful, structured, and constantly evolving.”
+
+  No icons, no badges, no decorative symbols. The overall design should feel Swiss minimalist: strong grid, precise alignment, asymmetrical balance, clean typography, generous negative space, restrained composition, and modern cultural city poster aesthetics.
+
+  Color palette: warm ivory background, deep navy or charcoal typography, concrete gray, glass blue, pine green, Kremlin red accents, river blue-gray, pale beige, and soft black accents. Matte paper finish, subtle paper grain, crisp edges, flat contemporary illustration, modern Moscow metropolitan mood, calm but strong, sophisticated, balanced, and print-ready.
+
+  Negative prompt: photorealistic, 3D render, glossy, maximalist, overcrowded city, complex illustration, too many details, too many landmarks

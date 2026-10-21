@@ -18,6 +18,8 @@ which is not a project dependency — run it with any Python that has it:
     python3 scripts/templates/import_covers.py gpt-image2 ~/claude/Private/GPT-Image2-Skill
     python3 scripts/templates/import_covers.py awesome-styles ~/claude/Public/awesome-gpt-image-2
     python3 scripts/templates/import_covers.py minimax-h3 ~/claude/Public/MiniMax-H3
+    python3 scripts/templates/import_covers.py evolink ~/claude/Public/awesome-gpt-image-2-API-Prompts \
+        --max-edge 640 --quality 80
 
 ``minimax-h3`` covers video records, so they are animated: each GIF or MP4 is re-encoded
 as an animated WebP (long edge ≤ ``--anim-max-edge``, MP4s resampled to ``--anim-fps``).
@@ -37,7 +39,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from PIL import Image, ImageSequence
+from PIL import Image, ImageSequence, UnidentifiedImageError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RECORDS = REPO_ROOT / "templates" / "records"
@@ -213,6 +215,29 @@ def minimax_h3_covers(repo: Path) -> Found:
     return found
 
 
+def evolink_covers(repo: Path, records: dict[str, Path]) -> Found:
+    """Each ``case-evolink-*`` record's first output image (``output.jpg``).
+
+    The case list is parsed by ``import_sources.evolink_cases``, so a record and its
+    cover come from one reading of the source files.
+    """
+    from import_sources import EVOLINK_ORIGIN, evolink_cases, evolink_record_id
+
+    found: Found = {}
+    for case in evolink_cases(repo):
+        record_id = evolink_record_id(case)
+        if record_id not in records:
+            continue
+        if not case["cover"]:
+            print(f"no cover listed for {record_id}", file=sys.stderr)
+            continue
+        found[record_id] = (
+            (repo / case["cover"], False),
+            {"origin": EVOLINK_ORIGIN, "author": case["author"], "url": case["url"]},
+        )
+    return found
+
+
 def _ffmpeg() -> str:
     exe = shutil.which("ffmpeg")
     if exe:
@@ -288,7 +313,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("source", choices=["gpt-image2", "awesome-styles", "minimax-h3"])
+    parser.add_argument("source", choices=["gpt-image2", "awesome-styles", "minimax-h3", "evolink"])
     parser.add_argument("path", type=Path)
     parser.add_argument("--max-edge", type=int, default=1024)
     parser.add_argument("--quality", type=int, default=85)
@@ -303,6 +328,8 @@ def main() -> int:
         found = gpt_image2_covers(repo, records)
     elif args.source == "awesome-styles":
         found = awesome_style_covers(repo)
+    elif args.source == "evolink":
+        found = evolink_covers(repo, records)
     else:
         found = minimax_h3_covers(repo)
 
@@ -317,11 +344,15 @@ def main() -> int:
             continue
         version = int(_RECORD_FILE.match(records[record_id].name)["version"])
         key = cover_key(record_id, version, src)
+        try:
+            write_cover(src, COVERS / key, args)
+        except UnidentifiedImageError:  # e.g. an MP4 saved under a .jpg name upstream
+            print(f"skip {record_id}: not a readable image {src[0]}", file=sys.stderr)
+            continue
         # One cover per record version: drop a previous one in another format.
         for old in [k for k in credits if k.rpartition(".")[0] == f"{record_id}/{version}" and k != key]:
             del credits[old]
             (COVERS / old).unlink(missing_ok=True)
-        write_cover(src, COVERS / key, args)
         credits[key] = {**credit, "usage": "reference-only"}
         written += 1
     save_credits(credits)

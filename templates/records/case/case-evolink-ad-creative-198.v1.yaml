@@ -1,0 +1,18 @@
+id: case-evolink-ad-creative-198
+version: 1
+kind: case
+media: image
+title: Ray-Ban 巨型飞行员墨镜广告
+summary: Minimalist commercial ad featuring oversized Ray-Ban Aviator sunglasses, ultra-clean design.
+genres:
+- product-ad
+tags:
+- 广告创意
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@MrDasOnX'
+  url: https://x.com/MrDasOnX/status/2068024611074367579
+content: 'Minimalist commercial ad featuring oversized Ray-Ban Aviator sunglasses, ultra-clean design. A young woman in all-white outfit leans casually against the giant sunglasses, relaxed confident pose, eyes closed, also holding a regular-sized pair in her hand. Soft gradient golden background with large bold white “RAY-BAN” text behind. Glossy reflective floor, soft studio lighting, modern high-end product photography. Small top-right text “Designed by Mr Das”. Bottom center tagline in small white font: “Iconic vision, every look.”'

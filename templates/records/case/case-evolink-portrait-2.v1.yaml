@@ -1,0 +1,18 @@
+id: case-evolink-portrait-2
+version: 1
+kind: case
+media: image
+title: Cinematic Minimal Portrait
+summary: Generate a cinematic minimal portrait of a solitary man standing in an intense orange to red gradient environment, strong silhouette lighting, deep shadow contrast, reflective glossy floor, symmetrical composition, mini…
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iam_miharbi'
+  url: https://x.com/iam_miharbi/status/2045151354679665101
+content: Generate a cinematic minimal portrait of a solitary man standing in an intense orange to red gradient environment, strong silhouette lighting, deep shadow contrast, reflective glossy floor, symmetrical composition, minimal

@@ -1,0 +1,22 @@
+id: case-evolink-poster-235
+version: 1
+kind: case
+media: image
+title: Mid-Century 3-Color City Poster
+summary: Create a vertical mid-century travel poster for [CITY NAME] featuring [LANDMARK].
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Goodmanprotocol'
+  url: https://x.com/Goodmanprotocol/status/2053523890744545437
+content: |-
+  Create a vertical mid-century travel poster for [CITY NAME] featuring [LANDMARK]. Use a strict 3-color palette: cream paper, black technical linework, and [COLOR].
+  Style: Minimalist isometric bird's-eye view with ultra-fine hatching and screen-print texture.
+  Color usage: Solid flat [COLOR] for the entire sky and small accents on roofs or streets. No gradients.
+  Text: Bold sans-serif "[CITY NAME]" at top in cream, with the local language name in smaller cream text below.

@@ -1,0 +1,16 @@
+id: case-evolink-comparison-82
+version: 1
+kind: case
+media: image
+title: Whimsical Folk Doodle Transformation
+summary: Simplify all details into clean, flat shapes with a handmade, slightly imperfect feel, as if drawn on a sheet of white paper.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@oggii_0'
+  url: https://x.com/oggii_0/status/2052792243845779811
+content: Simplify all details into clean, flat shapes with a handmade, slightly imperfect feel, as if drawn on a sheet of white paper. The overall style should look cute, childlike, and whimsical.

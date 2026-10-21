@@ -1,0 +1,18 @@
+id: case-evolink-character-11
+version: 1
+kind: case
+media: image
+title: GTA 6 in Bangalore Flower Market
+summary: '{argument name="game" default="gta 6"} in {argument name="location" default="Bangalore’s market flower"} in India'
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ismajc'
+  url: https://x.com/ismajc/status/2048174302164394493
+content: '{argument name="game" default="gta 6"} in {argument name="location" default="Bangalore’s market flower"} in India'

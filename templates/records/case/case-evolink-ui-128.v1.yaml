@@ -1,0 +1,18 @@
+id: case-evolink-ui-128
+version: 1
+kind: case
+media: image
+title: Personal Color Analysis Graphic Board
+summary: Create a personal color analysis graphic using this portrait.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ZaraIrahh'
+  url: https://x.com/ZaraIrahh/status/2049730770474877234
+content: Create a personal color analysis graphic using this portrait. Point out which season colour suits the subject best. Show side-by-side clothing color comparisons to highlight which colors suit the subject best. List out what texture/accessories/hairstyle suit the subject best. Make it visual-first, with short labels only and no paragraphs.

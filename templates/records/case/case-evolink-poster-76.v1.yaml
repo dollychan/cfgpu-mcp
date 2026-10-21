@@ -1,0 +1,20 @@
+id: case-evolink-poster-76
+version: 1
+kind: case
+media: image
+title: Premium Food Recipe Poster Elegant Layout
+summary: Create a premium food preparation poster for [ DISH NAME ], with a beautiful hero dish, warm natural lighting, cream background, elegant step-by-step recipe layout, ingredients, cooking process, premium food photography…
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Preda2005'
+  url: https://x.com/Preda2005/status/2047883394152088004
+content: |-
+  Create a premium food preparation poster for
+   [ DISH NAME ], with a beautiful hero dish, warm natural lighting, cream background, elegant step-by-step recipe layout, ingredients, cooking process, premium food photography, refined English typography, luxury restaurant advertisement style, clean design, rich colors, highly detailed, visually irresistible, cinematic masterpiece.

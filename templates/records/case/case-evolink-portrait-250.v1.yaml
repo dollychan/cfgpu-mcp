@@ -1,0 +1,22 @@
+id: case-evolink-portrait-250
+version: 1
+kind: case
+media: image
+title: Hollywood Character Sheet
+summary: Create an ultra-premium cinematic character sheet for an Oscar-worthy Hollywood drama film.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Mind_Boticni'
+  url: https://x.com/Mind_Boticni/status/2058514230350053496
+content: |-
+  Create an ultra-premium cinematic character sheet for an Oscar-worthy Hollywood drama film. Use reference image.
+  A stunning female protagonist with emotional eyes, realistic skin pores, luxurious satin evening dress, delicate diamond jewelry, graceful posture.
+  Include front/side/back turnaround, emotional facial expressions, close-up portrait photography, flowing fabric motion studies, luxury makeup breakdown, handwritten production annotations, realistic height comparison chart.
+  Mood: warm golden spotlight, timeless vintage Hollywood elegance, soft cinematic shadows, fashion editorial realism.

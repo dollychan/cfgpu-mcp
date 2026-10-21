@@ -1,0 +1,25 @@
+id: case-evolink-portrait-255
+version: 1
+kind: case
+media: image
+title: Toddler Crayon Drawing Style
+summary: Turn the uploaded image into a funny toddler-style crayon drawing, like it was made by a 3–4 year old kid who tried their best but had absolutely no idea what they were doing Keep the drawing messy, clumsy, uneven, and…
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@frametheory058'
+  url: https://x.com/frametheory058/status/2058543500086722604
+content: |-
+  Turn the uploaded image into a funny toddler-style crayon drawing, like it was made by a 3–4 year old kid who tried their best but had absolutely no idea what they were doing
+
+  Keep the drawing messy, clumsy, uneven, and adorably inaccurate. The lines should look rough and scribbly, shapes should feel awkward, proportions can be completely wrong, and details should be super simplified. It should feel like a child quickly drew the scene from memory using random crayons.
+
+  Avoid realistic anatomy, clean outlines, perfect symmetry, professional shading, or polished illustration styles. The charm should come from how silly, chaotic, and unintentionally funny the drawing looks.
+
+  Style: messy wax crayon art, childish doodles, random proportions, uneven coloring, simple shapes, loose interpretation of the original image.

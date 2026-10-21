@@ -1148,6 +1148,7 @@ _REGISTRY.append(("cancel_task", CancelTaskInput))
 2. 运行 `python scripts/templates/build_bundle.py`：校验 schema、分类词表、正文无模型方言、`verified_on` 是真实模型、已发布版本未被改动，再编译 `template_library/templates.bundle.json`。
 3. 已发布记录的正文不能原地修改：改正文就发新版本 `<id>.v2.yaml`；下架用 `status: withdrawn` + `withdrawn_reason`，不删文件。
 4. 分类取值是封闭词表（`templates/catalog.yaml`）；新增取值要先加进词表，并避免与已有取值近义重复。
+5. 封面用 `scripts/templates/import_covers.py <来源> <路径>` 写进 `templates/covers/<id>/<version>.jpg|webp` 并登记 `covers/credits.yaml`（需要项目环境外装有 Pillow 的 Python）。来源选项与 `import_sources.py` 对应（`gpt-image2` / `awesome-styles` / `minimax-h3` / `evolink`）；大批量导入用 `--max-edge 640 --quality 80` 控制仓库体积。
 
 运行时只读内存索引，没有写接口，也不查数据库。设计见 `docs/template-library-and-dialect.md` §6。
 

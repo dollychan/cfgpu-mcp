@@ -1,0 +1,16 @@
+id: case-evolink-comparison-39
+version: 1
+kind: case
+media: image
+title: Sam Altman Baseball Broadcast
+summary: サムアルトマンがメジャーリーガーでバットを構えている。よくあるようなテレビ画面の構図
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@16kthir0GRXgNqn'
+  url: https://x.com/16kthir0GRXgNqn/status/2046507362266259832
+content: サムアルトマンがメジャーリーガーでバットを構えている。よくあるようなテレビ画面の構図

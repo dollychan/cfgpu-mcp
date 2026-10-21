@@ -1,0 +1,29 @@
+id: case-evolink-portrait-308
+version: 1
+kind: case
+media: image
+title: 赛博义肢近景特写
+summary: Ultra-realistic cinematic close-up of a young woman with pale, freckled skin and wet dark hair.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2067732972351222060
+content: |-
+  Ultra-realistic cinematic close-up of a young woman with pale, freckled skin and wet dark hair. Her eyes are vivid blue-green and she wears a silver septum ring.
+  Cybernetics: A massive industrial robotic prosthetic arm with worn metal textures, visible wiring, and hydraulic components rests near her face, metallic fingers curved toward her temple.
+  A thin cybernetic sensor wire traces across her cheekbone just below the eye.
+  Her jawline and neck show embedded steel plating and brushed-metal body augmentations.
+
+  Background: Clean, neutral studio setting in muted grey-white.
+  Lighting: Soft front-left directional light casting detailed shadows across mechanical joints while catching moisture on skin and lips.
+  Mood: Raw, futuristic, and melancholic with a high-end editorial aesthetic.
+  Framing: Off-center composition, shallow focus on the eye and robotic hand texture detail.
+  Surface detail: Pores clearly visible, individual wet hair strands, scratched and oil-marked metal.
+  Color grade: Muted cool palette, high contrast. Photorealistic digital art style.

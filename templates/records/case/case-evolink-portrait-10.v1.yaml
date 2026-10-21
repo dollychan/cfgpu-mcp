@@ -1,0 +1,18 @@
+id: case-evolink-portrait-10
+version: 1
+kind: case
+media: image
+title: Sam Altman Skatepark Snapshot
+summary: '"Sam Altman on a skateboard at a skatepark with no people."'
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Malek1173989'
+  url: https://x.com/Malek1173989/status/2045836887684694395
+content: '"Sam Altman on a skateboard at a skatepark with no people."'

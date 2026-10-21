@@ -1,0 +1,20 @@
+id: case-evolink-poster-292
+version: 1
+kind: case
+media: image
+title: 9-Frame Cinematic Storyboard Grid
+summary: 'for GPT-2: Create a single image storyboard with 9 cinematic frames arranged in a 3×3 grid.'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@guicastellanos1'
+  url: https://x.com/guicastellanos1/status/2056425976763146366
+content: |-
+  for GPT-2:
+  Create a single image storyboard with 9 cinematic frames arranged in a  3×3 grid. Each frame is a widescreen 16:9 panel with a film aspect ratio  letterbox. Style: ultra-cinematic sci-fi blockbuster mixed with premium  airline commercial. Think Blade Runner 2049 color grading meets a UEFA  Champions League broadcast opener meets a luxury brand TVC.

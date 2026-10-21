@@ -1,0 +1,18 @@
+id: case-evolink-portrait-222
+version: 1
+kind: case
+media: image
+title: Luxury Cycling Storyboard Poster
+summary: '- Step 1: Generate storyboard with GPT Image 2'
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Strength04_X'
+  url: https://x.com/Strength04_X/status/2057348086247358551
+content: '- Step 1: Generate storyboard with GPT Image 2'

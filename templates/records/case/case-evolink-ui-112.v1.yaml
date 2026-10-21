@@ -1,0 +1,18 @@
+id: case-evolink-ui-112
+version: 1
+kind: case
+media: image
+title: Cloud shape doodle generation
+summary: Based on the shape of the {argument name="subject" default="clouds"} in the image, identify what object, animal, or person they most resemble.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Gorden_Sun'
+  url: https://x.com/Gorden_Sun/status/2048080137149899133
+content: Based on the shape of the {argument name="subject" default="clouds"} in the image, identify what object, animal, or person they most resemble. Do not change the original image; instead, draw that object, animal, or person over the original image in a {argument name="art style" default="doodle"} style.

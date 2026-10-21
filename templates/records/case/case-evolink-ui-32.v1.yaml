@@ -1,0 +1,21 @@
+id: case-evolink-ui-32
+version: 1
+kind: case
+media: image
+title: Palm Reading Diagnosis Report
+summary: GPT-image-2でこの手相を診断して詳細な鑑定書を作って 生命線・知能線・感情線・運命線・太陽線・財運線・結婚線を、線の形状・濃淡・枝分かれ・起点終点まで分析すること。
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@agi_aibusi'
+  url: https://x.com/agi_aibusi/status/2046530764871696750
+content: |-
+  GPT-image-2でこの手相を診断して詳細な鑑定書を作って
+  生命線・知能線・感情線・運命線・太陽線・財運線・結婚線を、線の形状・濃淡・枝分かれ・起点終点まで分析すること。
+  助言を重点的に高品質な占い鑑定書にまとめること。

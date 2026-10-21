@@ -1,0 +1,20 @@
+id: case-evolink-ecommerce-169
+version: 1
+kind: case
+media: image
+title: Lightning Storm Supercar Ad
+summary: 'Sports Car Made of Lightning Prompt: Supercar emerging from a storm cloud, body formed entirely from blue lightning bolts, wet reflective road, thunder exploding in background, cinematic action advertising, high-speed e…'
+genres:
+- product-food
+tags:
+- 电商
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamrealsnow'
+  url: https://x.com/iamrealsnow/status/2063649073819959502
+content: |-
+  Sports Car Made of Lightning
+  Prompt: Supercar emerging from a storm cloud, body formed entirely from blue lightning bolts, wet reflective road, thunder exploding in background, cinematic action advertising, high-speed energy trails, ultra-detailed automotive render, luxury commercial photography, 8K.

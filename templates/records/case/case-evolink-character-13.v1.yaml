@@ -1,0 +1,20 @@
+id: case-evolink-character-13
+version: 1
+kind: case
+media: image
+title: Eleanor from White Cat Project
+summary: '{argument name="series" default="White Cat Project"} {argument name="character" default="Eleanor"}'
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@yume00112211'
+  url: https://x.com/yume00112211/status/2048309139013853421
+content: |-
+  {argument name="series" default="White Cat Project"}
+  {argument name="character" default="Eleanor"}

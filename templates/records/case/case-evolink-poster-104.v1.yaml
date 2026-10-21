@@ -1,0 +1,18 @@
+id: case-evolink-poster-104
+version: 1
+kind: case
+media: image
+title: Royal Tramp Character Poster
+summary: 生成鹿鼎记海报，展现韦小宝跟老婆XXX，忠于原著的描述，夸大特点，强调女性的美艳和男性的气质
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@caiziboshi'
+  url: https://x.com/caiziboshi/status/2047091751731519744
+content: 生成鹿鼎记海报，展现韦小宝跟老婆XXX，忠于原著的描述，夸大特点，强调女性的美艳和男性的气质

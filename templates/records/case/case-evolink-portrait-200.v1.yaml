@@ -1,0 +1,18 @@
+id: case-evolink-portrait-200
+version: 1
+kind: case
+media: image
+title: 胶片拼贴人像海报
+summary: High-end portrait collage poster in vertical format.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@robertsmith_ai'
+  url: https://twitter.com/robertsmith_ai/status/2056766784846606727
+content: High-end portrait collage poster in vertical format. The background contains four layered rounded strips displaying black-and-white film-like images of a curly-haired male model wearing dark sunglasses in varied poses. In front, a vivid color cutout of the same character is placed to the left, dressed in an unbuttoned soft pink shirt, styled like a luxury fashion campaign with dramatic lighting and depth.

@@ -1,0 +1,63 @@
+id: case-evolink-poster-390
+version: 1
+kind: case
+media: image
+title: Double Exposure Art Director Poster
+summary: 'prompt: [PERSONE].'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2065088795494773094
+content: |-
+  prompt:
+
+  [PERSONE]. Act as a Senior Art Director.
+
+  PHASE 1: PHOTOGRAPHIC COMPOSITION.
+
+  - Layered Effect: Double exposure photo collage. Sharp action shot in the foreground; massive monumental silhouette in the background.
+
+  - Overlap: The subject blends seamlessly with the background graphic elements.
+
+  PHASE 2: CONTEXTUAL VIBE.
+
+  - Identity Analysis: Automatically detect the core industry of [PERSONE] (Sport, Music, Cinema, or Business).
+
+  - Pose and Props tailored to match their identity.
+
+  PHASE 3: DYNAMIC BRAND COLORS.
+
+  - Primary Color: Identify the most iconic color tied to [PERSONE] or their team or brand. Apply to the background, halftone textures, and smoke effects.
+
+  - Accent Color: Choose a high-contrast vibrant secondary hue (neon, gold, or electric white) for the radial burst rays.
+
+  - Visual Texture: Heavy film grain and halftone dots in the shadow areas of the photos.
+
+  PHASE 4: GRAPHIC ACCENTS.
+
+  - Geometry: Bold radial rays bursting from the center. Fluid wave-like organic shapes at the base.
+
+  - Birds: Minimal black bird silhouettes for scale and depth.
+
+  PHASE 5: BRANDING AND TEXT.
+
+  - Tagline: A powerful one- or two-word slogan that captures [PERSONE]'s legacy.
+
+  - Logo: Minimalist industry-appropriate logo in the bottom corner.
+
+  - Typography: Bold, high-impact sans-serif.
+
+  TECHNICAL FINISH:
+
+  - Quality: 8K resolution, authentic commercial photography style (not an illustration).
+
+  - Lighting: Extreme studio rim lighting to separate the photographic subjects from the graphic layers.
+
+  #AIart #GPTImage2

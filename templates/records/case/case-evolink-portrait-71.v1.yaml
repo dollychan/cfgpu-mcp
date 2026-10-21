@@ -1,0 +1,18 @@
+id: case-evolink-portrait-71
+version: 1
+kind: case
+media: image
+title: Magazine Travel Guide Feature Article
+summary: Create image of Magazine feature article [travel] guide page, cute, information dense photo book style magazine feature article page.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@andis13'
+  url: https://x.com/andis13/status/2047204384811921764
+content: 'Create image of Magazine feature article [travel] guide page, cute, information dense photo book style magazine feature article page. Add all necessary sections, tips, recommendations, information. add photos for any sections and recommendations if you like. Place the attached person at the precise location of [city, country]. Seamlessly blend the attached person as if they are sightseeing. Approach this task with the understanding that this is a critical, information rich page that will significantly influence visitor numbers, text accuracy is important. Fully use the entire [9:16] page. NEGATIVE PROMPT: coordinate texts @swiat_ai @ProfitAII'

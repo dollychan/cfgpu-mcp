@@ -1,0 +1,16 @@
+id: case-evolink-case-108
+version: 1
+kind: case
+media: image
+title: Douyin Livestream Sales Screenshot
+summary: 生成一个抖音直播的截图 里面是一个美女在直播，在卖丝袜和内衣，她的在线人数是99996，热度是18+，有个叫小互的大哥，给她刷了一个飞机礼物
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@LVWANGJI_0327'
+  url: https://x.com/LVWANGJI_0327/status/2046974302227206525
+content: 生成一个抖音直播的截图 里面是一个美女在直播，在卖丝袜和内衣，她的在线人数是99996，热度是18+，有个叫小互的大哥，给她刷了一个飞机礼物

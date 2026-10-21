@@ -1,0 +1,185 @@
+id: case-evolink-comparison-98
+version: 1
+kind: case
+media: image
+title: Match-Day Supporter Transformation Board
+summary: 'Prompt: 👇 Create a premium 12-frame cinematic editorial transformation storyboard poster using the uploaded woman as the strict identity reference.'
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ai_gezgini'
+  url: https://x.com/ai_gezgini/status/2063677480406511690
+content: |-
+  Prompt:
+  👇
+  Create a premium 12-frame cinematic editorial transformation storyboard poster using the uploaded woman as the strict identity reference.
+
+  USER INPUTS:
+  Country = [WRITE A COUNTRY NAME]
+  Reference Image = identity reference of the woman.
+
+  ASPECT RATIO:
+  16:9
+
+  FORMAT:
+  A clean 4-column x 3-row storyboard grid, 12 cinematic frames total.
+  Each frame must feel like a high-end vlog / fashion transformation short film.
+  Use elegant black editorial caption bars under each frame with readable numbered titles and short cinematic notes.
+
+  IMPORTANT TEXT LANGUAGE RULE:
+  All visible text inside the generated image must be in English only.
+  This includes:
+  - all frame titles
+  - all subtitle captions
+  - any scarf text
+  - any jersey text
+  - any visible signs, labels, or supporter wording
+  - the country name wherever it appears
+  Do not use Turkish or any other language anywhere inside the image text.
+
+  CORE CONCEPT:
+  The same woman from the reference image is in her bedroom on match day. She is sitting in front of the TV when she notices the football match atmosphere and begins preparing a premium [COUNTRY] supporter look. The transformation happens step by step through makeup, eyelid flag art, face paint, strong country-themed hair styling, accessories, and finally a feminine [COUNTRY]-inspired football outfit. The final frame must take place in a stadium, where she is fully ready to cheer.
+
+  IMPORTANT IDENTITY RULE:
+  The woman from the reference image must remain the same person throughout all 12 frames.
+  Preserve her face, eyes, hair, skin tone, lips, nose, eyebrows, body proportions, and identity.
+  No face replacement, no identity drift, no different woman between frames.
+
+  MOOD AND EXPRESSION RULE:
+  The woman should feel cheerful, lively, and excited throughout the storyboard.
+  Her energy should reflect joyful match-day anticipation.
+  Avoid dull, cold, blank, or emotionless expressions.
+  She should look increasingly happy, confident, playful, and enthusiastic as the transformation progresses.
+
+  POSE VARIETY RULE:
+  In every frame, the woman must have a clearly different pose, gesture, or body angle.
+  Do not repeat the same pose across multiple frames.
+  Use a variety of:
+  - seated pose
+  - excited reaction pose
+  - leaning pose
+  - reaching pose
+  - makeup application pose
+  - over-the-shoulder pose
+  - playful beauty pose
+  - jersey-adjusting pose
+  - confident standing pose
+  - cheering stadium pose
+  Each panel must feel visually distinct.
+
+  VISUAL STYLE:
+  Ultra-realistic cinematic photography, premium editorial vlog storyboard, warm moody bedroom lighting, realistic skin texture, fashion-film atmosphere, shallow depth of field, natural film grain, high-resolution detail, cozy but energetic match-day mood.
+  The color palette must adapt to [COUNTRY] using its national flag colors, football supporter colors, and cultural match-day details.
+
+  WARDROBE / SUPPORTER STYLE RULE:
+  The supporter jersey must look feminine and stylish.
+  It should be fitted, flattering, fashion-forward, and clearly inspired by [COUNTRY] football colors.
+  A cropped or tailored women’s football-fan top is preferred.
+  Do not use exact official logos, sponsor logos, club logos, or copyrighted brand marks.
+
+  STORYBOARD STRUCTURE:
+
+  FRAME 1 — BEDROOM MATCH DAY MORNING
+  The same woman sits on her bed in an oversized casual home outfit, facing the TV. She is not taking a selfie. The TV shows a football match on screen. Her pose is relaxed and natural, with a soft curious expression as she watches the match atmosphere.
+  Caption:
+  “1. MATCH DAY MORNING”
+  “She starts the day casually in her bedroom.”
+
+  FRAME 2 — GAME MODE ON
+  Close-up / medium close-up of the woman reacting with excitement and energy. She smiles brightly and gives an enthusiastic gesture, showing that she already knows the supporter look she wants.
+  Caption:
+  “2. GAME MODE ON”
+  “She knows exactly what look she wants.”
+
+  FRAME 3 — FAN MAKEUP KIT
+  Show her vanity table beautifully arranged with makeup brushes, palettes, face paint, small flags, ribbons, hair accessories, and supporter-themed beauty tools in the colors of [COUNTRY]. She interacts with the setup in a lively, engaged way.
+  Caption:
+  “3. FAN MAKEUP KIT”
+  “The match-day colors are ready.”
+
+  FRAME 4 — CHOOSING MY LOOK
+  A new frame showing her selecting the final supporter pieces. She is choosing between [COUNTRY]-themed accessories, scarf elements, hair ribbons, and a feminine [COUNTRY]-inspired jersey. She should have a different pose from prior frames, looking excited and playful while deciding.
+  Caption:
+  “4. CHOOSING MY LOOK”
+  “Picking the pieces that complete my supporter style.”
+
+  FRAME 5 — BASE MAKEUP
+  Beauty close-up. She applies base makeup with a brush: foundation, concealer, contour, soft skin prep. Her identity must stay very recognizable. Her expression should feel upbeat and naturally focused.
+  Caption:
+  “5. BASE MAKEUP”
+  “She prepares the face before the colors.”
+
+  FRAME 6 — FLAG EYES
+  Extreme close-up on her eyes. She paints her eyelids with elegant [COUNTRY] flag-inspired eye makeup. Use the national flag colors, shapes, and symbolic details of [COUNTRY] in a stylish, wearable, premium beauty look.
+  Caption:
+  “6. FLAG EYES”
+  “Her eyelids become the team flag.”
+
+  FRAME 7 — FACE PAINT
+  Medium close-up. She paints a clean, elegant [COUNTRY]-inspired supporter design on her cheek. Use national colors, flag-inspired marks, stars, stripes, crests, or cultural motifs depending on [COUNTRY]. She should have a new angle and a fresh expressive pose.
+  Caption:
+  “7. FACE PAINT”
+  “The national colors take over.”
+
+  FRAME 8 — HAIR COLORS
+  Her hair must clearly reflect the country style. She styles her hair with visible ribbons, braided strands, decorative clips, temporary color highlights, and accessories inspired by [COUNTRY] and its national colors. The pose should be different again, with a fun, beauty-editorial feel.
+  Caption:
+  “8. HAIR COLORS”
+  “Her hair joins the celebration.”
+
+  FRAME 9 — FINAL DETAILS
+  Close-up portrait showing the finished beauty and accessory details. This pose must be clean and readable: one hand placed clearly near the cheek or jawline, not tangled with the face. Show earrings, wrist accessories, painted nails, scarf-like supporter bands, and country-themed finishing touches. Her mood should feel happy and polished.
+  Caption:
+  “9. FINAL DETAILS”
+  “The look is complete in true supporter style.”
+
+  FRAME 10 — THE JERSEY
+  Medium shot of her adjusting or putting on the final feminine [COUNTRY]-inspired jersey. The jersey should look stylish, fitted, and clearly designed for a woman supporter look. Give her a distinct pose with confident, playful energy.
+  Caption:
+  “10. THE JERSEY”
+  “She slips into her match-inspired look.”
+
+  FRAME 11 — READY FOR THE MATCH
+  Full-body reveal in the bedroom / mirror area. She now wears the full supporter outfit: feminine cropped or tailored [COUNTRY]-inspired jersey, stylish fan outfit pieces, finished makeup, finished hair, accessories, and confident body language. She should pose proudly, joyfully, and fashionably.
+  Caption:
+  “11. READY FOR THE MATCH”
+  “The final reveal—proud and ready to cheer.”
+
+  FRAME 12 — COME ON, [COUNTRY]!
+  Final hero frame must take place in a stadium, not the bedroom. The woman is now inside a football stadium crowd atmosphere, holding a supporter scarf that clearly reads “[COUNTRY]”. She looks excited, joyful, and ready to cheer, with a strong celebratory pose and high-energy stadium emotion.
+  Caption:
+  “12. COME ON, [COUNTRY]!”
+  “Ready to cheer for her team.”
+
+  CONSISTENCY RULES:
+  - The woman must remain the same person from the reference image in every frame.
+  - Frame 1 must show her sitting in front of the TV, not taking a selfie.
+  - No separate TV announcement frame.
+  - Frame 2 must be the excited reaction.
+  - Frame 3 must be the fan makeup kit.
+  - Frame 4 must be “CHOOSING MY LOOK.”
+  - The transformation must be gradual and clearly visible.
+  - Hair must clearly reflect [COUNTRY] supporter styling, not just subtle hints.
+  - Frame 9 must have a cleaner, more understandable pose, with the hand and face clearly separated.
+  - The supporter jersey must be feminine, fitted, and stylish.
+  - Frame 12 must be in a stadium.
+  - All visible text inside the image must be in English only.
+  - The woman must look cheerful, lively, and expressive throughout.
+  - Every frame must feature a different pose or body angle.
+  - Keep the bedroom / vanity atmosphere consistent through the preparation frames.
+  - No random extra characters.
+  - No distorted hands, face, mirror reflections, or unreadable captions.
+  - No cheap costume look.
+  - No exact official team logos, sponsor logos, club logos, brand logos, or copyrighted marks.
+  - No cartoon style.
+
+  TYPOGRAPHY:
+  Use clean cinematic serif titles and elegant smaller subtitle text.
+  All captions must be correctly spelled, readable, and placed inside black editorial bars under each frame.
+
+  FINAL RESULT:
+  A premium 12-frame editorial match-day transformation storyboard showing the uploaded woman gradually becoming a stylish [COUNTRY] football supporter, beginning in her bedroom and ending in a stadium-ready final cheer moment, with all text in English, joyful energy, and a different pose in every frame.

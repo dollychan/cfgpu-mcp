@@ -1,0 +1,16 @@
+id: case-evolink-case-101
+version: 1
+kind: case
+media: image
+title: Historical Yang Guifei Realistic Portrait
+summary: 根据真实历史对杨玉环的形象描述，生成一张杨贵妃真实照片，画质为iPhone 15 pro
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Zhaoge01'
+  url: https://x.com/Zhaoge01/status/2047110776897638568
+content: 根据真实历史对杨玉环的形象描述，生成一张杨贵妃真实照片，画质为iPhone 15 pro
