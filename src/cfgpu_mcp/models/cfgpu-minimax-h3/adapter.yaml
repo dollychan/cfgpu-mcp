@@ -128,3 +128,6 @@ poll_config:
   max_interval: 20
   backoff_factor: 1.3
   default_timeout: 3000
+
+# reference: ratio enum (plus adaptive, which is never listed).
+aspect_ratios: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"]

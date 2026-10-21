@@ -151,13 +151,14 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
 
     catalog = await model_service.list_model_profiles(required_tasks=["video_edit"])
     assert catalog["catalog_version"] == 2
-    assert set(catalog) == {"catalog_version", "task_catalog", "models"}
+    assert set(catalog) == {"catalog_version", "task_catalog", "models", "input_roles"}
     assert set(catalog["task_catalog"]) == {"video_edit"}
     assert all("video_edit" in model["tasks"] for model in catalog["models"])
     assert catalog["models"] == sorted(catalog["models"], key=lambda model: model["model_id"])
 
     for model in catalog["models"]:
-        assert set(model) - {"outputs", "aspect_ratios"} == {
+        # task_parameters: the models with a video_edit call template (Seedance family)
+        assert set(model) - {"outputs", "aspect_ratios", "task_parameters"} == {
             "model_id",
             "display_name",
             "task_type",
@@ -220,6 +221,98 @@ async def test_layer_decomposition_search_returns_an_executable_call_template(mo
         "description": "Ordered output URLs: base image first, followed by independently editable transparent layers.",
         "layer_limit": 16,
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("media_type", ["video", "image", "understand", None])
+async def test_input_roles_define_exactly_the_roles_the_rows_carry(_full_registry, media_type):
+    """A bare `role: reference` read without its meaning looked like "not editable"."""
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_model_profiles(media_type=media_type)
+    used = {
+        (slot, spec["role"])
+        for model in catalog["models"]
+        for slot, spec in model.get("inputs", {}).items()
+        if "role" in spec
+    }
+    defined = {(slot, role) for slot, roles in catalog.get("input_roles", {}).items() for role in roles}
+    assert defined == used
+    if not used:
+        assert "input_roles" not in catalog
+
+
+def test_role_descriptions_cover_every_declarable_role():
+    from cfgpu_mcp.adapters.inputs import _ROLES, ROLE_DESCRIPTIONS
+
+    assert {slot: tuple(roles) for slot, roles in ROLE_DESCRIPTIONS.items()} == _ROLES
+    assert all(text.strip() for roles in ROLE_DESCRIPTIONS.values() for text in roles.values())
+
+
+@pytest.mark.asyncio
+async def test_reference_video_role_says_the_prompt_can_make_it_the_edited_clip(_full_registry):
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_model_profiles(required_tasks=["video_edit"])
+    roles = {model["inputs"]["reference_videos"]["role"] for model in catalog["models"]}
+    assert roles == {"reference", "source"}  # both kinds of editor are offered
+    assert "video_edit" in catalog["input_roles"]["reference_videos"]["reference"]
+
+
+def test_task_parameter_templates_name_only_models_that_claim_the_task():
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.service import model as model_service
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    _, task_catalog = model_service._load_task_catalog()
+    for model_id, contracts in model_service._load_task_parameter_contracts(task_catalog).items():
+        adapter = registry.get(model_id)
+        assert adapter is not None and adapter.model_name == model_id, model_id
+        assert set(contracts) <= set(adapter.tasks), model_id
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "doubao-seedance-2-5",
+        "doubao-seedance-2-0",
+        "doubao-seedance-2-0-fast",
+        "doubao-seedance-2-0-mini",
+        "wan-video",
+        "wan-video-fast",
+    ],
+)
+def test_seedance_edit_template_passes_the_preflight_unchanged(model_id):
+    """The template plus the material it requires is a request the billed path accepts."""
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.router import ModelRouter
+    from cfgpu_mcp.service import model as model_service
+    from cfgpu_mcp.task_manager import validate_request
+    from cfgpu_mcp.tool_registry import GenerateVideoInput
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    _, task_catalog = model_service._load_task_catalog()
+    contract = model_service._load_task_parameter_contracts(task_catalog)[model_id]["video_edit"]
+    req = GenerateVideoInput(
+        prompt="把[[src]]中光池里的男子替换为[[hero]]中的角色，镜头运动与背景保持不变",
+        model=model_id,
+        reference_videos=["https://example.com/src.mp4"],
+        video_refs=["src"],
+        reference_images=["https://example.com/hero.png"],
+        image_refs=["hero"],
+        **contract["call_template"],
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    result = validate_request(adapter, req)
+
+    assert not set(result["corrected_args"]) & set(contract["call_template"])
+    assert "[[" not in str(result["payload"])
+    if model_id == "doubao-seedance-2-5":
+        # adaptive + -1 + a reference video leaves the edit sub-task open to upstream.
+        assert result["payload"]["omni_reference_task_type"] == "auto"
 
 
 @pytest.mark.asyncio

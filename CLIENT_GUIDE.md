@@ -849,6 +849,19 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > Nano Banana 会把不支持的比例直接发给上游，现在都改为明确拒绝。`model="auto"` 的预检只有在没有任何模型原样接受时，
 > 才会选一个需要纠正的模型。
 >
+> **上游没有 `adaptive` 的模型，预检会把它钉成实际下发的比例（2026-10-21 起）。** `adaptive` 是统一 Schema 的
+> 默认值，各模型自行解释：Seedance 系、MiniMax-H3 参考生视频原样下发；万相 i2v / videoedit、HappyHorse i2v /
+> video-edit 不发比例，由输入素材决定；其余模型上游没有这个取值，会换成一个具体比例。后一种情况 `validate_only`
+> 一律在 `corrected_args` 里给出 `aspect_ratio`：可灵 O1 / V3 Omni 与 Grok 两款 `16:9`（以前静默替换、不报告），
+> 万相 2.6 / 2.7 t2v / r2v 与 HappyHorse t2v / r2v 早已如此。所以审批卡不会再显示「adaptive」却产出横屏 ——
+> 竖屏素材请显式传 `9:16`。`tool_param_constraints.json` 同步：这些模型的 `aspect_ratio` 选项里去掉了 `adaptive`，
+> 可灵收窄到 `1:1` / `9:16` / `16:9`，`wan2.7-videoedit` 不再有默认值（不填 = 沿用源视频比例）。
+>
+> **视频新增 `4:5` / `5:4` / `9:21` 三个比例（2026-10-21 起）。** 目前只有 HappyHorse t2v / r2v 支持（其 API 的
+> `ratio` 枚举）。其他视频模型都声明了各自的 `aspect_ratios`（Seedance 系、MiniMax-H3、Grok、`cfdream/minimax-h3*`
+> 仍是原来的 6 个），正式调用会在发请求前拒绝，`model="auto"` 会路由到 HappyHorse，`validate_only` 对点名的模型
+> 给出形状最接近的比例（`4:5` → `3:4`、`5:4` → `4:3`、`9:21` → `9:16`；可灵只有三个比例，`4:5` / `5:4` → `1:1`）。
+>
 > **封闭取值的拼写无所谓（2026-09-30 起）。** 大小写、首尾空格不影响：`480P` / `2K`（视频）、`2k` / `1.5k`（图片）、
 > `Fast`、`MP3`、`Happy`、`Female`、`model="minimax-h3"` 都会折成规范写法；画幅比例的 `16：9`（全角冒号）、`16/9`、
 > `16x9` 也按 `16:9` 处理。`validate_only`、正式调用、Agent SDK 与 CLI 行为一致；只有不在枚举里的值（如 `360p`、
@@ -886,6 +899,19 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 让它成为被编辑的那段）；`source` 表示它**永远**是被编辑或续写的那段视频（`wan2.7-i2v` 把它当作续写起点
 > `first_clip`，`wan2.7-videoedit` / `happyhorse-1.0-video-edit` 把它当作源视频）。想「参考这段视频的运镜重新拍」，
 > 不要选 `source` 模型 —— 它会直接续写或改动你给的那段。`model="auto"` 在只给参考视频时会优先 `reference` 模型。
+>
+> **`role` 的含义随目录一起返回：`input_roles`（2026-10-21 起）。** `list_model_profiles` 的返回在
+> `task_catalog` 旁新增 `input_roles: {槽: {role: 说明}}`，只列本次结果里出现过的 role（与 `task_catalog`
+> 只列可见任务同理），每行仍只写取值。起因：agent 只看到 `role: reference`，把它读成「不能编辑」，于是做
+> 「把视频里的人换成参考图角色」时只给了 `source` 编辑模型和「重做首帧再图生视频」两条路，漏掉了 Seedance 系
+> 「参考视频 + 编辑类 prompt」这条 —— 而它恰好最能保留原片的机位、时长与画幅。新增字段，向后兼容。
+>
+> **Seedance 系的 `video_edit` 参数模板（2026-10-21 起）。** `list_model_profiles(required_tasks=["video_edit"])`
+> 现在给 `doubao-seedance-2-5`、`doubao-seedance-2-0` / `-fast` / `-mini`、`wan-video` / `wan-video-fast` 返回
+> `task_parameters.video_edit`：`call_template`（2.5：`aspect_ratio: adaptive` + `duration_seconds: -1`，二者都是
+> 编辑的硬性条件，改成具体比例就变成参考生视频；2.0 系：`aspect_ratio: adaptive`）、`requirements`（至少一个
+> `reference_videos`，2.5 源视频 4–30 秒；prompt 用 `[[handle]]` 点名被编辑的视频和替换用的图，写编辑动词，并写明
+> 哪些不变）与 `notes`。Kling（编辑需 `model_specific.video_list[].refer_type: base`）和 MiniMax-H3 暂无模板。
 
 > **`list_models` 的 `capabilities` 字段已改名为 `tasks`（2026-10-09）**，取值换成与 `list_model_profiles` 相同的
 > canonical task（如 `multi_modal_reference` → `reference_to_video`、`audio_generate` → `synced_audio_output` 或

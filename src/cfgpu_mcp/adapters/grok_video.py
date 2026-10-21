@@ -68,6 +68,14 @@ class GrokVideoAdapter(ModelAdapter):
             payload.update(req.model_specific)
         return payload
 
+    def validation_corrections(self, req: "GenerateVideoInput") -> dict:
+        # The request has no adaptive value, so the schema default is sent as 16:9;
+        # the preflight says so rather than leaving a card that reads "adaptive".
+        corrected = super().validation_corrections(req)
+        if req.aspect_ratio == "adaptive":
+            corrected["aspect_ratio"] = _DEFAULT_RATIO
+        return corrected
+
     _TASK_ID_KEYS = ("taskId", "task_id", "id")
 
     def extract_task_id(self, resp: dict) -> str | None:

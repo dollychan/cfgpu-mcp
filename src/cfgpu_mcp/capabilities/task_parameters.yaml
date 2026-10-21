@@ -53,3 +53,41 @@ models:
         urls:
           description: "Ordered output URLs: base image first, followed by independently editable transparent layers."
           layer_limit: 16
+
+  # Seedance-family video edit (2026-10-21). These models take the clip to edit on the
+  # same reference_videos slot that reference generation uses (inputs role: reference),
+  # so whether a call edits is decided by the prompt and, on 2.5, by ratio/duration.
+  # Without a template an agent looking for "an edit model" saw only `role: reference`
+  # and offered dedicated source-slot editors or a regenerate-from-keyframe route that
+  # cannot keep camera motion or length. Contract source: wan-2-0 and
+  # doubao-seedance-2-5 card.md (全模态子任务 table).
+  doubao-seedance-2-5:
+    video_edit:
+      call_template:
+        aspect_ratio: adaptive
+        duration_seconds: -1
+      requirements:
+        reference_videos:
+          required: true
+          min_items: 1
+          source_seconds: {min: 4, max: 30}
+        prompt: &seedance_edit_prompt
+          required: true
+          guidance: "Name the clip to edit with [[handle]] (video_refs) and any replacement image the same way (image_refs); use an edit verb (替换/修改/增加/删除, replace/change/add/remove); state explicitly what must stay unchanged (camera move, framing, timing, background)."
+      notes:
+        - "aspect_ratio must stay adaptive and duration_seconds -1: any other ratio turns the call into reference generation (a new video, not an edit), and an explicit duration is refused for an edit. The output keeps the source clip's frame and length."
+  doubao-seedance-2-0: &seedance_2_0_edit
+    video_edit:
+      call_template:
+        aspect_ratio: adaptive
+      requirements:
+        reference_videos:
+          required: true
+          min_items: 1
+        prompt: *seedance_edit_prompt
+      notes:
+        - "adaptive keeps the source clip's frame. To keep its length, set duration_seconds to the clip's length (4-15); -1 lets the model choose."
+  doubao-seedance-2-0-fast: *seedance_2_0_edit
+  doubao-seedance-2-0-mini: *seedance_2_0_edit
+  wan-video: *seedance_2_0_edit
+  wan-video-fast: *seedance_2_0_edit

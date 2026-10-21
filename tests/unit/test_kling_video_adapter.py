@@ -123,7 +123,15 @@ def test_pinning_with_audio_does_not_displace_the_resolution_fallback():
     assert adapter.validation_corrections(req) == {
         "resolution": "1080p",
         "with_audio": False,
+        "aspect_ratio": "16:9",  # the schema default adaptive has no Kling spelling
     }
+
+
+def test_an_explicit_ratio_is_not_pinned():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", aspect_ratio="9:16")
+
+    assert "aspect_ratio" not in adapter.validation_corrections(req)
 
 
 def test_text_only_payload_has_no_media_arrays():

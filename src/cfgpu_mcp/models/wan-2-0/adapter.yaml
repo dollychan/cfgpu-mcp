@@ -52,3 +52,8 @@ poll_config:
   max_interval: 20
   backoff_factor: 1.3
   default_timeout: 3000
+
+# The card's ratio table (inherited by every Seedance model extending this one).
+# Declared once 4:5 / 5:4 / 9:21 joined the schema for HappyHorse: undeclared would
+# mean "every schema ratio", and those three would reach upstream and be rejected.
+aspect_ratios: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"]

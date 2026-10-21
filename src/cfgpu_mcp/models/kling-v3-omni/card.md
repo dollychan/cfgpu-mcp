@@ -48,7 +48,7 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
 | 统一 Schema 字段 | Kling 字段 | 映射说明 |
 |------------------|------------|----------|
 | prompt | prompt | 直接透传 |
-| resolution + aspect_ratio | size | 映射成像素 `宽x高`，`aspect_ratio=adaptive` 时按 16:9 处理 |
+| resolution + aspect_ratio | size | 映射成像素 `宽x高`。可灵只有 16:9 / 9:16 / 1:1，没有 adaptive：`aspect_ratio=adaptive` 按 16:9 下发，`validate_only` 在 `corrected_args` 里钉成 `16:9` |
 | quality_tier | mode | `best` → `pro`，其余 → `std` |
 | duration_seconds | seconds | 转成字符串透传；不支持 `-1` 智能时长 |
 | with_audio | sound | `true` → `on`，`false` → `off` |

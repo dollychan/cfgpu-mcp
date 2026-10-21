@@ -41,7 +41,7 @@ HappyHorse-1.0-R2V 支持参考生视频，更加稳定的主体与场景参考�
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `resolution` | string | `1080P` | 分辨率：`480P`、`720P` 或 `1080P`，adapter 自动大写 |
-| `aspect_ratio` | string | `16:9` | 宽高比：16:9、9:16、1:1、4:3、3:4、4:5、5:4 |
+| `aspect_ratio` | string | `16:9` | 宽高比：16:9、9:16、1:1、4:3、3:4、4:5、5:4、9:21、21:9 |
 | `duration_seconds` | integer | 5 | 视频时长（秒） |
 | `watermark` | boolean | `false` | 写入 `parameters.watermark`；上游仅在省略时默认 `true` |
 | `model_specific.parameters.seed` | integer | - | 随机数种子，取值范围 [0, 2147483647] |

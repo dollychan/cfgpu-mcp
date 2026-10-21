@@ -45,7 +45,7 @@
 | 统一 Schema 字段 | Kling 字段 | 映射说明 |
 |------------------|------------|----------|
 | prompt | prompt | 直接透传 |
-| resolution + aspect_ratio | size | 映射成像素 `宽x高`，`aspect_ratio=adaptive` 时按 16:9 处理 |
+| resolution + aspect_ratio | size | 映射成像素 `宽x高`。可灵只有 16:9 / 9:16 / 1:1，没有 adaptive：`aspect_ratio=adaptive` 按 16:9 下发，`validate_only` 在 `corrected_args` 里钉成 `16:9` |
 | quality_tier | mode | `best` → `pro`，其余 → `std` |
 | duration_seconds | seconds | 转成字符串透传；不支持 `-1` 智能时长 |
 | with_audio | sound | `true` → `on`，`false` → `off`。**preflight 会把它钉进 `corrected_args`**：`sound` 在本模型是真实请求字段（万相 2.6/2.7、HappyHorse 压根不发它），上游默认 `off`，统一 Schema 却默认 `true` 且总会发送，起决定作用的是一个与模型自身相反的静默默认值。不钉住的话，按调用方原始参数生成的审批卡上根本没有音频这一行。源视频原声另由 `video_list[].keep_original_sound`（`yes` / `no`，经 `model_specific`）控制 |

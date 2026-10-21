@@ -49,6 +49,10 @@ _MODE_MAP = {"fast": "std", "balanced": "std", "best": "pro"}
 # default and an edit is requested by overriding the whole array via
 # `model_specific={"video_list": [{"video_url": ..., "refer_type": "base"}]}`.
 _DEFAULT_REFER_TYPE = "feature"
+
+# Kling's `size` has no adaptive value (the documented ratios are 16:9 / 9:16 / 1:1),
+# so the schema default `adaptive` is sent as this — and pinned in corrected_args.
+_ADAPTIVE_RATIO = "16:9"
 _BASE_REFER_TYPE = "base"
 
 
@@ -80,7 +84,7 @@ class KlingVideoAdapter(ModelAdapter):
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
         assert isinstance(req, GenerateVideoInput)
-        ratio = req.aspect_ratio if req.aspect_ratio != "adaptive" else "16:9"
+        ratio = req.aspect_ratio if req.aspect_ratio != "adaptive" else _ADAPTIVE_RATIO
         size = _SIZE_MAP.get(
             (self.resolve_resolution(req), ratio), _SIZE_MAP[("720p", "16:9")]
         )
@@ -145,6 +149,11 @@ class KlingVideoAdapter(ModelAdapter):
         """
         corrected = super().validation_corrections(req)
         corrected["with_audio"] = req.with_audio
+        # `adaptive` has no upstream spelling here and is sent as 16:9. Pinned for the
+        # same reason as the sound switch: a card showing "adaptive" promises a frame
+        # that follows the input, and a portrait source would come back landscape.
+        if req.aspect_ratio == "adaptive":
+            corrected["aspect_ratio"] = _ADAPTIVE_RATIO
         return corrected
 
     @staticmethod

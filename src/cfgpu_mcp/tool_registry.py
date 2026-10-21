@@ -856,7 +856,9 @@ class GenerateVideoInput(BaseModel):
         description="Content to exclude from the output. Supported by selected models; "
         "compatible video models send it in their input envelope.",
     )
-    aspect_ratio: Folded("16:9", "9:16", "1:1", "4:3", "3:4", "21:9", "adaptive", ratio=True) = Field(
+    aspect_ratio: Folded(
+        "16:9", "9:16", "1:1", "4:3", "3:4", "4:5", "5:4", "21:9", "9:21", "adaptive", ratio=True
+    ) = Field(
         default="adaptive",
         description="'adaptive' automatically matches input image ratio",
     )

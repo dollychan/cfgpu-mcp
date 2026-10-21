@@ -36,3 +36,7 @@ poll_config:
   max_interval: 20
   backoff_factor: 1.3
   default_timeout: 600
+
+# Unverified: no reference lists the ratio set. These are the six it accepted before
+# 4:5 / 5:4 / 9:21 joined the schema, kept so that addition changes nothing here.
+aspect_ratios: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"]
