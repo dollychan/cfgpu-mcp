@@ -5134,6 +5134,16 @@ covers:
     author: MiniMax
     url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/i2va.mp4
     usage: reference-only
+  case-video-h3-voice-edit/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/r2va.mp4
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/r2va.mp4
+    usage: reference-only
+  style-3d-collectible-toy/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 378
+    author: '@Genematicai'
+    url: https://x.com/Genematicai/status/2050654848216109429
+    usage: reference-only
   style-architecture-space/1.jpg:
     origin: freestylefly/awesome-gpt-image-2 gallery case 331
     author: 苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）
@@ -5184,20 +5194,35 @@ covers:
     author: 苍何原创实测（公众号文章《我逆向了 329 条 GPT-Image2 提示词模板，全部开源！》）
     url: ''
     usage: reference-only
+  style-ink-double-exposure-poster/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 359
+    author: '@Goodmanprotocol'
+    url: https://x.com/Goodmanprotocol/status/2049002279051895243
+    usage: reference-only
   style-nature-science-poster/1.jpg:
     origin: freestylefly/awesome-gpt-image-2 gallery case 339
     author: '@berryxia'
     url: https://x.com/berryxia/status/2048251413147644100
     usage: reference-only
+  style-personalized-beauty-report/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 353
+    author: '@liyue_ai'
+    url: https://x.com/liyue_ai/status/2048667226195317219
+    usage: reference-only
   style-poster-layout-system/1.jpg:
-    origin: freestylefly/awesome-gpt-image-2 gallery case 5
-    author: 小红书号6455654397
-    url: ''
+    origin: freestylefly/awesome-gpt-image-2 gallery case 345
+    author: '@bananaprompts'
+    url: https://x.com/bananaprompts/status/2048541390900994476
     usage: reference-only
   style-product-commerce-visual/1.jpg:
     origin: freestylefly/awesome-gpt-image-2 gallery case 373
     author: '@xpg0970'
     url: https://x.com/xpg0970/status/2050108279385419965
+    usage: reference-only
+  style-realistic-photography/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 377
+    author: '@xRahultripathi'
+    url: https://x.com/xRahultripathi/status/2050677614168391716
     usage: reference-only
   style-scene-storytelling/1.jpg:
     origin: freestylefly/awesome-gpt-image-2 gallery case 330
@@ -5209,10 +5234,25 @@ covers:
     author: '@hqmank'
     url: https://x.com/hqmank/status/2048587150544028084
     usage: reference-only
+  style-sports-campaign-poster/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 350
+    author: '@ryanpp27'
+    url: https://x.com/ryanpp27/status/2048602248524214542
+    usage: reference-only
   style-street-accident-moment/1.jpg:
     origin: freestylefly/awesome-gpt-image-2 gallery case 376
     author: '@Shinning1010'
     url: https://x.com/Shinning1010/status/2050693240253214894
+    usage: reference-only
+  style-ui-screenshot-system/1.jpg:
+    origin: freestylefly/awesome-gpt-image-2 gallery case 17
+    author: '@wory37303852'
+    url: https://x.com/wory37303852
+    usage: reference-only
+  style-video-brand-promo/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/brand-promo-video-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/brand-promo-video-generator.gif
     usage: reference-only
   style-video-cartoon-3d-short/1.webp:
     origin: MiniMax-AI/MiniMax-H3 assets/3d-animation-short-generator.gif
@@ -5223,6 +5263,11 @@ covers:
     origin: MiniMax-AI/MiniMax-H3 assets/handdrawn-live-video-generator.gif
     author: MiniMax
     url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/handdrawn-live-video-generator.gif
+    usage: reference-only
+  style-video-minimal-product-ad/1.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/minimalist-product-ad-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/minimalist-product-ad-generator.gif
     usage: reference-only
   style-video-mv-lyric-typography/1.webp:
     origin: MiniMax-AI/MiniMax-H3 assets/music-video-subtitle-generator.gif
@@ -5249,6 +5294,11 @@ covers:
     author: MiniMax
     url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/papercraft-stop-motion-explainer.gif
     usage: reference-only
+  tpl-video-brand-promo-15s/2.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/brand-promo-video-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/brand-promo-video-generator.gif
+    usage: reference-only
   tpl-video-cartoon-3d-shot/2.webp:
     origin: MiniMax-AI/MiniMax-H3 assets/3d-animation-short-generator.gif
     author: MiniMax
@@ -5263,6 +5313,11 @@ covers:
     origin: MiniMax-AI/MiniMax-H3 assets/handdrawn-live-video-generator.gif
     author: MiniMax
     url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/handdrawn-live-video-generator.gif
+    usage: reference-only
+  tpl-video-minimal-product-ad-10s/2.webp:
+    origin: MiniMax-AI/MiniMax-H3 assets/minimalist-product-ad-generator.gif
+    author: MiniMax
+    url: https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/minimalist-product-ad-generator.gif
     usage: reference-only
   tpl-video-mv-shot-script/2.webp:
     origin: MiniMax-AI/MiniMax-H3 assets/music-video-subtitle-generator.gif

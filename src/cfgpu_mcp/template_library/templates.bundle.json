@@ -1,6 +1,6 @@
 {
  "catalog_version": 2,
- "checksum": "644b5a4f6ae46b0117f955fad1efcead4e50fda0e2d379c604b22777d0c3f821",
+ "checksum": "e2f3659fca81d0c9bbd8ef804be874644f3154d210a2c15be46c9e1330627ce1",
  "facets": {
   "genres": [
    "animation-short",
@@ -41677,7 +41677,13 @@
   },
   {
    "content": "在[原视频]的基础上编辑，5 秒：原视频的人物样貌、构图、黄昏暖光、草坡和背景里的白色小羊全部保留，只让画面中央穿粉色西装、抱着小黑羊的金发年轻男人开口说话。原视频的背景音乐保留，压在台词下面持续播放；他的音色参考[音色参考音频]，平静温和。\n写实摄影风格，镜头缓慢推近。他望向前方，轻声说 [[say S1: Follow the wind, live free.]] 说话时重心微微移动，稳稳抱着怀里的小黑羊。接着说 [[say S1: Leave worries behind, enjoy the moment.]] 话音一落，嘴唇合上，露出放松的微笑，下巴不再动；随后他把目光转向远处的地平线，手指轻抚小黑羊的毛，镜头停在这个画面直到结束。\n[[sound: 原视频的背景音乐持续铺底，上面是他平静清晰的男声台词]]",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/r2va.mp4",
+    "path": "covers/case-video-h3-voice-edit/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/r2va.mp4",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": null,
    "genres": [
@@ -41876,7 +41882,13 @@
   },
   {
    "content": "适用：用于高级收藏玩具、头像公仔、潮玩角色和 3D 展示图。\nUse when: Use for premium collectible figures, avatar toys, blind-box characters, and 3D display renders.\n要点 / Guidance:\n- Preserve face and outfit anchors from the reference.\n- Specify material, packaging, base, lighting, and collectible scale.\n- 保留参考图中的脸和服装锚点。\n- 指定材质、包装、底座、光线和收藏比例。\n避坑 / Pitfalls:\n- Avoid generic toy bodies without identity details.\n- Keep packaging text minimal and accurate.\n- 避免没有身份细节的通用玩具。\n- 包装文字保持少量且准确。\n可配合的模板骨架 / Skeletons: tpl-style-character-1, tpl-style-character-2, tpl-style-character-3",
-   "cover": null,
+   "cover": {
+    "author": "@Genematicai",
+    "origin": "freestylefly/awesome-gpt-image-2 gallery case 378",
+    "path": "covers/style-3d-collectible-toy/1.jpg",
+    "source_url": "https://x.com/Genematicai/status/2050654848216109429",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": null,
    "genres": [
@@ -42718,7 +42730,13 @@
   },
   {
    "content": "适用：用于诗意人像海报、水墨氛围和文化主题视觉。\nUse when: Use for poetic portrait posters, ink atmospheres, and layered cultural visuals.\n要点 / Guidance:\n- Blend portrait silhouette, ink texture, atmosphere, and negative space.\n- Keep composition quiet, premium, and readable.\n- 融合人像剪影、水墨质感、氛围和留白。\n- 保持构图克制、高级、可读。\n避坑 / Pitfalls:\n- Avoid cheap fantasy collage and overloaded scenery.\n- Use subtle text or no text unless required.\n- 避免廉价奇幻拼贴和景物堆叠。\n- 非必要时减少文字。\n可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8",
-   "cover": null,
+   "cover": {
+    "author": "@Goodmanprotocol",
+    "origin": "freestylefly/awesome-gpt-image-2 gallery case 359",
+    "path": "covers/style-ink-double-exposure-poster/1.jpg",
+    "source_url": "https://x.com/Goodmanprotocol/status/2049002279051895243",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": null,
    "genres": [
@@ -42943,7 +42961,13 @@
   },
   {
    "content": "适用：用于美妆推荐、肤质报告、导购助手和生活方式商品卡片。\nUse when: Use for beauty recommendations, skin reports, shopping assistants, and lifestyle product cards.\n要点 / Guidance:\n- Use a report-like hierarchy with diagnosis, recommendation, and product cards.\n- Keep product images, labels, and ratings aligned.\n- 使用诊断、推荐和商品卡片的报告层级。\n- 对齐商品图、标签和评分。\n避坑 / Pitfalls:\n- Avoid medical claims and unreadable dense notes.\n- Keep recommendation logic simple.\n- 避免医疗化结论和难读小字。\n- 保持推荐逻辑清楚。\n可配合的模板骨架 / Skeletons: tpl-style-product-1, tpl-style-product-2",
-   "cover": null,
+   "cover": {
+    "author": "@liyue_ai",
+    "origin": "freestylefly/awesome-gpt-image-2 gallery case 353",
+    "path": "covers/style-personalized-beauty-report/1.jpg",
+    "source_url": "https://x.com/liyue_ai/status/2048667226195317219",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": null,
    "genres": [
@@ -42983,10 +43007,10 @@
   {
    "content": "适用：用于活动海报、电影海报、封面和社媒传播视觉。\nUse when: Use for event posters, movie posters, covers, and social campaign visuals.\n要点 / Guidance:\n- Lock subject, headline, layout, palette, and aspect ratio.\n- Make the title hierarchy and primary visual clear.\n- 锁定主体、标题、版式、配色和比例。\n- 突出标题层级和主视觉。\n避坑 / Pitfalls:\n- Avoid mixed moodboards or process sheets when asking for one finished poster.\n- Constrain extra text and decorative symbols.\n- 需要成品海报时，避免生成拼贴展示板。\n- 约束多余文字和装饰符号。\n可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8",
    "cover": {
-    "author": "小红书号6455654397",
-    "origin": "freestylefly/awesome-gpt-image-2 gallery case 5",
+    "author": "@bananaprompts",
+    "origin": "freestylefly/awesome-gpt-image-2 gallery case 345",
     "path": "covers/style-poster-layout-system/1.jpg",
-    "source_url": null,
+    "source_url": "https://x.com/bananaprompts/status/2048541390900994476",
     "usage": "reference-only"
    },
    "dialect_variants": {},
@@ -43071,7 +43095,13 @@
   },
   {
    "content": "适用：用于人像、街拍、商品摄影和电影感写实。\nUse when: Use for portraits, street photos, product photography, and cinematic realism.\n要点 / Guidance:\n- Specify camera distance, lens, light source, texture, background, and motion.\n- Use believable imperfections for documentary realism.\n- 指定机位、镜头、光源、质感、背景和动作。\n- 加入可信的小瑕疵增强纪实感。\n避坑 / Pitfalls:\n- Avoid over-polished plastic skin unless commercial beauty is required.\n- Add negative constraints for hands, text, and anatomy when needed.\n- 商业美妆之外，避免过度磨皮。\n- 需要时加入手部、文字、结构类负面约束。\n可配合的模板骨架 / Skeletons: tpl-style-photo-1, tpl-style-photo-2",
-   "cover": null,
+   "cover": {
+    "author": "@xRahultripathi",
+    "origin": "freestylefly/awesome-gpt-image-2 gallery case 377",
+    "path": "covers/style-realistic-photography/1.jpg",
+    "source_url": "https://x.com/xRahultripathi/status/2050677614168391716",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": null,
    "genres": [
@@ -43202,7 +43232,13 @@
   },
   {
    "content": "适用：用于运动品牌 Campaign、运动员海报和运动产品视觉。\nUse when: Use for sports brand campaigns, athlete posters, and product-led sport visuals.\n要点 / Guidance:\n- Define sport, athlete pose, hero prop, title, and brand palette.\n- Use dramatic light, clean composition, and readable data overlays.\n- 定义运动项目、姿态、核心道具、标题和品牌色。\n- 使用强光影、干净构图和可读数据层。\n避坑 / Pitfalls:\n- Avoid wrong equipment and noisy collage.\n- Keep the athlete and hero prop visually dominant.\n- 避免错误运动器材和杂乱拼贴。\n- 让运动员和核心道具占据主导。\n可配合的模板骨架 / Skeletons: tpl-style-poster-1, tpl-style-poster-2, tpl-style-poster-3, tpl-style-poster-4, tpl-style-poster-5, tpl-style-poster-6, tpl-style-poster-7, tpl-style-poster-8",
-   "cover": null,
+   "cover": {
+    "author": "@ryanpp27",
+    "origin": "freestylefly/awesome-gpt-image-2 gallery case 350",
+    "path": "covers/style-sports-campaign-poster/1.jpg",
+    "source_url": "https://x.com/ryanpp27/status/2048602248524214542",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": null,
    "genres": [
@@ -43286,7 +43322,13 @@
   },
   {
    "content": "适用：用于 App 截图、仪表盘、社媒截图和直播界面。\nUse when: Use for app screens, dashboards, social screenshots, and live interface mockups.\n要点 / Guidance:\n- Lock platform, aspect ratio, layout hierarchy, and exact visible text.\n- Specify UI chrome such as status bars, tabs, action rows, or comment layers.\n- 锁定平台、比例、层级和画面文字。\n- 明确状态栏、Tab、操作区、评论层等 UI 元素。\n避坑 / Pitfalls:\n- Avoid vague platform names and generic app mockups.\n- Constrain text readability and platform-specific details.\n- 避免平台描述过泛。\n- 约束文字可读性和平台特征。\n可配合的模板骨架 / Skeletons: tpl-style-ui-1, tpl-style-ui-2, tpl-style-ui-3",
-   "cover": null,
+   "cover": {
+    "author": "@wory37303852",
+    "origin": "freestylefly/awesome-gpt-image-2 gallery case 17",
+    "path": "covers/style-ui-screenshot-system/1.jpg",
+    "source_url": "https://x.com/wory37303852",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": null,
    "genres": [
@@ -43324,7 +43366,13 @@
   },
   {
    "content": "适用：新品发布、官网展示、社媒推广的 15–30 秒品牌片。不适合长篇剧情片，也不适合在没有授权素材时仿造真实品牌标识。\n事实先行：LOGO、字体、品牌色、产品界面、包装、吉祥物等带身份识别的元素，只用用户提供或官方来源的原件；不重绘、不近似、不生成\"看起来像\"的替代品。产品名称、功能、指标、口号与官方一致，拿不准的写成概念文案并标注。\n叙事脊柱按产品类型：\n- AI / SaaS：用户意图 → 思考或规划 → 能力 → 执行 → 有用输出 → 证明 → LOGO。\n- 实体产品：英雄展示 → 交互 → 功能特写 → 使用场景 → 结果 → LOGO。\n- 服务 / 公司：背景 → 流程 → 证据 → 成果 → 承诺 → LOGO。\n- 图像主导品牌：真实影像 → 视觉母题 → 利益点 → 情绪回报 → LOGO。\n节拍：15 秒 5–8 个，30 秒 8–12 个；每个节拍写清起止时间、视觉主导元素、主要动作、展示的产品证明、文案与停留、色彩状态、入场与出场转场、动作意图（铺垫/预备/冲击/制动/稳定）。\n动效语言：由产品动作、光标路径、界面流、光线、滚动内容或物体边缘驱动转场；全片 2–5 个色彩状态；每个节拍一个主动作；2–3 个高能峰值配安静的制动时刻；LOGO 与文案保留安全区。\n避免：虚假 HUD、随意玻璃卡片、装饰性文字墙、未经证实的指标、全片同一种缓动、用抽象特效掩盖空洞的产品叙事。\n语言：旁白和画面文案按品牌受众与投放平台定，不机械跟随聊天语言。\n声音：默认用视频模型的原生音频生成品牌安全的纯音乐与界面音效；需要可替换的旁白或精确时长音乐时才单独生成，避免两条音轨重复。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/brand-promo-video-generator.gif",
+    "path": "covers/style-video-brand-promo/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/brand-promo-video-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": "minimax-h3-brand-promo-video-generator",
    "genres": [
@@ -43451,7 +43499,13 @@
   },
   {
    "content": "适用：耳机、手表、数码配件、小家电、香薰、潮玩、食品等实体产品的 5–15 秒广告短片。不适合达人口播、复杂屏幕演示。\n叙事脊柱（三选一）：\n- 发布型（默认）：留白开场 → 主推款建立主视觉 → 材质/结构特写 → 产品自然动作 → 款式或色彩关系 → 文案收束。\n- 功能触感型：静置 → 触发交互 → 功能动作 → 细节放大 → 使用感受 → 收束。适合有开合、旋转、磁吸、灯光、折叠的产品。\n- 色彩家族型：主推款单独出场 → 其他颜色轻量进入 → 形成秩序 → 全套收束。适合多色多款。\n节奏：每个节拍只有一个主动作，次级元素延后出现。5 秒片 1 个小峰值 + 1 次稳定收束；10 秒片 1–2 个峰值 + 1–2 次停顿；15 秒片 2–3 个峰值 + 2 次停顿。\n转场：由产品自身驱动——边缘高光、开合、旋转、滑入、款式排列的几何变化；不用无意义闪白、随机粒子。\n产品本色是硬约束：所有画面保持原图的本体颜色、点缀色和材质；\"高级感\"只改背景、光线、构图，不把产品改成白色或银灰。\n开场：尽快给出有吸引力的产品动作或刁钻视角（例如从结构内部旋转露出、沿轮廓滑出），不要空白等待。\n背景：白色科技风用纯净白背景，不用镜面反光台面、玻璃台面；或黑底轮廓光。\n画面文字：\n- 英文短句，3–5 个词，单行，同一时刻只出现一条；不做上下两行、主副标题。\n- 两段配色：白底时前半黑或深灰、后半用产品主色；黑底时前半白、后半产品主色。\n- 进入方式：前半先淡入或轻滑入，后半随后进入，前半在同一行内轻微位移让位；不要完全静止，也不要弹跳霓虹。\n- 位置在画面上下居中区域，靠左或靠右成为构图的一部分，不放底部字幕位。\n- 文字容易出错时减少次数：10 秒片通常只保留一次中段文字和一次结尾文字。\n多款式：先定一个主推款，其余款式只在过渡或结尾出现；不做商品墙、九宫格、平铺。\n禁止：网格、分屏、拼贴、画框、分镜板式画面；伪科技界面；装饰性文字墙；未经确认的数据；全片同一种缓动。\n配乐方向：约 100 BPM 的科技感器乐，清脆 pluck、空气感底噪、kick 与 sub-bass 卡点、木质打击；结尾 0.5 秒内收住，只留 pluck 余音；无人声。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/minimalist-product-ad-generator.gif",
+    "path": "covers/style-video-minimal-product-ad/1.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/minimalist-product-ad-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": "minimax-h3-minimalist-product-ad-generator",
    "genres": [
@@ -46620,7 +46674,13 @@
   },
   {
    "content": "[画幅]，15秒，[品牌名称]宣传短片，面向[目标受众]。品牌色[品牌色]，LOGO 使用[LOGO素材]原件，不重绘。\n[[shot 0-2]] 品牌钩子——[开场钩子]。\n[[shot 2-4]] 用户意图或场景建立——[使用场景]。\n[[shot 4-6.5]] 产品机制——[产品如何工作]，由[驱动转场的真实元素]带入下一镜。\n[[shot 6.5-9]] 能力或应用——[核心能力]。\n[[shot 9-11.5]] 输出或证明——[真实输出或证据]。\n[[shot 11.5-13]] 产品回报——[用户得到的结果]。\n[[shot 13-15]] LOGO 定格与行动号召 [[text: [行动号召]]]，留足安全区，停留可读。\n动效：每个节拍一个主动作，峰值放在[峰值节拍]；色彩状态不超过 5 个。\n[[sound: [声音方案]]]",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/brand-promo-video-generator.gif",
+    "path": "covers/tpl-video-brand-promo-15s/2.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/brand-promo-video-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": "minimax-h3-brand-promo-video-generator",
    "genres": [
@@ -47204,7 +47264,13 @@
   },
   {
    "content": "[画幅]，10秒，[背景风格]的极简产品广告片。产品为[产品名称]，本体颜色严格保持[产品主色]，不重新上色。叙事：[叙事脊柱]。\n[[shot 0-1.5]] [开场产品动作]，干净留白，无文字。\n[[shot 1.5-4]] 主视角建立，[主视觉角度]，产品边缘高光滑过。\n[[shot 4-6]] 材质与功能特写，[材质或结构细节]；画面内出现单行英文 [[text: [中段文案]]]，前半[前半文字颜色]、后半[产品主色]，前半先淡入，后半随后轻滑入，前半在同一行内轻微让位。\n[[shot 6-8]] [产品自然动作]，动作完成后制动停顿。\n[[shot 8-10]] 单一全画幅产品收束，单行英文 [[text: [结尾文案]]] 稳定停留、清晰可读，位于画面上下居中区域靠[文字位置]。\n全程同一时刻只有一条单行文字；不出现网格、分屏、拼贴或商品墙；不用镜面反光台面。\n[[music: [配乐方向]]]，节拍与产品动作和文字出现对齐。",
-   "cover": null,
+   "cover": {
+    "author": "MiniMax",
+    "origin": "MiniMax-AI/MiniMax-H3 assets/minimalist-product-ad-generator.gif",
+    "path": "covers/tpl-video-minimal-product-ad-10s/2.webp",
+    "source_url": "https://github.com/MiniMax-AI/MiniMax-H3/blob/main/assets/minimalist-product-ad-generator.gif",
+    "usage": "reference-only"
+   },
    "dialect_variants": {},
    "family": "minimax-h3-minimalist-product-ad-generator",
    "genres": [
