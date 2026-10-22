@@ -1,0 +1,38 @@
+# MiniMax H3 Max through the CFGPU video API.
+#
+# The 极速生成 version of MiniMax H3 (cfgpu-minimax-h3/reference): the same V2
+# create / query contract on the same CFGPU routes, so everything not listed here
+# is inherited. What differs, per the reference: resolution 480P / 768P (no 2K),
+# duration 5–15 (no 4), and an `extra.prompt_expansion_mode` option H3 lacks
+# (MinimaxH3MaxAdapter).
+extends: cfgpu-minimax-h3
+adapter_id: cfgpu-minimax-h3-max
+display_name: "MiniMax H3 Max"
+cfgpu_model_id: minimax-turbo-h3
+model_name: minimax-h3-max
+
+# Reference: 「MiniMax-H3-Max：480P、768P（默认 768P，不支持 2K）」.
+resolutions: [480p, 768p]
+default_resolution: 768p
+# Reference: 「MiniMax-H3-Max：5~15（不支持 4 秒）」. The default (5) is already inside.
+min_duration_seconds: 5
+max_duration_seconds: 15
+
+# Same labels and field layout as H3, plus the server rewrite H3 does not have:
+# `extra.prompt_expansion_mode` defaults to balanced, so a prompt carrying [[...]]
+# markup turns it off unless the caller asked for it (D-DL10).
+prompt_dialect: h3-max
+
+# Every input slot and scenario is H3's (the reference lists t2v, first/last frame
+# and reference image / video / audio for Max). voice_reference_video is left out:
+# that task is opt-in after verification, and it has been verified on H3 only.
+tasks:
+  - text_to_video
+  - image_to_video
+  - first_last_frame
+  - reference_to_video
+  - video_edit
+  - synced_audio_output
+
+# H3 is the declared balanced default; a variant must not inherit that decision.
+default_for: []

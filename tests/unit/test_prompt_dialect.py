@@ -90,6 +90,7 @@ _DECLARED = {
     "doubao-seedance-2-0-mini": "seedance",
     "doubao-seedance-2-5": "seedance",
     "MiniMax-H3": "h3",
+    "minimax-h3-max": "h3-max",
     "cfdream/minimax-h3": "h3",
     "cfdream/minimax-h3-r2v": "h3-ref2va",
     "wan2.7-r2v": "wan27-r2v",

@@ -225,7 +225,7 @@ class MinimaxH3Adapter(ModelAdapter):
             self.resolve_resolution(req) == "480p"
             and self.resolve_duration_seconds(req) < 5
         ):
-            return False, "MiniMax-H3 在 480p 分辨率下 duration_seconds 最小为 5 秒"
+            return False, f"{self.model_name} 在 480p 分辨率下 duration_seconds 最小为 5 秒"
 
         if not req.prompt.strip():
             return False, f"{self.model_name} requires at least one non-empty text prompt"
@@ -245,4 +245,52 @@ class MinimaxH3Adapter(ModelAdapter):
         # value the schema admits is one this API accepts — the Literal on
         # GenerateVideoInput.aspect_ratio and MiniMax's `ratio` enum are the same
         # seven values — so there is nothing left to gate.
+        return True, ""
+
+
+#: ``extra.prompt_expansion_mode`` values the reference documents for MiniMax-H3-Max.
+#: Anything else — ``balance``, ``""``, a bool, another key — is explicitly called out
+#: there as not to be sent, so it is refused locally rather than billed and rejected.
+_PROMPT_EXPANSION_MODES = ("disabled", "balanced", "quality")
+
+
+@register_python_adapter
+class MinimaxH3MaxAdapter(MinimaxH3Adapter):
+    """``MiniMax-H3-Max`` (CFGPU ``minimax-turbo-h3``): H3's wire contract plus ``extra``.
+
+    The tier and duration differences are declarative (adapter.yaml). The one payload
+    difference is ``extra.prompt_expansion_mode``, the server-side prompt rewrite, which
+    the unified ``prompt_extend`` drives: unset sends nothing (upstream default
+    ``balanced``), ``false`` → ``disabled``, ``true`` → ``balanced``. ``quality`` is
+    reachable through ``model_specific={"extra": {...}}``, which is merged last and wins.
+    """
+
+    adapter_id = "cfgpu-minimax-h3-max"
+
+    def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:
+        assert isinstance(req, GenerateVideoInput)
+        payload = super().build_payload(req)
+        if req.prompt_extend is not None and "extra" not in (req.model_specific or {}):
+            payload["extra"] = {
+                "prompt_expansion_mode": "balanced" if req.prompt_extend else "disabled",
+            }
+        return payload
+
+    def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
+        ok, reason = super().supports(req)
+        if not ok:
+            return False, reason
+        extra = (req.model_specific or {}).get("extra")
+        if extra is None:
+            return True, ""
+        modes = ", ".join(_PROMPT_EXPANSION_MODES)
+        if (
+            not isinstance(extra, dict)
+            or set(extra) - {"prompt_expansion_mode"}
+            or ("prompt_expansion_mode" in extra and extra["prompt_expansion_mode"] not in _PROMPT_EXPANSION_MODES)
+        ):
+            return False, (
+                f"{self.model_name}: model_specific.extra only accepts "
+                f"prompt_expansion_mode ∈ {{{modes}}}"
+            )
         return True, ""

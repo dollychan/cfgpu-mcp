@@ -113,16 +113,15 @@ def test_omitting_resolution_rules_no_model_out(registry):
         assert "resolution" not in reason, f"{adapter.model_name}: {reason}"
 
 
-# ── 768p / 2k are MiniMax H3's alone ─────────────────────────────────────────
+# ── 768p / 2k are MiniMax H3's alone (768p shared with H3 Max) ─────────────────────────────────────────
 
 
 def test_minimax_h3_is_the_only_model_offering_768p_and_2k(registry):
-    offering = {
-        a.model_name
-        for a in _video_adapters(registry)
-        if a.resolutions and {"768p", "2k"} & set(a.resolutions)
-    }
-    assert offering == {"MiniMax-H3"}
+    def offering(tier):
+        return {a.model_name for a in _video_adapters(registry) if a.resolutions and tier in a.resolutions}
+
+    assert offering("768p") == {"MiniMax-H3", "minimax-h3-max"}
+    assert offering("2k") == {"MiniMax-H3"}
 
 
 def test_minimax_h3_sends_its_tiers_verbatim_apart_from_case(registry):
