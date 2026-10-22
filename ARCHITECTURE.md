@@ -893,7 +893,7 @@ src/cfgpu_mcp/
 │   ├── audio_tts.py            语音合成（task_type=audio）：SeedTTSAdapter（豆包 seed-tts，异步）+ MiniMaxSpeechAdapter（MiniMax speech，同步）
 │   ├── vision_chat.py          视觉理解（task_type=understand）：QwenVisionAdapter（Qwen3-VL，OpenAI 兼容 chat/completions，同步，返回文本）
 │   ├── cfdream_h3.py           MiniMax H3（provider: comfy，自建 comfy-gateway）：t2v/i2v/flf2v 与 r2v 两套权重各一个类，互斥的素材槽位在 supports() 里判，使 auto 能在两者间路由
-│   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立；id 键名同理三种拼法一起读（`task_id` / CFGPU 实际应答的 `taskId` / 信封内的 `id`，见 _TASK_ID_KEYS）。`MinimaxH3MaxAdapter`（`minimax-h3-max`）是它的子类，只多一个 `extra.prompt_expansion_mode`：由统一的 `prompt_extend` 驱动（不传不发 = 上游默认 balanced，false → disabled，true → balanced），`model_specific.extra` 最后合并、优先；`extra` 只认这一个键和三个取值，其余在 `supports()` 本地拒绝（上游文档明确列为不要发送的写法）。档位/时长差异全在 YAML 里声明。它的方言 `h3-max` = `h3` + `rewrite: prompt_extend`，所以带 `[[...]]` 的 prompt 在未设置时关闭扩写（D-DL10）
+│   ├── minimax_h3.py           MiniMax-H3（provider: cfgpu）：MiniMax 视频 V2 的扁平 content[] + role 形状，走 CFGPU 统一视频路由；创建平铺 / 查询套 task，_task() 对两种都成立；id 键名同理三种拼法一起读（`task_id` / CFGPU 实际应答的 `taskId` / 信封内的 `id`，见 _TASK_ID_KEYS）
 │   └── __init__.py             导入 seedance_video、seedream、async_image、happyhorse_video、kling_video、wan_video、grok_video、audio_tts、vision_chat、cfdream_h3、minimax_h3 触发注册
 │
 ├── capabilities/
@@ -984,9 +984,9 @@ src/cfgpu_mcp/
 │   ├── cfgpu-minimax-h3/
 │   │   ├── adapter.yaml        MiniMax-H3（provider: cfgpu，内建；逐请求令牌对它生效），resolutions: [480p, 768p, 2k] + default_resolution: 768p，4–15s
 │   │   ├── card.md
-│   │   └── reference           MiniMax 视频 V2 上游 API 文档（H3 / H3 Max 共用）
-│   ├── cfgpu-minimax-h3-max/
-│   │   ├── adapter.yaml        MiniMax H3 Max（公开 id minimax-h3-max，CFGPU id minimax-turbo-h3），extends: cfgpu-minimax-h3；resolutions: [480p, 768p]、5–15s、prompt_dialect: h3-max、default_for: []
+│   │   └── reference           MiniMax 视频 V2 上游 API 文档
+│   ├── cfgpu-minimax-turbo-h3/
+│   │   ├── adapter.yaml        MiniMax H3 Turbo（降级版 H3，公开 id 与 CFGPU id 均为 minimax-turbo-h3），extends: cfgpu-minimax-h3；仅 resolutions 不同：[480p, 768p]；default_for: []
 │   │   └── card.md
 │   ├── grok-imagine-video-1-5/
 │   │   ├── adapter.yaml        Grok Imagine Video 1.5，GrokVideoAdapter（公开 id cf-imagine-video-1.5）

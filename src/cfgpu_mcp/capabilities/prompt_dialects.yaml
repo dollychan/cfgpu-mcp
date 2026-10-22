@@ -97,14 +97,6 @@ dialects:
       fl2va: "How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot {last_index}) aligns with the {duration}-second mark of the target video."
       l2va: "How the reference pictures align with the target video — <Picture 1> (from [Shot {last_index}]) aligns with the {duration}-second mark of the target video."
 
-  # MiniMax H3 Max: H3's notation, plus a server-side prompt expansion (on by default,
-  # V: cfgpu-minimax-h3/reference `extra.prompt_expansion_mode`) that is turned off
-  # when the prompt carries markup (D-DL10).
-  h3-max:
-    version: 1
-    extends: h3
-    rewrite: prompt_extend
-
   # The ref2va weights ignore any reference the prompt does not tag, without an error
   # (cfdream-minimax-h3-r2v/card.md) — so an untagged one is refused here instead. Its
   # full-reference layout keeps the body in `detailed_description` (V: ref-en.txt);

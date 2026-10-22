@@ -813,15 +813,13 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 
 > **视频 `resolution` 的默认值是「不传」（2026-09-07 起）。** 统一枚举现在是
 > `480p / 720p / 768p / 1080p / 2k / 4k`，schema 默认值是 `None` —— 不传时各模型用**自己**的默认档
-> （除 `MiniMax-H3` / `minimax-h3-max` 为 `768p` 外都是 `720p`）。这不是省事，是因为 `resolution` 会参与 `supports()`
+> （除 `MiniMax-H3` / `minimax-turbo-h3` 为 `768p` 外都是 `720p`）。这不是省事，是因为 `resolution` 会参与 `supports()`
 > 筛选：写死一个全队默认值，等于让不提供该档的模型被一个你根本没提的参数挤出 `model="auto"`。
 > **所以：需要哪一档就显式传哪一档，不需要就别传** —— 传了会同时缩小可选模型集合。
 >
-> `MiniMax-H3` 支持 `480p` / `768p` / `2k` 三档；其中 `2k` 为它独有，`768p` 只有它和 `minimax-h3-max` 提供，`720p` / `1080p` 不支持。
-> `minimax-h3-max`（MiniMax H3 Max，极速生成版，接口与 `MiniMax-H3` 相同）只有 `480p` / `768p`（不支持 `2k`），
-> 时长 5–15 秒（不支持 4 秒）；`prompt_extend` 映射到上游 `extra.prompt_expansion_mode`（`false` → `disabled`，
-> `true` → `balanced`，不传 = 上游默认 `balanced`），质量优先扩写用 `model_specific={"extra": {"prompt_expansion_mode": "quality"}}`。
-> 它不是任何档位的 `auto` 默认落点，也未声明 `voice_reference_video`（未经验证）。
+> `MiniMax-H3` 支持 `480p` / `768p` / `2k` 三档；其中 `2k` 为它独有，`768p` 只有它和 `minimax-turbo-h3` 提供，`720p` / `1080p` 不支持。
+> `minimax-turbo-h3`（MiniMax H3 Turbo，`MiniMax-H3` 的降级版，接口相同）只有 `480p` / `768p`（不支持 `2k`），
+> 其余参数约束与 `MiniMax-H3` 一致；它不是任何档位的 `auto` 默认落点。
 > 从前它们是靠「传 720p/1080p、内部翻译成 768P/2K」实现的，也就是说要 720p 的调用方被静默按
 > 768P 计费；现在原生档位是一等取值，原样上行（只做大写）。输入视频 / 输出视频分别按秒计费：
 > 480P 为 0.1 元、768P 为 0.2 元、2K 为 0.5 元；输入图片则分别为 0.04 / 0.08 / 0.1 元每张（前 5 张免费）。
