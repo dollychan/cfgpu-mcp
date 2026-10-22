@@ -36,7 +36,7 @@
 | size | string | - | 1280x720 | 输出像素尺寸 `宽x高`，由统一 Schema 的 `resolution` + `aspect_ratio` 映射得到 |
 | mode | string | - | pro | 生成模式：`std`（标准）/ `pro`（高质量），由 `quality_tier` 映射（`best` → `pro`）；adapter 总是显式发送 |
 | seconds | string | ✓ | "5" | 视频时长（秒），字符串形式，取值 3–10。视频编辑（`refer_type=base`）时不传，时长跟随源视频 |
-| sound | string | - | off | 是否生成有声视频：`on` / `off`，由 `with_audio` 直接映射 |
+| sound | string | - | off | 是否生成有声视频：`on` / `off`，由 `with_audio` 映射；**有 `video_list` 时只能为 `off`** |
 | image_list | array | - | - | 图片输入数组，元素为 `{"image": url, "type": ...}`；`type` 可为 `first_frame`（首帧）/ `end_frame`（尾帧），**省略 `type` 即普通参考图**，带 `type` 与不带 `type` 的元素可混用 |
 | video_list | array | - | - | 视频输入数组，元素为 `{"video_url": url, "refer_type": ...}`；`refer_type` 为 `feature`（参考其运镜/风格）或 `base`（作为被编辑的源视频） |
 
@@ -48,21 +48,21 @@
 | resolution + aspect_ratio | size | 映射成像素 `宽x高`。可灵只有 16:9 / 9:16 / 1:1，没有 adaptive：`aspect_ratio=adaptive` 按 16:9 下发，`validate_only` 在 `corrected_args` 里钉成 `16:9` |
 | quality_tier | mode | `best` → `pro`，其余 → `std` |
 | duration_seconds | seconds | 转成字符串透传；不支持 `-1` 智能时长 |
-| with_audio | sound | `true` → `on`，`false` → `off`。**preflight 会把它钉进 `corrected_args`**：`sound` 在本模型是真实请求字段（万相 2.6/2.7、HappyHorse 压根不发它），上游默认 `off`，统一 Schema 却默认 `true` 且总会发送，起决定作用的是一个与模型自身相反的静默默认值。不钉住的话，按调用方原始参数生成的审批卡上根本没有音频这一行。源视频原声另由 `video_list[].keep_original_sound`（`yes` / `no`，经 `model_specific`）控制 |
-| first_frame | image_list[] | `{"image": url, "type": "first_frame"}` |
+| with_audio | sound | `true` → `on`，`false` → `off`。**preflight 会把它钉进 `corrected_args`**：`sound` 在本模型是真实请求字段（万相 2.6/2.7、HappyHorse 压根不发它），上游默认 `off`，统一 Schema 却默认 `true` 且总会发送，起决定作用的是一个与模型自身相反的静默默认值。不钉住的话，按调用方原始参数生成的审批卡上根本没有音频这一行。**带参考视频时一律下发 `off`**，并钉成 `with_audio: false`（上游报 `sound must be off when video_list is provided`；`with_audio` 默认 `true`，所以不拒绝，否则不提声音的默认请求也会失败）。源视频原声另由 `model_specific.keep_original_sound`（`yes` / `no`，也接受 `true` / `false`）控制 |
+| first_frame | image_list[] | `{"image": url, "type": "first_frame"}`；有参考视频时不可用（图片只能作参考图，`supports()` 拒绝） |
 | last_frame | image_list[] | `{"image": url, "type": "end_frame"}`；需与 `first_frame` 同时给出 |
 | reference_images | image_list[] | `{"image": url}`（不带 `type`） |
-| reference_videos | video_list[] | `{"video_url": url, "refer_type": "feature"}` |
+| reference_videos | video_list[] | `{"video_url": url, "refer_type": "feature"}`；`model_specific.refer_type` / `keep_original_sound` 应用到每一项 |
 | reference_audios | -（不支持） | 请求体没有音频输入槽位，`supports()` 直接拒绝 |
-| model_specific | -（合并到顶层） | 末位合并，可覆盖上述字段 |
+| model_specific | -（合并到顶层） | `refer_type` / `keep_original_sound` 由 adapter 取出、写进 `video_list` 每一项，不发到顶层；其余键末位合并，可覆盖上述字段 |
 
-**视频编辑（`refer_type=base`）**：统一 Schema 只有一个 `reference_videos` 槽位，无法区分「参考」与「编辑」，因此默认按 `feature` 下发。要做视频编辑，用 `model_specific` 整体覆盖 `video_list`：
+**视频编辑（`refer_type=base`）**：统一 Schema 只有一个 `reference_videos` 槽位，无法区分「参考」与「编辑」，因此默认按 `feature` 下发。要做视频编辑，源视频照常放 `reference_videos`，再加 `model_specific.refer_type`：
 
 ```json
-{"model_specific": {"video_list": [{"video_url": "https://src.mp4", "refer_type": "base"}]}}
+{"reference_videos": ["https://src.mp4"], "model_specific": {"refer_type": "base", "keep_original_sound": "yes"}}
 ```
 
-adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `refer_type=base` 则移除 `seconds`（除非调用方在 `model_specific` 里显式给了 `seconds`）。
+`supports()` 在本地校验：`refer_type` 只能是 `feature` / `base`，`keep_original_sound` 只能是 `yes` / `no`（或布尔）；二者都需要 `reference_videos`；`base` 要求**恰好一段**参考视频；不能与 `model_specific.video_list` 整体覆盖同时出现。整体覆盖 `video_list` 的旧写法仍可用。adapter 在合并之后检查最终 `video_list`，含 `refer_type=base` 则移除 `seconds`（除非调用方在 `model_specific` 里显式给了 `seconds`）。`list_model_profiles(required_tasks=["video_edit"])` 给出这一写法的 `task_parameters` 模板。
 
 **分辨率 → size 对照（部分）：**
 
@@ -80,8 +80,9 @@ adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `ref
 - 支持文生视频、图生视频（首帧）、首尾帧、多图/视频参考、视频编辑。
 - 不支持 `reference_audios`：请求体没有音频输入槽位。
 - `last_frame` 必须与 `first_frame` 同时给出（尾帧 `end_frame` 依赖首帧）。
+- 有参考视频时，图片只能作参考图（`reference_images`），不能作首帧 / 尾帧；参考视频 + 参考图的组合正常放行。
 - 需要显式时长 3–10 秒，不支持 `duration_seconds=-1`。
-- 上游参数说明称「有参考视频时 `sound` 只能为 `off`」，但未经验证，且价格表列有「有视频输入的有声视频」一档，故 adapter 不改写，`with_audio` 原样映射，由上游裁决。
+- 有参考视频时 `sound` 只能为 `off`（2026-10-22 实测：`sound must be off when video_list is provided`），adapter 一律下发 `off` 并在 `validate_only` 钉成 `with_audio: false`。
 
 ## 异步任务流程
 
@@ -138,7 +139,7 @@ adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `ref
 }
 ```
 
-### 视频编辑（base 源视频 + 风格图，无 `seconds`）
+### 视频编辑（base 源视频 + 参考图，无 `seconds`）
 
 ```json
 {
@@ -146,14 +147,17 @@ adapter 在合并 `model_specific` 之后检查最终 `video_list`，若含 `ref
   "prompt": "把背景换成沙滩",
   "mode": "pro",
   "size": "1920x1080",
+  "sound": "off",
   "video_list": [
-    { "video_url": "https://src.mp4", "refer_type": "base" }
+    { "video_url": "https://src.mp4", "refer_type": "base", "keep_original_sound": "yes" }
   ],
   "image_list": [
-    { "image": "https://style.png", "type": "first_frame" }
+    { "image": "https://style.png" }
   ]
 }
 ```
+
+参考图不带 `type`：**只要有参考视频（`feature` 或 `base`），图片就只能作为参考图**，不能是首帧 / 尾帧。
 
 ## 响应结构
 

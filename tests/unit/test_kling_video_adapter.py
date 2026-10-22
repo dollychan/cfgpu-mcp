@@ -239,13 +239,80 @@ def test_model_specific_merged_and_overrides():
     assert payload["watermark_info"] == {"enabled": True}
 
 
-def test_with_audio_maps_to_sound_even_with_a_reference_video():
-    """No rewrite: the doc's "only off with a video" is unverified, and the price
-    table bills a with-video sounded tier — upstream decides, not the adapter."""
+_VID = "https://ref.mp4"
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"reference_videos": [_VID]},
+        {"model_specific": {"video_list": [{"video_url": _VID, "refer_type": "base"}]}},
+    ],
+    ids=["reference_videos", "video_list-override"],
+)
+def test_sound_is_off_whenever_a_video_is_sent_and_the_preflight_says_so(extra):
+    """Upstream: "sound must be off when video_list is provided" (seen on O1; the V3
+    Omni reference says the same). with_audio defaults to True, so this is the
+    default request — sent off, and pinned so the approval card shows no sound."""
     adapter = _make_adapter()
-    req = GenerateVideoInput(prompt="x", reference_videos=["https://ref.mp4"])
+    req = GenerateVideoInput(prompt="x", **extra)
+
+    assert adapter.build_payload(req)["sound"] == "off"
+    assert adapter.validation_corrections(req)["with_audio"] is False
+    assert adapter.supports(req)[0]  # sent off, never refused: the default must not fail
+
+
+def test_an_explicit_model_specific_sound_still_wins():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", reference_videos=[_VID], model_specific={"sound": "on"})
     assert adapter.build_payload(req)["sound"] == "on"
     assert adapter.validation_corrections(req)["with_audio"] is True
+
+
+# ── model_specific.refer_type / keep_original_sound ──────────────────────────
+
+def test_refer_type_base_marks_the_reference_video_as_the_edited_clip():
+    adapter = _make_adapter()
+    req = GenerateVideoInput(prompt="x", reference_videos=[_VID], model_specific={"refer_type": "base"})
+    payload = adapter.build_payload(req)
+
+    assert payload["video_list"] == [{"video_url": _VID, "refer_type": "base"}]
+    assert "refer_type" not in payload       # consumed, never a top-level key
+    assert "seconds" not in payload          # an edit's length follows the source
+
+
+@pytest.mark.parametrize("value,wire", [("yes", "yes"), ("NO", "no"), (True, "yes"), (False, "no")])
+def test_keep_original_sound_rides_each_video_entry(value, wire):
+    adapter = _make_adapter()
+    req = GenerateVideoInput(
+        prompt="x", reference_videos=[_VID, "https://b.mp4"], model_specific={"keep_original_sound": value}
+    )
+    payload = adapter.build_payload(req)
+
+    assert [v["keep_original_sound"] for v in payload["video_list"]] == [wire, wire]
+    assert [v["refer_type"] for v in payload["video_list"]] == ["feature", "feature"]
+    assert "keep_original_sound" not in payload
+    assert payload["sound"] == "off"         # generated sound; the source's is the switch above
+
+
+@pytest.mark.parametrize(
+    "extra,fragment",
+    [
+        ({"model_specific": {"refer_type": "edit"}, "reference_videos": [_VID]}, "refer_type must be one of"),
+        ({"model_specific": {"keep_original_sound": "maybe"}, "reference_videos": [_VID]}, "yes / no"),
+        ({"model_specific": {"refer_type": "base"}}, "none were given"),
+        ({"model_specific": {"refer_type": "base"}, "reference_videos": [_VID, "https://b.mp4"]}, "one source clip"),
+        (
+            {"model_specific": {"refer_type": "base", "video_list": [{"video_url": _VID}]}, "reference_videos": [_VID]},
+            "both video_list",
+        ),
+    ],
+    ids=["bad-refer-type", "bad-keep", "no-video", "two-videos-base", "with-video_list"],
+)
+def test_video_entry_shorthands_are_checked_locally(extra, fragment):
+    adapter = _make_adapter()
+    ok, reason = adapter.supports(GenerateVideoInput(prompt="x", **extra))
+    assert not ok and fragment in reason
 
 
 # ── parse_response ───────────────────────────────────────────────────────────
@@ -499,3 +566,32 @@ def test_v3_omni_payload_uses_own_model_id():
     assert payload["model"] == "kling-v3-omni"
     assert payload["size"] == "1920x1080"
     assert payload["mode"] == "pro"
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"reference_videos": [_VID], "first_frame": "https://f.png"},
+        {"reference_videos": [_VID], "first_frame": "https://f.png", "last_frame": "https://l.png"},
+        {"reference_videos": [_VID], "first_frame": "https://f.png", "model_specific": {"refer_type": "base"}},
+        {"first_frame": "https://f.png", "model_specific": {"video_list": [{"video_url": _VID}]}},
+    ],
+    ids=["feature+first", "feature+first+last", "base+first", "video_list-override+first"],
+)
+def test_a_video_input_takes_images_only_as_references_not_frames(extra):
+    adapter = _make_adapter()
+    ok, reason = adapter.supports(GenerateVideoInput(prompt="x", **extra))
+    assert not ok and "reference_images" in reason
+
+
+@pytest.mark.parametrize("refer_type", ["feature", "base"])
+def test_reference_images_ride_alongside_a_video(refer_type):
+    adapter = _make_adapter()
+    req = GenerateVideoInput(
+        prompt="x",
+        reference_videos=[_VID],
+        reference_images=["https://r.png"],
+        model_specific={"refer_type": refer_type},
+    )
+    assert adapter.supports(req)[0]
+    assert adapter.build_payload(req)["image_list"] == [{"image": "https://r.png"}]

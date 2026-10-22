@@ -562,23 +562,23 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "kling-video-o1", "writable": "false" },
-        "first_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: first_frame}]" },
+        "first_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: first_frame}]; not with reference_videos (with a video an image can only be a reference image)" },
         "last_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: end_frame}]; requires first_frame" },
-        "reference_images": { "type": "url[]", "writable": "true", "note": "-> image_list[{image}] with no type; may be mixed with first_frame / last_frame" },
+        "reference_images": { "type": "url[]", "writable": "true", "note": "-> image_list[{image}] with no type; may be mixed with first_frame / last_frame, or with reference_videos (the only way an image rides with a video)" },
         "image_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per reference image, same order and length as reference_images (\"\" for an item not named); resolves [[handle]] in prompt into the selected model's own reference wording. Never sent upstream" },
-        "reference_videos": { "type": "url[]", "writable": "true", "note": "-> video_list[{video_url, refer_type: feature}]; for an edit override video_list via model_specific with refer_type: base" },
+        "reference_videos": { "type": "url[]", "writable": "true", "note": "-> video_list[{video_url, refer_type}]; refer_type defaults to feature, set model_specific.refer_type: base to edit the clip" },
         "video_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per reference video, same order and length as reference_videos (\"\" for an item not named); resolves [[handle]] in prompt into the selected model's own reference wording. Never sent upstream" },
         "reference_audios": { "type": "url[]", "writable": "false", "note": "NOT supported (no audio input slot in the request body); adapter rejects" },
         "audio_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per reference audio, same order and length as reference_audios (\"\" for an item not named); resolves [[handle]] in prompt into the selected model's own reference wording. Never sent upstream" },
         "aspect_ratio": { "type": "enum", "options": ["1:1", "9:16", "16:9"], "default": "16:9", "writable": "true", "note": "Kling documents 16:9 / 9:16 / 1:1 only and has no adaptive; mapped with resolution to a pixel size. adaptive (the schema default) is sent as 16:9 and pinned in validate_only corrected_args" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped with aspect_ratio to a pixel size string" },
         "duration_seconds": { "type": "enum", "options": [3, 4, 5, 6, 7, 8, 9, 10], "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects)" },
-        "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off" },
+        "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off; with any reference video upstream allows only off, so it is sent off and validate_only pins with_audio: false (the source audio is model_specific.keep_original_sound)" },
         "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }], "default": "balanced", "writable": "true", "note": "maps to Kling mode: best -> pro, fast/balanced -> std" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level (can override size/mode/seconds); no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "refer_type": { "type": "enum", "options": ["feature", "base"], "default": "feature", "writable": "true", "note": "applied to every video_list entry built from reference_videos: feature = reference its motion/style, base = it is the clip being edited (exactly one reference video; output length follows the source, seconds not sent)" }, "keep_original_sound": { "type": "enum", "options": ["yes", "no"], "writable": "true", "note": "applied to every video_list entry: keep the reference video's own audio; omitted = upstream default. Requires reference_videos" } }, "note": "refer_type / keep_original_sound are consumed by the adapter (never sent top-level) and cannot be combined with a model_specific.video_list override; every other key is merged at top level (can override size/mode/seconds/sound)" }
       }
     },
     {
@@ -591,23 +591,23 @@
       "args": {
         "prompt": { "type": "text", "writable": "true" },
         "model": { "type": "string", "value": "kling-v3-omni", "writable": "false" },
-        "first_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: first_frame}]" },
+        "first_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: first_frame}]; not with reference_videos (with a video an image can only be a reference image)" },
         "last_frame": { "type": "url", "writable": "true", "note": "-> image_list[{image, type: end_frame}]; requires first_frame" },
-        "reference_images": { "type": "url[]", "writable": "true", "note": "-> image_list[{image}] with no type; may be mixed with first_frame / last_frame" },
+        "reference_images": { "type": "url[]", "writable": "true", "note": "-> image_list[{image}] with no type; may be mixed with first_frame / last_frame, or with reference_videos (the only way an image rides with a video)" },
         "image_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per reference image, same order and length as reference_images (\"\" for an item not named); resolves [[handle]] in prompt into the selected model's own reference wording. Never sent upstream" },
-        "reference_videos": { "type": "url[]", "writable": "true", "note": "-> video_list[{video_url, refer_type: feature}]; for an edit override video_list via model_specific with refer_type: base" },
+        "reference_videos": { "type": "url[]", "writable": "true", "note": "-> video_list[{video_url, refer_type}]; refer_type defaults to feature, set model_specific.refer_type: base to edit the clip" },
         "video_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per reference video, same order and length as reference_videos (\"\" for an item not named); resolves [[handle]] in prompt into the selected model's own reference wording. Never sent upstream" },
         "reference_audios": { "type": "url[]", "writable": "false", "note": "NOT supported (no audio input slot in the request body); adapter rejects" },
         "audio_refs": { "type": "string_array", "writable": "false", "note": "one caller handle per reference audio, same order and length as reference_audios (\"\" for an item not named); resolves [[handle]] in prompt into the selected model's own reference wording. Never sent upstream" },
         "aspect_ratio": { "type": "enum", "options": ["1:1", "9:16", "16:9"], "default": "16:9", "writable": "true", "note": "Kling documents 16:9 / 9:16 / 1:1 only and has no adaptive; mapped with resolution to a pixel size. adaptive (the schema default) is sent as 16:9 and pinned in validate_only corrected_args" },
         "resolution": { "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "writable": "true", "note": "mapped with aspect_ratio to a pixel size string" },
         "duration_seconds": { "type": "enum", "options": [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "default": 5, "writable": "true", "note": "explicit only; -1 (smart) NOT supported (adapter rejects)" },
-        "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off" },
+        "with_audio": { "type": "boolean", "default": true, "writable": "true", "note": "maps to sound: on / off; with any reference video upstream allows only off, so it is sent off and validate_only pins with_audio: false (the source audio is model_specific.keep_original_sound)" },
         "quality_tier": { "type": "enum", "options": [{ "label": "低", "value": "fast" }, { "label": "中", "value": "balanced" }, { "label": "高", "value": "best" }], "default": "balanced", "writable": "true", "note": "maps to Kling mode: best -> pro, fast/balanced -> std" },
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level (can override size/mode/seconds); no documented sub-fields" }
+        "model_specific": { "type": "object", "fields": { "refer_type": { "type": "enum", "options": ["feature", "base"], "default": "feature", "writable": "true", "note": "applied to every video_list entry built from reference_videos: feature = reference its motion/style, base = it is the clip being edited (exactly one reference video; output length follows the source, seconds not sent)" }, "keep_original_sound": { "type": "enum", "options": ["yes", "no"], "writable": "true", "note": "applied to every video_list entry: keep the reference video's own audio; omitted = upstream default. Requires reference_videos" } }, "note": "refer_type / keep_original_sound are consumed by the adapter (never sent top-level) and cannot be combined with a model_specific.video_list override; every other key is merged at top level (can override size/mode/seconds/sound)" }
       }
     },
     {

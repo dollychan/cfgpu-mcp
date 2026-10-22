@@ -39,7 +39,7 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
 | size | string | - | 1280x720 | 输出像素尺寸 `宽x高`，由统一 Schema 的 `resolution` + `aspect_ratio` 映射得到 |
 | mode | string | - | std | 生成模式：`std` / `pro`，由 `quality_tier` 映射（`best` → `pro`） |
 | seconds | string | ✓ | "5" | 视频时长（秒），字符串形式。视频编辑（`refer_type=base`）时不传，时长跟随源视频 |
-| sound | string | - | - | 是否生成有声视频：`on` / `off`，由 `with_audio` 映射 |
+| sound | string | - | off | 是否生成有声视频：`on` / `off`，由 `with_audio` 映射；**有 `video_list` 时只能为 `off`** |
 | image_list | array | - | - | 图片输入数组，元素为 `{"image": url, "type": ...}`；`type` 可为 `first_frame` / `end_frame`，省略 `type` 即普通参考图 |
 | video_list | array | - | - | 视频输入数组，元素为 `{"video_url": url, "refer_type": ...}`；`refer_type` 为 `feature`（参考其运镜/风格）或 `base`（被编辑的源视频） |
 
@@ -51,15 +51,15 @@ Kling-V3-Omni 是全能多模态版本，将文/图生视频、视频编辑以�
 | resolution + aspect_ratio | size | 映射成像素 `宽x高`。可灵只有 16:9 / 9:16 / 1:1，没有 adaptive：`aspect_ratio=adaptive` 按 16:9 下发，`validate_only` 在 `corrected_args` 里钉成 `16:9` |
 | quality_tier | mode | `best` → `pro`，其余 → `std` |
 | duration_seconds | seconds | 转成字符串透传；不支持 `-1` 智能时长 |
-| with_audio | sound | `true` → `on`，`false` → `off` |
-| first_frame | image_list[] | `{"image": url, "type": "first_frame"}` |
+| with_audio | sound | `true` → `on`，`false` → `off`；带参考视频时一律 `off` 并钉成 `with_audio: false`（同 `kling-video-o1`），源视频原声用 `model_specific.keep_original_sound` |
+| first_frame | image_list[] | `{"image": url, "type": "first_frame"}`；有参考视频时不可用（图片只能作参考图，`supports()` 拒绝） |
 | last_frame | image_list[] | `{"image": url, "type": "end_frame"}`；需与 `first_frame` 同时给出 |
 | reference_images | image_list[] | `{"image": url}`（不带 `type`） |
-| reference_videos | video_list[] | `{"video_url": url, "refer_type": "feature"}` |
+| reference_videos | video_list[] | `{"video_url": url, "refer_type": "feature"}`；`model_specific.refer_type` / `keep_original_sound` 应用到每一项 |
 | reference_audios | -（不支持） | 请求体没有音频输入槽位 |
-| model_specific | -（合并到顶层） | 末位合并，可覆盖上述字段 |
+| model_specific | -（合并到顶层） | `refer_type` / `keep_original_sound` 由 adapter 取出、写进 `video_list` 每一项，不发到顶层；其余键末位合并，可覆盖上述字段 |
 
-**视频编辑（`refer_type=base`）**：默认按 `feature` 下发，要做编辑用 `model_specific` 整体覆盖 `video_list`（详见 `kling-video-o1` 卡片）。
+**视频编辑（`refer_type=base`）**：默认按 `feature` 下发；源视频放 `reference_videos`，加 `model_specific: {"refer_type": "base"}` 即为编辑（可加 `keep_original_sound`），校验规则详见 `kling-video-o1` 卡片。
 
 ## 能力与限制
 

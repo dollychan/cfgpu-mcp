@@ -157,7 +157,7 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     assert catalog["models"] == sorted(catalog["models"], key=lambda model: model["model_id"])
 
     for model in catalog["models"]:
-        # task_parameters: the models with a video_edit call template (Seedance family)
+        # task_parameters: the models with a video_edit call template (Seedance family, Kling)
         assert set(model) - {"outputs", "aspect_ratios", "task_parameters"} == {
             "model_id",
             "display_name",
@@ -281,9 +281,11 @@ def test_task_parameter_templates_name_only_models_that_claim_the_task():
         "doubao-seedance-2-0-mini",
         "wan-video",
         "wan-video-fast",
+        "kling-video-o1",
+        "kling-v3-omni",
     ],
 )
-def test_seedance_edit_template_passes_the_preflight_unchanged(model_id):
+def test_edit_template_passes_the_preflight_unchanged(model_id):
     """The template plus the material it requires is a request the billed path accepts."""
     from cfgpu_mcp.adapters.registry import AdapterRegistry
     from cfgpu_mcp.router import ModelRouter
@@ -313,6 +315,9 @@ def test_seedance_edit_template_passes_the_preflight_unchanged(model_id):
     if model_id == "doubao-seedance-2-5":
         # adaptive + -1 + a reference video leaves the edit sub-task open to upstream.
         assert result["payload"]["omni_reference_task_type"] == "auto"
+    if model_id.startswith("kling"):
+        assert result["payload"]["video_list"][0]["refer_type"] == "base"
+        assert result["payload"]["sound"] == "off"
 
 
 @pytest.mark.asyncio

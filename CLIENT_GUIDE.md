@@ -654,9 +654,11 @@ cfgpu generate video "首帧变尾帧" --model kling-video-o1 -r 720p \
   --last-frame https://example.com/end.png
 cfgpu generate video "跟随参考视频运镜" --model kling-v3-omni -r 1080p \
   --reference-videos https://example.com/ref.mp4
-# 视频编辑（把源视频当 base）：统一 Schema 无「编辑 vs 参考」之分，用 model_specific 覆盖 video_list
-#   {"video_list": [{"video_url": "https://src.mp4", "refer_type": "base"}]}
-#   此时 seconds 不下发，时长跟随源视频
+# 视频编辑（把源视频当 base）：统一 Schema 无「编辑 vs 参考」之分，源视频照常放 reference_videos，
+#   再加 model_specific {"refer_type": "base"}（可加 "keep_original_sound": "yes" 保留原声）
+#   此时 seconds 不下发，时长跟随源视频；只能一段视频
+# 有参考视频时（feature 或 base），图片只能走 --reference-images，不能当首帧 / 尾帧
+# 带参考视频时 sound 只能为 off：一律下发 off，validate_only 钉成 with_audio=false
 # 不支持 --reference-audios（请求体没有音频输入槽位）；--last-frame 必须与 --first-frame 同时给出
 
 # 万相 2.7（wan-2-7-t2v）— 文生视频，支持电影级分镜叙事；需显式时长（不支持 -1 智能时长）；
@@ -911,7 +913,15 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `task_parameters.video_edit`：`call_template`（2.5：`aspect_ratio: adaptive` + `duration_seconds: -1`，二者都是
 > 编辑的硬性条件，改成具体比例就变成参考生视频；2.0 系：`aspect_ratio: adaptive`）、`requirements`（至少一个
 > `reference_videos`，2.5 源视频 4–30 秒；prompt 用 `[[handle]]` 点名被编辑的视频和替换用的图，写编辑动词，并写明
-> 哪些不变）与 `notes`。Kling（编辑需 `model_specific.video_list[].refer_type: base`）和 MiniMax-H3 暂无模板。
+> 哪些不变）与 `notes`。MiniMax-H3 暂无模板。
+>
+> **Kling 的视频编辑开关与声音（2026-10-22 起）。** 可灵 O1 / V3 Omni 新增两个 `model_specific` 字段：`refer_type`
+> （`feature` / `base`，`base` = 这段参考视频就是被编辑的源视频）与 `keep_original_sound`（`yes` / `no`，也接受布尔），
+> adapter 把它们写进由 `reference_videos` 生成的每个 `video_list` 项，不再需要用 `model_specific.video_list` 整体覆盖、
+> 重复写一遍 URL（旧写法仍可用，但不能与这两个字段同时出现）。`base` 要求恰好一段参考视频；**只要有参考视频，图片就只能作参考图**
+> （`reference_images`），带首帧 / 尾帧会被拒绝，参考视频 + 参考图照常放行。均在发请求前本地拒绝。`video_edit` 模板随之覆盖两款可灵：`model_specific: {refer_type: base}`。另外，**带参考视频时 `sound` 只能为
+> `off`**（上游报 `sound must be off when video_list is provided`）：`with_audio` 默认 `true`，所以不拒绝，而是一律下发 `off`、
+> `validate_only` 把 `with_audio` 钉成 `false`；想保留源视频原声请用 `keep_original_sound`。
 
 > **`list_models` 的 `capabilities` 字段已改名为 `tasks`（2026-10-09）**，取值换成与 `list_model_profiles` 相同的
 > canonical task（如 `multi_modal_reference` → `reference_to_video`、`audio_generate` → `synced_audio_output` 或

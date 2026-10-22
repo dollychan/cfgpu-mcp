@@ -43,17 +43,32 @@ _RATIO_BY_SIZE: dict[str, str] = {size: ratio for (_res, ratio), size in _SIZE_M
 # Unified quality_tier → Kling generation mode.
 _MODE_MAP = {"fast": "std", "balanced": "std", "best": "pro"}
 
-# `video_list[].refer_type`: "feature" borrows motion/camera/style from the video,
-# "base" makes it the footage being edited. The unified schema has a single
-# `reference_videos` slot with no edit/reference distinction, so reference is the
-# default and an edit is requested by overriding the whole array via
-# `model_specific={"video_list": [{"video_url": ..., "refer_type": "base"}]}`.
-_DEFAULT_REFER_TYPE = "feature"
-
 # Kling's `size` has no adaptive value (the documented ratios are 16:9 / 9:16 / 1:1),
 # so the schema default `adaptive` is sent as this — and pinned in corrected_args.
 _ADAPTIVE_RATIO = "16:9"
+
+# `video_list[].refer_type`: "feature" borrows motion/camera/style from the video,
+# "base" makes it the footage being edited. The unified schema has a single
+# `reference_videos` slot with no edit/reference distinction, so reference is the
+# default and an edit is requested with `model_specific={"refer_type": "base"}` —
+# a Kling-only switch the adapter consumes and applies to each `video_list` entry,
+# so the URL stays in `reference_videos` (a template need not carry a placeholder).
+# `keep_original_sound` (yes / no) rides the same way. Overriding the whole array
+# via `model_specific={"video_list": [...]}` still works, but not together with
+# either shorthand: two statements of one entry would have to be reconciled.
+_DEFAULT_REFER_TYPE = "feature"
 _BASE_REFER_TYPE = "base"
+_REFER_TYPES = (_DEFAULT_REFER_TYPE, _BASE_REFER_TYPE)
+_VIDEO_ENTRY_KEYS = ("refer_type", "keep_original_sound")
+
+
+def _yes_no(value: Any) -> str | None:
+    """``keep_original_sound`` is upstream's yes / no; a boolean means the same thing."""
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    if isinstance(value, str) and value.strip().lower() in ("yes", "no"):
+        return value.strip().lower()
+    return None
 
 
 @register_python_adapter
@@ -98,10 +113,14 @@ class KlingVideoAdapter(ModelAdapter):
         for url in (req.reference_images or []):
             image_list.append({"image": url})
 
-        video_list = [
-            {"video_url": url, "refer_type": _DEFAULT_REFER_TYPE}
-            for url in (req.reference_videos or [])
-        ]
+        model_specific = dict(req.model_specific or {})
+        entry_fields = {
+            "refer_type": model_specific.pop("refer_type", None) or _DEFAULT_REFER_TYPE,
+        }
+        keep = model_specific.pop("keep_original_sound", None)
+        if keep is not None:
+            entry_fields["keep_original_sound"] = _yes_no(keep)
+        video_list = [{"video_url": url, **entry_fields} for url in (req.reference_videos or [])]
 
         payload: dict = {
             "model": self.cfgpu_model_id,   # Only place cfgpu_model_id is used
@@ -109,14 +128,13 @@ class KlingVideoAdapter(ModelAdapter):
             "size": size,
             "mode": _MODE_MAP.get(req.quality_tier, "std"),
             "seconds": str(self.resolve_duration_seconds(req)),
-            "sound": "on" if req.with_audio else "off",
         }
         if image_list:
             payload["image_list"] = image_list
         if video_list:
             payload["video_list"] = video_list
-        if req.model_specific:
-            payload.update(req.model_specific)
+        payload.update(model_specific)
+        payload["sound"] = self._sound(req)
         # Editing a `base` video takes its length from the source footage, so Kling
         # sends no `seconds` there. Decided after the merge so an override-supplied
         # video_list counts too — but never drop a `seconds` the caller set explicitly.
@@ -148,13 +166,35 @@ class KlingVideoAdapter(ModelAdapter):
         guessing which case this is would leave exactly the silent one unpinned.
         """
         corrected = super().validation_corrections(req)
-        corrected["with_audio"] = req.with_audio
+        # The value the payload carries, not the one asked for: with a video input
+        # `sound` can only be off, so a with_audio=True request is pinned to False.
+        corrected["with_audio"] = self._sound(req) == "on"
         # `adaptive` has no upstream spelling here and is sent as 16:9. Pinned for the
         # same reason as the sound switch: a card showing "adaptive" promises a frame
         # that follows the input, and a portrait source would come back landscape.
         if req.aspect_ratio == "adaptive":
             corrected["aspect_ratio"] = _ADAPTIVE_RATIO
         return corrected
+
+    @staticmethod
+    def _sound(req: "GenerateVideoInput") -> str:
+        """The ``sound`` the payload carries — one rule for build_payload and the pin.
+
+        Upstream refuses ``sound: on`` whenever ``video_list`` is present (``sound must
+        be off when video_list is provided``; the V3 Omni reference says the same).
+        ``with_audio`` defaults to True and cannot tell "asked for sound" from "said
+        nothing", so refusing it would fail every default reference-video call and
+        drop Kling out of auto routing for that scenario; it is sent as off instead,
+        and validate_only pins ``with_audio: false`` so the card says so. The source
+        clip's own audio is ``keep_original_sound``, a separate switch. A ``sound``
+        set in model_specific still wins, as every model_specific key does.
+        """
+        model_specific = req.model_specific or {}
+        if "sound" in model_specific:
+            return str(model_specific["sound"])
+        if req.reference_videos or model_specific.get("video_list"):
+            return "off"
+        return "on" if req.with_audio else "off"
 
     @staticmethod
     def _has_base_video(payload: dict) -> bool:
@@ -245,4 +285,44 @@ class KlingVideoAdapter(ModelAdapter):
                 return False, f"{self.model_name} does not accept {slot}"
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"
+        # With a video input an image can only be a plain reference: image_list may
+        # not carry first_frame / end_frame then (any refer_type, not just an edit).
+        # Not rewritten into a reference image — a first frame pins the opening shot,
+        # a reference only steers the look, and the swap would be billed silently.
+        has_video = bool(req.reference_videos or (req.model_specific or {}).get("video_list"))
+        if has_video and (req.first_frame or req.last_frame):
+            return False, (
+                f"{self.model_name} cannot combine a video input with first_frame / last_frame; "
+                "pass the image in reference_images (and say in the prompt how to use it), "
+                "or drop the video for first/last-frame generation"
+            )
+        return self._check_video_entry_fields(req)
+
+    def _check_video_entry_fields(self, req: "GenerateVideoInput") -> tuple[bool, str]:
+        """``refer_type`` / ``keep_original_sound`` in model_specific, checked locally.
+
+        Unchecked, a misspelt value reaches upstream, and a shorthand with no video to
+        apply to is silently dropped — an edit that quietly runs as a generation.
+        """
+        model_specific = req.model_specific or {}
+        given = [key for key in _VIDEO_ENTRY_KEYS if key in model_specific]
+        if not given:
+            return True, ""
+        if "video_list" in model_specific:
+            return False, (
+                f"model_specific sets both video_list and {', '.join(given)}; set "
+                f"{', '.join(given)} with reference_videos, or put them inside video_list"
+            )
+        if not req.reference_videos:
+            return False, f"model_specific.{given[0]} applies to reference_videos, and none were given"
+        refer_type = model_specific.get("refer_type", _DEFAULT_REFER_TYPE)
+        if refer_type not in _REFER_TYPES:
+            return False, f"model_specific.refer_type must be one of {list(_REFER_TYPES)} (got {refer_type!r})"
+        if "keep_original_sound" in model_specific and _yes_no(model_specific["keep_original_sound"]) is None:
+            return False, "model_specific.keep_original_sound must be yes / no (or true / false)"
+        if refer_type == _BASE_REFER_TYPE and len(req.reference_videos) != 1:
+            return False, (
+                f"refer_type=base edits one source clip; got {len(req.reference_videos)} "
+                "reference_videos — send the clip to edit alone"
+            )
         return True, ""

@@ -91,3 +91,27 @@ models:
   doubao-seedance-2-0-mini: *seedance_2_0_edit
   wan-video: *seedance_2_0_edit
   wan-video-fast: *seedance_2_0_edit
+
+  # Kling video edit (2026-10-22): the clip to edit rides reference_videos like any
+  # reference, and `model_specific.refer_type: base` is what makes it the footage
+  # edited (the adapter applies it to the video_list entry). Contract source:
+  # kling-v3-omni/reference (video_list / refer_type / keep_original_sound / sound).
+  kling-video-o1: &kling_edit
+    video_edit:
+      call_template:
+        model_specific:
+          refer_type: base
+      requirements:
+        reference_videos:
+          required: true
+          min_items: 1
+          max_items: 1
+        first_frame: {allowed: false}
+        last_frame: {allowed: false}
+        prompt: *seedance_edit_prompt
+      notes:
+        - "The output length follows the source clip; duration_seconds is not sent."
+        - "Generated sound is always off with a video input (with_audio is pinned to false). To keep the source clip's own audio, add model_specific.keep_original_sound: yes."
+        - "Set aspect_ratio to the source clip's ratio (16:9 / 9:16 / 1:1): adaptive is sent as 16:9."
+        - "With a video input an image can only be a reference: put a replacement character or style image in reference_images, never first_frame / last_frame."
+  kling-v3-omni: *kling_edit
