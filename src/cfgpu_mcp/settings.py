@@ -53,6 +53,13 @@ class PublicHttpSettings:
     covers_dir: str | None = None
     #: Seconds browsers / CDNs may cache a cover. Kept short so a takedown takes effect.
     cache_max_age: int = 86400
+    #: DeerFlow skill cover roots, ``{alias: directory}`` (docs/template-library-and-dialect.md
+    #: §6.8): read-only mounts of DeerFlow's ``skills/public`` and ``skills/public_published``,
+    #: served under ``/skill-covers/<alias>/``. None → the route is not registered. Never
+    #: point one at a user-private tree such as ``skills/custom``.
+    skill_roots: dict[str, str] | None = None
+    #: Seconds between rescans of ``skill_roots`` (publish / unpublish lag at most this long).
+    skill_rescan_interval: float = 60
 
 
 #: The built-in provider — the CFGPU API itself. Models that declare no
