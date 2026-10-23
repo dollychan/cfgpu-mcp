@@ -14,10 +14,13 @@ is 404. A cover listed in the bundle whose file is missing is logged and left ou
 
 Covers are third-party examples kept for reference only (``templates/covers/credits.yaml``).
 
-With ``public_http.skill_roots`` set it also serves DeerFlow skill covers under
-``/skill-covers/<alias>/<skill dir>/covers/<file>`` (§6.8). Those change whenever a user
-publishes, so their whitelist is rebuilt by a periodic rescan (``SkillCoverIndex``) rather
-than fixed at startup — but a request is still only an exact lookup in that dict.
+With ``public_http.skill_roots`` set it also serves DeerFlow skill covers on the same
+route, ``/covers/<alias>/<skill dir>/covers/<file>`` (§6.8), so a front proxy that already
+forwards ``/covers/`` needs nothing new. The two key shapes cannot meet: a template cover is
+exactly ``<id>/<version>.<ext>``, a skill cover has at least four segments; template keys
+are looked up first anyway. Skill covers change whenever a user publishes, so their
+whitelist is rebuilt by a periodic rescan (``SkillCoverIndex``) rather than fixed at
+startup — but a request is still only an exact lookup in that dict.
 ``Cache-Control`` is a bounded ``max-age`` rather than ``immutable`` so that removing a
 cover on a takedown request stops it being served from caches within a day.
 """
@@ -149,14 +152,12 @@ def build_public_app(
     }
 
     async def cover(request: Request) -> Response:
-        file = files.get(_COVERS_PREFIX + request.path_params["rest"])
-        if file is None:
-            return PlainTextResponse("not found", status_code=404)
-        return FileResponse(file, media_type=COVER_MEDIA_TYPES[file.suffix], headers=headers)
-
-    async def skill_cover(request: Request) -> Response:
-        file = skill_covers.files.get(request.path_params["rest"])
-        # A file unpublished since the last scan is a 404, not a FileResponse error.
+        rest = request.path_params["rest"]
+        file = files.get(_COVERS_PREFIX + rest)
+        if file is not None:
+            return FileResponse(file, media_type=COVER_MEDIA_TYPES[file.suffix], headers=headers)
+        file = skill_covers.files.get(rest) if skill_covers is not None else None
+        # A skill file unpublished since the last scan is a 404, not a FileResponse error.
         if file is None or not file.is_file():
             return PlainTextResponse("not found", status_code=404)
         return FileResponse(file, media_type=SKILL_COVER_MEDIA_TYPES[file.suffix.lower()], headers=headers)
@@ -192,7 +193,6 @@ def build_public_app(
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
-    routes.append(Route("/skill-covers/{rest:path}", skill_cover, methods=["GET", "HEAD"]))
     return Starlette(routes=routes, lifespan=lifespan)
 
 

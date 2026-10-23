@@ -1,5 +1,9 @@
 """DeerFlow skill covers on the public cover service (docs/template-library-and-dialect.md §6.8).
 
+They share the ``/covers/`` route with template covers, so a front proxy that already
+forwards ``/covers/`` needs nothing new. The two key shapes cannot meet: a template cover
+is exactly ``<id>/<version>.<ext>``, a skill cover ``<root>/<skill dir>/covers/<file>``.
+
 Unlike template covers the whitelist is not fixed at startup: users publish and unpublish
 skills at any time. ``SkillCoverIndex`` rescans the configured roots and swaps in a new
 ``{url path: file}`` dict; a request is still only an exact dict lookup (I-TL8).
@@ -84,10 +88,10 @@ def test_collects_only_media_files_directly_in_a_skill_covers_dir(index):
 @pytest.mark.parametrize(
     ("path", "media_type", "body"),
     [
-        ("/skill-covers/public/cf-dream/branding/brandkit/covers/1.webp", "image/webp", b"webp"),
-        ("/skill-covers/public/cf-dream/branding/brandkit/covers/2.mp4", "video/mp4", b"mp4"),
-        ("/skill-covers/public_published/u_coffee/covers/a.png", "image/png", b"png"),
-        ("/skill-covers/public_published/u_coffee/covers/b.JPEG", "image/jpeg", b"jpeg"),
+        ("/covers/public/cf-dream/branding/brandkit/covers/1.webp", "image/webp", b"webp"),
+        ("/covers/public/cf-dream/branding/brandkit/covers/2.mp4", "video/mp4", b"mp4"),
+        ("/covers/public_published/u_coffee/covers/a.png", "image/png", b"png"),
+        ("/covers/public_published/u_coffee/covers/b.JPEG", "image/jpeg", b"jpeg"),
     ],
 )
 def test_serves_covers_with_public_headers(client, path, media_type, body):
@@ -104,18 +108,18 @@ def test_serves_covers_with_public_headers(client, path, media_type, body):
 @pytest.mark.parametrize(
     "path",
     [
-        "/skill-covers/public/cf-dream/branding/brandkit/SKILL.md",
-        "/skill-covers/public/cf-dream/branding/brandkit/covers/notes.txt",
-        "/skill-covers/public/cf-dream/branding/brandkit/references/r.png",
-        "/skill-covers/public/cf-dream/branding/brandkit/references/covers/deep.png",
-        "/skill-covers/public/cf-dream/branding/brandkit/covers/escape.png",
-        "/skill-covers/public/linked/covers/o.png",
-        "/skill-covers/public/skill-reviewer/evals/fixtures/bad/covers/x.png",
-        "/skill-covers/public/loose/covers/l.png",
-        "/skill-covers/public/cf-dream/branding/brandkit/covers/%2e%2e/SKILL.md",
-        "/skill-covers/public/cf-dream/branding/brandkit/covers/",
-        "/skill-covers/custom/u_coffee/covers/a.png",
-        "/skill-covers/",
+        "/covers/public/cf-dream/branding/brandkit/SKILL.md",
+        "/covers/public/cf-dream/branding/brandkit/covers/notes.txt",
+        "/covers/public/cf-dream/branding/brandkit/references/r.png",
+        "/covers/public/cf-dream/branding/brandkit/references/covers/deep.png",
+        "/covers/public/cf-dream/branding/brandkit/covers/escape.png",
+        "/covers/public/linked/covers/o.png",
+        "/covers/public/skill-reviewer/evals/fixtures/bad/covers/x.png",
+        "/covers/public/loose/covers/l.png",
+        "/covers/public/cf-dream/branding/brandkit/covers/%2e%2e/SKILL.md",
+        "/covers/public/cf-dream/branding/brandkit/covers/",
+        "/covers/custom/u_coffee/covers/a.png",
+        "/covers/",
     ],
 )
 def test_anything_else_is_404(client, path):
@@ -123,21 +127,21 @@ def test_anything_else_is_404(client, path):
 
 
 def test_only_reads_are_allowed(client):
-    assert client.post("/skill-covers/public_published/u_coffee/covers/a.png").status_code == 405
+    assert client.post("/covers/public_published/u_coffee/covers/a.png").status_code == 405
 
 
 def test_rescan_picks_up_publish_and_unpublish(roots, index, client):
     _skill(roots["public_published"], "u_new", {"n.webp": b"new"})
     (roots["public_published"] / "u_coffee" / "covers" / "a.png").unlink()
-    assert client.get("/skill-covers/public_published/u_new/covers/n.webp").status_code == 404  # not yet
+    assert client.get("/covers/public_published/u_new/covers/n.webp").status_code == 404  # not yet
     index.refresh()
-    assert client.get("/skill-covers/public_published/u_new/covers/n.webp").status_code == 200
-    assert client.get("/skill-covers/public_published/u_coffee/covers/a.png").status_code == 404
+    assert client.get("/covers/public_published/u_new/covers/n.webp").status_code == 200
+    assert client.get("/covers/public_published/u_coffee/covers/a.png").status_code == 404
 
 
 def test_file_removed_between_scans_is_404_not_500(roots, index, client):
     (roots["public_published"] / "u_coffee" / "covers" / "a.png").unlink()
-    assert client.get("/skill-covers/public_published/u_coffee/covers/a.png").status_code == 404
+    assert client.get("/covers/public_published/u_coffee/covers/a.png").status_code == 404
 
 
 def test_unreadable_root_keeps_its_previous_result(roots, index):
@@ -152,8 +156,20 @@ def test_unreadable_root_keeps_its_previous_result(roots, index):
 
 def test_unset_skill_roots_registers_no_route():
     client = TestClient(build_public_app({}, cache_max_age=600))
-    assert client.get("/skill-covers/public/x/covers/1.webp").status_code == 404
+    assert client.get("/covers/public/x/covers/1.webp").status_code == 404
     assert "skill" not in client.get("/healthz").text
+
+
+def test_template_and_skill_covers_share_the_covers_route(roots, index, tmp_path):
+    template = tmp_path / "template.jpg"
+    template.write_bytes(b"\xff\xd8\xff template")
+    client = TestClient(build_public_app({"covers/case-test-0001/1.jpg": template}, cache_max_age=600, skill_covers=index))
+    assert client.get("/covers/case-test-0001/1.jpg").content == b"\xff\xd8\xff template"
+    assert client.get("/covers/public_published/u_coffee/covers/a.png").content == b"png"
+
+
+def test_the_old_skill_covers_prefix_is_gone(client):
+    assert client.get("/skill-covers/public_published/u_coffee/covers/a.png").status_code == 404
 
 
 def test_healthz_counts_skill_covers(client):
@@ -172,7 +188,7 @@ def test_background_rescan_runs_on_the_app_lifespan(roots):
     with TestClient(app) as client:
         _skill(roots["public_published"], "u_new", {"n.webp": b"new"})
         for _ in range(100):
-            if client.get("/skill-covers/public_published/u_new/covers/n.webp").status_code == 200:
+            if client.get("/covers/public_published/u_new/covers/n.webp").status_code == 200:
                 break
             time.sleep(0.02)
         else:

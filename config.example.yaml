@@ -26,7 +26,7 @@ public_http:                   # public read-only cover service: its own process
   #                            #   process to build cover URLs. Unset → tools return no cover.
   # covers_dir: /srv/cfgpu/covers                 # default: the checkout's templates/covers
   # cache_max_age: 86400       # short on purpose: a takedown must clear caches within a day
-  # skill_roots:               # DeerFlow skill covers (skill_recommend), served at /skill-covers/<alias>/;
+  # skill_roots:               # DeerFlow skill covers (skill_recommend), served at /covers/<alias>/;
   #   public: /root/fs/deer-flow-cfgpu/skills/public                    #   read-only mounts.
   #   public_published: /root/fs/<DEER_FLOW_HOME>/skills/public_published  # Unset → route disabled.
   #                            #   Never list skills/custom (user-private).

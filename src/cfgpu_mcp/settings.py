@@ -55,7 +55,7 @@ class PublicHttpSettings:
     cache_max_age: int = 86400
     #: DeerFlow skill cover roots, ``{alias: directory}`` (docs/template-library-and-dialect.md
     #: §6.8): read-only mounts of DeerFlow's ``skills/public`` and ``skills/public_published``,
-    #: served under ``/skill-covers/<alias>/``. None → the route is not registered. Never
+    #: served under ``/covers/<alias>/`` beside template covers. None → not served. Never
     #: point one at a user-private tree such as ``skills/custom``.
     skill_roots: dict[str, str] | None = None
     #: Seconds between rescans of ``skill_roots`` (publish / unpublish lag at most this long).
