@@ -287,7 +287,7 @@ class SeedanceVideoAdapter(ModelAdapter):
         if has_first_last and has_refs:
             # Seedance 1.5 Pro takes no reference media at all, so "move the picture
             # into reference_images" is only a fix on another model there.
-            reference_model = None
+            reference_model = framed_model = None
             if "reference_images" not in (self.inputs or {}):
                 # One same-family example, read from the registry so it cannot name
                 # a disabled model. The text names the task, never a tool: which tools a
@@ -297,11 +297,12 @@ class SeedanceVideoAdapter(ModelAdapter):
                      if m.startswith("doubao-seedance")),
                     None,
                 )
-                reference_model = "tasks 含 reference_to_video 的模型" + (
-                    f"（如 model={sibling}）" if sibling else ""
-                )
+                example = f"（如 model={sibling}）" if sibling else ""
+                reference_model = "tasks 含 reference_to_video 的模型" + example
+                framed_model = "tasks 含 framed_reference_video 的模型" + example
             return False, frames_vs_references_reason(
-                self.model_name, req, reference_model=reference_model
+                self.model_name, req,
+                reference_model=reference_model, framed_model=framed_model,
             )
         if req.last_frame and not req.first_frame:
             return False, "last_frame requires first_frame"

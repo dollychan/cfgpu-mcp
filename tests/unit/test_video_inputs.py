@@ -256,6 +256,24 @@ def test_a_driving_audio_track_and_audio_driven_video_imply_each_other(adapter):
 
 
 @pytest.mark.parametrize("adapter", _ADAPTERS, ids=lambda a: a.adapter_id)
+def test_framed_reference_video_is_claimed_by_every_reference_image_model(adapter):
+    """"These references, and this one as the first frame" is reachable on every model
+    that takes reference images: natively where first_frame may ride beside them, else
+    by naming the image in the prompt. Its frames-vs-references conflict is a parameter
+    rule, and an agent filtering by task must not read it as a capability gap
+    (2026-10-27). So the task follows from reference_to_video + a reference_images slot,
+    both ways — a model that drops it is invisible to exactly that request.
+    """
+    expected = "reference_to_video" in adapter.tasks and "reference_images" in adapter.inputs
+    claims = "framed_reference_video" in adapter.tasks
+    assert expected == claims, (
+        f"{adapter.adapter_id}: framed_reference_video "
+        f"{'claimed' if claims else 'not claimed'} but reference_to_video + "
+        f"reference_images is {expected}"
+    )
+
+
+@pytest.mark.parametrize("adapter", _ADAPTERS, ids=lambda a: a.adapter_id)
 def test_voice_reference_video_speaks_in_the_output(adapter):
     """Checked one way only: a `voice` or `reference` slot does not by itself prove the
     model can imitate a voice (a `reference` track may only steer music or rhythm), so

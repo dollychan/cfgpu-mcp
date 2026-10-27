@@ -43,7 +43,7 @@ Match the user's inputs and intent to exactly ONE scenario. As **parameters** th
 
 Rules for reading intent:
 - A reference **audio** never stands alone — it only makes sense alongside at least one reference image or video.
-- If the user gives several references **and** wants one of them as the start/end image, do not tell them it is unsupported. Use **Multimodal reference**: put every image (the chosen one included) in `reference_images`, give each a handle in `image_refs`, and write in the prompt "以 [[handle]] 作为视频首帧" (or 尾帧). The model reproduces that frame from the prompt — close, not pixel-identical. If it must be the exact picture, say so and offer the trade: first-frame scenario without the other references, or a non-Seedance model that takes both slots (the refusal names them).
+- If the user gives several references **and** wants one of them as the start/end image, do not tell them it is unsupported. Use **Multimodal reference**: put every image (the chosen one included) in `reference_images`, give each a handle in `image_refs`, and write in the prompt "以 [[handle]] 作为视频首帧" (or 尾帧). The model reproduces that frame from the prompt — close, not pixel-identical. If it must be the exact picture, say so and offer the trade: first-frame scenario without the other references, or a non-Seedance model that takes both slots (the refusal names them). Filter for such models with `required_tasks=["framed_reference_video"]` — every Seedance 2.0 / 2.5 model claims it.
 - Reference / edit / extend intents require a 2.0 or 2.5 model — if the user asked for 1.5 Pro, steer them to one of those.
 
 ## Step 3 — Set parameters to match intent

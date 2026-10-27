@@ -105,7 +105,7 @@ def test_the_refusal_says_the_request_is_still_achievable(registry, model):
     assert "as parameters on this model" in reason
     assert "still achievable" in reason
     third = _route_three(reason)
-    assert "其余参考也要保留" in third
+    assert "其余参考也要保留（framed_reference_video）" in third
     assert "以 [[名字]] 作为视频首帧" in third
     assert "不保证与原图逐像素一致" in third  # approximate, and says so
 
@@ -149,4 +149,4 @@ def test_route_three_on_a_model_without_references_points_elsewhere(registry):
         _req(first_frame="f", reference_images=["r"])
     )
 
-    assert "改用 tasks 含 reference_to_video 的模型" in _route_three(reason)
+    assert "改用 tasks 含 framed_reference_video 的模型" in _route_three(reason)

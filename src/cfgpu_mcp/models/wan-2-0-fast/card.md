@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan-video-fast` | 
-| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, framed_reference_video, video_edit, video_extend, synced_audio_output |
 | 成本档位 | 2/5 |
 | 速度档位 | 4/5 |
 

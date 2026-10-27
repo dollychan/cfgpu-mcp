@@ -29,8 +29,8 @@ tasks:
     description: >-
       Animate a supplied image as the opening visual of a new video. Whether first_frame
       can also be combined with reference media is a per-model parameter rule, not a limit
-      of the task: where a model refuses the pair, a reference_to_video model can still open
-      on that image when the prompt names it as the first frame (approximate, not pixel-exact).
+      of the task: where a model refuses the pair, the task is framed_reference_video, which
+      every reference_to_video model can do (exactly or through the prompt).
     prompt_guidance: Describe the motion to add while preserving the supplied image's subject and composition.
     requires: {all: [first_frame]}
   first_last_frame:
@@ -39,7 +39,7 @@ tasks:
     description: >-
       Create a video constrained by both an opening image and an ending image. As with
       image_to_video, combining the frames with reference media is a per-model parameter
-      rule; a reference_to_video model can approximate the frames through the prompt.
+      rule; that combined request is framed_reference_video.
     prompt_guidance: Describe the transition and the motion that connects the two supplied frames.
     requires: {all: [first_frame, last_frame]}
   reference_to_video:
@@ -52,10 +52,22 @@ tasks:
       To have a character speak a new script in a supplied voice, use voice_reference_video.
     prompt_guidance: >-
       State which visual, character, or motion qualities to preserve from the references.
-      To open or end on one of the reference images, name it in the prompt as the first or
-      last frame ([[handle]] from image_refs) — the way to keep a chosen frame and other
-      references together on a model whose first_frame excludes reference media.
+      To open or end on one of the reference images, see framed_reference_video.
     requires: {any: [reference_images, reference_videos]}
+  framed_reference_video:
+    media_type: video
+    name: Reference video with a chosen frame
+    description: >-
+      Create a reference-guided video that opens (or ends) on one chosen image while the
+      other references still guide it — e.g. "use these references, and this one as the
+      first frame". Every reference_to_video model can do this: a model that accepts
+      first_frame / last_frame beside reference_* pins the frame exactly; on any other,
+      put the image in reference_images and name it in the prompt as the first or last
+      frame, which the model reproduces closely but not pixel-exactly.
+    prompt_guidance: >-
+      Give the frame image a handle in image_refs and write "[[handle]] as the first
+      frame" (or last frame) in the prompt; say what each other reference contributes.
+    requires: {all: [reference_images]}
   video_edit:
     media_type: video
     name: Video edit

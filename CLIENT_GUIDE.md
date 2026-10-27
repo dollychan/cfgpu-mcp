@@ -903,6 +903,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `reference_images`、在 `image_refs` 里起名，prompt 写「以 [[名字]] 作为视频首帧」（由提示词还原，接近但不保证逐像素一致）。
 > 当前模型走不了的那条会直接指名要换的模型（如 HappyHorse 的 `happyhorse-1.0-r2v` / `happyhorse-1.0-i2v`）。
 > **不要据此告诉用户「模型不支持」**：用户给了多张参考、又说其中一张作首帧，路线 ③ 就是答案（2026-10-27 起）。
+> 选模型时用 `list_model_profiles(required_tasks=["framed_reference_video"])`：所有声明 `reference_to_video` 且接受
+> `reference_images` 的模型都声明了这个任务（原生同时接受首帧与参考的模型精确保留首帧，其余靠提示词近似还原）。
 
 > **`reference_audios` 在不同模型上用途不同，选模型前先看 `inputs`（2026-10-09 起）。**
 > `list_model_profiles` 给每个视频模型返回 `inputs`：它接受哪些素材槽、每槽最多几个，以及音频的

@@ -1245,6 +1245,7 @@ CanonicalTaskId = Literal[
     "image_to_video",
     "first_last_frame",
     "reference_to_video",
+    "framed_reference_video",
     "video_edit",
     "video_extend",
     "synced_audio_output",

@@ -8,7 +8,7 @@ HappyHorse-1.0-R2V 支持参考生视频，更加稳定的主体与场景参考�
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `happyhorse-1.0-r2v` |
-| 任务（tasks） | reference_to_video |
+| 任务（tasks） | reference_to_video, framed_reference_video |
 | 成本档位 | 2/5 |
 | 速度档位 | 3/5 |
 

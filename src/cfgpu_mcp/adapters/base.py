@@ -110,6 +110,7 @@ def frames_vs_references_reason(
     *,
     reference_model: str | None = None,
     frame_model: str | None = None,
+    framed_model: str | None = None,
 ) -> str:
     """The refusal for first/last frames mixed with ``reference_*`` media, with every fix.
 
@@ -127,7 +128,9 @@ def frames_vs_references_reason(
     ``reference_model`` / ``frame_model`` describe the switch for that route when this
     model cannot take it (HappyHorse ships each scenario as its own model), inserted after
     "改用" verbatim — e.g. ``"model=happyhorse-1.0-r2v"``; ``None`` means this model takes
-    it. ``req`` is only read.
+    it. ``framed_model`` is route ③'s switch (``framed_reference_video``); it defaults to
+    ``reference_model``, since every model reading reference images claims that task.
+    ``req`` is only read.
     """
     frames = [n for n in ("first_frame", "last_frame") if getattr(req, n, None)]
     refs = [
@@ -153,7 +156,7 @@ def frames_vs_references_reason(
             f"改用 {reference_model}，把 {frame_list} 的图放入 reference_images，"
             f"删除 {frame_list}"
         )
-        prompt_switch = f"改用 {reference_model}，"
+        prompt_switch = f"改用 {framed_model or reference_model}，"
     if frame_model is None:
         route_frame = f"保留 {frame_list}，删除 {ref_list}"
     else:
@@ -181,7 +184,7 @@ def frames_vs_references_reason(
         f"三种意图生成的是不同的视频，请按 prompt 的意图选一条："
         f"① 图片用于确定主体/人物形象，场景与构图由 prompt 重新描述 → {route_ref}；"
         f"② 图片需原样作为视频{frame_words}，其余参考可以不要 → {route_frame}{lost}；"
-        f"③ 图片要作为视频{frame_words}，其余参考也要保留 → {route_both}。"
+        f"③ 图片要作为视频{frame_words}，其余参考也要保留（framed_reference_video）→ {route_both}。"
     )
 
 

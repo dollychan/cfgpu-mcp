@@ -10,7 +10,7 @@ Seedance 2.0 mini 是面向更广泛视频生成需求推出的新一代高性�
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `Doubao-Seedance-2.0-mini` |
-| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output, voice_reference_video |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, framed_reference_video, video_edit, video_extend, synced_audio_output, voice_reference_video |
 | 成本档位 | 1/5 |
 | 速度档位 | 3/5 |
 
