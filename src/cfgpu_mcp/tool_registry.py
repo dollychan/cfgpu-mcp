@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import time
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated, Any, Literal, Optional
@@ -302,6 +303,74 @@ def _validate_regions(
 _HANDLE_FORBIDDEN = set("#[]")
 
 
+def _usable_handles(pairs: list[tuple[Optional[list[str]], int]]) -> list[Optional[list[str]]]:
+    """The handle lists a real (``validate_only=false``) call actually uses.
+
+    The lenient half of the handle checks: nothing here refuses, but nothing is guessed
+    either. A list whose length differs from its slot's is **dropped whole** (``None``):
+    the pairing is positional, so once the lengths disagree no handle is known to name
+    any particular item — cutting or padding would be a guess, and the likely cause (an
+    item removed from the front of the slot) makes it a wrong one, naming the next
+    material instead. Within a list of the right length, a handle that could not name
+    exactly one item is blanked rather than resolved: one with surrounding space, ``#`` /
+    ``[`` / ``]``, a reserved keyword, or one that appears more than once across all lists
+    (which of the two did ``[[a]]`` mean?). A ``[[...]]`` that then names nothing is
+    written as text by the prompt layer.
+
+    The preflight is where a caller learns its handles are wrong; by the time the call
+    is real, either a validated plan is being executed or a person edited it, and in
+    both cases a refusal here only throws the request away.
+    """
+    from cfgpu_mcp.adapters import prompt_markup as markup
+
+    fixed: list[Optional[list[str]]] = []
+    for refs, n_items in pairs:
+        if refs is None or len(refs) != n_items:
+            fixed.append(None)
+            continue
+        fixed.append([
+            h if isinstance(h, str) and h and h == h.strip() and not (_HANDLE_FORBIDDEN & set(h)) and not markup.is_reserved(h) else ""
+            for h in refs
+        ])
+    counts = Counter(h for refs in fixed if refs for h in refs if h)
+    return [None if refs is None else [h if counts[h] == 1 else "" for h in refs] for refs in fixed]
+
+
+def _lenient_video_refs(req: Any) -> None:
+    """``validate_only=false``: repair what :func:`_validate_video_refs` would refuse.
+
+    The handle lists go through :func:`_usable_handles`, then every ``[[...]]`` in the
+    prompt that names no usable handle — a typo, a name a person made up on an approval
+    card, a ``[[handle#label]]`` this tool has no regions for — is written as its own
+    text (``prompt_markup.degrade``), as is malformed markup and a shot that overlaps
+    the previous one or runs past an explicit ``duration_seconds``. Everything that
+    does resolve is left exactly as it was.
+    """
+    from cfgpu_mcp.adapters import prompt_markup as markup
+    from cfgpu_mcp.adapters.dialect import REFS_FIELD, SLOT_KIND
+
+    kinds = list(SLOT_KIND.items())
+    fixed = _usable_handles([(getattr(req, REFS_FIELD[kind]), len(getattr(req, slot) or [])) for slot, kind in kinds])
+    for (_, kind), refs in zip(kinds, fixed):
+        if refs != getattr(req, REFS_FIELD[kind]):
+            setattr(req, REFS_FIELD[kind], refs)
+    handles = {h for refs in fixed if refs for h in refs if h}
+    duration = getattr(req, "duration_seconds", None)
+    limit = duration if isinstance(duration, int) and duration > 0 else None
+
+    def keep(node: Any) -> bool:
+        if isinstance(node, markup.Ref):
+            return node.token in handles
+        if isinstance(node, markup.Shot):
+            return limit is None or node.end <= limit
+        return True
+
+    if req.prompt:
+        degraded = markup.degrade(req.prompt, keep)
+        if degraded != req.prompt:
+            req.prompt = degraded
+
+
 def _validate_video_refs(req: Any) -> None:
     """Check ``generate_video``'s three handle lists and every ``[[...]]`` in its prompt.
 
@@ -314,7 +383,14 @@ def _validate_video_refs(req: Any) -> None:
 
     Whether the selected model can name a given kind at all, and whether it ignores an
     unnamed reference, are per-model facts and are checked in ``supports()``.
+
+    Strict only for ``validate_only=true``. A real call repairs instead of refusing
+    (:func:`_lenient_video_refs`): the preflight is where mistakes are reported, and a
+    real call is either a validated plan or a person's edit of one.
     """
+    if not req.validate_only:
+        _lenient_video_refs(req)
+        return
     from cfgpu_mcp.adapters import prompt_markup as markup
     from cfgpu_mcp.adapters.dialect import REFS_FIELD, SLOT_KIND
 
@@ -416,9 +492,10 @@ def media_refs_field(slot: str, kind: str = "image") -> Any:
         f"{kind}'): positions shift whenever a list is rebuilt or another model is chosen, "
         f"and a sentence that hard-codes one then points at the wrong material without "
         f"any error. Use an empty string for an item you will not refer to. A `[[...]]` "
-        f"that matches no handle is refused before anything is sent, since it would "
-        f"otherwise reach the model as literal text. Passed through untouched — never "
-        f"fetched, never sent upstream.",
+        f"that matches no handle is an error on a `validate_only` run; on a real call it "
+        f"is sent as plain text with the brackets removed, so the {kind} it meant is not "
+        f"referenced at all — only ever write handles that exist. Passed through untouched "
+        f"— never fetched, never sent upstream.",
     )
 
 
@@ -753,6 +830,8 @@ class GenerateImageInput(BaseModel):
 
     @model_validator(mode="after")
     def _validate_regions_against_images(self) -> "GenerateImageInput":
+        if not self.validate_only:  # a real call repairs its handles (see _usable_handles)
+            (self.image_refs,) = _usable_handles([(self.image_refs, len(self.reference_images or []))])
         _validate_regions(
             self.regions, self.reference_images, self.image_refs,
             image_slot="reference_images",
@@ -1105,6 +1184,8 @@ class UnderstandVisionInput(BaseModel):
 
     @model_validator(mode="after")
     def _validate_regions_against_images(self) -> "UnderstandVisionInput":
+        if not self.validate_only:  # a real call repairs its handles (see _usable_handles)
+            (self.image_refs,) = _usable_handles([(self.image_refs, len(self.images or []))])
         _validate_regions(self.regions, self.images, self.image_refs, image_slot="images")
         return self
 

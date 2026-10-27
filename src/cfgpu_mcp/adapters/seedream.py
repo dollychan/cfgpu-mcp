@@ -10,7 +10,7 @@ from cfgpu_mcp.adapters.base import (
     _default_expires_at,
     register_python_adapter,
 )
-from cfgpu_mcp.adapters.regions import render_prompt
+from cfgpu_mcp.adapters.regions import is_real_call, render_prompt
 from cfgpu_mcp.tool_registry import GenerateImageInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -355,7 +355,8 @@ class SeedreamAdapter(ModelAdapter):
             # this model paints what it reads, and "标记1" in the prompt is a string it
             # may render into the picture.
             prompt = render_prompt(
-                prompt, req.regions, req.image_refs, include_names=False
+                prompt, req.regions, req.image_refs, include_names=False,
+                lenient=is_real_call(req),
             )
 
         layer_decomposition = (req.model_specific or {}).get("layer_decomposition") is True

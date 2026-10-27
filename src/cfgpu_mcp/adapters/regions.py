@@ -50,6 +50,15 @@ GRID = 1000
 #: unbalanced string degrades to "no match" rather than swallowing the rest of the line.
 _PLACEHOLDER = re.compile(r"\[\[([^\[\]]{1,200})\]\]")
 
+def is_real_call(req: Any) -> bool:
+    """``validate_only=false`` — a real call, which repairs placeholders instead of refusing.
+
+    Anything without the field (a test double, a hand-built request) is judged strictly,
+    i.e. as before the lenient mode existed.
+    """
+    return getattr(req, "validate_only", True) is False
+
+
 #: The canonical tasks that gate regions (``tasks:`` in adapter.yaml).
 _TASK_EDIT = "region_edit"
 _TASK_UNDERSTAND = "region_understanding"
@@ -246,12 +255,12 @@ def resolve_image_refs(req: Any) -> Any:
     in one pass — it must, because a token that is both a handle and a label can only
     be caught as ambiguous with both in view. Returns ``req`` itself when nothing
     changes, and a copy with the rendered prompt otherwise; raises for a placeholder
-    that resolves to nothing.
+    that resolves to nothing — on a preflight. A real call writes it as text.
     """
     if getattr(req, "regions", None) or "image_refs" not in type(req).model_fields:
         return req
     prompt = req.prompt
-    rendered = render_prompt(prompt, None, req.image_refs, include_names=False)
+    rendered = render_prompt(prompt, None, req.image_refs, include_names=False, lenient=is_real_call(req))
     return req if rendered == prompt else req.model_copy(update={"prompt": rendered})
 
 
@@ -276,6 +285,7 @@ def render_prompt(
     *,
     include_names: bool,
     structured: bool = False,
+    lenient: bool = False,
 ) -> str:
     """Substitute ``[[...]]`` placeholders and append whatever regions went unmentioned.
 
@@ -304,6 +314,12 @@ def render_prompt(
     whether or not a placeholder named it. Appending a bare mention with no instruction
     attached would not be a safety net — "图1中框选的第2个区域。" alone on a line reads as
     one more thing to go and edit.
+
+    ``lenient=True`` is the real call (``validate_only=false``). Both fail-closed cases
+    above are then written as their own text instead — the brackets dropped, nothing
+    guessed: the preflight is where they are reported, and on a real call the prompt is
+    either a validated plan or a person's edit of one. A region its placeholder no
+    longer reaches still falls through to the suffix, so it is never dropped either.
     """
     regions = list(regions or [])
     refs = list(image_refs or [])
@@ -349,12 +365,16 @@ def render_prompt(
                 else [i for i in by_label.get(label, []) if regions[i].image_index == idx]
             )
             if len(hits) != 1:
+                if lenient:
+                    return token
                 raise _unresolved(token, refs, regions)
             used.add(hits[0])
             return render_one(hits[0])
 
         hits = by_label.get(token, [])
         is_ref = token in ref_index
+        if lenient and (len(hits) > 1 or (hits and is_ref)):
+            return token
         if hits and is_ref:
             raise _ambiguous(
                 token,
@@ -370,6 +390,8 @@ def render_prompt(
             return render_one(hits[0])
         if is_ref:
             return _ordinal(ref_index[token])
+        if lenient:
+            return token
         raise _unresolved(token, refs, regions)
 
     rendered = _PLACEHOLDER.sub(substitute, prompt)

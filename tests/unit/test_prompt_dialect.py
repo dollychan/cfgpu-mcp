@@ -235,7 +235,7 @@ def test_a_kind_the_model_cannot_name_is_refused_before_sending(registry):
     req = _video(
         model="wan2.7-r2v", prompt="[[a]] 用 [[v]] 的声音说话", duration_seconds=5,
         reference_videos=[VID.format(1)], video_refs=["a"],
-        reference_audios=[AUD.format(1)], audio_refs=["v"],
+        reference_audios=[AUD.format(1)], audio_refs=["v"], validate_only=True,
     )
     ok, reason = adapter.supports(req)
     assert not ok and "[[v]]" in reason and "reference_audios" in reason
@@ -270,7 +270,7 @@ def test_auto_routing_skips_a_model_that_would_ignore_an_untagged_reference(regi
 def test_handle_lists_and_placeholders_are_checked_at_the_schema(kw, match):
     kw.setdefault("prompt", "x")
     with pytest.raises(ValueError, match=match):
-        GenerateVideoInput(**kw)
+        GenerateVideoInput(**kw, validate_only=True)
 
 
 def test_an_empty_handle_marks_an_item_nobody_refers_to():
