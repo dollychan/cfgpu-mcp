@@ -26,13 +26,20 @@ tasks:
   image_to_video:
     media_type: video
     name: Image to video
-    description: Animate a supplied image as the opening visual of a new video.
+    description: >-
+      Animate a supplied image as the opening visual of a new video. Whether first_frame
+      can also be combined with reference media is a per-model parameter rule, not a limit
+      of the task: where a model refuses the pair, a reference_to_video model can still open
+      on that image when the prompt names it as the first frame (approximate, not pixel-exact).
     prompt_guidance: Describe the motion to add while preserving the supplied image's subject and composition.
     requires: {all: [first_frame]}
   first_last_frame:
     media_type: video
     name: First and last frame video
-    description: Create a video constrained by both an opening image and an ending image.
+    description: >-
+      Create a video constrained by both an opening image and an ending image. As with
+      image_to_video, combining the frames with reference media is a per-model parameter
+      rule; a reference_to_video model can approximate the frames through the prompt.
     prompt_guidance: Describe the transition and the motion that connects the two supplied frames.
     requires: {all: [first_frame, last_frame]}
   reference_to_video:
@@ -43,7 +50,11 @@ tasks:
       also take reference audio; a model's inputs.reference_audios.role says what it
       does with it, and only audio_driven_video keeps a supplied track as the soundtrack.
       To have a character speak a new script in a supplied voice, use voice_reference_video.
-    prompt_guidance: State which visual, character, or motion qualities to preserve from the references.
+    prompt_guidance: >-
+      State which visual, character, or motion qualities to preserve from the references.
+      To open or end on one of the reference images, name it in the prompt as the first or
+      last frame ([[handle]] from image_refs) — the way to keep a chosen frame and other
+      references together on a model whose first_frame excludes reference media.
     requires: {any: [reference_images, reference_videos]}
   video_edit:
     media_type: video

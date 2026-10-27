@@ -868,13 +868,17 @@ class GenerateVideoInput(BaseModel):
     # other two say 素材 ID). Media inputs are the whole reason the asset library exists,
     # so this is the tool where the handle is at home.
     first_frame: Optional[str] = media_field(
-        slot="The image to use as the video's first frame (image-to-video).",
+        slot="The image to use as the video's first frame (image-to-video). Some models "
+        "refuse it beside reference_* media; there, keep the frame by putting the image in "
+        "reference_images and naming it in the prompt as the first frame.",
         role="image",
         arity="one",
         accepts=["https_url", "asset_url"],
     )
     last_frame: Optional[str] = media_field(
-        slot="The image to use as the video's last frame; use together with first_frame.",
+        slot="The image to use as the video's last frame; use together with first_frame. "
+        "Beside reference_* media the same per-model rule and prompt route as first_frame "
+        "apply.",
         role="image",
         arity="one",
         accepts=["https_url", "asset_url"],

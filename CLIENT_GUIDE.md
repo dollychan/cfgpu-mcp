@@ -893,11 +893,16 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `16x9` 也按 `16:9` 处理。`validate_only`、正式调用、Agent SDK 与 CLI 行为一致；只有不在枚举里的值（如 `360p`、
 > `16:10`）仍报参数错误。`voice` 例外：音色 id 必须原样复制。
 
-> **首帧与参考素材不能同时给（MiniMax-H3 / Seedance / HappyHorse）。** 服务端不会替你把 `first_frame`
+> **首帧与参考素材不能同时给（MiniMax-H3 / Seedance / HappyHorse）—— 这是参数约束，不是任务做不到。** 服务端不会替你把 `first_frame`
 > 改成 `reference_images` —— 首帧是视频原样的开场画面，参考图只提供主体、场景由 prompt 重新构图，两者生成的是不同的视频。
-> 报错里会给出两条具体改法，按 prompt 的意图选一条：图片是人物/主体 → 移入 `reference_images`、删 `first_frame`；
-> 图片要原样开场 → 保留 `first_frame`、删掉 `reference_*`（删 `reference_audios` 就没有对口型了）。
+> 报错（`… is mutually exclusive with … as parameters on this model; the request itself is still achievable.`）
+> 给出三条具体改法，按 prompt 的意图选一条：① 图片是人物/主体 → 移入 `reference_images`、删 `first_frame`；
+> ② 图片要原样开场、其余参考可以不要 → 保留 `first_frame`、删掉 `reference_*`（删 `reference_audios` 就没有对口型了）；
+> ③ 图片要作开场/结尾画面、其余参考也要保留 → 改用报错里点名的、能同时接受首帧与参考素材的模型（如可灵 `kling-v3-omni` /
+> `kling-video-o1`、`wan2.7-r2v`；列表从注册表实时探测，Grok 那种首帧只是参考图数组第一项的模型不算），或者把这张图也放进
+> `reference_images`、在 `image_refs` 里起名，prompt 写「以 [[名字]] 作为视频首帧」（由提示词还原，接近但不保证逐像素一致）。
 > 当前模型走不了的那条会直接指名要换的模型（如 HappyHorse 的 `happyhorse-1.0-r2v` / `happyhorse-1.0-i2v`）。
+> **不要据此告诉用户「模型不支持」**：用户给了多张参考、又说其中一张作首帧，路线 ③ 就是答案（2026-10-27 起）。
 
 > **`reference_audios` 在不同模型上用途不同，选模型前先看 `inputs`（2026-10-09 起）。**
 > `list_model_profiles` 给每个视频模型返回 `inputs`：它接受哪些素材槽、每槽最多几个，以及音频的

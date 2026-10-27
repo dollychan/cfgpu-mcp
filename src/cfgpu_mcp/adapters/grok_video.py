@@ -40,6 +40,9 @@ class GrokVideoAdapter(ModelAdapter):
     """
 
     adapter_id = "grok-imagine-video-1-5"
+    # first_frame is refer_images[0] of one flat list: with reference_images beside it
+    # nothing marks it as the opening picture any more.
+    pins_frames_with_references = False
 
     @staticmethod
     def _data(resp: dict) -> dict:

@@ -55,7 +55,7 @@ All `generate_*` tools share these:
 
 Tool-specific parameters are documented in each model's skill / card. Key ones:
 - `generate_image`: `aspect_ratio` (`1:1`…`21:9`), `resolution` (`1K`–`4K`), `reference_images`, `n` (1–15, 组图, `doubao-seedream-*` only), `watermark`.
-- `generate_video`: `first_frame`/`last_frame` **or** `reference_images`/`reference_videos`/`reference_audios` (mutually exclusive scenarios), `duration_seconds` (4–30 on `doubao-seedance-2-5`, 4–15 elsewhere, `-1`=smart), `aspect_ratio` (`4:5`/`5:4`/`9:21` are HappyHorse t2v/r2v only — elsewhere refused, and `validate_only` corrects to the nearest shape), `resolution` (`480p`/`720p`/`1080p`), `with_audio`, `watermark`.
+- `generate_video`: `first_frame`/`last_frame`, `reference_images`/`reference_videos`/`reference_audios` (most models refuse frames beside `reference_*` — a parameter rule, not a task limit: keep the frame by moving it into `reference_images` and naming it in the prompt as the first frame, or use a model that takes both, e.g. Kling / `wan2.7-r2v`), `duration_seconds` (4–30 on `doubao-seedance-2-5`, 4–15 elsewhere, `-1`=smart), `aspect_ratio` (`4:5`/`5:4`/`9:21` are HappyHorse t2v/r2v only — elsewhere refused, and `validate_only` corrects to the nearest shape), `resolution` (`480p`/`720p`/`1080p`), `with_audio`, `watermark`.
 - `generate_audio`: `voice`, `audio_format` (`mp3`/`wav`/`pcm`/`flac`), `sample_rate`, plus MiniMax-only `bitrate`/`speed`/`volume`/`pitch`/`emotion`.
 - `understand_vision`: `images` (list), `video` (single URL), `system_prompt`, `max_tokens`, `temperature`. Synchronous — no `wait`/`task_id`.
 
@@ -160,7 +160,7 @@ These come from per-model `build_payload` validation, mostly as `invalid_params`
 
 | Symptom in `message` | Cause | Fix |
 |---|---|---|
-| `mixed_scenarios` | combined first/last-frame **with** reference inputs in one `generate_video` call | Use exactly one scenario per call. |
+| `mixed_scenarios` / `is mutually exclusive with … as parameters on this model` | combined first/last-frame **with** reference inputs on a model whose parameters forbid it | Not a capability refusal — never tell the user it can't be done. Pick the route the message lists for the user's intent: ① image is a subject → move it to `reference_images`; ② exact opening frame, other references optional → drop `reference_*`; ③ keep both → a model the message names, or every image in `reference_images` with the prompt saying `以 [[handle]] 作为视频首帧`. |
 | `audio_only` | sent `reference_audios` with no reference image/video | Add ≥1 `reference_images` or `reference_videos`. |
 | `media_download_failed` | a reference/first-frame URL was unreachable | Use a **publicly accessible** URL; check it loads in a browser. |
 | `n>1` rejected | `n>1` on a non-`doubao-seedream-*` image model | Use a `doubao-seedream-*` model for 组图, or set `n=1`. |

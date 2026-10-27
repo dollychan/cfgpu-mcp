@@ -58,7 +58,7 @@
 | `prompt` | `content[].type=text` | 文生视频必填；图生视频、首尾帧和全模态参考任务可选 |
 | `first_frame` | `content[].role=first_frame` | 首帧图片 |
 | `last_frame` | `content[].role=last_frame` | 尾帧图片（需与 first_frame 同用） |
-| `reference_images` | `content[].role=reference_image` | 参考图片（0-9，与首/尾帧互斥） |
+| `reference_images` | `content[].role=reference_image` | 参考图片（0-9）。与首/尾帧不能同时作为参数；要某张参考图作首/尾帧，在 prompt 里写「以 [[handle]] 作为视频首帧」 |
 | `reference_videos` | `content[].role=reference_video` | 参考视频（0-3） |
 | `reference_audios` | `content[].role=reference_audio` | 参考音频（0-3）：音色、节奏、音画同步参考 |
 | `aspect_ratio` | 顶层 `ratio` | 宽高比，`adaptive` 自动匹配 |

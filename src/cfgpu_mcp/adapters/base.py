@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from abc import ABC, abstractmethod
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Literal
@@ -58,6 +59,51 @@ def models_with_task(task: str) -> list[str]:
         return []
 
 
+#: Set while ``models_accepting_frames_with_references`` probes other adapters, whose own
+#: refusal would otherwise probe the fleet again from inside the probe.
+_probing_frame_combinations: ContextVar[bool] = ContextVar(
+    "_probing_frame_combinations", default=False
+)
+
+
+def models_accepting_frames_with_references(req: Any, *, exclude: str) -> list[str]:
+    """Public ``model_name``s that take this request's frames *and* references as given.
+
+    Only the material is probed (frames and ``reference_*``), not resolution / ratio /
+    duration: the question is "who can carry this combination at all", and the other
+    parameters are adjusted per model as usual. A model whose frame is just the first
+    item of a flat image list is left out (``pins_frames_with_references``) — it accepts
+    the call but keeps no frame. Never raises, like ``models_with_task``: building a
+    nicer refusal must not lose the real one.
+    """
+    if _probing_frame_combinations.get():
+        return []
+    token = _probing_frame_combinations.set(True)
+    try:
+        from cfgpu_mcp.config import get_registry
+        from cfgpu_mcp.tool_registry import GenerateVideoInput
+
+        material = {
+            slot: getattr(req, slot, None)
+            for slot in (
+                "first_frame", "last_frame",
+                "reference_images", "reference_videos", "reference_audios",
+            )
+        }
+        probe = GenerateVideoInput(prompt="x", **material)
+        return sorted(
+            adapter.model_name
+            for adapter in get_registry().list_all(task_type="video")
+            if adapter.model_name != exclude
+            and adapter.pins_frames_with_references
+            and adapter.supports(probe)[0]
+        )
+    except Exception:  # pragma: no cover - defensive: advice must never break validation
+        return []
+    finally:
+        _probing_frame_combinations.reset(token)
+
+
 def frames_vs_references_reason(
     model_name: str,
     req: Any,
@@ -65,14 +111,18 @@ def frames_vs_references_reason(
     reference_model: str | None = None,
     frame_model: str | None = None,
 ) -> str:
-    """The refusal for first/last frames mixed with ``reference_*`` media, with both fixes.
+    """The refusal for first/last frames mixed with ``reference_*`` media, with every fix.
 
-    The bare fact ("mutually exclusive") leaves the caller to guess, and the two ways out
-    produce different videos: a frame is the video's literal opening picture, a reference
-    only carries the subject into a newly composed shot. Which one was meant is in the
-    prompt, which only the caller can read — so both routes are spelled out, each with
-    the exact argument moves, and the choice stays with the caller. Converting one into
-    the other here would be a silent substitution: a plausible, billed, different video.
+    This is a *parameter* constraint of this model, not a task the request cannot reach,
+    and the text must not read as the latter: a caller told "mutually exclusive" tells
+    its user the job is impossible. Three intents, three routes: a frame is the video's
+    literal opening picture, a reference only carries the subject into a newly composed
+    shot, and "this picture opens the video *and* keep the other references" is either a
+    model that takes both slots at once or the reference route with the prompt naming
+    that picture as the opening / closing shot (approximate, not pixel-locked). Which one
+    was meant is in the prompt, which only the caller can read — so each route is spelled
+    out as the exact argument moves and the choice stays with the caller. Converting one
+    into another here would be a silent substitution: a plausible, billed, different video.
 
     ``reference_model`` / ``frame_model`` describe the switch for that route when this
     model cannot take it (HappyHorse ships each scenario as its own model), inserted after
@@ -86,6 +136,7 @@ def frames_vs_references_reason(
     ]
     frame_list = " / ".join(frames)
     ref_list = " / ".join(refs)
+    frame_words = " / ".join({"first_frame": "首帧", "last_frame": "尾帧"}[n] for n in frames)
 
     if reference_model is None:
         keep_refs = f"，{'、'.join(n for n in refs if n != 'reference_images')} 保留" if any(
@@ -96,22 +147,41 @@ def frames_vs_references_reason(
             f"把 {frame_list} 的图移入 reference_images{merge}，"
             f"删除 {frame_list}{keep_refs}"
         )
+        prompt_switch = ""
     else:
         route_ref = (
             f"改用 {reference_model}，把 {frame_list} 的图放入 reference_images，"
             f"删除 {frame_list}"
         )
+        prompt_switch = f"改用 {reference_model}，"
     if frame_model is None:
         route_frame = f"保留 {frame_list}，删除 {ref_list}"
     else:
         route_frame = f"改用 {frame_model}，保留 {frame_list}，删除 {ref_list}"
     lost = "（reference_audios 删除后不再驱动配音/对口型）" if "reference_audios" in refs else ""
 
+    native = models_accepting_frames_with_references(req, exclude=model_name)
+    native_route = (
+        f"改用直接接受这一素材组合的 {' / '.join(f'model={m}' for m in native[:3])}，"
+        "素材参数不变；或"
+        if native else ""
+    )
+    if len(frames) == 2:
+        naming = "在 image_refs 里给两张图各起名，并在 prompt 里写明「以 [[首帧名]] 作为视频首帧、[[尾帧名]] 作为尾帧」"
+    else:
+        naming = f"在 image_refs 里给它起名，并在 prompt 里写明「以 [[名字]] 作为视频{frame_words}」"
+    route_both = (
+        f"{native_route}{prompt_switch}把 {frame_list} 的图也放进 reference_images、删除 {frame_list}，"
+        f"{naming}（由提示词还原，画面接近但不保证与原图逐像素一致）"
+    )
+
     return (
-        f"{model_name}: {frame_list} is mutually exclusive with {ref_list}. "
-        f"二者生成的是不同的视频，请按 prompt 的意图二选一："
+        f"{model_name}: {frame_list} is mutually exclusive with {ref_list} as parameters "
+        f"on this model; the request itself is still achievable. "
+        f"三种意图生成的是不同的视频，请按 prompt 的意图选一条："
         f"① 图片用于确定主体/人物形象，场景与构图由 prompt 重新描述 → {route_ref}；"
-        f"② 图片需原样作为视频开场画面 → {route_frame}{lost}。"
+        f"② 图片需原样作为视频{frame_words}，其余参考可以不要 → {route_frame}{lost}；"
+        f"③ 图片要作为视频{frame_words}，其余参考也要保留 → {route_both}。"
     )
 
 
@@ -271,6 +341,11 @@ class ModelAdapter(ABC):
     #: model's real range — the caller must write the seconds out, because a length
     #: this server picked would be a billed choice nobody made.
     accepts_smart_duration: bool = False
+    #: Whether ``first_frame`` / ``last_frame`` stay pinned frames when ``supports()``
+    #: lets them ride beside reference media (video only). False where the request body
+    #: has one flat image list and the frame is just its first item (Grok), so the
+    #: frames-vs-references refusal never offers such a model as the way to keep both.
+    pins_frames_with_references: bool = True
     resolutions: list[str] | None  # video only: allowed resolution values, None = unrestricted
     aspect_ratios: tuple[str, ...] | None  # image/video: allowed ratios (adaptive always ok), None = unrestricted
     #: The tier used when the caller omits ``resolution`` (video only).

@@ -43,7 +43,7 @@ MiniMax H3 的降级版本。请求、查询格式与 `MiniMax-H3` 相同；目�
 - `reference_images` 最多 9 张。
 - `reference_videos` 最多 3 个，单段 2–15 秒、总时长不超过 15 秒。
 - `reference_audios` 最多 3 个，单段 2–15 秒、总时长不超过 15 秒。**参考音频可用于音色克隆与锁定**：上传目标人物的一段语音作为参考，锁定视频中生成角色的音色，让角色用这个声音说 prompt 里的新台词（`voice_reference_video`）。
-- 首尾帧输入与所有 `reference_*` 输入互斥。
+- 首尾帧输入与所有 `reference_*` 输入不能同时作为参数（参数约束，不是任务做不到）：要保留参考素材、又要某张图作开场画面时，把它也放进 `reference_images`，在 prompt 里写「以 [[handle]] 作为视频首帧」。
 - 参考视频、音频的总时长无法从 URL 本地判断，超过 15 秒时由上游返回参数错误。
 
 媒体格式限制（请求体总大小 ≤ 64 MB，大文件请用公网 URL）：图片 JPG/JPEG/PNG/WEBP/

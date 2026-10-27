@@ -67,7 +67,7 @@
 | `prompt` | `content[].type=text` | 文生视频必填；其余任务可选。30 秒长叙事建议用 `[[shot 0-10]]` / `[[shot 10-20]]` / `[[shot 20-30]]` 分段描述 |
 | `first_frame` | `content[].role=first_frame` | 首帧图片 |
 | `last_frame` | `content[].role=last_frame` | 尾帧图片（需与 first_frame 同用） |
-| `reference_images` | `content[].role=reference_image` | 参考图片（0-30，与首/尾帧互斥） |
+| `reference_images` | `content[].role=reference_image` | 参考图片（0-30）。与首/尾帧不能同时作为参数；要某张参考图作首/尾帧，在 prompt 里写「以 [[handle]] 作为视频首帧」 |
 | `reference_videos` | `content[].role=reference_video` | 参考视频（0-10） |
 | `reference_audios` | `content[].role=reference_audio` | 参考音频（0-10）：音色、节奏、音画同步参考 |
 | `aspect_ratio` | 顶层 `ratio` | 文生/普通参考任务支持指定宽高比或 `adaptive`；首帧/首尾帧任务仅支持 `adaptive`，输出比例跟随首帧 |
