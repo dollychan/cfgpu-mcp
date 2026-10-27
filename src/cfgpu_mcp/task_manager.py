@@ -589,7 +589,9 @@ def _corrected_args(
     candidate. That is the intended trade — an approval only means something if it
     names what runs — and the failure is loud and retryable.
     """
-    corrected = dict(adapter_corrections or {})
+    # Rewrites the schema made before any model was chosen (frames the prompt names,
+    # moved into reference_images) come first; per-model fallbacks may refine them.
+    corrected = {**(getattr(req, "_schema_corrections", None) or {}), **(adapter_corrections or {})}
     if isinstance(req.model, list) or req.model == "auto":
         corrected["model"] = adapter.model_name
     return corrected
@@ -623,6 +625,20 @@ def validate_request(
         raise CFGPUError(
             error_type="invalid_params",
             user_message=reason,
+            original={"model": req.model},
+            model_id=adapter.model_name,
+        )
+    # Handle mistakes caused by frames riding beside references, held back by the schema
+    # so a model refusing that combination reports the conflict first. A model that
+    # accepts it (Kling, wan2.7-r2v) still cannot resolve a frame named as [[...]].
+    deferred = getattr(req, "_deferred_frame_refs", None)
+    if deferred:
+        from cfgpu_mcp.tool_registry import frame_placeholder_message
+
+        frame = next(s for s in ("first_frame", "last_frame") if getattr(req, s) == deferred[0])
+        raise CFGPUError(
+            error_type="invalid_params",
+            user_message=frame_placeholder_message(deferred[0], frame),
             original={"model": req.model},
             model_id=adapter.model_name,
         )

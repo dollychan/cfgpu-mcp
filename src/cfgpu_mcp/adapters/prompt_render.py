@@ -373,6 +373,28 @@ def _degrade_for(adapter: "ModelAdapter", req: Any, dialect: PromptDialect) -> A
     return req if degraded == prompt else req.model_copy(update={"prompt": degraded})
 
 
+def _without_deferred_frames(req: Any) -> Any:
+    """``req`` with the frame handles the schema deferred taken out of the way.
+
+    The schema holds back ``[[<frame value>]]`` and frame entries in ``image_refs`` when
+    frames ride beside references (``tool_registry._frames_beside_references``), so that
+    the model's frames/references refusal is reported first; ``validate_request`` reports
+    them after ``supports()``. Here they must not be judged as this model's placeholder
+    problems either, or they would again come first.
+    """
+    deferred = set(getattr(req, "_deferred_frame_refs", None) or ())
+    if not deferred:
+        return req
+    update: dict[str, Any] = {}
+    if req.prompt:
+        update["prompt"] = markup.degrade(
+            req.prompt, lambda node: not (isinstance(node, markup.Ref) and node.token in deferred)
+        )
+    if req.image_refs and len(req.image_refs) != len(req.reference_images or []):
+        update["image_refs"] = [h for h in req.image_refs if h not in deferred]
+    return req.model_copy(update=update)
+
+
 def check_prompt_refs(adapter: "ModelAdapter", req: Any) -> tuple[bool, str]:
     """The per-model half of prompt validation, for ``ModelAdapter.supports()``.
 
@@ -396,6 +418,7 @@ def check_prompt_refs(adapter: "ModelAdapter", req: Any) -> tuple[bool, str]:
     lenient = _lenient_for_model(req)
     if lenient:
         req = _degrade_for(adapter, req, dialect)
+    req = _without_deferred_frames(req)
     prompt = req.prompt or ""
     has_markup = bool(_PLACEHOLDER.search(prompt))
     # Without markup only a `required` dialect has anything to say: a reference the
