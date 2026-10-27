@@ -294,6 +294,7 @@ async def test_create_refuses_an_unresolved_handle_before_writing_a_row():
         prompt="以[[nope]]为准",
         reference_images=["https://example.com/a.jpg"],
         image_refs=["own"],
+        validate_only=True,  # a render failure inserts no row; a real call writes it as text instead
     )
     with pytest.raises(CFGPUError):
         await tm.create(_registry().get("cf-image-2"), req)
@@ -533,6 +534,7 @@ def test_image_refs_must_be_one_per_image():
             prompt="x",
             reference_images=["https://example.com/a.jpg"],
             image_refs=["m_a1", "m_7c"],
+            validate_only=True,
         )
 
 

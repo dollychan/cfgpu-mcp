@@ -1,0 +1,18 @@
+id: case-evolink-portrait-232
+version: 1
+kind: case
+media: image
+title: Identity Reference Beauty Portrait
+summary: Use only my uploaded portrait photo as the identity reference.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@heyfatema'
+  url: https://x.com/heyfatema/status/2057345382800306192
+content: Use only my uploaded portrait photo as the identity reference. Accurately preserve my real face shape, facial proportions, facial contours, skin tone, hairstyle outline, hair volume, hairline, and overall natural presence. Do not turn me into another person. Do not over-beautify the face. Do not create an influencer-style face, plastic skin, or anime look.

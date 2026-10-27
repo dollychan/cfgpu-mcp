@@ -1,0 +1,18 @@
+id: case-evolink-portrait-88
+version: 1
+kind: case
+media: image
+title: Young Woman in Sequin Dress on Stairs
+summary: Vertical 2:3 format.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@XSydneyFan'
+  url: https://x.com/XSydneyFan/status/2048114180906217566
+content: Vertical 2:3 format. {argument name="subject" default="Young woman"} hair in messy updo sits on modern wooden staircase. wears {argument name="dress" default="shimmering Silver halter dress sequin dress"}. matching with silver high-heeled sandals. legs crossed. Silver heart earrings. One fuchsia bracelet on each ankle. Sultry expression, with slightly parted lips. Blurred background vertical wooden slats and black metal railings. Don't change face

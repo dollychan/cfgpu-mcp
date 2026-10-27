@@ -1,0 +1,18 @@
+id: case-evolink-poster-9
+version: 1
+kind: case
+media: image
+title: Super Famicom Poster Style
+summary: 小悪魔リリムリリィちゃんが スーパーファミコンのゲームだったときのポスターを考えて
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@lilimliliychan'
+  url: https://x.com/lilimliliychan/status/2045114760937804187
+content: 小悪魔リリムリリィちゃんが　スーパーファミコンのゲームだったときのポスターを考えて

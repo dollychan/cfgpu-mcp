@@ -1,0 +1,62 @@
+id: case-evolink-ui-175
+version: 1
+kind: case
+media: image
+title: Editorial Anatomy Infographic Poster
+summary: 'prompt: Ultra-clean editorial infographic poster (1080x1080 square), blending premium magazine design with lifestyle illustration and photography.'
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2063202176344932732
+content: |-
+  prompt:
+
+  Ultra-clean editorial infographic poster (1080x1080 square), blending premium magazine design with lifestyle illustration and photography.
+
+  **HEADLINE:**
+  Bold, large sans-serif type centered at top: "HUMAN LIVER"
+
+  **MAIN IMAGE:**
+  High-detail 3D illustration of the human liver, showing the Right Lobe, Left Lobe, and Gallbladder. Color palette: terracotta, deep brownish-red, and soft coral tones. Background: clean, soft beige or off-white. Lighting: soft studio style.
+
+  **POSTER SECTIONS:**
+
+  * **Floating Fact Bubbles (top corners):**
+      * "Weight: ~1.5 kg (Heaviest internal organ)"
+      * "Regeneration: Can regrow from just 25%"
+      * "Location: Upper Right Abdomen"
+      * "Blood Flow: Filters 1.4 L/min"
+
+  * **Organ Labels (arrows pointing to anatomy):**
+      * Right Lobe
+      * Left Lobe
+      * Gallbladder (greenish sac below)
+      * Common Bile Duct
+      * Hepatic Portal Vein
+
+  * **Key Functions (left column, small icons):**
+      * **Detox:** Filters toxins from blood
+      * **Bile:** Aids fat digestion
+      * **Metabolism:** Processes carbs and protein
+      * **Storage:** Holds glycogen, iron, vitamins
+
+  * **Highlights (right column, small icons):**
+      * **Chemical Factory:** 500+ vital functions
+      * **Immunity:** Fights blood-borne infections
+      * **Clotting:** Makes blood-clotting proteins
+
+  * **Health Tips (bottom cards):**
+      1. **Limit Alcohol** - Prevents cirrhosis
+      2. **Stay Hydrated** - Flushes toxins
+      3. **Balanced Diet** - Low sugar, high fiber
+      4. **Vaccinate** - Hepatitis A & B protection
+      5. **Exercise** - Burns fat and triglycerides
+
+  **STYLE:** Glassmorphism frosted-glass text boxes, soft drop shadows, medical accuracy meets high-end graphic design.

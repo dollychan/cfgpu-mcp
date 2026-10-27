@@ -1,0 +1,36 @@
+id: case-evolink-poster-369
+version: 1
+kind: case
+media: image
+title: Furniture Product Sheet Layout
+summary: ://t.co/UuHTKEB9Ff Create a high-quality realistic 3D product showcase for a table, using a split-view layout (3:2 or 4:3 aspect ratio) on a neutral light gray or white background.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2064499654725902349
+content: |-
+  ://t.co/UuHTKEB9Ff
+
+  Create a high-quality realistic 3D product showcase for a table, using a split-view layout (3:2 or 4:3 aspect ratio) on a neutral light gray or white background.
+
+  Left side — Table Perspectives:
+  - Top-down view: full tabletop shape, surface texture, and edge details
+  - Side view: leg design, table height, and tabletop thickness
+  - Front view: width, symmetry, and leg alignment
+  Use consistent lighting with subtle shadows for realism.
+
+  Right side — Material Breakdown:
+  - Tabletop: solid or engineered wood, with a close-up wood texture swatch and clean sans-serif label
+  - Legs: polished oak wood or metal, with a material texture swatch and consistent labeling
+  - Frame: matte black steel, with a small metallic texture swatch and minimalist annotation
+
+  Separate the two sections with a vertical dividing line or subtle split background. Use natural tones for materials and grayscale for backgrounds and lines. Modern readable font for labels and section titles. Output as a high-resolution image suitable for a product sheet, interior design catalog, or furniture showcase.
+
+  #AIart #GPTImage2

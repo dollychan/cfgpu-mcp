@@ -1,0 +1,41 @@
+id: case-evolink-comparison-97
+version: 1
+kind: case
+media: image
+title: Continuous-Run Glitch Storyboard
+summary: Use @[storyboard ref] as the authoritative director-approved storyboard blueprint for the sequence.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@aimikoda'
+  url: https://x.com/aimikoda/status/2063688774324981798
+content: |-
+  Use @[storyboard ref]  as the authoritative director-approved storyboard blueprint for the sequence. Treat every storyboard panel as a consecutive shot within a single cinematic sequence. Follow panel order exactly and do not invent alternative coverage. Do not render the storyboard sheet itself. Preserve camera placement, framing, lens intent, shot scale, character staging, screen direction, environmental geography, prop placement, action choreography, continuity and emotional escalation shown by the storyboard. The storyboard is the primary source of truth for visual storytelling. Recreate the filmed sequence implied by the panels rather than the physical storyboard artwork.
+  The entire video must play as one continuous developing master shot with no visible cuts; each panel is a sampled phase of the same uninterrupted camera move, not a separate shot.
+  Use one virtual lens / same-lens move; angle changes come from backward front-track, push-in, shallow front-side orbit, and pullback only. Never pass behind Rand.
+  Use @[char1 ref] as starting Rand/C1. Use @[char2 ref]  as final RAN.
+
+  ENVIRONMENT: Vivid daytime street into quiet passage: colorful storefront glass, crosswalk, posters, bollards, hard shadows, unaware crowd, right-side escape. Rand runs toward the camera as it retreats in front of her.
+  EMOTIONAL GUIDANCE: Valence: vulnerable public appeal into private panic, then altered control. Arousal: urgent run -> "I can't control this" flicker -> false heads -> palm-slap snapbacks -> hidden roulette -> RAN lock. Crowd never notices.
+  VISUAL STYLE: Match @[char1 ref] : faceted semi-real concept art, vivid daylight, crisp skin, polygon texture, hard shadows, vertical black-gray pixels stuck to Rand's whole head until final body lock; no side faces.
+  TRANSFORMATION RULE: P03-P07 must not show face fragments beside Rand or as floating panels. Each temporary identity replaces the actual head attached to Rand's neck for a readable instant, like a broken TV channel. Body keeps running/bracing while the head swaps. Original Rand head returns only after each open-palm slap. Only final @[char1 ref] lock spreads below the neck.
+  AUDIO: No music. Use crowd, footsteps, breath, clothing rustle, pixel tearing, palm-head slaps, glitch snaps, dialogue.
+
+  PANEL BEATS:
+  P01: Wide backward front-track. Rand runs toward camera through unaware crowd, original identity intact, colorful storefronts behind her.
+  P02: Camera retreats in front of her as she looks into the lens, breathing hard: "You're probably wondering why I'm running."
+  P03: Camera keeps retreating front-side as she spots the passage: "I need to get away before it starts. I can't control this." On that line, she looks to lens; her whole head starts vertical glitching, still attached to her neck.
+  P04: Camera pushes closer. Three human heads replace her actual head one after another, each in the same skull position, never beside it. She open-palm slaps side of head like fixing a TV, no pointing; original Rand head snaps back.
+  P05: More whole-head swaps cycle on the neck: older man, pale mask-like face, shaved head, then a clear animal head as rejected option. Rand gives another open-palm slap; Rand head briefly returns.
+  P06: Camera backs into passage with her as she ducks into cover; first dense whole-head roulette shows readable heads replacing her actual head in micro-freezes, body/clothes still Rand's.
+  P07: Still front-side in cover, second roulette beat shows different readable heads replacing the same head volume; no side faces, no floating panels, no clones, no detached masks.
+  P08: At the wall, closest front-side orbit: roulette stops on @[char2 ref] RAN. Only now the glitch runs down the body as cap, braids, sunglasses, blue jacket, hoodie, pink cargos, chains, sneakers lock in.
+  P09: Camera pulls wider in passage. RAN lowers his hand, fully changed into @[char2 ref], looks to lens, says, "See? I told you. I can't control it."
+
+  ---
+
+  I shared the storyboard skill file I use for these prompts with my subscribers.

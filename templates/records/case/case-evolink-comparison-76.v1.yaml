@@ -1,0 +1,16 @@
+id: case-evolink-comparison-76
+version: 1
+kind: case
+media: image
+title: Miyazaki-style short film pipeline
+summary: 'Given a story concept, generate a complete Miyazaki-style animated short film: write a 30-shot script → generate watercolor storyboard images (gpt-image-1) → plan SOFT/HARD transitions → produce video clips with Seedanc…'
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@happycapyai'
+  url: https://x.com/happycapyai/status/2049468986828697940
+content: 'Given a story concept, generate a complete Miyazaki-style animated short film: write a 30-shot script → generate watercolor storyboard images (gpt-image-1) → plan SOFT/HARD transitions → produce video clips with Seedance 2.0 using first/last-frame binding → synthesize the original ambient piano score → stitch everything into a final MP4 with music.'

@@ -1,0 +1,46 @@
+id: case-evolink-ad-creative-200
+version: 1
+kind: case
+media: image
+title: 荧光泡沫 Logo 主视觉
+summary: '[BRAND NAME] | [COLOR] CORE RULE: The fluid mass must take the exact shape of the [BRAND NAME] logo — not a circle, not a blob, not an oval.'
+genres:
+- product-ad
+tags:
+- 广告创意
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2069135898265125326
+content: |-
+  [BRAND NAME] | [COLOR]
+
+  CORE RULE: The fluid mass must take the exact shape of the [BRAND NAME] logo — not a circle, not a blob, not an oval. The outer silhouette of the fluid IS the logo outline, identical to the canonical trademark. If you cover the bubble texture and look only at the silhouette, you must immediately recognize [BRAND NAME]. This is the single most important rule and overrides everything else.
+
+  Create a hero image as a Macro Fluid Photographer and CGI Art Director: the brand logo formed entirely from living fluorescent foam and bubble liquid — as if poured into a logo-shaped mold on a black surface, captured at peak bubble activity. References: macro fluid photography, fluorescent paint foam art, soap bubble macro photography.
+
+  PHASE 0: LOGO GEOMETRY IS LAW
+  Use the 100% canonical [BRAND NAME] trademark silhouette — every curve, angle, and proportion exactly as trademarked. This silhouette is the rigid mold. The fluid fills its interior. The outer boundary of the fluid mass IS the logo outline — precise and hard. Gaps in the logo design show pure black background. No container (no circle, oval, badge, or frame). Correct canonical upright orientation — not rotated, flipped, or tilted. Zero fluid, bubbles, or droplets outside the logo boundary. When fluid physics conflict with logo geometry — geometry wins always. Apply [COLOR] as the fluid foam color throughout in maximum fluorescent saturation.
+
+  PHASE 1: FLUID MATERIAL
+  The logo is filled with a single viscous fluid in two physical states simultaneously. NOT water — thick, surface-tension-dominant, like fluorescent soap foam or colored slime. Base: [COLOR] at maximum fluorescent saturation, self-luminous, UV-reactive quality. Tonal variation within [COLOR] only: bubble membrane walls 35-45% lighter (near-transparent); mid-thickness zones pure saturated [COLOR]; deep liquid pools 25-35% darker. Liquid surface: high gloss, wet, shiny, broad specular reflection. Foam membranes: lower gloss, subtle soap film iridescence.
+
+  PHASE 2: BUBBLE ARCHITECTURE
+  Full size hierarchy across foam zone only. Large anchor bubbles 10-18mm, 4-8 count. Medium 4-9mm, 15-25 count. Small 1.5-3mm, 30-50 count. Micro 0.5-1mm, 50-100+ count. Each bubble: physically accurate air sphere in thin colored membrane 0.1-0.3mm thick, semi-transparent. Dome highlight: bright white crescent arc in upper-left, 15-20% of dome surface, soft-edged, white. Burst holes: 3-8 irregular dark voids in foam zone only, never at logo boundary edges.
+
+  PHASE 3: DUAL-STATE CONTRAST
+  Left zone — foam state: dense chaotic foam with full bubble hierarchy, strictly within logo silhouette, no bubbles at or beyond the edge. Right zone — liquid state: smooth continuous mass, bubbles absent (max 2-3 micro at transition edge), high gloss with broad soft specular highlight toward upper-left. Transition zone: 8-15mm wide gradual transition at vertical center. Both foam and liquid sides terminate exactly at the canonical logo outline — clean edge, no ragged silhouette. NO splatter, droplets, spray, or tendrils beyond the boundary.
+
+  PHASE 4: LIGHTING
+  Primary: large softbox upper-LEFT at 20-30 degrees from vertical, 5500K neutral white. Left and upper-left surfaces brighter, right relatively darker. All bubble dome highlights in upper-left. Liquid zone specular toward upper-left. Micro-shadows from bubbles fall lower-right, 0.5-1mm. Secondary: 8-10% cool ambient from above. No fill from right, no rim light, no colored light.
+
+  PHASE 5: COMPOSITION
+  Background: absolute black  zero texture, zero noise. Aspect ratio 1:1. Logo occupies 60-70% of frame, centered. Camera: directly overhead, perfectly perpendicular, zero perspective distortion, zero rotation. Pure top-down macro. Sharp depth of field across entire surface.
+
+  PHASE 6: TECH SPECS
+  Houdini FLIP fluid simulation + Redshift/Octane or equivalent photorealistic CGI. Fluid simulation domain bounded by logo silhouette — cannot escape boundary. Real FLIP geometry per bubble, not texture map. Bubble membranes: thin-shell geometry, IOR 1.33, transmission 0.7-0.85, thin-film iridescence. Liquid zone: smooth FLIP mesh, roughness 0.02-0.05. Foam: fluorescent shader, emissive 0.05-0.1, SSS 2-4mm. Area light 80x80cm upper-left 20-30 degrees, 5500K. HDRI ambient 8-10% neutral gray. Ray tracing 12+ bounces, caustics on, sampling 2048+, max anti-aliasing. No film grain, no post-process.
+
+  FINAL CHECK: (1) Does the fluid silhouette exactly match the [BRAND NAME] logo? (2) Is it inside a container? If yes, regenerate. (3) Any fluid outside the boundary? If yes, regenerate. (4) Both foam and liquid states visible? If no, regenerate.

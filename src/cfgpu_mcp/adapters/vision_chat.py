@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cfgpu_mcp.adapters.base import ModelAdapter, register_python_adapter
-from cfgpu_mcp.adapters.regions import output_contract, render_prompt
+from cfgpu_mcp.adapters.regions import is_real_call, output_contract, render_prompt
 from cfgpu_mcp.tool_registry import NormalizedResult, UnderstandVisionInput
 
 if TYPE_CHECKING:
@@ -59,7 +59,7 @@ class QwenVisionAdapter(ModelAdapter):
             # Names and notes are included here (unlike the editing path): this model
             # reads rather than paints, so there is nothing to leak into, and an answer
             # phrased as "标记3 里是…" hands back the caller's own word for the region.
-            prompt = render_prompt(prompt, req.regions, req.image_refs, include_names=True)
+            prompt = render_prompt(prompt, req.regions, req.image_refs, include_names=True, lenient=is_real_call(req))
             prompt = f"{prompt}\n\n{output_contract(req.regions)}"
 
         content: list[dict] = [{"type": "text", "text": prompt}]

@@ -1,0 +1,27 @@
+id: case-evolink-character-26
+version: 1
+kind: case
+media: image
+title: 视觉小说角色档案页
+summary: Create a high-quality character introduction page using a chibi illustration and a full standing character artwork, styled like an official visual novel (gal-game) character profile page.
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2067308176715001944
+content: |-
+  Create a high-quality character introduction page using a chibi illustration and a full standing character artwork, styled like an official visual novel (gal-game) character profile page. It should look realistic enough to use on an actual game website. Include CG-style illustrations, facial expression variants, and a chibi version of the character.
+
+  "Self-introduction here"
+
+  Name: (name here)
+  Theme color: (color here)
+  Height: (height here) cm
+  Weight: (weight here) kg
+  Catchphrase: "(line here)"

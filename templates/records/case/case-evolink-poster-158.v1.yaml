@@ -1,0 +1,29 @@
+id: case-evolink-poster-158
+version: 1
+kind: case
+media: image
+title: 'E-commerce Main Image - Minimalist Product Ad: PURE CRUNCH'
+summary: A minimalist product advertisement with a {argument name="product" default="fried chicken bucket"} placed on a clean white podium.
+genres:
+- product-food
+tags:
+- 电商
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Strength04_X'
+  url: https://x.com/Strength04_X/status/2047917220165231011
+content: |-
+  A minimalist product advertisement with a {argument name="product" default="fried chicken bucket"} placed on a clean white podium.
+
+  Background: soft gradient ({argument name="background gradient" default="light cream to white"}), clean studio.
+
+  Lighting: soft diffused, premium Apple-style.
+
+  Typography (center): “{argument name="headline" default="PURE CRUNCH"}”
+
+  Small text below: “Nothing extra. Just perfection.”
+
+  Style: ultra clean, editorial minimal, high-end branding, 8K.

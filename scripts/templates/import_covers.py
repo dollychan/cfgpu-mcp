@@ -18,6 +18,8 @@ which is not a project dependency — run it with any Python that has it:
     python3 scripts/templates/import_covers.py gpt-image2 ~/claude/Private/GPT-Image2-Skill
     python3 scripts/templates/import_covers.py awesome-styles ~/claude/Public/awesome-gpt-image-2
     python3 scripts/templates/import_covers.py minimax-h3 ~/claude/Public/MiniMax-H3
+    python3 scripts/templates/import_covers.py evolink ~/claude/Public/awesome-gpt-image-2-API-Prompts \
+        --max-edge 640 --quality 80
 
 ``minimax-h3`` covers video records, so they are animated: each GIF or MP4 is re-encoded
 as an animated WebP (long edge ≤ ``--anim-max-edge``, MP4s resampled to ``--anim-fps``).
@@ -37,7 +39,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from PIL import Image, ImageSequence
+from PIL import Image, ImageSequence, UnidentifiedImageError
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RECORDS = REPO_ROOT / "templates" / "records"
@@ -59,18 +61,14 @@ _IMAGE_LINE = re.compile(r"^- Image: `([^`]+)`")
 _LIST_IMAGE = re.compile(r"^  - `([^`]+)`")
 _RECORD_FILE = re.compile(r"^(?P<id>.+)\.v(?P<version>\d+)\.yaml$")
 
-# Style record -> awesome-gpt-image-2 gallery case used as its cover. Picked from the
-# style-library's "Example cases" by looking at each image. Styles left out on purpose,
-# because every listed example shows a real person or a real brand:
-#   ui-screenshot-system (Meta product ad / @OpenAI post / Trump), sports-campaign-poster
-#   (real footballers, club crests), ink-double-exposure-poster (real footballer),
-#   personalized-beauty-report (YSL branding), realistic-photography (edit of an uploaded
-#   real-person photo), 3d-collectible-toy (Trump).
-# poster-layout-system uses case 5, not its first example 345 (a real film and actress).
+# Style record -> awesome-gpt-image-2 gallery case used as its cover, the first of the
+# style-library's "Example cases". Covers showing real people or brands are included:
+# every cover is credited to its author as a reference-only third-party example (see
+# CREDITS_NOTICE), and a takedown request removes it.
 AWESOME_STYLE_COVERS: dict[str, int] = {
     "style-infographic-engine": 334,
     "style-scientific-scale-diagram": 341,
-    "style-poster-layout-system": 5,
+    "style-poster-layout-system": 345,
     "style-conceptual-typography-poster": 355,
     "style-nature-science-poster": 339,
     "style-product-commerce-visual": 373,
@@ -84,15 +82,19 @@ AWESOME_STYLE_COVERS: dict[str, int] = {
     "style-history-classical-themes": 375,
     "style-document-publishing": 360,
     "style-concept-product-breakdown": 370,
+    "style-ui-screenshot-system": 17,
+    "style-sports-campaign-poster": 350,
+    "style-ink-double-exposure-poster": 359,
+    "style-personalized-beauty-report": 353,
+    "style-realistic-photography": 377,
+    "style-3d-collectible-toy": 378,
 }
 
 # Record -> file under MiniMax-H3 ``assets/``, shown whole as an animated cover; an image
 # record instead gets one GIF frame as a still JPEG (``(file, frame index)``). The GIFs
 # are the demo clips of the H3 genre skills the style/template records were rewritten
-# from; the MP4s are the README case outputs. Left out on purpose:
-# brand-promo-video-generator (a MiniMax Hub product promo, i.e. a real brand),
-# minimalist-product-ad-generator (real consumer products), and case-video-h3-voice-edit
-# (live-action footage of a real person).
+# from; the MP4s are the README case outputs (H3-Base). Real brands, products and
+# people are included on the same terms as the style covers above.
 H3_COVERS: dict[str, str | tuple[str, int]] = {
     "style-video-cartoon-3d-short": "3d-animation-short-generator.gif",
     "tpl-video-cartoon-3d-shot": "3d-animation-short-generator.gif",
@@ -109,6 +111,11 @@ H3_COVERS: dict[str, str | tuple[str, int]] = {
     "tpl-image-papercraft-keyframe": ("papercraft-stop-motion-explainer.gif", 6),
     "case-video-h3-fleet-jump": "t2va.mp4",
     "case-video-h3-ramen-focus-pull": "i2va.mp4",
+    "case-video-h3-voice-edit": "r2va.mp4",
+    "style-video-brand-promo": "brand-promo-video-generator.gif",
+    "tpl-video-brand-promo-15s": "brand-promo-video-generator.gif",
+    "style-video-minimal-product-ad": "minimalist-product-ad-generator.gif",
+    "tpl-video-minimal-product-ad-10s": "minimalist-product-ad-generator.gif",
 }
 
 #: A source file and its cover form: animated (``True``), the image itself (``False``),
@@ -213,6 +220,29 @@ def minimax_h3_covers(repo: Path) -> Found:
     return found
 
 
+def evolink_covers(repo: Path, records: dict[str, Path]) -> Found:
+    """Each ``case-evolink-*`` record's first output image (``output.jpg``).
+
+    The case list is parsed by ``import_sources.evolink_cases``, so a record and its
+    cover come from one reading of the source files.
+    """
+    from import_sources import EVOLINK_ORIGIN, evolink_cases, evolink_record_id
+
+    found: Found = {}
+    for case in evolink_cases(repo):
+        record_id = evolink_record_id(case)
+        if record_id not in records:
+            continue
+        if not case["cover"]:
+            print(f"no cover listed for {record_id}", file=sys.stderr)
+            continue
+        found[record_id] = (
+            (repo / case["cover"], False),
+            {"origin": EVOLINK_ORIGIN, "author": case["author"], "url": case["url"]},
+        )
+    return found
+
+
 def _ffmpeg() -> str:
     exe = shutil.which("ffmpeg")
     if exe:
@@ -288,7 +318,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("source", choices=["gpt-image2", "awesome-styles", "minimax-h3"])
+    parser.add_argument("source", choices=["gpt-image2", "awesome-styles", "minimax-h3", "evolink"])
     parser.add_argument("path", type=Path)
     parser.add_argument("--max-edge", type=int, default=1024)
     parser.add_argument("--quality", type=int, default=85)
@@ -303,6 +333,8 @@ def main() -> int:
         found = gpt_image2_covers(repo, records)
     elif args.source == "awesome-styles":
         found = awesome_style_covers(repo)
+    elif args.source == "evolink":
+        found = evolink_covers(repo, records)
     else:
         found = minimax_h3_covers(repo)
 
@@ -317,11 +349,15 @@ def main() -> int:
             continue
         version = int(_RECORD_FILE.match(records[record_id].name)["version"])
         key = cover_key(record_id, version, src)
+        try:
+            write_cover(src, COVERS / key, args)
+        except UnidentifiedImageError:  # e.g. an MP4 saved under a .jpg name upstream
+            print(f"skip {record_id}: not a readable image {src[0]}", file=sys.stderr)
+            continue
         # One cover per record version: drop a previous one in another format.
         for old in [k for k in credits if k.rpartition(".")[0] == f"{record_id}/{version}" and k != key]:
             del credits[old]
             (COVERS / old).unlink(missing_ok=True)
-        write_cover(src, COVERS / key, args)
         credits[key] = {**credit, "usage": "reference-only"}
         written += 1
     save_credits(credits)

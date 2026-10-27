@@ -1,0 +1,18 @@
+id: case-evolink-ui-64
+version: 1
+kind: case
+media: image
+title: Create a landing page using this image as a reference for style and color gra...
+summary: Create a landing page using this image as a reference for style and color grading.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@D_studioproject'
+  url: https://x.com/D_studioproject/status/2047212826264211540
+content: Create a landing page using this image as a reference for style and color grading.

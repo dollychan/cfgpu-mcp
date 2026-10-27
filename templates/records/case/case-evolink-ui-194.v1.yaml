@@ -1,0 +1,65 @@
+id: case-evolink-ui-194
+version: 1
+kind: case
+media: image
+title: 直播电商 UI 模型图
+summary: '{ "type": "live stream UI mockup", "subject": { "description": "portrait of {argument name=\"host name\" default=\"Elon Musk\"}, smiling, dressed in a black t-shirt featuring a white technical schematic print", "backgro…'
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2069090579355668501
+content: |-
+  {
+    "type": "live stream UI mockup",
+    "subject": {
+      "description": "portrait of {argument name=\"host name\" default=\"Elon Musk\"}, smiling, dressed in a black t-shirt featuring a white technical schematic print",
+      "background": "left side displays a screen showing '{argument name=\"left background logo\" default=\"SPACEX\"}' text, right side shows a red '{argument name=\"right background logo\" default=\"Tesla T logo\"}' and a dark-colored car"
+    },
+    "ui_overlay": {
+      "top_header": {
+        "host_info": "avatar, host name '{argument name=\"host name\" default=\"Elon Musk\"}', subtext '556k likes this stream', red 'Follow' button",
+        "rank_badge": "gold coin icon labeled 'No.1 Site-wide'",
+        "viewer_stats": "3 top viewer avatars with counts '123k', '86k', '57k', total viewers '687k', 'X' close button",
+        "right_links": "'More streams >', 'Gift Hall 0/24' with blue 'Classic' tag"
+      },
+      "mid_left_gifts": {
+        "count": 2,
+        "items": [
+          "avatar 'TechFan', 'sent a Little Heart', heart icon x 1314",
+          "avatar 'SeaOfStars', 'sent a Rocket', rocket icon x 666"
+        ]
+      },
+      "bottom_left_chat": {
+        "system_message": "level 37 badge 'CosmicWanderer joined the stream'",
+        "message_count": 7,
+        "messages": [
+          "LittleRocket: Musk! The future is bright! 🚀",
+          "future: When is Tesla Model 2 coming out?",
+          "StarryDreamer: Will SpaceX reach Mars this year?",
+          "AIExplorer: What's the latest on Neuralink?",
+          "HandsomeNetizen: Hello Boss Ma!",
+          "Mars: First time watching your stream, super excited!",
+          "User123: Talk about AI — will it replace humans?"
+        ]
+      },
+      "bottom_right_product_card": {
+        "hot_tag": "orange 'Hot Sale x 1888'",
+        "image": "Tesla Cybertruck",
+        "title": "{argument name=\"product name\" default=\"Tesla Cybertruck Electric Pickup\"}",
+        "price": "{argument name=\"product price\" default=\"¥1,618,000\"}",
+        "button": "red 'Buy' button",
+        "floating_animation": "translucent hearts drifting up along the right edge"
+      },
+      "bottom_bar": {
+        "input_field": "'Say something...'",
+        "icons": ["smiley face", "three dots", "shopping cart", "gift box", "share"]
+      }
+    }
+  }

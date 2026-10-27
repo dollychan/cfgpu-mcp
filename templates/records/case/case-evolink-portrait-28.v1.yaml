@@ -1,0 +1,18 @@
+id: case-evolink-portrait-28
+version: 1
+kind: case
+media: image
+title: Old Delhi Sweet Shop Storefront Documentary Photo
+summary: Create a photorealistic travel-documentary image of a small sweet-shop storefront in Old Delhi at midday.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@commanderdgr8'
+  url: https://x.com/commanderdgr8/status/2047889839123521635
+content: Create a photorealistic travel-documentary image of a small sweet-shop storefront in Old Delhi at midday. A painted shop signboard above the door reads "मिठाई की दुकान" in large bold yellow hand-painted Devanagari on a deep red background, with "SWEET SHOP" in smaller roman letters beneath. Realistic hand-painted texture, slight wear, natural shadow. Authentic script proportion. Spelling and characters exact. No extra signage in frame, no watermark.

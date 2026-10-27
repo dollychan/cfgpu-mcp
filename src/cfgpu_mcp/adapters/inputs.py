@@ -51,28 +51,45 @@ INPUT_SLOTS = {
 }
 _VISUAL_SLOTS = ("first_frame", "last_frame", "reference_images", "reference_videos")
 
-#: How a model consumes a supplied audio track. One slot, three different contracts —
-#: and the difference decides which model a request like "make a video from this
-#: speech" may be routed to:
+#: What each ``role`` value means, per slot — the one place these meanings are written.
+#: ``list_model_profiles`` publishes the entries its rows use as ``input_roles``: a row
+#: carries only the bare value, and an agent that cannot read what ``reference`` means
+#: takes it for "not editable" and never offers a reference-video edit (2026-10-21).
 #:
-#: - ``driving``   — the track is the soundtrack and the picture follows it (timing,
-#:                   lip movement). The only role that implies the audio is heard as-is.
-#: - ``voice``     — a timbre sample bound to a visual reference; the model speaks new
-#:                   lines in that voice. The supplied recording itself is not played.
-#: - ``reference`` — material the prompt directs (background music, a voice to imitate,
-#:                   a rhythm). What happens to it depends on the prompt; nothing
-#:                   guarantees it survives into the output unchanged.
-AUDIO_ROLES = ("driving", "voice", "reference")
-
-#: How a model consumes a supplied video. The same slot carries two different jobs:
-#:
-#: - ``reference`` — material the prompt directs (a motion, a style, a subject to keep).
-#:                   On models that also edit or extend, the prompt can make it the
-#:                   thing edited; nothing about the call says so.
-#: - ``source``    — always the video being edited or continued (万相 2.7 i2v's
-#:                   ``first_clip``, the 万相 / HappyHorse edit models' source video).
-#:                   Sending reference material here edits or extends *it*.
-VIDEO_ROLES = ("reference", "source")
+#: Audio: one slot, three contracts, and the difference decides which model a request
+#: like "make a video from this speech" may be routed to. Video: the same slot carries
+#: two jobs — ``source`` is 万相 2.7 i2v's ``first_clip`` and the 万相 / HappyHorse edit
+#: models' source video; on ``reference`` nothing about the call says which job it is.
+ROLE_DESCRIPTIONS: dict[str, dict[str, str]] = {
+    "reference_videos": {
+        "reference": (
+            "Material the prompt directs (a motion, a style, a subject to keep). On a model "
+            "whose tasks include video_edit or video_extend, the prompt can make this video "
+            "the clip that is edited or continued: name it with [[handle]], say what to "
+            "change, and state what must stay unchanged."
+        ),
+        "source": (
+            "Always the video being edited or continued; whatever is sent here is the "
+            "footage that gets modified, never mere reference material."
+        ),
+    },
+    "reference_audios": {
+        "driving": (
+            "The track is the soundtrack and the picture follows it (timing, lip "
+            "movement). The only role in which the audio is heard as supplied."
+        ),
+        "voice": (
+            "A timbre sample bound to a visual reference; the model speaks new lines in "
+            "that voice. The supplied recording itself is not played."
+        ),
+        "reference": (
+            "Material the prompt directs (background music, a voice to imitate, a "
+            "rhythm). Nothing guarantees it is heard unchanged in the output."
+        ),
+    },
+}
+AUDIO_ROLES = tuple(ROLE_DESCRIPTIONS["reference_audios"])
+VIDEO_ROLES = tuple(ROLE_DESCRIPTIONS["reference_videos"])
 _ROLES = {"reference_videos": VIDEO_ROLES, "reference_audios": AUDIO_ROLES}
 
 _SLOT_KEYS = {

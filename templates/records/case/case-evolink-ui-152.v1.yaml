@@ -1,0 +1,20 @@
+id: case-evolink-ui-152
+version: 1
+kind: case
+media: image
+title: Exploded Vehicle View
+summary: Create an ultra detailed exploded view of the iconic [vehicle name].
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@CharaspowerAI'
+  url: https://x.com/CharaspowerAI/status/2056049620753449271
+content: |-
+  Create an ultra detailed exploded view of the iconic [vehicle name].
+  [Vehicle] is suspended in mid-air with all mechanical parts separated and floating in perfect alignment, showing the full internal structure of the vehicle. White background

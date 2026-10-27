@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `wan-video` | 
-| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, video_edit, video_extend, synced_audio_output |
+| 任务（tasks） | text_to_video, image_to_video, first_last_frame, reference_to_video, framed_reference_video, video_edit, video_extend, synced_audio_output |
 | 成本档位 | 3/5 |
 | 速度档位 | 2/5 |
 
@@ -451,8 +451,9 @@ data:image/<格式>;base64,<Base64编码>
 | 在线推理 RPM | 600 |
 | 在线推理并发数 | 10 |
 
-**场景互斥：**
-- 图生视频-首帧、图生视频-首尾帧、多模态参考生视频是三种互斥场景，不可混用
+**场景互斥（参数层面）：**
+- 图生视频-首帧、图生视频-首尾帧、多模态参考生视频在一次请求里不能混用参数：`first_frame` / `last_frame` 不能与 `reference_*` 同时给出。
+- 这是参数约束，不是任务做不到：用户给了多张参考、又要其中一张作首帧/尾帧时，走多模态参考，把这张也放进 `reference_images`，在 prompt 里写「以 [[handle]] 作为视频首帧」（尾帧同理）。画面由提示词还原，接近但不保证与原图逐像素一致。
 
 ## 异步任务流程
 

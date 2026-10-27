@@ -1,0 +1,18 @@
+id: case-evolink-poster-290
+version: 1
+kind: case
+media: image
+title: Vintage Travel Collage Poster
+summary: Vintage mixed-media travel collage poster, portrait orientation, themed around [COUNTRY].
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@sdhilip'
+  url: https://x.com/sdhilip/status/2056261616967270640
+content: Vintage mixed-media travel collage poster, portrait orientation, themed around [COUNTRY].

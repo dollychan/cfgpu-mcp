@@ -1,0 +1,18 @@
+id: case-evolink-ad-creative-194
+version: 1
+kind: case
+media: image
+title: OBSIDIAN 咖啡品牌企划
+summary: Generate four cohesive high-end realistic editorial visuals for OBSIDIAN coffee brand.
+genres:
+- product-ad
+tags:
+- 广告创意
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2066523210808484228
+content: 'Generate four cohesive high-end realistic editorial visuals for OBSIDIAN coffee brand. Cinematic, dark, mature aesthetic inspired by luxury sportswear and premium coffee advertising. Studio lighting that''s dramatic yet controlled, photorealistic textures, clean compositional layout. Shot 1: Hero brand poster featuring ''OBSIDIAN'' lettering with an artful coffee display — steam rising, beans scattered. Shot 2: Full product range — coffee bags, cans, and capsules arranged together. Shot 3: Tight packaging detail with tagline ''Coffee for grown-ups who chase flavor.'' Shot 4: Lifestyle close-up of a steaming cup. Ultra-polished finish, crisp realistic materials, unified brand identity, no fantastical or surreal elements'

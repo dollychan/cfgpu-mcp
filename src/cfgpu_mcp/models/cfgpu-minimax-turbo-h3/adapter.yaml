@@ -1,0 +1,16 @@
+# MiniMax H3 Turbo through the CFGPU video API.
+#
+# A downgraded MiniMax H3 served under CFGPU id `minimax-turbo-h3`: the same V2
+# create / query contract on the same CFGPU routes, so everything not listed here
+# is inherited. The one parameter difference today is resolution — no 2K.
+extends: cfgpu-minimax-h3
+adapter_id: cfgpu-minimax-turbo-h3
+display_name: "MiniMax H3 Turbo"
+cfgpu_model_id: minimax-turbo-h3
+model_name: minimax-turbo-h3
+
+resolutions: [480p, 768p]
+default_resolution: 768p
+
+# H3 is the declared balanced default; a variant must not inherit that decision.
+default_for: []

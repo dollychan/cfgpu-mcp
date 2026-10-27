@@ -1,0 +1,27 @@
+id: case-evolink-poster-419
+version: 1
+kind: case
+media: image
+title: 阿根廷10号运动海报
+summary: 'prompt: A mixed-media sports poster with a realistic chest-up portrait of a young Argentine soccer player, confident pose with a subtle smile, dark brown slightly messy hair.'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2068534010574459131
+content: |-
+  prompt:
+
+  A mixed-media sports poster with a realistic chest-up portrait of a young Argentine soccer player, confident pose with a subtle smile, dark brown slightly messy hair. Wearing the Argentina national team jersey with iconic sky-blue and white stripes, Adidas logo on right chest, Argentina Football Association crest on left.
+
+  Soft studio lighting from upper left with gentle shadows and highlights on the hair. A bold white number "10" fills the background, partially overlapped by the player.
+
+  Background features vertical smoke bands in Argentine flag colors: sky blue, white, and sky blue.
+
+  Modern, clean, and dynamic style combining sharp portrait details with soft smoky effects for a powerful professional sports-poster aesthetic.

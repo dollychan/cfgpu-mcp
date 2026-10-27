@@ -1,0 +1,31 @@
+id: case-evolink-poster-373
+version: 1
+kind: case
+media: image
+title: Hand-drawn Doodle Art Overlay
+summary: '://t.co/jBGrThiRdq prompt: Take the uploaded photo and keep the subject completely unchanged — same face, pose, framing, and lighting, no warping or distortion.'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2064454454553051298
+content: |-
+  ://t.co/jBGrThiRdq
+
+  prompt:
+
+  Take the uploaded photo and keep the subject completely unchanged — same face, pose, framing, and lighting, no warping or distortion. Layer expressive hand-drawn illustrations on top that playfully interact with the person or scene.
+
+  Have the doodles react to what's in the frame: follow gestures, amplify movement, trace body outlines, or bring in imaginative details that feel connected to the moment. The sketches should look deliberate, like someone drew straight onto the print with spontaneous yet thoughtful pen strokes.
+
+  Go for a loose, slightly rough drawing style — wobbly lines, organic curves, a sketchbook aesthetic. Add handwritten words or short captions that fit the vibe of the image: make them clever, context-specific, and genuinely playful rather than generic filler.
+
+  Keep the illustrated additions from overwhelming the original photo. Aim for a balanced final composition with crisp, high-res output and a color palette that feels native to the original scene.
+
+  #AIart #GPTImage2

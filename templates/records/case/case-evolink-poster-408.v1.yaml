@@ -1,0 +1,18 @@
+id: case-evolink-poster-408
+version: 1
+kind: case
+media: image
+title: 炒面食谱信息图
+summary: Ultra-clean modern recipe infographic for chowmin.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2067429181726904350
+content: 'Ultra-clean modern recipe infographic for chowmin. Feature the finished dish as hero visual, plated and slightly elevated in a perspective or angled view. Arrange ingredients, preparation steps, and tips dynamically around the dish in an editorial layout. Ingredients: icons or mini illustrations with quantities, arranged in clusters or circular flows connected visually to the dish. Steps: numbered panels with arrows or connecting lines forming a logical flow, including small cooking icons (knife, pan, oven, timer). Optional info: calories, prep/cook time, servings, spice level displayed as clean bubbles or badges. Visual style: editorial infographic meets lifestyle food photography. Vibrant natural food colors, subtle drop shadows, clean vector icons, modern typography, soft gradients or glassmorphism for step panels, accent colors on key stats. Composition: finished meal as hero, ingredients and steps flowing dynamically around it, clear visual hierarchy with ample negative space. Lighting: soft natural studio light on a minimal textured or gradient background. Output: 1080x1080, ultra-crisp, social-feed optimized, no watermark.'

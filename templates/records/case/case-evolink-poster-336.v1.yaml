@@ -1,0 +1,18 @@
+id: case-evolink-poster-336
+version: 1
+kind: case
+media: image
+title: Landmark Miniature Diorama
+summary: Isometric miniature diorama of [LANDMARK NAME], capturing its real-world structure and proportions on a small floating platform, surrounded by buildings and landscape details from [CITY / COUNTRY].
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2063020385420161405
+content: Isometric miniature diorama of [LANDMARK NAME], capturing its real-world structure and proportions on a small floating platform, surrounded by buildings and landscape details from [CITY / COUNTRY]. Physically accurate materials including stone, concrete, metal, and glass. True-to-life color palette, muted and realistic tones matching the actual landmark. Off-white studio background with soft natural lighting, gentle shadows, and clean composition. High-detail 3D render, premium architectural model aesthetic, no people, no text.

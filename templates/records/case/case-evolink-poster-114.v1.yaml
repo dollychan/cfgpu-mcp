@@ -1,0 +1,18 @@
+id: case-evolink-poster-114
+version: 1
+kind: case
+media: image
+title: E-commerce Main Image - Skincare Product Studio Shot
+summary: A soft {argument name="bottle color" default="cream-colored"} bottle with a {argument name="pump color" default="pastel yellow"} pump stands on a matte podium, surrounded by silky foam and {argument name="flowers" defau…
+genres:
+- product-food
+tags:
+- 电商
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Strength04_X'
+  url: https://x.com/Strength04_X/status/2047636636847231222
+content: A soft {argument name="bottle color" default="cream-colored"} bottle with a {argument name="pump color" default="pastel yellow"} pump stands on a matte podium, surrounded by silky foam and {argument name="flowers" default="chamomile blossoms"}. The background is a pale yellow gradient with subtle bubble details. The label emphasizes organic chamomile and calming care. Fresh chamomile flowers accentuate the gentle appeal.

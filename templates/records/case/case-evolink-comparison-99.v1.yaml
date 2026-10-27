@@ -1,0 +1,294 @@
+id: case-evolink-comparison-99
+version: 1
+kind: case
+media: image
+title: Dust Bunny Nature Documentary
+summary: Create a 16:9 image.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@NeuralAIInsight'
+  url: https://x.com/NeuralAIInsight/status/2063638281976189102
+content: |-
+  Create a 16:9 image.
+
+  [PROJECT CARD]
+  Create a compact designed masthead, not a table.
+  TITLE: THE DUST BUNNY NATURE DOCUMENTARY
+  META LINE: macro wildlife realism / under-couch survival ecosystem / dry documentary comedy / 15-second natural-history chase
+  PRIORITY: real nature-documentary seriousness, under-couch wilderness, dust bunny herd, fragile main dust bunny, household objects as landmarks, vacuum cleaner apex predator, survival chase, calm noble ending
+  MICRO BRIEF: Eighteen-panel storyboard of a small dust bunny under a couch filmed like a wild animal surviving in a dangerous natural habitat.
+  [CONTINUITY HEADER]
+  SEQUENCE ID: DUST-BUNNY-DOC-18
+  REFERENCE PRIORITY: This storyboard controls C1 dust bunny identity, under-couch geography, macro household scale, documentary lens language, herd behavior, vacuum predator logic, survival chase continuity, and dry comedic realism.
+  [SCENE PACKET]
+  PREMISE: Beneath an ordinary living-room couch exists a hidden wilderness. Dust bunnies drift and gather like a small herd in a shadowed ecosystem of carpet fibers, long hair strands, crumbs, lost objects, and canyon-like sofa legs. One small fragile dust bunny explores the terrain, moving through the under-couch world like a wild animal foraging in a hostile habitat. The peace breaks when the ground begins to tremble. The vacuum cleaner arrives like an apex predator: part lion, part shark, part sandstorm. Its suction pulls dust, crumbs, and debris into a violent vortex. C1 races through the under-sofa wilderness, dodges household dangers, tumbles past a lost LEGO brick, coin, pen cap, crumbs, and hair-strand forests, then finds cover just in time. The vacuum passes. Calm returns. The herd remains. Against all odds, life continues under the couch.
+  LOCATION:
+  The underside of a couch in a real home, filmed at extreme macro scale.
+  Environment: dark sofa underside, canyon-like couch shadows, carpet fibers like tall grass, dust motes drifting like desert particles, long hair strands like tangled vines or forest roots, crumbs like boulders, a lost LEGO brick like a red stone ruin, a coin like a metallic moon-disc, a pen cap like a fallen cylinder monument, deep shadow pockets used as cover.
+  World scale: everything is household-sized in reality but filmed like a vast natural ecosystem.
+  START -> END:
+  C1 and a small dust bunny herd rest calmly in the hidden under-couch habitat -> C1 explores and forages -> the vacuum arrives and creates a suction storm -> C1 survives by finding cover -> C1 returns to the herd as the habitat settles back into quiet.
+  ACTION CHAIN:
+  calm under-couch ecosystem -> dust bunny herd drifting -> main dust bunny emerges -> foraging through carpet grass -> LEGO ruin pass -> coin reflection -> pen cap tunnel -> crumbs and hair forest -> ground tremor -> vacuum shadow appears -> suction storm begins -> debris vortex pulls everything -> C1 tumbles and runs -> near miss at nozzle edge -> cover behind LEGO brick -> vacuum passes -> dust settles -> C1 returns to herd -> life continues.
+
+  PROP / EFFECT STATE:
+  C1 is a believable dust bunny creature made from dust, fuzz, hair, lint, and tiny fibers. It has subtle expressive movement but no human face, no speech, no limbs like a cartoon mascot, no clothes, and no exaggerated cuteness.
+  Dust bunny herd members are soft drifting clumps of dust and lint with tiny natural movement, not characters with faces.
+  The vacuum cleaner is the apex predator. It should be introduced through shadow, vibration, low mechanical presence, nozzle movement, suction wind, and debris being pulled into darkness. It should feel genuinely threatening in documentary terms, not like a villain with personality.
+  The household objects are landmarks: LEGO brick, coin, pen cap, crumbs, hair strands, carpet fibers. They should feel like real objects seen at extreme macro scale.
+  MUST READ:
+  The style must stay committed to real documentary seriousness. This is not a cartoon parody. The joke is that a dirty forgotten corner of a home is treated like a majestic wildlife ecosystem.
+  [CHARACTER SANITIZATION]
+  C1: small dust bunny, fragile rounded irregular shape, soft grey-beige lint body, slightly shaggy edges, tiny tangled hair fibers, dust particles clinging to its surface, delicate movement like a windblown creature, subtle readable orientation without a cartoon face. It should feel alive but still plausibly made from household dust and fuzz.
+  C2: dust bunny herd, several smaller and larger dust clumps drifting and resting in shadow, fragile, quiet, non-human, no obvious faces, no mascot design.
+  C3: vacuum cleaner apex predator, seen mostly as a large dark nozzle, rotating brush shadow, vibrating floor presence, harsh suction wind, low mechanical threat. It should feel enormous from dust-bunny scale.
+  C4: household landmarks — lost LEGO brick, coin, pen cap, old crumbs, long hair strands, carpet fibers, couch legs, dark sofa underside. These are environmental features, not props to be played for slapstick.
+
+  [IDENTITY CONSISTENCY]
+  Keep C1’s small grey-beige shaggy dust-and-lint body, fragile irregular shape, hair-fiber texture, and subtle movement consistent across every panel. Keep the under-couch geography consistent: couch underside above, carpet fibers below, lost objects as landmarks, vacuum entering from one side. Preserve face, identity, skin tone, body shape, hair, outfit, and proportions exactly across every panel. No identity drift. No redesign.
+  [STORYBOARD PURITY]
+  Create a clean professional storyboard sheet with 18 panels arranged in a compact 3x6 grid. Full-color cinematic documentary panel artwork. Put panel numbers, beat names, and lens tags in a clean header strip outside each panel image. No captions, no subtitles, no speech bubbles, no logos, no watermarks, no arrows inside the artwork, no technical overlays. Do not make the dust bunny too cute or anthropomorphic. Do not overcrowd panels. Each panel must have one clear wildlife-documentary visual idea.
+
+  [MASTER SHOT RULE]
+  P01 must clearly establish the under-couch ecosystem in calm documentary beauty: sofa underside overhead, carpet fibers like grass, dust motes in shallow focus, lost objects in the distance, herd visible but subtle. P10 must clearly introduce the vacuum as an enormous apex predator presence. P13-P15 must be the clearest survival-chase section. P18 must return to calm, noble life continuing under the couch.
+  [EMOTIONAL ARC]
+  Hidden natural beauty -> fragile creature life -> strange majestic household wilderness -> first tremor -> predator arrival -> survival panic -> near consumption -> shelter and endurance -> dust settles -> noble absurd continuity of life.
+  [STYLE LOCKS]
+  STYLE LOCK: National Geographic / BBC Earth macro documentary realism, cinematic natural-history lens language, shallow depth of field, extreme macro photography, realistic household textures, dust motes in volumetric light, tactile carpet fibers, muted earth tones, soft documentary contrast, serious wildlife cinematography.
+  REALISM LOCK: the dust bunny should feel like a believable dust-and-lint organism, not a cartoon character. Movement is subtle, fragile, and wind-driven. No talking, no human gestures, no mascot design.
+  DOCUMENTARY LOCK: camera treats the under-couch world like a real ecosystem: patient observation, macro tracking, hidden-life beauty, predator dread, survival stakes.
+  PREDATOR LOCK: the vacuum is shot like a natural threat: shadow first, vibration second, then nozzle and suction vortex. It should feel like a lion, shark, and sandstorm combined, but still clearly a household vacuum cleaner.
+  COMEDY LOCK: dry seriousness is the joke. Do not wink at the audience. Do not exaggerate into slapstick.
+  ENVIRONMENT LOCK: underside of couch remains the same wilderness throughout: couch shadow canopy above, carpet fiber grass below, lost LEGO brick, coin, pen cap, crumbs, and hair strands as landmarks.
+  [SPATIAL CONTINUITY LOCK]
+  P01-P04 establish the calm under-couch ecosystem and C1 among the dust bunny herd.
+  P05-P08 follow C1 exploring through the household landmark terrain.
+  P09-P10 introduce vibration and vacuum predator arrival from one side of the couch.
+  P11-P15 stage the suction chase through the same under-couch geography.
+  P16 shows C1 finding cover and surviving the vacuum pass.
+  P17-P18 restore calm and return C1 to the herd.
+  The vacuum always enters from one consistent direction. C1’s survival path moves from the open carpet-fiber field toward cover behind the LEGO brick or pen cap.
+
+  [DIRECTOR STRIP]
+  Bottom animatic track board aligned to panel columns. Tracks: BEAT LINE, CAMERA PATH, ACTION PATH, RHYTHM TRACK, ESCALATION MAP, STATE TRACK, STYLE TRACK. Use clean shot chips, thin lines, small rhythm blocks, and short labels. No timestamps.
+  PANEL HEADERS:
+  P01 / macro 35mm / Hidden ecosystem
+  P02 / macro 100mm / Herd drifts
+  P03 / 85mm close / C1 emerges
+  P04 / low macro / Carpet grass
+  P05 / 70mm track / Foraging path
+  P06 / macro wide / LEGO ruin
+  P07 / 100mm insert / Coin moon
+  P08 / 50mm tunnel / Pen cap shelter
+  P09 / 85mm tremor / Ground warning
+  P10 / low 24mm / Predator shadow
+  P11 / 35mm storm / Suction begins
+  P12 / macro chaos / Debris vortex
+  P13 / 70mm chase / C1 runs
+  P14 / 100mm danger / Nozzle near miss
+  P15 / low 35mm / Hair forest escape
+  P16 / 50mm cover / Survives pass
+  P17 / macro calm / Dust settles
+  P18 / 35mm wide / Life continues
+
+  CAMERA + LENS PLAN:
+  P01 wide macro establishing shot under the couch, sofa underside like canyon ceiling, carpet fibers like grass, dust motes floating in light.
+  P02 patient macro shot of several dust bunnies drifting and gathering like a herd in a hidden ecosystem.
+  P03 close documentary shot of C1 emerging from shadow, fragile and shaggy, subtly alive.
+  P04 low carpet-level shot as C1 moves through tall carpet fibers like grassland.
+  P05 tracking macro shot following C1 foraging through crumbs and lint.
+  P06 wider macro shot of C1 passing a lost LEGO brick framed like an ancient red stone ruin.
+  P07 insert shot of a coin reflecting dim light like a metallic moon in the under-couch world.
+  P08 tunnel-like shot of C1 passing near a pen cap, treated like a fallen hollow log or shelter.
+  P09 tense close shot as carpet fibers vibrate and dust trembles from an approaching force.
+  P10 low dramatic shot of the vacuum nozzle shadow entering the habitat like an apex predator.
+  P11 wide macro chaos shot as suction begins pulling dust motes, crumbs, and lint into a directional wind.
+  P12 extreme macro shot of debris spinning in a suction vortex, realistic and tactile.
+  P13 fast documentary chase shot of C1 tumbling and racing through the carpet-fiber field.
+  P14 intense near-miss shot: vacuum nozzle edge passes dangerously close as C1 is almost pulled in.
+  P15 low tracking shot as C1 escapes through long hair strands like a tangled forest.
+  P16 still tense shot as C1 wedges behind the LEGO brick or pen cap, surviving as the vacuum passes.
+  P17 quiet macro shot as dust settles back onto the carpet and the predator sound fades.
+  P18 wide macro final shot of C1 returning to the dust bunny herd, calm restored, life continuing under the couch.
+  ACTION PATH:
+  P01 The under-couch wilderness is revealed in calm documentary beauty.
+  P02 Dust bunnies drift and gather like a quiet herd.
+  P03 C1 emerges carefully from shadow.
+  P04 C1 moves through carpet fibers like tall grass.
+  P05 C1 forages among crumbs, dust, and lint.
+  P06 C1 passes the lost LEGO brick landmark.
+  P07 C1 crosses near the coin, its reflection looming huge.
+  P08 C1 explores beside the pen cap shelter.
+  P09 The ground trembles; dust particles shake.
+  P10 The vacuum cleaner shadow appears at the edge of the habitat.
+  P11 Suction begins, pulling dust and crumbs into a violent wind.
+  P12 Debris spins into a vortex.
+  P13 C1 races away through the under-couch wilderness.
+  P14 C1 narrowly avoids the vacuum nozzle.
+  P15 C1 tumbles through hair strands and carpet fibers.
+  P16 C1 finds cover behind the LEGO brick or pen cap and survives the pass.
+  P17 The vacuum leaves; dust settles; silence returns.
+  P18 C1 rejoins the herd. Against all odds, life continues.
+
+  RHYTHM TRACK:
+  P01 hold / hidden beauty / patient beat
+  P02 observe / calm life / documentary beat
+  P03 reveal / fragile subject / clean beat
+  P04 move / quiet exploration / slow beat
+  P05 forage / natural behavior / measured beat
+  P06 landmark / scale reveal / held beat
+  P07 detail / world texture / quiet beat
+  P08 shelter / ecosystem detail / clean beat
+  P09 warning / tremor / tension beat
+  P10 predator reveal / dread / held beat
+  P11 attack / suction wind / impact beat
+  P12 vortex / chaos / storm beat
+  P13 chase / survival run / driving beat
+  P14 near miss / danger spike / smash beat
+  P15 escape / tangled path / whip beat
+  P16 cover / survival pause / suspended beat
+  P17 settle / predator gone / release beat
+  P18 continue / noble calm / final hold
+  ESCALATION MAP:
+  P01 L1 calm / flat
+  P02 L1 ecosystem / hold
+  P03 L2 subject reveal / rise
+  P04 L2 exploration / hold
+  P05 L2 foraging / hold
+  P06 L2 scale wonder / rise
+  P07 L2 texture wonder / hold
+  P08 L2 shelter / hold
+  P09 L3 warning / spike
+  P10 L4 predator / rise
+  P11 L5 attack / spike
+  P12 L5 vortex / surge
+  P13 L5 chase / sustained
+  P14 L5 near death / spike
+  P15 L4 escape / unresolved
+  P16 L3 survival / drop
+  P17 L2 calm returns / release
+  P18 L1 life continues / resolved
+  STATE TRACK:
+  P01 hidden habitat
+  P02 herd calm
+  P03 C1 emerges
+  P04 carpet grass
+  P05 foraging
+  P06 LEGO ruin
+  P07 coin moon
+  P08 pen cap shelter
+  P09 tremor
+  P10 vacuum shadow
+  P11 suction begins
+  P12 debris vortex
+  P13 survival chase
+  P14 nozzle near miss
+  P15 hair forest escape
+  P16 cover survives
+  P17 dust settles
+  P18 herd remains
+  STYLE TRACK:
+  P01 BBC Earth macro
+  P02 fragile herd
+  P03 wild subject
+  P04 grassland scale
+  P05 natural behavior
+  P06 household ruin
+  P07 metallic landmark
+  P08 hidden shelter
+  P09 predator omen
+  P10 apex dread
+  P11 sandstorm suction
+  P12 debris cyclone
+  P13 survival sprint
+  P14 shark-mouth danger
+  P15 forest escape
+  P16 sheltered life
+  P17 quiet aftermath
+  P18 noble absurdity
+  [NEGATIVE / AVOID]
+  Do not make the dust bunny too cute in a Pixar way.
+  Do not give the dust bunny a cartoon face, human eyes, arms, legs, clothing, speech, or mascot behavior.
+  Do not turn the vacuum into a character with a face.
+  Do not make the scene loud, colorful, or cartoonish.
+  Do not lose the realism of the household environment.
+  Do not make the couch world clean or magical.
+  Do not overcrowd panels with too many objects.
+  Do not add narration text, captions inside panels, speech bubbles, logos, watermarks, UI, or arrows inside the artwork.
+  Do not make the dust bunny herd look like plush toys.
+  Do not make the ending sentimental; make it calm, dry, and weirdly noble.
+
+  [SEQUENCE]
+  Grid: 18 panels in a compact 3x6 cinematic storyboard sheet. The sequence must read as a serious macro nature documentary: a small dust bunny lives under a couch, explores its household wilderness, faces the vacuum cleaner apex predator, survives the suction storm, and returns to the herd as calm life continues. National Geographic / BBC Earth documentary realism, macro household scale, dry absurd comedy, tense survival framing, and committed visual seriousness throughout.
+
+  Seedance 2.0 Prompt:
+
+  Use as the authoritative director-approved storyboard blueprint for the sequence. Treat every storyboard panel as a consecutive shot within a single cinematic survival-documentary sequence. Follow panel order exactly and do not invent alternative coverage. Do not render the storyboard sheet itself. Preserve camera placement, framing, lens intent, shot scale, under-couch geography, dust-bunny scale, household landmark placement, vacuum-predator approach, suction-storm escalation, survival chase logic, and quiet final recovery shown by the storyboard. The storyboard is the primary source of truth for visual storytelling. Recreate the filmed sequence implied by the panels rather than the physical storyboard artwork.
+
+  REFERENCE PRIORITY:  controls the under-couch ecosystem, dust bunny design, dust herd behavior, LEGO ruin, coin sun, pen cap tunnel, crumb boulders, hair forest, vacuum predator staging, suction vortex physics, shelter beat, documentary realism, and panel purity.
+
+  TITLE: THE DUST BUNNY NATURE DOCUMENTARY
+
+  FORMAT: 15-second macro survival nature documentary. Serious wildlife tone applied to household dust. No dialogue from characters. No faces. No cartoon behavior.
+
+  MAIN SUBJECT:
+  The main dust bunny is a small tangled ball of grey dust, hair fibers, lint, tiny crumbs, and loose fuzz. It must feel like a real physical dust clump, not a cute creature. It has no eyes, no mouth, no limbs, no facial expressions, and no human behavior. Its personality is created only through camera framing, movement, danger, and survival context.
+
+  ENVIRONMENT:
+  A hidden ecosystem under a couch. The underside of the couch forms a dark ceiling; couch legs feel like giant trees; carpet fibers become grassland; dust particles hang in the air like desert haze. Household debris becomes wilderness landmarks: a red LEGO brick as an ancient ruin, a coin standing like a glowing sun disk, a pen cap as a tunnel, crumbs as boulders, tangled hair strands as a forest. The under-couch geography must remain consistent and readable.
+
+  PREDATOR:
+  The vacuum cleaner is the predator. It appears at the edge of the couch as a dark, heavy mechanical threat. It should not look silly or friendly. The danger comes from vibration, shadow, proximity, suction wind, debris movement, and the violent pull of the vortex.
+
+  EMOTIONAL GUIDANCE:
+  Valence: quiet hidden ecosystem → strange natural beauty → discovery → distant threat → predator reveal → violent survival chase → last-second shelter → calm continuation.
+  Arousal: slow observational opening, gentle exploration, sudden ground tremor, rising threat, intense suction storm, near-miss danger, shelter release, quiet survival.
+  The comedy comes from the seriousness of the documentary language. The scene should feel funny because it is played completely straight.
+
+  VISUAL STYLE:
+  National Geographic / BBC Earth macro survival documentary. Low macro camera, shallow depth of field, realistic dust texture, floating dust motes, dramatic naturalistic light shafts, tactile carpet fibers, realistic household debris, cinematic macro wildlife framing, earthy brown-grey palette, occasional warm highlights from distant room light. The world should feel vast, ancient, and dangerous even though it is only under a couch. Documentary realism first; no Pixar-cute expression, no anthropomorphic design.
+
+  AUDIO:
+  No character dialogue. Optional serious nature-documentary style narration is allowed only if the platform supports voice, but the visuals must work without it. Use diegetic survival-documentary sound design: low room tone, tiny dust movement, faint fiber crackle, distant household hum, subtle rumble before the vacuum appears, heavy mechanical approach, carpet vibration, suction wind, debris rattling, crumbs scraping, hair strands whipping, vortex rush, sudden muffled shelter silence, vacuum fading away, then calm dust-settling ambience. Music, if used, should be restrained wildlife-documentary tension: minimal low drone, rising pulse during predator approach, intense swell during suction chase, cut down to quiet after shelter.
+
+  PANEL BEATS:
+  P01: Hidden World; wide shot. Under the couch, a vast dark ecosystem stretches across the dusty carpet floor. Couch legs rise like trees. Dust motes drift in distant light.
+  P02: The Herd; close-up. Multiple dust bunnies gather and drift like a small herd across the under-couch terrain. Natural, slow, observational.
+  P03: Our Dust Bunny; MCU. Introduce the main dust bunny as a tangled grey clump of lint, hair, and dust. It feels like a wild animal only because of the camera treatment.
+  P04: Exploring; close-up. The main dust bunny moves through dense carpet fibers and dust formations, exploring the hidden wilderness.
+  P05: LEGO Ruin; close-up. A red LEGO brick rises like an ancient ruin in the dust landscape. The main dust bunny passes nearby, establishing it as future shelter.
+  P06: Coin Sun; close-up. A coin stands upright or glints in light like a huge metallic sun. The dust bunny is tiny against it.
+  P07: Pen Cap Tunnel; close-up. The dust bunny approaches or passes a dark pen cap opening, framed like a cave or tunnel.
+  P08: Crumb Boulders; close-up. Crumbs loom like large boulders around the dust bunny. Keep the scale serious and naturalistic.
+  P09: Hair Forest; close-up. Long strands of hair curve through the frame like tall grass or a forest. The dust bunny passes through the tangled terrain.
+  P10: The Ground Trembles; wide shot. The under-couch world vibrates. Dust shifts. The herd becomes unsettled. The threat is felt before it is fully seen.
+  P11: Predator Approaches; close-up. The vacuum cleaner enters at the edge of the couch like an apex predator. Dark, heavy, mechanical, dangerous.
+  P12: Suction Storm Begins; close-up. The suction pulls dust, hair, crumbs, and loose fibers into motion. The first vortex forms around the dust bunny.
+  P13: Debris Vortex; close-up. The storm intensifies. Dust, crumbs, hair, and debris spiral violently through the frame. The main dust bunny resists the pull.
+  P14: Survival Chase; close-up. The dust bunny is dragged and rolled across the carpet by the suction wind, racing through the terrain as debris streaks past.
+  P15: Near Miss; close-up. The dust bunny is almost sucked into the vacuum path. The vortex curls around it. Survival hangs by a tiny margin.
+  P16: Last Second Shelter; close-up. The dust bunny reaches the red LEGO brick and tucks behind it at the last possible second. The brick blocks the suction like a rock shelter.
+  P17: Danger Passes; wide shot. The vacuum moves away. The suction fades. Dust settles. The under-couch world is still again.
+  P18: Life Continues; wide shot. The hidden ecosystem returns to quiet. Dust bunnies remain under the couch. The main dust bunny has survived. Life continues.
+
+  KEY INSTRUCTIONS:
+
+  * Keep the tone serious and documentary-real, not cute cartoon.
+  * Do not give the dust bunny eyes, face, mouth, limbs, or human gestures.
+  * The dust bunny must remain a real dust clump made of lint, hair, crumbs, and fuzz.
+  * The vacuum must feel like a genuine predator, not a joke machine.
+  * Keep the under-couch geography clear and consistent.
+  * The LEGO brick must read clearly as the final shelter.
+  * The chase must feel like survival, not slapstick.
+  * Protect the macro scale at all times.
+  * Keep household debris beautiful, tactile, and wilderness-like.
+  * Do not add dialogue between objects.
+  * Do not make the vacuum silly.
+  * Do not make the world bright and clean; it should be dusty, shadowed, and cinematic.
+  * End with quiet survival and life continuing under the couch.
+  * Do not show panel boxes, labels, numbers, captions, storyboard borders, or camera notes.

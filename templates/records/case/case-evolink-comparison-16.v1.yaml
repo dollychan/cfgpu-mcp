@@ -1,0 +1,16 @@
+id: case-evolink-comparison-16
+version: 1
+kind: case
+media: image
+title: A/B Test Signed Output
+summary: 私があなたをどんなふうに扱ってきたか、4 コマ漫画風に描いてください。まずは 800 字くらいのプロットをテキストで出して、私が「描いて」と言ったらプロットに沿った 4 コマ漫画を描いてください。
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@saskr_13'
+  url: https://x.com/saskr_13/status/2044744396932079934
+content: 私があなたをどんなふうに扱ってきたか、4 コマ漫画風に描いてください。まずは 800 字くらいのプロットをテキストで出して、私が「描いて」と言ったらプロットに沿った 4 コマ漫画を描いてください。

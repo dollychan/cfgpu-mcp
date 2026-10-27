@@ -1,0 +1,101 @@
+id: case-evolink-ecommerce-174
+version: 1
+kind: case
+media: image
+title: 冰淇淋配料标注广告
+summary: '{ "resolution": "8K", "aspect_ratio": "3:4", "image_type": "photorealistic commercial product render", "scene_description": { "main_subject": "A vertically centered ice cream bar mounted on a wooden stick", "orientation…'
+genres:
+- product-food
+tags:
+- 电商
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2067465624683700642
+content: |-
+  {
+    "resolution": "8K",
+    "aspect_ratio": "3:4",
+    "image_type": "photorealistic commercial product render",
+    "scene_description": {
+      "main_subject": "A vertically centered ice cream bar mounted on a wooden stick",
+      "orientation": "upright, front-facing, slightly elevated perspective",
+      "composition": "single product centered with surrounding ingredient labels and curved arrows"
+    },
+    "background": {
+      "color": "warm golden-yellow gradient",
+      "texture": "smooth, matte, evenly illuminated",
+      "lighting_falloff": "subtle vignette, darker towards edges"
+    },
+    "lighting": {
+      "type": "studio lighting",
+      "key_light": "soft frontal light emphasizing chocolate gloss",
+      "fill_light": "balanced fill preserving texture detail",
+      "specular_highlights": "visible on melted chocolate coating",
+      "shadows": "soft shadow beneath the stick"
+    },
+    "ice_cream_bar": {
+      "shape": "rounded rectangular bar",
+      "surface": "smooth with visible embedded inclusions",
+      "layers": [
+        {
+          "layer_position": "top coating",
+          "material": "milk chocolate",
+          "state": "melted and dripping",
+          "texture": "glossy, thick, fluid",
+          "details": [
+            "multiple chocolate drips flowing downward",
+            "irregular almond pieces embedded in coating",
+            "rounded drip edges pulled by gravity"
+          ]
+        },
+        {
+          "layer_position": "left interior",
+          "material": "chocolate ice cream",
+          "texture": "dense, creamy",
+          "color": "deep cocoa brown"
+        },
+        {
+          "layer_position": "right interior",
+          "material": "vanilla ice cream",
+          "texture": "smooth and creamy",
+          "color": "warm pale ivory"
+        }
+      ]
+    },
+    "stick": {
+      "material": "light natural wood",
+      "position": "centered below the bar",
+      "finish": "matte"
+    },
+    "ingredient_callouts": {
+      "style": "clean black sans-serif uppercase labels with thin curved arrows",
+      "placement": [
+        {
+          "label": "ALMOND",
+          "points_to": "almond chunks embedded in chocolate coating",
+          "position": "upper right"
+        },
+        {
+          "label": "CHOCOLATE",
+          "points_to": "brown ice cream core",
+          "position": "middle left"
+        },
+        {
+          "label": "VANILLA",
+          "points_to": "light vanilla ice cream core",
+          "position": "upper left"
+        }
+      ]
+    },
+    "style_keywords": [
+      "luxury food advertising",
+      "editorial product poster",
+      "ingredient breakdown visual",
+      "hyper-real textures",
+      "clean commercial composition"
+    ]
+  }

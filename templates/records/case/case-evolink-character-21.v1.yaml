@@ -1,0 +1,41 @@
+id: case-evolink-character-21
+version: 1
+kind: case
+media: image
+title: 3D Acrobat Jumping Editorial Cartoon
+summary: 'prompt: One complete 3D illustration, editorial exaggerated cartoon style, single standalone image, not a storyboard or multi-panel layout.'
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2065058228585844954
+content: |-
+  prompt:
+
+  One complete 3D illustration, editorial exaggerated cartoon style, single standalone image, not a storyboard or multi-panel layout.
+
+  Central character: a cartoon figure with a tiny head, chubby round torso, super-long limbs, huge hands and bulky shoes, slightly off-balance, caught mid-jump in a dramatic pose radiating tension and playful energy.
+
+  The silhouette reads like a soft toy sculpture — plump, springy, and exaggerated, not anatomically realistic.
+
+  Surface quality: matte rubber, fuzzy textile, knitted detail, clay-like feel, subtle fiber grain, handmade texture. Avoid shiny plastic, transparent glass, or high-spec reflections.
+
+  Color: vibrant dopamine palette, high saturation, strong color contrasts, large bold flat fills — vivid but not neon-overexposed.
+
+  Background: pure white, minimal staging, just a gentle oval drop shadow beneath the character, no elaborate setting.
+
+  Decorative floating elements orbiting the character: stars, wavy lines, spheres, cubes, icons, abstract shapes — all sculpted as soft rubber or paper-like 3D props, amplifying motion and graphic energy.
+
+  Lighting: soft studio setup, global illumination, diffused shadows, low contrast, polished commercial feel.
+
+  Rendered in C4D or Blender: stylized soft-sculpture aesthetic, matte clay finish, knitted fabric surface, playful editorial tone, high resolution.
+
+  — Scene: a pastel-toned acrobat throwing both arms up in a victorious airborne leap, wearing chunky multicolor sneakers
+
+  #AIart #GPTImage2

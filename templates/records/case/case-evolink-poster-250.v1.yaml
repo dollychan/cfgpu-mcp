@@ -1,0 +1,18 @@
+id: case-evolink-poster-250
+version: 1
+kind: case
+media: image
+title: Hand-Torn Editorial Collage
+summary: Transform the attached image into a collage artwork.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@realsigridjin'
+  url: https://x.com/realsigridjin/status/2054368795121361249
+content: Transform the attached image into a collage artwork. Make it appear as if hand-torn from newspapers, magazines, and flyers and pasted. Every single expression should be completed using large, torn pieces of paper. Represent in detail the torn edges, wrinkles, overlaps, and glue marks on the paper. Use relatively large pieces of paper, not too small, and place them randomly at different angles and directions, with the paper orientation rotated haphazardly. Create it to look like an actual collage roughly hand-pasted by a person.

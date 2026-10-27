@@ -1,0 +1,21 @@
+id: case-evolink-poster-103
+version: 1
+kind: case
+media: image
+title: Journey to the West Daughter Kingdom Poster
+summary: 西游记女儿国诱惑海报，六位艳丽的女儿国大臣在后宫温泉中，迷雾朦胧妖冶，生成图片 4.23早上测试成功
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@cj858cjsoul'
+  url: https://x.com/cj858cjsoul/status/2047103956535697822
+content: |-
+  西游记女儿国诱惑海报，六位艳丽的女儿国大臣在后宫温泉中，迷雾朦胧妖冶，生成图片
+
+  4.23早上测试成功

@@ -1,0 +1,27 @@
+id: case-evolink-poster-343
+version: 1
+kind: case
+media: image
+title: Retro Automotive Travel Poster Template
+summary: 'prompt: Create a vertical retro automotive travel poster featuring [CAR MODEL] either parked or driving through [SCENERY].'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2063276384924111329
+content: |-
+  prompt:
+
+  Create a vertical retro automotive travel poster featuring [CAR MODEL] either parked or driving through [SCENERY]. Use a bold 1970s printmaking style with a strict 4-color palette only: [COLORS]. Build the image with flat silkscreen-style color blocking, strong contrast shadows, simplified geometric reflections, slight ink misregistration, subtle paper grain, distressed print texture, and graphic halftone shading.
+
+  Avoid gradients, photorealism, glossy 3D rendering, and modern digital polish. The car should feel iconic and graphic, with thick simplified contour shapes and a warm nostalgic travel-ad atmosphere.
+
+  Include vintage advertisement typography that reads "[TITLE]" and integrate an authentic [BRAND LOGO] naturally into the layout. Add stylized trees, buildings, road signs, landscape shapes, or location details in the background so the setting clearly supports the travel-poster story.
+
+  The composition should feel like a strong mid-century tourism poster: balanced, editorial, poster-ready, and visually bold. Keep the design clean and intentional, with no stamp border.

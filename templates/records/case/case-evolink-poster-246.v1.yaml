@@ -1,0 +1,28 @@
+id: case-evolink-poster-246
+version: 1
+kind: case
+media: image
+title: COSMED Anime Commercial Poster
+summary: Create a premium anime-style commercial poster inspired by a real Taiwanese COSMED beauty store collaboration campaign.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Kashberg_0'
+  url: https://x.com/Kashberg_0/status/2053763810423664652
+content: |-
+  Create a premium anime-style commercial poster inspired by a real Taiwanese COSMED beauty store collaboration campaign. Vertical layout with a strong split composition: bold typography panel on the left and cinematic anime character scene on the right. Feature a stylish anime girl with short brown hair and expressive eyes wearing a white COSMED-branded windbreaker jacket with orange accents, holding a skincare serum bottle inside a modern beauty store filled with cosmetics and glowing shelves. Include transparent shopping bag with beauty products, realistic packaging details, soft cinematic lighting, glossy reflections, luxury skincare advertising aesthetic, warm orange and cream color palette, highly detailed anime rendering, Makoto Shinkai + modern commercial anime style, ultra-clean typography, realistic folds and textures, lifestyle branding atmosphere, elegant Japanese/Taiwanese retail design, depth of field, premium magazine advertisement look. Large bold text on left side: “BEAUTY IN LIFE. CARE IN EVERY CHOICE.” Include subtle molecular graphics and beauty icons. Ultra detailed, 8K, cinematic anime illustration, poster design, professional advertising composition, high-end retail campaign aesthetic --ar 2:3
+
+  FamilyMart × AnimePoster Prompt:
+  Create a cinematic anime-style convenience store collaboration poster inspired by FamilyMart Taiwan. Vertical commercial poster layout with bold typography section on the left and anime character portrait on the right. Feature a cool blond anime boy wearing a navy-blue FamilyMart jacket with green and white accents, standing inside a neon-lit FamilyMart at night while holding a hot coffee cup. Background filled with convenience store shelves, glowing signs, vending machines, and cyberpunk-inspired blue lighting reflections. Add subtle chain accessories and urban street atmosphere. Typography should feel bold and modern with giant white slogan text: “EVERY DAY, MORE FOR YOU.” Premium anime illustration style with realistic lighting, glossy textures, cinematic shadows, detailed eyes, modern Japanese advertising design, blue-green color palette, retail branding aesthetic, ultra-detailed convenience store environment, lifestyle commercial vibe, anime x corporate collaboration campaign, 8K quality, dramatic depth of field, polished poster composition --ar 2:3
+
+  POYA × Yu Yu Hakusho Poster Prompt:
+  Create a high-end anime commercial poster inspired by a POYA beauty store collaboration with Yusuke Urameshi from Yu Yu Hakusho. Vertical split-layout advertisement with bright pink branding panel on the left and detailed anime character scene on the right. Feature Yusuke Urameshi wearing a stylish pink-and-white POYA varsity jacket while holding a cosmetic skincare bottle inside a glowing pink beauty store filled with premium products and neon signage. Include branded shopping bags, cosmetic displays, reflective surfaces, luxury beauty campaign atmosphere, feminine yet edgy fashion aesthetic. Large bold white typography on left side saying: “BEAUTY IS MY POWER. POYA IS MY CHOICE.” Use vibrant pink neon lighting, glossy magazine-quality rendering, cinematic anime shading, detailed hair highlights, dramatic retail lighting, premium product advertisement composition, Japanese commercial poster design, elegant beauty branding, ultra detailed 8K anime artwork, modern lifestyle campaign aesthetic --ar 2:3
+
+  McDonald’s × One Piece  Poster Prompt:
+  Create a bold anime crossover advertisement poster featuring Monkey D. Luffy working at McDonald’s in an official collaboration campaign style. Vertical commercial poster with iconic McDonald’s red-and-yellow branding. Split composition with oversized slogan typography on the left and cinematic anime scene on the right. Feature Luffy wearing a McDonald’s employee uniform inspired by One Piece aesthetics,smiling confidently inside a warmly lit McDonald’s restaurant. Include french fries, glowing menu boards.

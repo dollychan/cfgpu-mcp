@@ -1,0 +1,21 @@
+id: case-evolink-ui-40
+version: 1
+kind: case
+media: image
+title: Japanese AI Game Dev Overview Slide Prompt
+summary: 横長のパワポ画像ここで生成してみて どのモデル使ってるか判定するから、今のAIゲーム開発の概要をまとめた1枚パワポで 日本語で ゲーム開発の技術に関して、工数ベースでどこにパワーかかるかの分析資料といかに量産が大事かについての説明とかのパワポ画も作って
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ailovedirector'
+  url: https://x.com/ailovedirector/status/2046905387274891296
+content: |-
+  横長のパワポ画像ここで生成してみて　どのモデル使ってるか判定するから、今のAIゲーム開発の概要をまとめた1枚パワポで　日本語で
+
+  ゲーム開発の技術に関して、工数ベースでどこにパワーかかるかの分析資料といかに量産が大事かについての説明とかのパワポ画も作って

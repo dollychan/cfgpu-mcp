@@ -1,0 +1,16 @@
+id: case-evolink-case-66
+version: 1
+kind: case
+media: image
+title: Edit this image so that total amount changes to 244.5 baht. You can change th...
+summary: Edit this image so that total amount changes to 244.5 baht.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@elliscrosby'
+  url: https://x.com/elliscrosby/status/2047211507596071235
+content: Edit this image so that total amount changes to 244.5 baht. You can change the quantity of each of the stacks of coins until we hit the target total.

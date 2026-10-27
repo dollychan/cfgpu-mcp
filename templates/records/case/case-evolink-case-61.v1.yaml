@@ -1,0 +1,16 @@
+id: case-evolink-case-61
+version: 1
+kind: case
+media: image
+title: Based on the video content and this current frame, use GPT to generate a YouT...
+summary: Based on the video content and this current frame, use GPT to generate a YouTube thumbnail that fits the video.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@chatcutapp'
+  url: https://x.com/chatcutapp/status/2047228386117128475
+content: Based on the video content and this current frame, use GPT to generate a YouTube thumbnail that fits the video. You can reference the style of the image I gave you, but replace the logo on the right side of AE with theChatCut logo. I'll attach the logo for you.

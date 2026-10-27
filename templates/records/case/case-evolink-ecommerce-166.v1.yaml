@@ -1,0 +1,21 @@
+id: case-evolink-ecommerce-166
+version: 1
+kind: case
+media: image
+title: Ancient Palace Perfume Ad
+summary: 'Full prompt: Ancient Chinese palace perfume advertisement inspired by the legendary dancer Zhao Feiyan.'
+genres:
+- product-food
+tags:
+- 电商
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2063187221730185227
+content: |-
+  Full prompt:
+
+  Ancient Chinese palace perfume advertisement inspired by the legendary dancer Zhao Feiyan. A bronze bottle with gold-inlaid twisting lotus vines. Mysterious, cold, and haunting imperial harem atmosphere. Vertical portrait format, 9:16 ratio.

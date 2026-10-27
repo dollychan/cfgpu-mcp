@@ -1,0 +1,16 @@
+id: case-evolink-comparison-104
+version: 1
+kind: case
+media: image
+title: 4 Architectural Styles 2×2 Grid
+summary: 2x2 grid, do this for 4 famous architectural styles.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Gdgtify'
+  url: https://x.com/Gdgtify/status/2065191846800740636
+content: '2x2 grid, do this for 4 famous architectural styles. Anchor: [Architectural Style] :: [Geometric Essence & Period]. Each panel shows a representative building in that exact style with consistent camera angle and neutral sky background.'

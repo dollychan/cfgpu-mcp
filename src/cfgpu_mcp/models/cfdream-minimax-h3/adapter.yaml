@@ -110,3 +110,7 @@ poll_config:
   # DB, and a later task_status returns the artifact. If the gateway's ceiling
   # ever drops, this has to drop with it.
   default_timeout: 1500
+
+# Unverified: the gateway documents no ratio set. These are the six it accepted before
+# 4:5 / 5:4 / 9:21 joined the schema, kept so that addition changes nothing here.
+aspect_ratios: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"]

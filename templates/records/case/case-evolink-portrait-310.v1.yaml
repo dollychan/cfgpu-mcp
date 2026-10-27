@@ -1,0 +1,37 @@
+id: case-evolink-portrait-310
+version: 1
+kind: case
+media: image
+title: 玩具相机阳台随拍
+summary: A quiet summer morning in a European apartment.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2068501129059783072
+content: |-
+  A quiet summer morning in a European apartment. A woman sits on the floor next to open balcony doors, absorbed in a book, one leg stretched toward the railing, a cream knitted blanket draped loosely over her lap. She wears a simple orange bralette and delicate jewelry, completely unaware of the camera. A cup of tea and an open book rest on the wooden floor beside her. The balcony overlooks classic European architecture: cream stone facades, wrought-iron railings, flowering balconies, leafy trees.
+
+  Photographed from an awkward handheld angle, as if someone walked past the room and snapped a photo without slowing down. The framing is tilted and accidental. The subject is not centered. Parts of the balcony doors, blanket, floor, and foreground objects are cut off by the frame edges.
+
+  Captured on a cheap 2000s low-resolution toy digital camera. 0.3-megapixel quality. Heavy motion blur. Intentionally crooked and tilted framing. Harsh pop-up flash despite bright daylight. Overexposed white highlights. Intense digital noise and heavy sensor grain. Low-fidelity faded colors. Chromatic aberration at the edges. Lens flare. Looks like an extremely blurry candid photo uploaded from an old toy camera. Raw and amateurish. Authentic nostalgic texture.
+
+  Slight focus miss, motion smear, low-resolution facial details, sensor noise, JPEG artifacts, and compression damage visible across the face — exactly as a cheap toy camera would produce.
+
+  Do not preserve modern clarity. Do not protect facial sharpness. The subject remains recognizable despite image degradation. Subject occupies 65% of the frame.
+
+  Large foreground obstructions from a partially clipped teacup, book, blanket folds, and balcony door frame. Extreme off-balance composition. Camera not leveled. Subject positioned awkwardly near one edge. Parts of the room, railing, and foreground elements are clipped.
+
+  The image should feel like a forgotten candid uploaded to an old social media site in the mid-2000s. Raw, amateurish, imperfect, accidental, nostalgic, unpolished. Captured-memory realism, not aesthetic photography.
+
+  Super thick plastic toy-lens softness, motion smear, focus miss, smeared highlights, low-resolution detail loss, heavy JPEG compression, sensor noise, and degraded detail across the face, hair, hands, blanket, books, teacup, balcony, buildings, and sky.
+
+  --ar 4:5
+
+  Negative prompt: beauty filter, modern smartphone quality, DSLR quality, cinematic grading, HDR photography, professional composition, studio lighting, ultra sharp face, perfect skin, flawless focus, fashion editorial, influencer photo, polished digital rendering, AI perfection, hyper-detailed eyes, premium camera quality, luxury portrait photography

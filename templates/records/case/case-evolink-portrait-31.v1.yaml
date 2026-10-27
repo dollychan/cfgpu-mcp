@@ -1,0 +1,21 @@
+id: case-evolink-portrait-31
+version: 1
+kind: case
+media: image
+title: Toddler Crayon Scribble Art Style Portrait
+summary: (被写体) in the style of super bad child drawing, toddler art, scribbles, messy crayon lines on white background, completely lack of technique, terrible composition, chaotic colors, barely recognizable shapes, very raw, ho…
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@akakageAI'
+  url: https://x.com/akakageAI/status/2047812983389356276
+content: |-
+  (被写体) in the style of super bad child drawing, toddler art, scribbles, messy crayon lines on white background, completely lack of technique, terrible composition, chaotic colors, barely recognizable shapes, very raw, honest art, pure naivety, unrefined style, 4:3
+  Negative:
+  good drawing, nice lines, clear shapes, neat, pretty, smooth, realistic, talented art, coherent composition, artistic style, professional, skilled, masterpiece, beautiful, detailed

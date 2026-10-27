@@ -155,3 +155,20 @@ def test_video_duration_max_matches_declared_ceiling(constraints, registry):
         if declared is None:
             continue
         assert declared == adapter.max_duration_seconds, entry["modelName"]
+
+
+def test_video_aspect_ratio_options_match_declared_ratios(constraints, registry):
+    """A ratio offered here but refused by supports() is an approval the billed call rejects.
+
+    ``adaptive`` is outside the comparison: it is never declared (always accepted), and
+    whether the front-end offers it is a per-model call about what it means upstream.
+    """
+    for entry in constraints["generate_video"]:
+        if entry["modelName"] == "auto":
+            continue
+        adapter = registry.get(entry["modelName"])
+        options = (entry["args"].get("aspect_ratio") or {}).get("options")
+        if options is None or adapter.aspect_ratios is None:
+            continue
+        offered = sorted(o for o in options if o != "adaptive")
+        assert offered == sorted(adapter.aspect_ratios), entry["modelName"]

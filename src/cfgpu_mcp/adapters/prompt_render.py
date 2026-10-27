@@ -45,7 +45,7 @@ from cfgpu_mcp.adapters.dialect import (
     get_dialect,
 )
 from cfgpu_mcp.adapters import prompt_markup as markup
-from cfgpu_mcp.adapters.regions import _PLACEHOLDER, resolve_image_refs
+from cfgpu_mcp.adapters.regions import _PLACEHOLDER, is_real_call, resolve_image_refs
 from cfgpu_mcp.errors import CFGPUError
 
 if TYPE_CHECKING:
@@ -98,6 +98,17 @@ def _render_image_text(req: Any, dialect: Optional[PromptDialect]) -> Any:
     prompt = req.prompt or ""
     if not _PLACEHOLDER.search(prompt):
         return req
+    if is_real_call(req):
+        # A real call writes a marker this tool cannot carry as text instead of refusing.
+        def keep(node: markup.Node) -> bool:
+            if not isinstance(node, markup.STRUCTURAL):
+                return True  # handles and labels are the region renderer's, next
+            return isinstance(node, markup.OnScreen) and dialect is not None and dialect.text is not None
+
+        degraded = markup.degrade(prompt, keep)
+        if degraded != prompt:
+            req = req.model_copy(update={"prompt": degraded})
+            prompt = degraded
     nodes = _parse(prompt)
     structural = [n for n in nodes if isinstance(n, markup.STRUCTURAL)]
     if not structural:
@@ -308,18 +319,83 @@ def _over_limit(adapter: "ModelAdapter", prompt: str) -> Optional[str]:
     return None
 
 
+def _lenient_for_model(req: Any) -> bool:
+    """A real call naming one concrete model, so the per-model checks repair instead of refuse.
+
+    With ``model="auto"`` (or a candidate list) the same checks are how the router steers
+    *around* a model that would mangle the prompt — skipping one that cannot name a kind
+    or silently ignores an unnamed reference costs nothing, since another model takes the
+    call as written. Only once the choice is pinned (a caller that preflighted gets the
+    concrete model back in ``corrected_args``) is there no better model to route to, and
+    repairing becomes better than refusing.
+    """
+    if not is_real_call(req):
+        return False
+    model = getattr(req, "model", None)
+    if isinstance(model, list):
+        return len(model) == 1
+    return isinstance(model, str) and model != "auto"
+
+
+def _degrade_for(adapter: "ModelAdapter", req: Any, dialect: PromptDialect) -> Any:
+    """A real call's video prompt with everything this model cannot render written as text.
+
+    The per-model half of the lenient contract (the model-independent half ran at the
+    schema layer): a ``[[handle]]`` whose kind this dialect cannot name, a marker it has
+    no way to write, a shot past the duration this model resolves to. Returns ``req``
+    itself when nothing changes.
+    """
+    prompt = req.prompt or ""
+    if not _PLACEHOLDER.search(prompt):
+        return req
+    handles = _handles(req)
+    counts = _counts(req)
+    duration = _duration(adapter, req)
+    fields = dialect.layout != "inline"
+
+    def keep(node: markup.Node) -> bool:
+        if isinstance(node, markup.Ref):
+            target = handles.get(node.token)
+            return target is not None and target[0] in dialect.ref and dialect.label(target[0], target[1], counts) is not None
+        if isinstance(node, markup.Shot):
+            return dialect.shot is not None and (duration is None or node.end <= duration)
+        if isinstance(node, markup.Say):
+            return dialect.say is not None
+        if isinstance(node, markup.OnScreen):
+            return dialect.text is not None
+        if isinstance(node, markup.Sound):
+            return fields or dialect.sound is not None
+        if isinstance(node, markup.Music):
+            return fields or dialect.music is not None
+        return True
+
+    degraded = markup.degrade(prompt, keep)
+    return req if degraded == prompt else req.model_copy(update={"prompt": degraded})
+
+
 def check_prompt_refs(adapter: "ModelAdapter", req: Any) -> tuple[bool, str]:
     """The per-model half of prompt validation, for ``ModelAdapter.supports()``.
 
     Everything here is about how this model would render the prompt; a prompt with no
     ``[[...]]`` is looked at only by a ``required`` dialect. Messages speak the unified
     notation only (I-DL5).
+
+    A real call (``validate_only=false``) on a pinned model (:func:`_lenient_for_model`)
+    refuses none of the placeholder cases: they are written as text first
+    (:func:`_degrade_for`), and the ``required`` dialect's "reference not named" check is
+    skipped. A person who edited the prompt on an
+    approval card decided what the model is told; the preflight is where a planner's
+    mistakes are reported. Only the prompt length limit still applies — it is not about
+    placeholders, and the upstream would refuse it anyway.
     """
     if not _is_video(req):
         return True, ""
     dialect = dialect_for(adapter)
     if dialect is None:
         return True, ""
+    lenient = _lenient_for_model(req)
+    if lenient:
+        req = _degrade_for(adapter, req, dialect)
     prompt = req.prompt or ""
     has_markup = bool(_PLACEHOLDER.search(prompt))
     # Without markup only a `required` dialect has anything to say: a reference the
@@ -357,7 +433,7 @@ def check_prompt_refs(adapter: "ModelAdapter", req: Any) -> tuple[bool, str]:
             f"或换一个支持这种标记的模型。"
         )
 
-    if dialect.required:
+    if dialect.required and not lenient:
         counts = _counts(req)
         missing: list[str] = []
         for slot, kind in SLOT_KIND.items():
@@ -405,9 +481,12 @@ def render_for(adapter: "ModelAdapter", req: Any) -> RenderOutcome:
             return RenderOutcome(req)
         return RenderOutcome(rendered_req, dialect.key if dialect else None, req.prompt)
 
+    source = req.prompt or ""
+    if dialect is not None and _lenient_for_model(req):
+        req = _degrade_for(adapter, req, dialect)
     prompt = req.prompt or ""
     if dialect is None or not _PLACEHOLDER.search(prompt):
-        return RenderOutcome(req)
+        return RenderOutcome(req) if prompt == source else RenderOutcome(req, dialect.key if dialect else None, source)
     ok, reason = check_prompt_refs(adapter, req)
     if not ok:
         raise CFGPUError(error_type="invalid_params", user_message=reason, card_hint=False)
@@ -426,7 +505,7 @@ def render_for(adapter: "ModelAdapter", req: Any) -> RenderOutcome:
         params["shot_type"] = "multi"
         extra["parameters"] = params
         update["model_specific"] = extra
-    return RenderOutcome(req.model_copy(update=update), dialect.key, prompt)
+    return RenderOutcome(req.model_copy(update=update), dialect.key, source)
 
 
 # ── hand-written labels ─────────────────────────────────────────────────────

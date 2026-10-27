@@ -1,0 +1,18 @@
+id: case-evolink-poster-35
+version: 1
+kind: case
+media: image
+title: New Chinese Ink Landscape Poster
+summary: 新中式水墨山水海报，竖版9:16构图，东方极简美学风格，大面积留白，主题是春岚一叶红。
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@liyue_ai'
+  url: https://x.com/liyue_ai/status/2046215276249993720
+content: 新中式水墨山水海报，竖版9:16构图，东方极简美学风格，大面积留白，主题是春岚一叶红。

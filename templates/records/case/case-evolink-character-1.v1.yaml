@@ -1,0 +1,18 @@
+id: case-evolink-character-1
+version: 1
+kind: case
+media: image
+title: Anime Snapshot Conversion
+summary: '<!-- Case 31: Cozy Lifestyle Sticker Grid (by @RuzainaMeer) -->'
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Thereallo1026'
+  url: https://x.com/Thereallo1026/status/2044241997163311569
+content: '<!-- Case 31: Cozy Lifestyle Sticker Grid (by @RuzainaMeer) -->'

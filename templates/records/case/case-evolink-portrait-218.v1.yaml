@@ -1,0 +1,18 @@
+id: case-evolink-portrait-218
+version: 1
+kind: case
+media: image
+title: Korean Beauty Fashion Portrait
+summary: Create a high-quality “chibi sticker diary portrait” based on the uploaded real-life photo.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Sheldon056'
+  url: https://x.com/Sheldon056/status/2057296658191483236
+content: Create a high-quality “chibi sticker diary portrait” based on the uploaded real-life photo. Preserve the subject’s original identity, realistic facial structure, hairstyle, hair color, glasses, outfit, pose, proportions, lighting, and background. Keep the main subject photorealistic and do not transform the entire image into a full illustration.

@@ -1,0 +1,26 @@
+id: case-evolink-portrait-321
+version: 1
+kind: case
+media: image
+title: 海岸白日梦胶片人像
+summary: 'Coastal Daydream Composition: Three-quarter close-up captured from slightly behind the shoulder, with wind-swept hair creating organic movement across the frame while the coastline softly recedes into mist.'
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@mehvishs25'
+  url: https://x.com/mehvishs25/status/2071043508346183695
+content: |-
+  Coastal Daydream
+  Composition: Three-quarter close-up captured from slightly behind the shoulder, with wind-swept hair creating organic movement across the frame while the coastline softly recedes into mist.
+  Prompt:
+  Using the uploaded photo as the exact face reference. Preserve the face identity perfectly without modifying facial structure, proportions, expression anatomy, skin texture, or unique features. No beautification, no face reshaping, no artificial symmetry, no AI-generated appearance. Photorealistic candid photograph captured on a worn disposable film camera, monochrome cinematic photography, authentic 35mm grain, subtle exposure inconsistencies, natural imperfections, vintage analog character, documentary realism.
+  The woman sits quietly on rugged coastal rocks damp from ocean spray, wearing a flowing white dress with soft fabric folds gathered naturally around her. Strong sea breeze moves through her voluminous hair, lifting sections into the air while delicate strands drift across her cheeks and lips. Her head is turned slightly toward the shoreline, eyes closed, wearing a calm reflective expression and a faint genuine smile as she enjoys the cool ocean wind.
+  Behind her, towering sea cliffs disappear gradually into dense coastal fog beneath a dramatic cloud-filled sky. Waves break softly against distant rocks, adding subtle atmosphere without distracting from the subject. Diffused overcast daylight creates gentle tonal transitions across the face and dress, emphasizing realistic skin texture and natural film contrast.
+  Shot with an 85mm lens, shallow depth of field, cinematic documentary framing, emotional editorial photography, realistic analog exposure, soft focus falloff. The composition captures her from just behind the shoulder, allowing wind-blown hair to partially veil the frame while the mist-covered coastline stretches into the background, creating a quiet sense of solitude and freedom.
+  no ultra-clean digital sharpness, no CGI appearance, no beauty-retouching, no fashion-poster composition, no studio lighting, no centered framing, no black bars, no artificial skin smoothing, aspect ratio vertical.

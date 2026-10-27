@@ -129,13 +129,13 @@ def test_time_formats_and_language_detection():
 @pytest.mark.parametrize("prompt", ["[[shot 3-1]] x", "[[say 你好]]", "[[text]]", "[[shot 0-3]] a [[shot 1-4]] b"])
 def test_schema_refuses_malformed_markup_before_any_model_is_chosen(prompt):
     with pytest.raises(ValidationError, match="prompt markup is malformed"):
-        _video(prompt=prompt)
+        _video(prompt=prompt, validate_only=True)
 
 
 @pytest.mark.parametrize("handle", ["text", "shot", "say x", "music:x"])
 def test_a_handle_spelled_like_a_keyword_is_refused(handle):
     with pytest.raises(ValidationError, match="reserved prompt keywords"):
-        _video(prompt="x", reference_images=[IMG.format(1)], image_refs=[handle])
+        _video(prompt="x", reference_images=[IMG.format(1)], image_refs=[handle], validate_only=True)
 
 
 def test_structure_alone_needs_no_handle_lists():
@@ -293,7 +293,7 @@ def test_a_shot_past_the_models_own_duration_is_refused_for_that_model(registry)
 def test_a_shot_past_an_explicit_duration_is_refused_at_the_schema():
     """An explicit duration is the same on every model, so no model could take it."""
     with pytest.raises(ValidationError, match=r"\[\[shot 0-8\]\] ends after the video does"):
-        _video(prompt="[[shot 0-8]] 走", duration_seconds=5)
+        _video(prompt="[[shot 0-8]] 走", duration_seconds=5, validate_only=True)
     assert _video(prompt="[[shot 0-8]] 走", duration_seconds=8)
     assert _video(prompt="[[shot 0-8]] 走", duration_seconds=-1)  # the model decides: judged per model
 
@@ -335,7 +335,7 @@ def test_no_refusal_names_a_model_label(registry):
     for kw in ({"prompt": "[[shot 3-1]]"}, {"prompt": "[[say 你好]]"}, {"prompt": "[[text]]"},
                {"prompt": "[[shot 0-8]]", "duration_seconds": 5}):
         with pytest.raises(ValidationError) as info:
-            _video(**kw)
+            _video(**kw, validate_only=True)
         messages.append(str(info.value))
     for message in messages:
         assert message
@@ -415,7 +415,7 @@ def test_validate_only_shows_the_rendered_request(registry):
 def test_validate_only_refuses_a_shot_past_the_duration(registry):
     adapter = registry.get("wan2.7-t2v")
     with pytest.raises(CFGPUError) as info:
-        validate_request(adapter, _video(model="wan2.7-t2v", prompt="[[shot 0-9]] 甲"))
+        validate_request(adapter, _video(model="wan2.7-t2v", prompt="[[shot 0-9]] 甲", validate_only=True))
     assert "[[shot 0-9]]" in info.value.user_message
 
 
@@ -483,7 +483,7 @@ def test_image_text_marker_alongside_regions(registry):
 @pytest.mark.parametrize("prompt", ["[[shot 0-3]] 海报", "海报 [[say: 你好]]", "[[music: 钢琴]] 海报", "[[sound: 雨]]"])
 def test_video_only_markers_are_refused_on_images(registry, prompt):
     with pytest.raises(CFGPUError) as info:
-        render_for(registry.get("gpt-image-2"), GenerateImageInput(prompt=prompt, model="gpt-image-2"))
+        render_for(registry.get("gpt-image-2"), GenerateImageInput(prompt=prompt, model="gpt-image-2", validate_only=True))
     assert "[[text: 文字]]" in info.value.user_message
     for label in _LABELS:
         assert label not in info.value.user_message

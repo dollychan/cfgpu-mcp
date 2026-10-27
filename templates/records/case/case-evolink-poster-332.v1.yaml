@@ -1,0 +1,35 @@
+id: case-evolink-poster-332
+version: 1
+kind: case
+media: image
+title: Mid-Century Editorial Illustration System
+summary: Create a premium mid-century-inspired flat editorial illustration of [Subject], rendered in a refined handcrafted printmaking aesthetic.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Goodmanprotocol'
+  url: https://x.com/Goodmanprotocol/status/2062235491588849920
+content: |-
+  Create a premium mid-century-inspired flat editorial illustration of [Subject], rendered in a refined handcrafted printmaking aesthetic. The artwork should feel like a sophisticated vintage children’s encyclopedia illustration combined with Scandinavian editorial design and retro nature-book graphics.
+
+  Language: English 8K ultra-high resolution with a 3:4 aspect ratio
+
+  STYLE: minimalist flat-shape illustration soft geometric simplification handcrafted gouache + risograph + silkscreen print texture subtle paper grain and dry ink imperfections muted refined color palette clean matte colors crisp neutral white balance bright museum-quality paper appearance no yellow tint no beige cast no sepia tone no glossy rendering no photorealism no 3D shading elegant editorial composition premium picture-book atmosphere modern museum-shop illustration vibe
+
+  COMPOSITION: spacious balanced layout with multiple elements harmoniously arranged simplified organic shapes stylized plants, objects, animals, architecture, landmarks, or symbolic elements depending on [Subject] visual storytelling through clustered illustrated motifs maximum 8–10 illustrated elements total playful but refined asymmetrical editorial balance large clean negative space on soft neutral white paper background premium Scandinavian editorial layout feeling
+
+  TEXTURE & PRINT FEEL: subtle premium paper texture refined layered ink overlap delicate risograph misalignment soft dry brush grain light handcrafted print imperfections tactile handcrafted surface feeling clean bright paper surface controlled ink density airy and crisp visual atmosphere
+
+  COLOR SYSTEM: muted teal dusty blue sage green cool gray faded coral soft navy desaturated mineral tones restrained natural palette (adjust palette naturally to fit [Subject])
+
+  ILLUSTRATION RULES: simplified eyes and facial features rounded organic silhouettes minimal line usage flat layered color blocking decorative but restrained detail density avoid excessive realism avoid anime style avoid modern vector corporate style avoid bright neon colors avoid sharp digital gradients avoid yellowish paper tone avoid vintage sepia coloration
+
+  MOOD: quietly playful, educational, nostalgic, timeless, sophisticated, airy, clean, premium editorial illustration, Scandinavian museum-book elegance
+
+  OUTPUT: high-resolution editorial illustration, ultra-clean composition, refined handcrafted print aesthetic, bright neutral paper tones, crisp museum-quality editorial finish, suitable for premium magazine spreads, art books, museum posters, or luxury children’s publishing.

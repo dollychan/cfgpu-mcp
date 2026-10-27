@@ -1,0 +1,33 @@
+id: case-evolink-portrait-30
+version: 1
+kind: case
+media: image
+title: Realistic Candid Bedroom Recording Portrait
+summary: A realistic young woman sitting casually in a softly lit bedroom during late afternoon.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@ChillaiKalan__'
+  url: https://x.com/ChillaiKalan__/status/2047862141894681076
+content: |-
+  A realistic young woman sitting casually in a softly lit bedroom during late afternoon.
+
+  She is holding her phone very close to her face as if recording a private video or voice note.
+
+  Framing is tight and slightly imperfect.
+
+  Expression: thoughtful, slightly shy, natural.
+
+  Minimal makeup, natural skin texture, relaxed clothing.
+
+  Lighting: warm natural light fading from a window, soft shadows.
+
+  Environment: simple bedroom, calm and lived-in.
+
+  Style: ultra-realistic, looks like a real phone recording, slightly grainy, not cinematic.

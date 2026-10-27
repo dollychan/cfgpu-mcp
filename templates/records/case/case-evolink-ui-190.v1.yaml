@@ -1,0 +1,18 @@
+id: case-evolink-ui-190
+version: 1
+kind: case
+media: image
+title: 中文野生动物信息图
+summary: Design a visually rich infographic about an endangered animal using Chinese text.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2068852226844664044
+content: Design a visually rich infographic about an endangered animal using Chinese text. Feature a photorealistic animal as the main focal point, surrounded by annotated diagrams, structured callouts, and concise labels covering its habitat, diet, and distinctive traits. Blend photorealism with bold graphic design elements including color blocking, icons, and layered shapes on a clean background. Make it dense with information, tactile in feel, and professionally crafted.

@@ -1,0 +1,198 @@
+id: case-evolink-ui-187
+version: 1
+kind: case
+media: image
+title: 王者仍在呼吸题头版式
+summary: Create a 16:9 image.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@NeuralAIInsight'
+  url: https://x.com/NeuralAIInsight/status/2067291988953567706
+content: |-
+  Create a 16:9 image.
+
+  [PROJECT CARD]
+  Create a compact designed masthead, not a table.
+  TITLE: THE KING STILL BREATHES
+  META LINE: empty night stadium / a buried crown remembers / three triumphs and one hope
+  PRIORITY: the four-jewel crown — three jewels lit certain and complete (blue, white, blue) and a fourth softly awakening with hope; crown stays buried until it rises; pitch resolves into a giant number 10; one realistic field, restraint throughout
+  MICRO BRIEF: After a legendary hat-trick, a buried crown awakens beneath an empty Argentina-blue stadium — three jewels light for three World Cups, a fourth begins to glow with hope, and the pitch briefly forms a giant number 10.[CONTINUITY HEADER]
+  SEQUENCE ID: king_still_breathes_4jewel_12p
+  REFERENCE PRIORITY: No image references provided (Brief-Only). No character — environment-led and symbolic. This storyboard controls stadium geography, the waking pitch lines, the buried crown, the four-jewel sequence, the crown rise, the number-10 reveal, and panel order.
+  BEAT NAME LOCK (generate once, use identically in panel headers, action path, state track, and the director-strip beat labels): P01 Empty Stadium / P02 Lines Wake / P03 Crown Stirs / P04 First Jewel (blue) / P05 Second Jewel (white) / P06 Third Jewel (blue) / P07 Crown Rises / P08 Three Jewels Lit / P09 Fourth Jewel Awakens / P10 Lines Connect / P11 Number 10 / P12 Hopeful Stillness. Do not relabel or reorder these anywhere on the board
+  [SCENE PACKET]
+  PREMISE: An empty but still-charged football stadium at night remembers a legendary hat-trick; the pitch wakes, a buried crown stirs and lights three historic jewels one by one, rises in ceremony, and a fourth jewel softly begins to glow with hope as the field geometry briefly forms a giant number 10.
+  LOCATION: A single realistic modern football stadium at night after a major match, empty stands, floodlights over an Argentina sky-blue atmosphere, dark emerald grass, white pitch markings, silver floodlight haze, one goal net. Normal football geography only. The pitch surface and the crown buried beneath it are the active stage.
+  START -> END: empty charged stadium, one net swaying, lines beginning to wake -> a quiet hold on the still field, the crown settled, three jewels fading but the fourth jewel remaining faintly alive — the future has begun to breathe.
+  ACTION CHAIN: empty stadium, one net sways -> the white pitch lines begin glowing softly, the field waking -> beneath the grass the crown stirs, sensed through buried light and pressure (no visible crown) -> the first jewel lights blue (first World Cup) -> the second jewel lights white (second World Cup) -> the third jewel lights blue (third World Cup) -> the crown rises with ceremonial weight from beneath the pitch -> we see the crown clearly, three jewels glowing blue-white-blue -> a fourth dark jewel stirs, flickers, breathes, and softly begins to glow (hope, not yet a triumph) -> the white lines connect and spread with living light -> from an elevated view the field geometry resolves into a giant number 10 -> the glow fades toward stillness, the crown settles, the fourth jewel remaining faintly alive.
+  PROP / EFFECT STATE: a buried crown made by the pitch — gold edges partly formed from the white pitch lines, soil and grass clinging, elegant and football-mythic, never medieval-prop or fantasy-clean. It has four jewel settings. The first three jewels ignite one by one, certain and complete, in Albiceleste rhythm: blue, white, blue. The crown is NOT clearly visible before P07. The fourth jewel is visually distinct: dormant, then flickering and breathing, a soft fragile glow that never fully ignites like the others. The number 10 forms organically and half-found from real field geometry (penalty box, center circle, touchlines, glowing trails), never a graphic overlay. The fourth jewel remains faintly lit at the end. Subtle gold and jewel light only; otherwise blues, whites, silver.
+  MUST READ: the hat-trick lights history (three certain jewels) and awakens belief in what comes next (the fragile fourth). Reverent, epic, restrained; pride turning to hope.
+  [CHARACTER SANITIZATION]
+  No characters. No player, face, body, silhouette, portrait, or likeness of any real person. No Messi depiction of any kind. The subject is the stadium, the pitch, and the crown. The crown is a symbol, not worn; no king, throne, or robes.
+  [IDENTITY CONSISTENCY]
+  Keep stadium geometry, floodlight positions, the single net position, and pitch-line layout consistent across all panels. Keep the crown design consistent once revealed, and keep the four jewel positions consistent (three that light historic, one that awakens). Argentina connection through color and atmosphere only — sky blue, white, deep night blue — never text, crests, or a depicted person.
+  [STORYBOARD PURITY]
+  Full-color panel artwork (polished pitch board). Panel numbers, beat names, and lens tags in the header strip outside each panel. The beat names in the headers must match the BEAT NAME LOCK and the director-strip beat labels exactly. No captions, subtitles, signage, logos, crests, brand marks, trophy replicas, readable text, arrows, or overlays inside the artwork. The number 10 appears ONLY as illuminated field geometry within the image, never a graphic label. One clear visual idea per panel.
+  [MASTER SHOT RULE]
+  P01 establishes the geography: the empty night stadium, floodlights over Argentina-blue haze, dark emerald pitch with white markings, one goal net, empty stands. One realistic field, normal geography. The sacred charged emptiness is set here.
+  [EMOTIONAL ARC]
+  post-match silence -> recognition -> awakening -> pride (three historic jewels and the coronation) -> hope (the fragile fourth jewel and the lingering glow); carried by the environment — the swaying net, waking lines, buried stir, the one-by-one jewels, the ceremonial rise, the breathing fourth jewel, the connecting geometry, the number 10, and a quiet hopeful hold.
+  [STYLE LOCKS]
+  STYLE LOCK: mythic cinematic football short, premium symbolic sports poetry, elegant and emotionally charged; full-color; deep stadium night blues, sky-blue and white Argentina light, dark emerald grass, silver floodlight haze, selective gold only on the crown and jewel moments. Reverent, epic, restrained, poetic rather than literal. Not a match recap, not a fan edit, not abstract art-film.
+  EFFECT LOCK: the white pitch lines wake with a soft living glow like a nervous system; the crown stirs as buried light and pressure under the turf before any reveal; the first three jewels ignite one by one with clear punctuation, certain and complete, blue then white then blue; the crown, once revealed, rises slow and ceremonial and heavy, pitch-made with soil and grass clinging, never a clean prop; the fourth jewel is softer, fragile, flickering and breathing into a gentle glow, never a full bright ignition; the lines connect and spread with living light; the number 10 resolves organically and half-found from real field geometry, discovered by the camera; the fourth jewel remains faintly alive at the end.
+  ENVIRONMENT LOCK: one realistic night stadium throughout — floodlights, blue atmosphere, emerald pitch, white lines, a single net, empty stands; normal football geography only; no three-net or impossible layouts; no crowd, no players, no symbolic clutter.
+  CROWN REVEAL LOCK: the crown is NOT clearly visible in P01-P06. In P03-P06 show only buried glow, pressure under the turf, and the jewels lighting beneath/through the grass — never a readable crown. The first clear crown reveal is P07 when it rises. The crown is pitch-made: gold edges partly formed from white pitch lines, soil and grass clinging, elegant and football-mythic, not medieval-prop, not fantasy-clean.
+  JEWEL LOCK: four jewel settings, consistent positions. Three light one-by-one as historic and complete in Albiceleste rhythm — P04 blue, P05 white, P06 blue. The fourth (P09) is visually distinct: dormant then awakening, a soft fragile breathing glow that never matches the full certainty of the first three. It must read as hope, not a won trophy.
+  [SPATIAL CONTINUITY LOCK]
+  All panels share one stadium geography: pitch, white-line layout, floodlight positions, the single net, the crown's central buried location and its four jewel positions. The jewels light in fixed positions; the crown rises from one fixed central point (only from P07); the number 10 forms from the established white-line geometry seen from a widening elevated angle (not a new location or overlay). The camera starts close and textural and gradually widens and elevates toward the reveal. Allowed changes: camera height/angle/distance, which jewel is lit, buried-glow state, crown emergence state (none before P07), the fourth jewel's awakening state, glow spread, line illumination, net sway.
+  [DIRECTOR STRIP]
+  Animatic track board aligned to panel columns. Shot chips, rhythm blocks, intensity bars, short labels. No seconds or timestamps. BEAT LABEL row must read exactly: P01 Empty Stadium / P02 Lines Wake / P03 Crown Stirs / P04 First Jewel / P05 Second Jewel / P06 Third Jewel / P07 Crown Rises / P08 Three Jewels Lit / P09 Fourth Jewel / P10 Lines Connect / P11 Number 10 / P12 Hopeful Stillness. These must match the panel header beat names.
+  PANEL HEADERS:
+  P01 / 24mm wide / Empty stadium
+  P02 / macro low / Lines wake
+  P03 / macro low / Crown stirs (buried)
+  P04 / 50mm low / First jewel: blue
+  P05 / 50mm low / Second jewel: white
+  P06 / 50mm low / Third jewel: blue
+  P07 / 35mm low / Crown rises
+  P08 / 50mm / Three jewels lit
+  P09 / macro / Fourth jewel awakens
+  P10 / 35mm rising / Lines connect
+  P11 / 24mm crane high / Number 10
+  P12 / 24mm wide / Hopeful stillness
+  CAMERA + LENS PLAN:
+  P01: high wide establishing hold on the empty stadium and single net, patient
+  P02: macro low as the white pitch lines begin to glow softly, the field waking
+  P03: macro low on the turf as the buried crown stirs — light and pressure under the grass, no visible crown
+  P04: low push as the first jewel lights blue beneath the surface, certain and clear
+  P05: low push as the second jewel lights white, matching punctuation
+  P06: low push as the third jewel lights blue, the historic three now complete
+  P07: low angle as the pitch-made crown rises with ceremonial weight from beneath the pitch, soil and grass clinging — first clear reveal
+  P08: held medium on the risen crown, three jewels glowing blue-white-blue in Albiceleste rhythm
+  P09: macro on the fourth, previously dark jewel as it stirs, flickers, breathes, and softly begins to glow — fragile, hopeful, distinct from the other three
+  P10: rising angle as the white lines connect and spread with living light across the field
+  P11: high crane / elevated wide as the field geometry resolves half-found into a giant number 10
+  P12: wide hold as the glow fades toward stillness and the crown settles, the fourth jewel remaining faintly alive
+  ACTION PATH:
+  P01: the empty stadium sits charged under floodlights, one net swaying slightly
+  P02: the white pitch lines begin glowing softly, the field waking and remembering
+  P03: beneath the grass the crown stirs, sensed only through buried light and pressure; no crown visible
+  P04: the first jewel lights blue — Argentina's first World Cup
+  P05: the second jewel lights white — the second World Cup
+  P06: the third jewel lights blue — the third World Cup, the historic three complete
+  P07: the crown rises with ceremonial weight from beneath the pitch, soil and grass clinging
+  P08: the crown is seen clearly, three jewels glowing blue-white-blue
+  P09: a fourth dark jewel stirs, flickers, breathes, and softly begins to glow — hope for a fourth, not yet a triumph
+  P10: the white lines connect and spread with living light through the pitch geometry
+  P11: from the elevated view, the field geometry resolves into a giant number 10
+  P12: the glow fades toward stillness, the crown settles, the fourth jewel remains faintly alive
+  RHYTHM TRACK:
+  RHY P01: hold / long block / held beat
+  RHY P02: slow reveal / medium block / clean beat
+  RHY P03: slow reveal / medium block / held beat
+  RHY P04: build / short block / clean beat
+  RHY P05: build / short block / match beat
+  RHY P06: impact / short block / smash beat
+  RHY P07: build / long block / held beat
+  RHY P08: pause / medium block / held beat
+  RHY P09: slow reveal / long block / held beat
+  RHY P10: build / medium block / match beat
+  RHY P11: final hit / long block / smash beat
+  RHY P12: pause / long block / held beat
+  ESCALATION MAP:
+  ESC P01: L1 calm / flat
+  ESC P02: L2 tension / rise
+  ESC P03: L2 tension / rise
+  ESC P04: L3 rise / rise
+  ESC P05: L3 rise / rise
+  ESC P06: L4 surge / spike
+  ESC P07: L5 peak / surge
+  ESC P08: L4 surge / held
+  ESC P09: L3 rise / rise
+  ESC P10: L4 surge / rise
+  ESC P11: L5 peak / spike
+  ESC P12: L2 tension / release
+  STATE TRACK:
+  P01: empty stadium, one net sways, no glow
+  P02: white lines waking, soft glow
+  P03: buried crown stirs, pressure under turf, no crown
+  P04: first jewel blue, beneath surface
+  P05: second jewel white
+  P06: third jewel blue, historic three complete
+  P07: crown rises, soil clinging (first reveal)
+  P08: crown clear, three jewels blue-white-blue
+  P09: fourth jewel flickering, breathing, soft glow
+  P10: lines connected, living light spreading
+  P11: geometry resolves into number 10
+  P12: glow fades, crown settled, fourth jewel faintly alive STYLE TRACK:
+  P01: blue floodlit haze
+  P02: waking line glow
+  P03: buried stir, turf pressure
+  P04: blue jewel light
+  P05: white jewel light
+  P06: blue jewel light
+  P07: rising pitch-made gold
+  P08: Albiceleste three-jewel glow
+  P09: fragile fourth-jewel breath
+  P10: connecting line veins
+  P11: half-found number 10
+  P12: fading glow, one jewel alive [NEGATIVE / AVOID]
+  Panel header beat names must match the
+
+  Seedance 2.0 Prompt:
+
+  Based on the storyboard , create this short film — do not include any movement arrows, camera notes, panel numbers, captions, labels, borders, or storyboard markings.
+
+  THE KING STILL BREATHES — beneath an empty Argentina-blue stadium, a buried crown lights three jewels for three triumphs and a fourth begins to glow with hope.
+
+  IMAGE REFERENCE INSTRUCTION
+  = the locked 12-panel storyboard, the authoritative director-approved blueprint for composition, staging, motion, timing, and pacing across the full 15 seconds. Follow the panel order exactly. Do not render the storyboard sheet itself. Do not invent alternative coverage. This is an environment-led symbolic piece with no character — no player, face, body, or likeness anywhere.
+  Color bible (definitive): deep stadium night blues, sky-blue and white Argentina light, dark emerald grass, silver floodlight haze; selective gold only on the crown and jewel moments. The crown is pitch-made — gold edges partly formed from the white pitch lines, soil and grass clinging to it, elegant and football-mythic, never a clean prop or medieval cosplay. The number 10 forms only from real field geometry, half-found, never a graphic overlay. One realistic football field, one net, normal geography only.
+
+  TASK
+  Create a 15-second mythic cinematic football short built from deliberate, elegant cuts. An empty night stadium, still charged after a legendary hat-trick, slowly awakens: the white pitch lines begin to glow, a buried crown stirs beneath the turf, and three jewels light one by one — blue, white, blue — for Argentina's three World Cup triumphs. The crown rises in ceremony, revealing those three certain jewels, and then a fourth dark jewel softly stirs, flickers, and begins to glow with fragile hope for what comes next. The field lines connect and spread with living light until the pitch geometry resolves, for one brief unforgettable moment, into a giant number 10 — then the glow fades toward stillness, the crown settles, and the fourth jewel remains faintly alive. Football history turning to myth, and pride turning to hope.
+
+  STYLE
+  Mythic cinematic football short, premium symbolic sports poetry, elegant and emotionally charged — not a match recap, not a fan edit, not abstract art-film. Reverent, epic, restrained, poetic rather than literal, as if the stadium itself remembers. Deep night blues with sky-blue and white Argentina light, dark emerald grass, silver floodlight haze, selective gold only on the crown and jewels. Everything moves with weight and intention; restraint over spectacle.
+
+  SHOT STRUCTURE: 12 shots / 15s / 16:9 — deliberate cinematic cuts (not one continuous take)
+
+  SEQUENCE
+  Shot 01 — EMPTY STADIUM (0–1.5s) WIDE / STATIC / PATIENT HOLD: the empty night stadium under floodlights, Argentina-blue haze, dark emerald pitch, a single goal net swaying faintly. Still, but charged with the memory of what just happened. Post-match silence.
+  Shot 02 — LINES WAKE (1.5–3s) MACRO / LOW / SLOW TRACK ALONG A LINE: the white pitch lines begin to glow softly, light running along the painted markings like the field's nervous system waking and remembering. Recognition.
+  Shot 03 — CROWN STIRS (3–4s) MACRO / LOW / SLOW PUSH: in the turf, a buried glow and faint pressure stir beneath the grass — something royal sensed but not yet seen. No visible crown.
+  Shot 04 — FIRST JEWEL (4–5s) CLOSE / LOW / CUT IN: beneath the surface the first jewel lights a deep blue — Argentina's first World Cup. Certain, clear, historic.
+  Shot 05 — SECOND JEWEL (5–6s) CLOSE / LOW / MATCHING CUT: the second jewel lights white — the second triumph. The same confident punctuation.
+  Shot 06 — THIRD JEWEL (6–7.5s) CLOSE / LOW / MATCHING CUT: the third jewel lights blue — the third triumph. The historic three now complete, glowing in Albiceleste rhythm.
+  Shot 07 — CROWN RISES (7.5–9.5s) MEDIUM / LOW / SLOW CEREMONIAL RISE: the pitch-made crown rises with heavy ceremonial weight from beneath the turf, soil and grass clinging to its gold edges. Earned, mythic, powerful. The first clear reveal.
+  Shot 08 — THREE JEWELS LIT (9.5–11s) MEDIUM / SLOW PUSH: the crown seen clearly, its three jewels glowing blue-white-blue. A held moment of pride. The king's history made visible.
+  Shot 09 — FOURTH JEWEL AWAKENS (11–12.5s) MACRO / SLOW PUSH: a fourth, previously dark jewel stirs — it flickers, breathes, and softly begins to glow. It does not blaze like the other three; it is fragile, tentative, hopeful. Belief in a fourth triumph, not yet won.
+  Shot 10 — LINES CONNECT (12.5–13.5s) HIGH / RISING: the white pitch lines connect and spread with living light across the field, the geometry beginning to mean something.
+  Shot 11 — NUMBER 10 (13.5–14.5s) CRANE HIGH / ELEVATED WIDE: from above, the glowing field geometry resolves, half-found and broken-edged, into a giant number 10 — discovered by the camera, pitch memory rather than a drawn symbol. The unforgettable image.
+  Shot 12 — HOPEFUL STILLNESS (14.5–15s) WIDE / STATIC / HOLD: the glow fades toward stillness, the crown settles back into the grass, the stadium quiets — but the fourth jewel remains faintly alive, breathing. The future has begun to breathe. Hold.
+
+  CAMERA RULES
+  Deliberate, elegant cinematic cuts between shots — not one continuous take. The camera is patient and confident, uncovering something sacred: it begins close and textural (macro grass, low jewel angles) and gradually widens and elevates toward the reveal, ending on a held wide. One primary move per shot; no shaky handheld, no snap zooms, no hyper-editing. The number 10 is discovered by the elevated camera, never presented as a flat graphic. Let the piece breathe.
+
+  HARD RULES
+  - No character of any kind: no player, face, body, silhouette, or Messi likeness. The subject is the stadium, the pitch, and the crown.
+  - The crown is NOT visible before Shot 07; Shots 03–06 show only buried glow, turf pressure, and the jewels lighting beneath the grass.
+  - The crown is pitch-made, soil and grass clinging, elegant and football-mythic — never a clean prop, medieval cosplay, or ornate fantasy.
+  - The first three jewels light one by one, certain and complete, in Albiceleste rhythm: blue, white, blue.
+  - The fourth jewel must look different from the first three — dormant then awakening, fragile, flickering, a soft glow that never fully blazes. It reads as hope, not a won trophy.
+  - One realistic football field, one net, normal geography only — never three nets or impossible layouts.
+  - The number 10 appears only as illuminated field geometry, half-found with broken edges, never a graphic overlay or label.
+  - No readable logos, crests, sponsor marks, brand marks, or trophy replicas. Argentina connection through color and atmosphere only.
+  - Not a match-highlight recap. Reverent aftermath, memory, myth, and hope. Power through restraint — no symbolic clutter.
+
+  AUDIO
+  No dialogue, no commentary. Reverent, charged, slightly supernatural sound design. Begin with the deep ambience of an empty stadium — distant floodlight hum, a faint wind, the soft creak of the swaying net. The lines waking add a delicate glassy shimmer running across the field. The crown stirring is a low buried throb under the turf. Each of the three jewels lights with a clear, resonant chime — three certain, complete tones, the same confident punctuation each time. The crown rising lands with a heavy, sacred low impact and a slow rising shimmer of gold. The three-jewel moment holds on a proud sustained chord. The fourth jewel is different — a soft, fragile, flickering tone that breathes rather than rings, tentative and tender. The lines connecting add a spreading living hum; the number 10 resolves on a held, awe-struck swell. Then it falls back toward near-silence — the empty stadium hum, and one last faint breathing shimmer from the fourth jewel. Music: sparse, mythic, restrained — deep cinematic drones, a slow sacred build through the coronation, a single restrained peak at the number-10 reveal, then a quiet hopeful fade that does not fully resolve, leaving the fourth jewel's note hanging. Never bombastic, never a sports anthem; aura and hope, not hype.
+
+  Negatives: no player, face, likeness, body, or silhouette; no Messi depiction; no crown before Shot 07; no clean-prop or medieval crown; the fourth jewel must not blaze like the first three; one field and one net only, never three nets; the number 10 only as organic half-found field geometry, never an overlay; no logos, crests, brand marks, trophy replicas, or readable text; no match-recap energy; no identity drift, no jitter or temporal flicker, no warped geometry, no floating objects, no watermarks; no movement arrows, camera notes, panel numbers, captions, labels, borders, or storyboard markings in the video.

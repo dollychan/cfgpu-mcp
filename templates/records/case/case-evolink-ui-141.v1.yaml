@@ -1,0 +1,18 @@
+id: case-evolink-ui-141
+version: 1
+kind: case
+media: image
+title: Vehicle Reference Engineering Infographic
+summary: GPT Image 2 on ChatGPT Prompt; Create a premium square “reference-style transportation infographic” centered around {VEHICLE_NAME}, designed as a beautifully curated engineering handbook page rather than a commercial po…
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@mehvishs25'
+  url: https://x.com/mehvishs25/status/2052787699153838452
+content: "GPT Image 2 on ChatGPT \n\nPrompt;\n\nCreate a premium square “reference-style transportation infographic” centered around {VEHICLE_NAME}, designed as a beautifully curated engineering handbook page rather than a commercial poster.\n\nThe composition should feel like a modern visual encyclopedia mixed with a high-end industrial design manual and elite editorial infographic system.\n\nVisual Direction:\n\n• 1:1 square composition\n• Soft light-toned technical background with subtle blueprint textures and schematic overlays\n• Elegant muted palette using graphite gray, titanium silver, deep navy, steel blue, and soft white accents\n• Refined editorial typography hierarchy\n• Rounded modular information cards with clean spacing\n• Gentle realistic shadows and premium UI-style dividers\n• Minimal technical iconography\n• Extremely detailed central vehicle render viewed in dramatic three-quarter perspective\n• Thin precision annotation lines pointing toward engineering systems and structural details\n• Clean, organized “knowledge-first” layout with high information density but breathable spacing\n\nMain Subject Presentation:\n\nA stunning ultra-detailed realistic render of the {VEHICLE_NAME} placed at the cen"

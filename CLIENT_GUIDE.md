@@ -348,8 +348,9 @@ await image_svc.generate_image(
 )
 ```
 
-对不上任何句柄或标记名的 `[[...]]` 会以 `invalid_params` 拒绝（错误信息列出可用占位符），
-请求不发送、不计费；`validate_only=True` 预检时同样会报。宿主若有自己的素材 id（如 `m_31b5b08b`），
+对不上任何句柄或标记名的 `[[...]]`：`validate_only=True` 预检时以 `invalid_params` 拒绝（错误信息
+列出可用占位符）；正式调用（`validate_only=False`）不拒绝，而是去掉括号当普通文字发出——见下方
+「预检严格、正式调用兼容」。宿主若有自己的素材 id（如 `m_31b5b08b`），
 直接把它当句柄传进 `image_refs` 即可，不必自己换算序号——素材列表一重排，写死的序号就会悄悄指错图。
 
 `generate_video` 同样接受句柄：`image_refs` / `video_refs` / `audio_refs` 分别与 `reference_images` /
@@ -367,8 +368,8 @@ await video_svc.generate_video(
 ```
 
 两条只在视频上有的规则：有些模型**只使用 prompt 里点名的参考素材**，没点名的会被静默忽略、照常计费，
-这类模型会在发出前拒绝「有参考素材没被点名」的请求（`model="auto"` 时改选别的模型）；有些素材类型在某些
-模型上只有固定用途（例如作为主体的音色），不能在 prompt 里点名，写了 `[[句柄]]` 也会被拒绝。prompt 里手写
+这类模型在预检时拒绝「有参考素材没被点名」的请求（`model="auto"` 时改选别的模型）；有些素材类型在某些
+模型上只有固定用途（例如作为主体的音色），不能在 prompt 里点名，预检时写了 `[[句柄]]` 也会被拒绝。prompt 里手写
 序号（「图片1」「视频2」之类）不会被拒绝，但结果里会多一条 `prompt_note` 提醒改用 `[[句柄]]`。
 
 媒体槽的 `x-cfgpu-media` 注解带 `refs` 字段，指明该槽对应的句柄列表名（`reference_videos` → `video_refs`），
@@ -393,14 +394,35 @@ await video_svc.generate_video(
 )
 ```
 
-写错语法（`[[shot 6-3]]`、`[[say]]` 缺冒号）或镜头重叠会直接以 `invalid_params` 拒绝；镜头超出所选模型的时长、
-模型不支持某个标记、渲染后超过模型的 prompt 长度上限，则是该模型不可用（`model="auto"` 时改选别的模型）。
+预检时，写错语法（`[[shot 6-3]]`、`[[say]]` 缺冒号）或镜头重叠会直接以 `invalid_params` 拒绝；镜头超出所选
+模型的时长、模型不支持某个标记、渲染后超过模型的 prompt 长度上限，则是该模型不可用（`model="auto"` 时改选别的模型）。
 句柄不能叫 `shot` / `say` / `text` / `sound` / `music`。
 
 `prompt_extend`（服务端扩写 prompt）不传时默认开启，但 prompt 用了 `[[...]]` 写法时默认关闭，因为扩写会改动
 写好的镜头、台词和素材指代；显式传 `true` / `false` 则按传入的来。不需要自己写任何模型的镜头编号或时间码格式。`[[shot]]` 表示切到新镜头；一镜到底里的逐秒节拍直接用文字写（「0–1秒：…」）。
 
-`generate_image` 同样认 `[[text: 文字]]`（画面里要逐字出现的文字），其余结构标记只用于视频，写在图片 prompt 里会被拒绝。
+`generate_image` 同样认 `[[text: 文字]]`（画面里要逐字出现的文字），其余结构标记只用于视频，写在图片 prompt 里预检时会被拒绝。
+
+#### 预检严格、正式调用兼容
+
+上面所有关于 `[[...]]` 和句柄表的拒绝，都只在 `validate_only=True` 时发生。正式调用（`validate_only=False`）
+不因它们拒绝，而是按一条规则修复：**用不上的 `[[...]]` 去掉括号、原文当普通文字发出，从不猜它指的是哪个素材**
+（猜错的结果会计费、看着还合理）。用得上的照常按模型渲染。理由：预检是发现错误的地方；到正式调用时，要么是
+已经通过预检的方案，要么是人在审批卡片上改过的版本，此时拒绝只会把请求扔掉。
+
+| 情况 | 预检（`true`） | 正式调用（`false`） |
+|---|---|---|
+| `[[xxx]]` 对不上任何句柄 / 标记名 | 拒绝 | 写成 `xxx` |
+| 句柄表比素材列表长 / 短 | 拒绝 | 整张句柄表作废（不截断、不补齐——对不齐时无法知道哪个句柄对应哪个素材），其中的 `[[…]]` 都当文字 |
+| 同一句柄出现两次、含 `#[]`、是保留关键字 | 拒绝 | 该句柄作废，`[[它]]` 当文字 |
+| `[[标记1]]` 在多张图上都有、`[[句柄#标记]]` 对不上 | 拒绝 | 当文字；对应的区域照常追加在 prompt 末尾，不丢 |
+| 结构标记写错、镜头重叠、镜头超出时长 | 拒绝 | 当文字 |
+| 模型不能点名某类素材、不支持某个标记 | 该模型不可用 | 当文字（仅限指定了具体模型） |
+| 「有参考素材没被点名」 | 该模型不可用 | 放行（仅限指定了具体模型） |
+| 渲染后超过 prompt 长度上限 | 该模型不可用 | 仍不可用（与占位符无关，上游也会拒） |
+
+最后三行是按模型的检查，只在请求指定了**一个具体模型**时放宽。`model="auto"` 或候选列表时它们照旧用于选模型：
+绕开一个会悄悄忽略参考素材的模型没有代价。预检会把选中的模型写进 `corrected_args`，照着合并后正式调用的就是具体模型。
 模板库（`get_template`）返回的正文里也可能带这些标记：填好里面的 `[槽位]`、保留标记本身即可。
 
 ### 轮询异步任务
@@ -654,9 +676,11 @@ cfgpu generate video "首帧变尾帧" --model kling-video-o1 -r 720p \
   --last-frame https://example.com/end.png
 cfgpu generate video "跟随参考视频运镜" --model kling-v3-omni -r 1080p \
   --reference-videos https://example.com/ref.mp4
-# 视频编辑（把源视频当 base）：统一 Schema 无「编辑 vs 参考」之分，用 model_specific 覆盖 video_list
-#   {"video_list": [{"video_url": "https://src.mp4", "refer_type": "base"}]}
-#   此时 seconds 不下发，时长跟随源视频
+# 视频编辑（把源视频当 base）：统一 Schema 无「编辑 vs 参考」之分，源视频照常放 reference_videos，
+#   再加 model_specific {"refer_type": "base"}（可加 "keep_original_sound": "yes" 保留原声）
+#   此时 seconds 不下发，时长跟随源视频；只能一段视频
+# 有参考视频时（feature 或 base），图片只能走 --reference-images，不能当首帧 / 尾帧
+# 带参考视频时 sound 只能为 off：一律下发 off，validate_only 钉成 with_audio=false
 # 不支持 --reference-audios（请求体没有音频输入槽位）；--last-frame 必须与 --first-frame 同时给出
 
 # 万相 2.7（wan-2-7-t2v）— 文生视频，支持电影级分镜叙事；需显式时长（不支持 -1 智能时长）；
@@ -811,11 +835,13 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 
 > **视频 `resolution` 的默认值是「不传」（2026-09-07 起）。** 统一枚举现在是
 > `480p / 720p / 768p / 1080p / 2k / 4k`，schema 默认值是 `None` —— 不传时各模型用**自己**的默认档
-> （除 `MiniMax-H3` 为 `768p` 外都是 `720p`）。这不是省事，是因为 `resolution` 会参与 `supports()`
+> （除 `MiniMax-H3` / `minimax-turbo-h3` 为 `768p` 外都是 `720p`）。这不是省事，是因为 `resolution` 会参与 `supports()`
 > 筛选：写死一个全队默认值，等于让不提供该档的模型被一个你根本没提的参数挤出 `model="auto"`。
 > **所以：需要哪一档就显式传哪一档，不需要就别传** —— 传了会同时缩小可选模型集合。
 >
-> `MiniMax-H3` 支持 `480p` / `768p` / `2k` 三档；其中 `768p` / `2k` 为它独有，`720p` / `1080p` 不支持。
+> `MiniMax-H3` 支持 `480p` / `768p` / `2k` 三档；其中 `2k` 为它独有，`768p` 只有它和 `minimax-turbo-h3` 提供，`720p` / `1080p` 不支持。
+> `minimax-turbo-h3`（MiniMax H3 Turbo，`MiniMax-H3` 的降级版，接口相同）只有 `480p` / `768p`（不支持 `2k`），
+> 其余参数约束与 `MiniMax-H3` 一致；它不是任何档位的 `auto` 默认落点。
 > 从前它们是靠「传 720p/1080p、内部翻译成 768P/2K」实现的，也就是说要 720p 的调用方被静默按
 > 768P 计费；现在原生档位是一等取值，原样上行（只做大写）。输入视频 / 输出视频分别按秒计费：
 > 480P 为 0.1 元、768P 为 0.2 元、2K 为 0.5 元；输入图片则分别为 0.04 / 0.08 / 0.1 元每张（前 5 张免费）。
@@ -849,16 +875,36 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > Nano Banana 会把不支持的比例直接发给上游，现在都改为明确拒绝。`model="auto"` 的预检只有在没有任何模型原样接受时，
 > 才会选一个需要纠正的模型。
 >
+> **上游没有 `adaptive` 的模型，预检会把它钉成实际下发的比例（2026-10-21 起）。** `adaptive` 是统一 Schema 的
+> 默认值，各模型自行解释：Seedance 系、MiniMax-H3 参考生视频原样下发；万相 i2v / videoedit、HappyHorse i2v /
+> video-edit 不发比例，由输入素材决定；其余模型上游没有这个取值，会换成一个具体比例。后一种情况 `validate_only`
+> 一律在 `corrected_args` 里给出 `aspect_ratio`：可灵 O1 / V3 Omni 与 Grok 两款 `16:9`（以前静默替换、不报告），
+> 万相 2.6 / 2.7 t2v / r2v 与 HappyHorse t2v / r2v 早已如此。所以审批卡不会再显示「adaptive」却产出横屏 ——
+> 竖屏素材请显式传 `9:16`。`tool_param_constraints.json` 同步：这些模型的 `aspect_ratio` 选项里去掉了 `adaptive`，
+> 可灵收窄到 `1:1` / `9:16` / `16:9`，`wan2.7-videoedit` 不再有默认值（不填 = 沿用源视频比例）。
+>
+> **视频新增 `4:5` / `5:4` / `9:21` 三个比例（2026-10-21 起）。** 目前只有 HappyHorse t2v / r2v 支持（其 API 的
+> `ratio` 枚举）。其他视频模型都声明了各自的 `aspect_ratios`（Seedance 系、MiniMax-H3、Grok、`cfdream/minimax-h3*`
+> 仍是原来的 6 个），正式调用会在发请求前拒绝，`model="auto"` 会路由到 HappyHorse，`validate_only` 对点名的模型
+> 给出形状最接近的比例（`4:5` → `3:4`、`5:4` → `4:3`、`9:21` → `9:16`；可灵只有三个比例，`4:5` / `5:4` → `1:1`）。
+>
 > **封闭取值的拼写无所谓（2026-09-30 起）。** 大小写、首尾空格不影响：`480P` / `2K`（视频）、`2k` / `1.5k`（图片）、
 > `Fast`、`MP3`、`Happy`、`Female`、`model="minimax-h3"` 都会折成规范写法；画幅比例的 `16：9`（全角冒号）、`16/9`、
 > `16x9` 也按 `16:9` 处理。`validate_only`、正式调用、Agent SDK 与 CLI 行为一致；只有不在枚举里的值（如 `360p`、
 > `16:10`）仍报参数错误。`voice` 例外：音色 id 必须原样复制。
 
-> **首帧与参考素材不能同时给（MiniMax-H3 / Seedance / HappyHorse）。** 服务端不会替你把 `first_frame`
+> **首帧与参考素材不能同时给（MiniMax-H3 / Seedance / HappyHorse）—— 这是参数约束，不是任务做不到。** 服务端不会替你把 `first_frame`
 > 改成 `reference_images` —— 首帧是视频原样的开场画面，参考图只提供主体、场景由 prompt 重新构图，两者生成的是不同的视频。
-> 报错里会给出两条具体改法，按 prompt 的意图选一条：图片是人物/主体 → 移入 `reference_images`、删 `first_frame`；
-> 图片要原样开场 → 保留 `first_frame`、删掉 `reference_*`（删 `reference_audios` 就没有对口型了）。
+> 报错（`… is mutually exclusive with … as parameters on this model; the request itself is still achievable.`）
+> 给出三条具体改法，按 prompt 的意图选一条：① 图片是人物/主体 → 移入 `reference_images`、删 `first_frame`；
+> ② 图片要原样开场、其余参考可以不要 → 保留 `first_frame`、删掉 `reference_*`（删 `reference_audios` 就没有对口型了）；
+> ③ 图片要作开场/结尾画面、其余参考也要保留 → 改用报错里点名的、能同时接受首帧与参考素材的模型（如可灵 `kling-v3-omni` /
+> `kling-video-o1`、`wan2.7-r2v`；列表从注册表实时探测，Grok 那种首帧只是参考图数组第一项的模型不算），或者把这张图也放进
+> `reference_images`、在 `image_refs` 里起名，prompt 写「以 [[名字]] 作为视频首帧」（由提示词还原，接近但不保证逐像素一致）。
 > 当前模型走不了的那条会直接指名要换的模型（如 HappyHorse 的 `happyhorse-1.0-r2v` / `happyhorse-1.0-i2v`）。
+> **不要据此告诉用户「模型不支持」**：用户给了多张参考、又说其中一张作首帧，路线 ③ 就是答案（2026-10-27 起）。
+> 选模型时用 `list_model_profiles(required_tasks=["framed_reference_video"])`：所有声明 `reference_to_video` 且接受
+> `reference_images` 的模型都声明了这个任务（原生同时接受首帧与参考的模型精确保留首帧，其余靠提示词近似还原）。
 
 > **`reference_audios` 在不同模型上用途不同，选模型前先看 `inputs`（2026-10-09 起）。**
 > `list_model_profiles` 给每个视频模型返回 `inputs`：它接受哪些素材槽、每槽最多几个，以及音频的
@@ -886,6 +932,27 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > 让它成为被编辑的那段）；`source` 表示它**永远**是被编辑或续写的那段视频（`wan2.7-i2v` 把它当作续写起点
 > `first_clip`，`wan2.7-videoedit` / `happyhorse-1.0-video-edit` 把它当作源视频）。想「参考这段视频的运镜重新拍」，
 > 不要选 `source` 模型 —— 它会直接续写或改动你给的那段。`model="auto"` 在只给参考视频时会优先 `reference` 模型。
+>
+> **`role` 的含义随目录一起返回：`input_roles`（2026-10-21 起）。** `list_model_profiles` 的返回在
+> `task_catalog` 旁新增 `input_roles: {槽: {role: 说明}}`，只列本次结果里出现过的 role（与 `task_catalog`
+> 只列可见任务同理），每行仍只写取值。起因：agent 只看到 `role: reference`，把它读成「不能编辑」，于是做
+> 「把视频里的人换成参考图角色」时只给了 `source` 编辑模型和「重做首帧再图生视频」两条路，漏掉了 Seedance 系
+> 「参考视频 + 编辑类 prompt」这条 —— 而它恰好最能保留原片的机位、时长与画幅。新增字段，向后兼容。
+>
+> **Seedance 系的 `video_edit` 参数模板（2026-10-21 起）。** `list_model_profiles(required_tasks=["video_edit"])`
+> 现在给 `doubao-seedance-2-5`、`doubao-seedance-2-0` / `-fast` / `-mini`、`wan-video` / `wan-video-fast` 返回
+> `task_parameters.video_edit`：`call_template`（2.5：`aspect_ratio: adaptive` + `duration_seconds: -1`，二者都是
+> 编辑的硬性条件，改成具体比例就变成参考生视频；2.0 系：`aspect_ratio: adaptive`）、`requirements`（至少一个
+> `reference_videos`，2.5 源视频 4–30 秒；prompt 用 `[[handle]]` 点名被编辑的视频和替换用的图，写编辑动词，并写明
+> 哪些不变）与 `notes`。MiniMax-H3 暂无模板。
+>
+> **Kling 的视频编辑开关与声音（2026-10-22 起）。** 可灵 O1 / V3 Omni 新增两个 `model_specific` 字段：`refer_type`
+> （`feature` / `base`，`base` = 这段参考视频就是被编辑的源视频）与 `keep_original_sound`（`yes` / `no`，也接受布尔），
+> adapter 把它们写进由 `reference_videos` 生成的每个 `video_list` 项，不再需要用 `model_specific.video_list` 整体覆盖、
+> 重复写一遍 URL（旧写法仍可用，但不能与这两个字段同时出现）。`base` 要求恰好一段参考视频；**只要有参考视频，图片就只能作参考图**
+> （`reference_images`），带首帧 / 尾帧会被拒绝，参考视频 + 参考图照常放行。均在发请求前本地拒绝。`video_edit` 模板随之覆盖两款可灵：`model_specific: {refer_type: base}`。另外，**带参考视频时 `sound` 只能为
+> `off`**（上游报 `sound must be off when video_list is provided`）：`with_audio` 默认 `true`，所以不拒绝，而是一律下发 `off`、
+> `validate_only` 把 `with_audio` 钉成 `false`；想保留源视频原声请用 `keep_original_sound`。
 
 > **`list_models` 的 `capabilities` 字段已改名为 `tasks`（2026-10-09）**，取值换成与 `list_model_profiles` 相同的
 > canonical task（如 `multi_modal_reference` → `reference_to_video`、`audio_generate` → `synced_audio_output` 或

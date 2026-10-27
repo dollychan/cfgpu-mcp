@@ -1,0 +1,25 @@
+id: case-evolink-poster-354
+version: 1
+kind: case
+media: image
+title: World Cup Match Poster
+summary: 'Photorealistic movie poster designed by a professional graphic designer with this concept: - The background is the venue, [Name of The Stadium, Location] - Main image showing Captain from [Country] Team: [Name] wearing…'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@lukmanfebrianto'
+  url: https://x.com/lukmanfebrianto/status/2064159903531544961
+content: |-
+  Photorealistic movie poster designed by a professional graphic designer with this concept:
+  - The background is the venue, [Name of The Stadium, Location]
+  - Main image showing Captain from [Country] Team: [Name] wearing national team jersey head to head with Captain from [Country] Team: [Name] wearing national team jersey
+  - Main title is '[Country] vs [Country]'
+  - Behind the title, waving flag of [Country] and [Country]
+  - Below main title, text '[Name of The Stadium] - [Location], [Date]'
+  - At the top, 'World Cup 2026' logo

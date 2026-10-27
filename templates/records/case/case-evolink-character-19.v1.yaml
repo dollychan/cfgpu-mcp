@@ -1,0 +1,181 @@
+id: case-evolink-character-19
+version: 1
+kind: case
+media: image
+title: 40K Power Armour Squad Portrait
+summary: 'Prompt of the Day: 40K POWER ARMOUR SQUAD ⚔️🛡️💜💚 Today’s Prompt of the Day turns your characters into a 40K-inspired warriors.'
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@EvaGlitchAI'
+  url: https://x.com/EvaGlitchAI/status/2065204081363435604
+content: |-
+  Prompt of the Day: 40K POWER ARMOUR SQUAD ⚔️🛡️💜💚
+
+  Today’s Prompt of the Day turns your characters into a 40K-inspired warriors. Yes this was done before but i wanted to see how much better GPT 2 can do it now
+
+  Use one character reference for a solo warrior, or attach multiple character references to create a full squad. The prompt is built to count every reference image and turn each one into a separate visible character, with no helmets covering their faces.
+
+  Type your chosen scene into the SCENE SELECTOR at the top, then attach your character reference image or images.
+
+  Try scenes like:
+
+  a brutal battlefield charge
+  a gothic starship boarding action
+  a candlelit shrine world cathedral
+  an industrial forge world
+  a grim underhive alley
+  a quiet off-duty barracks scene
+  a solemn prayer before battle
+
+  Have fun with this one ⚔️🛡️
+
+  ............................PROMPT STARTS HERE............................
+
+  SCENE SELECTOR:
+  [Type the 40K-inspired scene you want here.]
+  Examples:
+
+  brutal battlefield charge through smoke, fire, shell craters, and ruined gothic architecture
+
+  boarding action inside a colossal warship corridor
+  cathedral-like shrine world interior filled with candles, banners, stained glass, and incense haze
+  industrial forge world with sparks, chains, molten metal, pipes, and huge machinery
+  command deck before battle with tactical holograms and vast void windows
+  grim underhive alleyway with pipes, neon grime, metal walkways, and urban decay
+  heroic last stand surrounded by wreckage, fallen enemies, burning vehicles, and drifting ash
+  quiet off-duty scene inside a fortress barracks, armoury, workshop, canteen, or hangar
+  solemn prayer before battle with relics, banners, candles, incense smoke, and sacred war symbols
+  everyday-life scene in a gothic sci-fi military stronghold, training yard, armoury, repair bay, or mess hall
+  Use the typed scene selector as the main scene concept.
+  If no custom scene is typed, choose one of the example scenes that best fits the attached character reference image or images and the overall character vibe.
+  Adapt the environment, action, pose, props, camera, and mood to match the selected scene.
+  Keep the final scene clearly inspired by 40K-style grimdark far-future gothic military sci-fi.
+
+  STRICT REFERENCE COUNT RULE:
+  Before creating the image, count the number of attached character reference images.
+  Create exactly one main character from each attached character reference image.
+  The number of main characters in the final image must exactly match the number of attached character reference images.
+  If 1 character reference image is attached, create exactly 1 main character.
+  If 2 character reference images are attached, create exactly 2 main characters.
+  If 3 character reference images are attached, create exactly 3 main characters.
+  If 4 character reference images are attached, create exactly 4 main characters.
+  If more character reference images are attached, create exactly that same number of main characters.
+  Each attached character reference image is a separate person.
+  Each attached character reference image must appear once and only once as their own distinct main character.
+  Do not treat any attached character reference image as optional.
+  Do not ignore, drop, replace, combine, or simplify any attached character reference image.
+
+  MULTI-CHARACTER IDENTITY RULE:
+  Use every attached character reference image as its own separate character identity source.
+  Character 1 must be based only on the first attached character reference image.
+  Character 2 must be based only on the second attached character reference image.
+  Character 3 must be based only on the third attached character reference image.
+  Character 4 must be based only on the fourth attached character reference image.
+  Continue this pattern for any additional attached character reference images.
+
+  Do not use the first attached character reference image to create multiple characters.
+  Do not duplicate the first character to fill the group.
+  Do not create variations, twins, clones, alternate outfits, mirrored copies, recolours, or slightly edited versions of the same character.
+  Do not merge two or more attached character references into one design.
+  Do not let one character’s face, hairstyle, colours, outfit motifs, body type, species traits, or accessories replace another character’s identity.
+  SINGLE-CHARACTER FALLBACK RULE:
+  If only one character reference image is attached, create one main character only.
+  Do not create a squad, clone group, twin, alternate version, second warrior, companion, or duplicate of the character.
+  The single character should remain the only main subject.
+
+  THREE-CHARACTER PRIORITY RULE:
+  If three character reference images are attached, this is a three-character squad image.
+  All three referenced characters must appear together in the same scene.
+  All three faces must be visible.
+  All three armour designs must be distinct.
+  All three characters must be clearly separated in the composition.
+  Use a readable left-center-right squad arrangement unless the selected scene needs another clear formation.
+  CHARACTER REFERENCE RULES:
+  Preserve each attached character’s face shape, hairstyle, hair colour, eye colour, expression, body language, signature colour palette, outfit motifs, accessories, silhouette, species traits, proportions, and overall character vibe.
+  The final image must clearly show every attached character as a separate, recognizable individual.
+  Every character must still clearly look like their own attached reference image.
+
+  Keep each character’s head uncovered with no helmet, full face mask, or visor covering the face.
+  The face, hair, and identity of every referenced character must remain clearly visible.
+  Hard style rule:
+  Use the attached character reference image or images as the visual style reference for the final image.
+  Preserve the visual art style, rendering language, line quality, colour handling, facial stylization, shading style, texture treatment, background treatment, and overall stylization of the attached reference image or images while transforming the character or characters into 40K-inspired power-armoured warriors.
+  If the references are anime, keep them anime. If they are stylized, keep that stylization.
+  Do not turn the final image photorealistic unless specifically requested.
+  Scene concept:
+  Create a 16:9 horizontal widescreen cinematic illustration based on the scene written in the SCENE SELECTOR.
+  Show the attached character or characters transformed into custom 40K-inspired grimdark far-future power-armoured warriors.
+  The image should feel heavy, dramatic, mythic, warlike, and character-driven, with strong atmosphere, clear storytelling, and a powerful sense of scale.
+
+  Character transformation:
+  Transform every attached reference character into a custom 40K-inspired power-armoured version of themselves while preserving their original identity.
+  The redesign should center on massive stylized power armour with broad shoulder plates, reinforced chest armour, heavy gauntlets, armoured boots, thick mechanical joints, gothic sci-fi military detailing, sacred-warrior ornamentation, battlefield wear, and an oversized futuristic weapon.
+  The armour must feel imposing, brutal, ceremonial, expensive, and engineered for endless war.
+  Keep the head uncovered so each character’s original face, hair, and expression remain visible.
+  Use each attached character’s colours, motifs, accessories, outfit shapes, symbols, materials, personality, and overall vibe as the foundation for their armour redesign.
+  The armour should feel like it belongs in a 40K-inspired universe, but it must be custom-built from the attached character’s own identity.
+  If multiple characters are present, each one must have a distinct armour design based on their own original reference rather than all wearing identical suits.
+  Armour design:
+  Give each character huge futuristic power armour inspired by 40K-style grimdark gothic sci-fi warfare.
+  Include broad pauldrons, a strong chest plate, layered armour segments, mechanical joints, reinforced thighs, heavy boots, thick gauntlets, power cables, vents, seals, relic-like details, engraved plates, purity-scroll-like decorations, battle damage, and character-specific symbols.
+  Adapt each armour design to that character’s original style, colour palette, outfit motifs, accessories, personality, and silhouette.
+  Keep the armour stylized to match the attached reference image or images rather than realistic.
+
+  Weapon design:
+  Give each character a fitting oversized futuristic weapon inspired by 40K-style grimdark sci-fi warfare.
+  The weapon can be a heavy explosive sci-fi rifle, massive energy weapon, brutal motorized serrated melee weapon, glowing power blade, ceremonial war hammer, plasma-like cannon, heavy pistol, or other far-future battlefield weapon appropriate to their vibe and role.
+  Each character’s weapon should be different and should match that character’s identity, armour design, and role in the scene.
+  If the selected scene is calm, ceremonial, or off-duty, the weapon may be held at rest, slung, holstered, leaned nearby, placed on a table, or carried ceremonially, but it should still be visible.
+  If the selected scene is battle-heavy, make each weapon active, weighty, readable, and integrated into the pose.
+  Scene adaptation rules:
+  If the selected scene is battle-heavy, make the action dynamic but readable, with strong poses, clear silhouettes, environmental destruction, smoke, fire, debris, and a strong sense of momentum.
+  If the selected scene is solemn, sacred, or ceremonial, focus on mood, scale, banners, relics, candles, incense, stained glass, and reverent atmosphere.
+  If the selected scene is indoors, use gothic sci-fi architecture, industrial machinery, cathedral-scale interiors, fortress spaces, armouries, barracks, command rooms, or military infrastructure that fit the selected location.
+  If the selected scene is everyday-life or off-duty, keep the armour and 40K-inspired universe intact, but show the character or characters in a grounded moment such as maintenance, briefing, prayer, conversation, eating, resting, training, repairing gear, or preparing equipment.
+  If multiple characters are present, make their interaction clear and readable, with each one contributing to the scene rather than standing as vague duplicates.
+  Environment and composition:
+  Build the environment around the selected scene.
+  The setting should feel like the kind of place the character or characters naturally belong in once translated into a 40K-inspired grimdark far-future war universe.
+  Use a wide 16:9 horizontal cinematic composition.
+  Keep the main subject or subjects clearly visible, central or compositionally dominant, and easy to read at a glance.
+  If one character is present, give them a strong hero composition with a clear silhouette and dominant visual presence.
+  If multiple characters are present, arrange them so every character remains readable and identifiable with clean silhouette separation.
+  For three attached references, use a clear three-person squad composition with all three faces visible.
+  Use background architecture, smoke, debris, banners, machinery, sparks, haze, relics, gothic shapes, or cathedral-like scale to support the scene without overpowering the characters.
+  Lighting and mood:
+  Use lighting that matches the selected scene.
+  The image should feel grim, cinematic, epic, and immersive, with dramatic contrast and strong atmosphere.
+  Use battlefield firelight, smoky haze, stained-glass glow, cold ship lighting, industrial sparks, moody rim light, incense haze, harsh military illumination, glowing machinery, or distant explosions where appropriate.
+  The mood should feel powerful, warlike, sacred, brutal, and character-specific while still reflecting each original character’s personality.
+  Quality and rendering:
+  Polished, premium-quality stylized illustration with clean linework, crisp rendering, readable forms, powerful armour design, expressive visible faces, strong weapon design, and clear composition.
+  Keep the strongest detail concentrated on the referenced character or characters, their armour, their faces, and their weapons.
+  Maintain strong visual hierarchy and readability.
+  The background should support the characters rather than becoming busier than them.
+
+  Do not:
+  Do not ignore the SCENE SELECTOR.
+  Do not create more or fewer main characters than the number of attached character reference images.
+  Do not create only two characters if three character reference images are attached.
+  Do not duplicate the first attached character instead of using the second or third reference.
+
+  Do not merge multiple attached references into fewer characters.
+  Do not make any referenced character a clone, twin, recolour, armour variant, or alternate version of another referenced character.
+  Do not hide, crop, mask, or cover any referenced character’s face.
+  Do not make every character wear the same identical armour if multiple references are provided.
+
+  Do not make the weapon tiny, modern, toy-like, or visually unimportant.
+  Do not make the background busier than the characters.
+  Do not make the main subjects blurry, tiny, hidden, or unreadable.
+  Do not create messy anatomy, extra limbs, malformed hands, distorted faces, or muddy textures.
+  Do not use photorealism unless specifically requested.
+
+  ..............................END OF PROMPT..................................
+  #POTD #promptoftheday #AI #AiArt #Art #AnimeArt #40K #Grimdark #PowerArmour #SciFi #CharacterDesign #DigitalArt #AnimeStyle #CommunityPrompt

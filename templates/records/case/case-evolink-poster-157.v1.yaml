@@ -1,0 +1,18 @@
+id: case-evolink-poster-157
+version: 1
+kind: case
+media: image
+title: E-commerce Main Image - Elegant Cosmetic Poster Prompt
+summary: An image in a {argument name="reference style" default="similar style"}, a product image for {argument name="product" default="lipstick"}, requiring color coordination and a grand aesthetic in a {argument name="style" d…
+genres:
+- product-food
+tags:
+- 电商
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Adam38363368936'
+  url: https://x.com/Adam38363368936/status/2047917266361360682
+content: An image in a {argument name="reference style" default="similar style"}, a product image for {argument name="product" default="lipstick"}, requiring color coordination and a grand aesthetic in a {argument name="style" default="poster style"}, with language changed to Simplified Chinese.

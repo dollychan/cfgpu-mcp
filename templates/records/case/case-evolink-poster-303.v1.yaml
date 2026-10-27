@@ -1,0 +1,18 @@
+id: case-evolink-poster-303
+version: 1
+kind: case
+media: image
+title: Scientific Concept Anchor Poster
+summary: 'Anchor: The word "[SCIENTIFIC CONCEPT (e.g., CARBON / DNA / GRAVITY)]" :: where each letter is constructed from the molecular structure, atomic bonds, or physical diagrams associated with that concept ::4 Morphology: DN…'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Gdgtify'
+  url: https://x.com/Gdgtify/status/2057297076032262574
+content: 'Anchor: The word "[SCIENTIFIC CONCEPT (e.g.,  CARBON / DNA / GRAVITY)]" :: where each  letter is constructed from the molecular  structure, atomic bonds, or physical  diagrams associated with that concept ::4  Morphology: DNA — letters formed from  double helix ladder rungs and backbone  curves. CARBON — letters built from  benzene ring hexagons and bond lines.  GRAVITY — letters curve and stretch  as if pulled toward a point mass,  lower strokes elongated by gravitational  lensing. All fully readable ::3  Material Physics: Scientific whiteboard  aesthetic — white chalk or marker on  dark ground. Or blueprint blue with  white diagrammatic linework ::3  Illumination: Flat, even, academic —  as if projected on a lecture screen ::2  Render Stack: Science magazine cover,  university poster, Ted Talk title card ::1  Negative: [photorealistic molecular  renders, 3D shading, color-coded  atoms in standard CPK colors,  realistic laboratory imagery] :: -1'

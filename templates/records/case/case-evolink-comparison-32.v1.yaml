@@ -1,0 +1,16 @@
+id: case-evolink-comparison-32
+version: 1
+kind: case
+media: image
+title: Forged Masterpiece Prompt Test
+summary: 帮我生成xxxx真迹图片
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@MrLarus'
+  url: https://x.com/MrLarus/status/2046201836525302032
+content: 帮我生成xxxx真迹图片

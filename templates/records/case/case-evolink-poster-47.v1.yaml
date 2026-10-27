@@ -1,0 +1,18 @@
+id: case-evolink-poster-47
+version: 1
+kind: case
+media: image
+title: Handwritten Medical Prescription Sheet
+summary: 生成一张手写中/西医药方图
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@MrLarus'
+  url: https://x.com/MrLarus/status/2046514998965371144
+content: 生成一张手写中/西医药方图

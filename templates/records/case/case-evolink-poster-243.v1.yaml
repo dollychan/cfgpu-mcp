@@ -1,0 +1,52 @@
+id: case-evolink-poster-243
+version: 1
+kind: case
+media: image
+title: Japanese Whimsical Folk-Art Illustration
+summary: Create a cozy Japanese-inspired whimsical folk-art illustration of a cute stylish [girl/boy/couple] in a dreamy handmade storybook aesthetic.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@sha_zdiii'
+  url: https://x.com/sha_zdiii/status/2053810777786835445
+content: |-
+  Create a cozy Japanese-inspired whimsical folk-art illustration of a cute stylish [girl/boy/couple] in a dreamy handmade storybook aesthetic. The character should look youthful, soft-featured, adorable, and aesthetically fashionable with gentle glossy eyes, rosy cheeks, and elegant proportions. Keep the overall vibe warm, calming, artistic, and premium like a trendy Japanese café poster mixed with modern Pinterest folk-art.
+  Scene theme: [Japanese café / cozy street / bookstore / tea shop / flower market / convenience store / rainy Tokyo alley / picnic / classroom / bicycle street]
+  Character details:
+  [Girl/Boy/Couple]
+  Outfit color: [sage green / muted coral / dusty blue / cream / terracotta / pastel yellow]
+  Hairstyle: [soft bangs / wavy hair / short fluffy hair / tied bun / long silky hair]
+  Expression: [gentle smile / shy look / cozy happy vibe / soft eye contact]
+  Pose: [walking / holding coffee / sitting / looking at camera / talking together]
+  Background elements:
+  Japanese lanterns
+  Cute café boards
+  Japanese handwritten typography
+  Small Japanese posters and stickers
+  Tiny flowers and leaves
+  Decorative hearts and stars
+  Bicycle / vending machine / tea cups / books / plants
+  Soft doodle borders around the composition
+  Add aesthetic Japanese text naturally in the background: [Japanese café signs] [Japanese handwritten quotes] [vertical Japanese typography] [small Japanese labels and stamps]
+
+  Color palette: [(sage green), (muted coral), (butter yellow), (warm cream), (dusty turquoise), (soft peach), (deep teal accents)]
+
+  Art style:
+  Hand-painted marker texture
+  Gouache-style brush strokes
+  Soft uneven outlines
+  Visible paper grain
+  Handmade imperfect beauty
+  Simplified flat illustration shapes
+  Cozy Japanese stationery aesthetic
+  Premium editorial composition
+  Balanced clean layout with negative space
+  Rendering style: ultra detailed handcrafted illustration, Japanese folk-art fusion, whimsical doodle aesthetic, cozy lifestyle artwork, painterly flat design, trendy viral Pinterest illustration style, premium storybook poster, cute Japanese café vibe
+
+  Negative prompt: avoid exact copy of Pinterest styles, avoid messy composition, avoid neon oversaturated colors, avoid anime exaggeration, avoid cluttered background, avoid generic AI look, avoid repetitive flowers everywhere, avoid low detail faces.

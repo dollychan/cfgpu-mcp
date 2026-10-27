@@ -1,0 +1,18 @@
+id: case-evolink-poster-333
+version: 1
+kind: case
+media: image
+title: Graphic-Novel Eyes Banner
+summary: 'Cinematic poster art: extreme close-up of a man''s eyes filling a narrow horizontal band across the frame, deep black void above and below.'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2062189319562187193
+content: 'Cinematic poster art: extreme close-up of a man''s eyes filling a narrow horizontal band across the frame, deep black void above and below. Graphic-novel illustration style with bold red, black, and orange tones, heavy contrast, dramatic shadows, sharp highlights, raw gritty atmosphere. Eyes look fierce and emotionally charged, hair slightly disheveled.'

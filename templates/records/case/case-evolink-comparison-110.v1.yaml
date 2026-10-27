@@ -1,0 +1,16 @@
+id: case-evolink-comparison-110
+version: 1
+kind: case
+media: image
+title: 铅笔屑微缩景观网格
+summary: '2x2 grid, do this for 4 days $ scenes that made humans proud: Input = Pencil Shaving Category.'
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Gdgtify'
+  url: https://x.com/Gdgtify/status/2069543521045143580
+content: '2x2 grid, do this for 4 days $ scenes that made humans proud: Input = Pencil Shaving Category. Identify 4 distinct shavings (e.g., Graphite Shavings, Red Pencil Shavings, Yellow Pencil Shavings, Green Pencil Shavings). > Function Draw($ Pencil_Shaving, $ scene) > Anchor: [scene]:: [Pencil_Shaving]::4 > Morphology: A stunning 3D [scene] composed of [Pencil_Shaving] — full detailed > Material Physics: The thin curled wood, painted color edge, and fine grain of [$Pencil_Shaving] under warm window light'

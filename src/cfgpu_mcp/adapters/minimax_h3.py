@@ -225,7 +225,7 @@ class MinimaxH3Adapter(ModelAdapter):
             self.resolve_resolution(req) == "480p"
             and self.resolve_duration_seconds(req) < 5
         ):
-            return False, "MiniMax-H3 在 480p 分辨率下 duration_seconds 最小为 5 秒"
+            return False, f"{self.model_name} 在 480p 分辨率下 duration_seconds 最小为 5 秒"
 
         if not req.prompt.strip():
             return False, f"{self.model_name} requires at least one non-empty text prompt"
@@ -246,3 +246,4 @@ class MinimaxH3Adapter(ModelAdapter):
         # GenerateVideoInput.aspect_ratio and MiniMax's `ratio` enum are the same
         # seven values — so there is nothing left to gate.
         return True, ""
+

@@ -1,0 +1,87 @@
+id: case-evolink-poster-233
+version: 1
+kind: case
+media: image
+title: Premium Scandinavian Travel Poster
+summary: Create a premium editorial travel poster illustration of [DESTINATION].
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Goodmanprotocol'
+  url: https://x.com/Goodmanprotocol/status/2053347075648278737
+content: |-
+  Create a premium editorial travel poster illustration of [DESTINATION].
+
+  Style:
+
+  flat vector illustration, ultra clean minimalism,
+
+  mid-century modern aesthetic,
+
+  editorial travel poster style (Scandinavian design inspired),
+
+  no photorealism, no textures, no noise, no gradients
+
+  Composition:
+
+  vertical 4:5 poster layout,
+
+  foreground: calm waterfront / road / natural edge
+
+  midground: colorful local houses or buildings with clean geometric shapes
+
+  background: iconic natural landscape or mountain of [DESTINATION]
+
+  add 1–2 landmark structures (church, tower, bridge, etc.) subtly
+
+  Architecture:
+
+  simplified geometric buildings,
+
+  clean edges, flat colors,
+
+  slightly varied roof colors (harmonious palette, not random)
+
+  Color palette:
+
+  soft, cohesive, location-inspired colors
+
+  pastel tones + muted contrast
+
+  bright but not saturated
+
+  (example: sky blue, coral, mustard, navy, soft green)
+
+  Lighting:
+
+  bright daylight, soft shadows,
+
+  clean and fresh atmosphere
+
+  Typography:
+
+  add text at bottom center:
+
+  "[DESTINATION]" (large, modern sans-serif, spaced letters)
+
+  "[COUNTRY]" (small subtitle below)
+
+  Mood:
+
+  calm, clean, premium, slightly dreamy travel magazine feel
+
+  Quality:
+
+  ultra clean edges,
+
+  perfect alignment,
+
+  no distortion,
+
+  high resolution, print-ready

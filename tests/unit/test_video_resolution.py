@@ -113,16 +113,15 @@ def test_omitting_resolution_rules_no_model_out(registry):
         assert "resolution" not in reason, f"{adapter.model_name}: {reason}"
 
 
-# ── 768p / 2k are MiniMax H3's alone ─────────────────────────────────────────
+# ── 768p / 2k are MiniMax H3's alone (768p shared with H3 Turbo) ─────────────────────────────────────────
 
 
 def test_minimax_h3_is_the_only_model_offering_768p_and_2k(registry):
-    offering = {
-        a.model_name
-        for a in _video_adapters(registry)
-        if a.resolutions and {"768p", "2k"} & set(a.resolutions)
-    }
-    assert offering == {"MiniMax-H3"}
+    def offering(tier):
+        return {a.model_name for a in _video_adapters(registry) if a.resolutions and tier in a.resolutions}
+
+    assert offering("768p") == {"MiniMax-H3", "minimax-turbo-h3"}
+    assert offering("2k") == {"MiniMax-H3"}
 
 
 def test_minimax_h3_sends_its_tiers_verbatim_apart_from_case(registry):
@@ -177,6 +176,9 @@ def test_naming_minimax_h3_with_720p_fails_and_names_the_real_tiers(registry):
         # MiniMax H3 supports 480p directly; 720p falls back to that lower tier.
         ("MiniMax-H3", {"aspect_ratio": "16:9"}, "720p", "480p"),
         ("MiniMax-H3", {"aspect_ratio": "16:9"}, "1080p", "768p"),
+        # MiniMax H3 Turbo has no 2k: it falls to 768p, the highest tier it offers.
+        ("minimax-turbo-h3", {"aspect_ratio": "16:9"}, "2k", "768p"),
+        ("minimax-turbo-h3", {"aspect_ratio": "16:9"}, "720p", "480p"),
     ],
 )
 def test_validate_only_corrects_a_tier_the_model_does_not_offer(

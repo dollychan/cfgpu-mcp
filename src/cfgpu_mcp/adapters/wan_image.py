@@ -4,7 +4,7 @@ import math
 from typing import TYPE_CHECKING, Any
 
 from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
-from cfgpu_mcp.adapters.regions import build_bbox_list, regions_missing_size, render_prompt
+from cfgpu_mcp.adapters.regions import build_bbox_list, is_real_call, regions_missing_size, render_prompt
 from cfgpu_mcp.tool_registry import GenerateImageInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -184,7 +184,8 @@ class WanImageAdapter(ModelAdapter):
             # structured=True: the placeholder resolves to a referent, not to coordinates
             # — those go to bbox_list below, in a raster the model actually knows.
             prompt = render_prompt(
-                prompt, req.regions, req.image_refs, include_names=False, structured=True
+                prompt, req.regions, req.image_refs, include_names=False, structured=True,
+                lenient=is_real_call(req),
             )
 
         content: list[dict] = [{"text": prompt}]

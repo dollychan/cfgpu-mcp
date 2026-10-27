@@ -1,0 +1,16 @@
+id: case-evolink-comparison-109
+version: 1
+kind: case
+media: image
+title: 狗骨头变形宇宙飞船
+summary: A photorealistic split-frame composition divided precisely down the center.
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2068969150949843373
+content: 'A photorealistic split-frame composition divided precisely down the center. Left half: a detailed dog bone resting against the dividing edge, set against a bright blue sky with soft clouds. Right half: the bone organically morphs into a breathtaking futuristic spacecraft, its silhouette and form continuing the exact contours of the bone into a deep starfield. The transition across the centerline is seamless, making the organic structure flow naturally into the mechanical, set against a clean neutral backdrop to draw full focus to both subjects.'

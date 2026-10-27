@@ -1,0 +1,18 @@
+id: case-evolink-poster-264
+version: 1
+kind: case
+media: image
+title: Isometric Travel Poster
+summary: Design a vertical retro mid-century travel poster of [CITY NAME] showcasing [LANDMARK].
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2054593748085215513
+content: 'Design a vertical retro mid-century travel poster of [CITY NAME] showcasing [LANDMARK]. Stick to a tight 3-color scheme: cream-toned paper background, black technical line drawing, plus one [COLOR] accent. Aesthetic: minimalist isometric top-down aerial perspective with very fine cross-hatching and silkscreen print grain. Color rules: fill the entire sky in flat solid [COLOR], add small [COLOR] touches on rooftops or street details. Zero gradients allowed. Typography: large bold sans-serif "[CITY NAME]" at the top in cream, with the city''s name in its native language set smaller in cream beneath it. #AIart #GPTImage2'

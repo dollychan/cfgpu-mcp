@@ -6,7 +6,7 @@
 |------|-----|
 | 任务类型 | video |
 | CFGPU 模型 ID | `cfdream/minimax-h3-r2v` |
-| 任务（tasks） | reference_to_video, video_edit, synced_audio_output, voice_reference_video |
+| 任务（tasks） | reference_to_video, framed_reference_video, video_edit, synced_audio_output, voice_reference_video |
 | 成本档位 | 1/5 |
 | 速度档位 | 1/5 |
 

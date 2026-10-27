@@ -1,0 +1,18 @@
+id: case-evolink-poster-335
+version: 1
+kind: case
+media: image
+title: Mixed-Media Editorial Portrait
+summary: A mixed-media portrait of [SUBJECT] showing [EXPRESSION], looking [GAZE DIRECTION], styled with [ACCESSORY/STYLING].
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2063050883651547471
+content: A mixed-media portrait of [SUBJECT] showing [EXPRESSION], looking [GAZE DIRECTION], styled with [ACCESSORY/STYLING]. Realistic identity rendered with bold black sketch strokes layered over torn newspaper collage fragments and acrylic paint splashes. Editorial print texture throughout, seamlessly blending photorealism with abstract expressionism. Premium poster aesthetic with a tactile, handmade feel. High contrast composition, ultra-detailed face and eyes. [PRIMARY COLORS] and [SECONDARY COLORS] palette.

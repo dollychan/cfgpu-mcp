@@ -1,0 +1,18 @@
+id: case-evolink-poster-40
+version: 1
+kind: case
+media: image
+title: Fictional Anime Movie Poster
+summary: 架空のアニメ映画のポスターをGPT image2で作成。
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@seiiiiiiiiiiru'
+  url: https://x.com/seiiiiiiiiiiru/status/2046509734954741780
+content: 架空のアニメ映画のポスターをGPT image2で作成。

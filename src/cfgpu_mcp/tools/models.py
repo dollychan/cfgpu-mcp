@@ -24,7 +24,7 @@ def register(mcp: FastMCP) -> None:
         required_tasks: Optional[list[CanonicalTaskId]] = None,
         match: CapabilityMatch = "all",
     ) -> dict:
-        """Find models by canonical capabilities; use match='all' for every required task. Video models also list inputs: accepted material slots, limits, and the audio role."""
+        """Find models by canonical capabilities; use match='all' for every required task. Video models also list inputs: accepted material slots, limits, and each slot's role, whose meaning is in input_roles."""
         try:
             return await model_service.list_model_profiles(media_type, required_tasks, match)
         except Exception as e:

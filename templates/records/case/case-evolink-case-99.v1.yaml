@@ -1,0 +1,16 @@
+id: case-evolink-case-99
+version: 1
+kind: case
+media: image
+title: Realistic Guanyin Portrait from Buddhist Texts
+summary: 根据佛经对观音菩萨的形象描述，原原本本的还原一张真实的观音菩萨形象照片，皮肤与衣服接近真实，画质iPhone 15 pro
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Zhaoge01'
+  url: https://x.com/Zhaoge01/status/2047123570485260753
+content: 根据佛经对观音菩萨的形象描述，原原本本的还原一张真实的观音菩萨形象照片，皮肤与衣服接近真实，画质iPhone 15 pro

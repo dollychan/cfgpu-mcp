@@ -11,7 +11,7 @@ CF‑Imagine‑Video 是 xAI 开发的文生 / 图生视频生成模型，采用
 | 任务类型 | video |
 | 公开模型 ID（`model` 参数 / `list_models`） | `cf-imagine-video` |
 | 上游 API 模型 ID（仅出现在请求体 `model` 字段） | `grok-imagine-video` |
-| 任务（tasks） | text_to_video, image_to_video, reference_to_video, synced_audio_output |
+| 任务（tasks） | text_to_video, image_to_video, reference_to_video, framed_reference_video, synced_audio_output |
 | 成本档位 | 2/5 |
 | 速度档位 | 4/5 |
 
@@ -40,7 +40,7 @@ CF‑Imagine‑Video 是 xAI 开发的文生 / 图生视频生成模型，采用
 | 统一 Schema 字段 | Grok 字段 | 映射说明 |
 |------------------|-----------|----------|
 | prompt | prompt | 直接透传 |
-| aspect_ratio | aspect_ratio | 直接透传；`adaptive` 按 `16:9` 下发（请求体没有自适应取值） |
+| aspect_ratio | aspect_ratio | 直接透传；`adaptive` 按 `16:9` 下发（请求体没有自适应取值），`validate_only` 在 `corrected_args` 里钉成 `16:9` |
 | resolution | resolution_name | 直接透传，保持小写（`720p`，不像万相那样转大写） |
 | duration_seconds | video_length | 转成字符串透传；不支持 `-1` 智能时长 |
 | first_frame | refer_images[0] | 首帧即参考图，排在数组第一位 |

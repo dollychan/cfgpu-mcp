@@ -1,0 +1,56 @@
+id: case-evolink-ui-164
+version: 1
+kind: case
+media: image
+title: Pet World Cup Storyboard Sheet
+summary: 'A professional pre-production storyboard sheet for a 12-second photorealistic short film, single landscape page, layout top to bottom: == TITLE BAR == Black bar across full width.'
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@CamikaApp'
+  url: https://x.com/CamikaApp/status/2062355101877231959
+content: |-
+  A professional pre-production storyboard sheet for a 12-second photorealistic short film, single landscape page, layout top to bottom:
+
+  == TITLE BAR ==
+  Black bar across full width. Left: massive bold white text "PET WORLD CUP". Right: two outlined boxes "TOTAL VIDEO TIME: 12 SECONDS" and "8 SHOTS · ENSEMBLE · COMEDY · CINEMATIC".
+
+  == ICON LEGEND ==
+  Four icon+label pairs in a row: soccer ball + "BALL ACTION"; paw + "DUEL"; hamster + "MIGHTY MINI"; trophy + "VICTORY".
+
+  == MAIN GRID (8 panels, 2×4) ==
+  Each panel: thin white border, landscape 16:9. Number badge (1-8) top-left, teal "~1.5s" tag top-right, photorealistic still inside, bottom caption bar with icon + ALL-CAPS text.
+
+  1. [ball] "PET WORLD CUP FINAL KICKS OFF" — Wide stadium at golden hour. Midfield: orange tabby cat (red jersey) + golden retriever (blue jersey) facing off, ball between them. Deep background: enormous white goalposts with tiny hamster goalkeeper between them. Side: white rabbits in stands with pom-poms. Sunset cinematic light.
+
+  2. [paw] "RABBIT CHEERLEADERS BRING THE NOISE" — Close on stands: 3 fluffy white rabbits in tiny jerseys, mouths open cheering, paws shaking red and blue pom-poms in unison. Stadium lights, blurred crowd silhouettes behind.
+
+  3. [paw] "CAT VS DOG MIDFIELD DUEL" — Close-up: cat (red jersey) and dog (blue jersey) facing off, ball between their paws. Intense eye contact. Dirt kicking up. Whiskers and ear fluff in motion.
+
+  4. [ball] "DOG STEALS, BREAKS AWAY" — Dog with ball at paws charging through midfield. Cat sprinting behind, paws stretched, ears back.
+
+  5. [ball] "DOG WINDS UP — SHOT INCOMING" — Dog in classic kick pose, back leg lifted high, eyes locked on distant goal. Deep background: enormous white goalposts with TINY hamster goalkeeper barely visible — dramatic scale contrast.
+
+  6. [hamster] "HAMSTER VS THE GIANT GOAL" — Low angle close-up: enormous white goalposts towering over tiny golden Syrian hamster wearing mini yellow goalie gloves. Looking up determined, paws raised ready. Ball flying in from frame edge.
+
+  7. [hamster] "EPIC SAVE — TINY BUT MIGHTY" — Hamster in full sprawl leap, paws extended, blocking ball with tiny body. Mid-air freeze frame. Confetti falling, blurred crowd silhouettes raising arms.
+
+  8. [trophy] "HAMSTER HERO — TEAMS UNITE" — Wide final shot at golden hour: cat (red) and dog (blue) standing side by side staring in awe at tiny hamster holding up small golden trophy. White rabbits in stands raise pom-poms wildly. Confetti, golden sparkles.
+
+  == BOTTOM INFOGRAPHIC (4 sections horizontal) ==
+  [Clock] VIDEO FLOW: "8 shots × ~1.5s = 12s. Stadium → rabbit fans → cat-vs-dog rivalry → dog shoots → hamster saves → ensemble celebration."
+
+  [Camera] CAMERA TIPS: "Wide establishing on stadium, close-up on rabbits, low-angle on midfield duel, side-tracking on breakaway, scale frame on hamster vs goalposts, hero shot on save, wide on celebration."
+
+  [Sun] LIGHT & STYLE: "Photorealistic cinematic. Golden-hour stadium light throughout. Warm amber grass, lens flares, real DSLR/iPhone aesthetic. Crisp action focus."
+
+  [Person] CHARACTER NOTES: "Cast: orange tabby cat with M-mark (red jersey), golden retriever (blue jersey), golden Syrian hamster with mini yellow goalie gloves (yellow kit), 3-4 white fluffy rabbits with pom-poms. Hamster MUST appear dramatically tiny vs goalposts. All humans/crowd are faceless silhouettes — no faces. Each animal identical across panels."
+
+  == STRICT EXCLUSIONS ==
+  No real soccer team logos, no FIFA/Champions League/UEFA/World Cup branding, no real player faces, no sponsor logos, no national flags, no jersey numbers, no stadium signage with real text, no captions, no watermarks. Plain colored jerseys only. All 8 panels photorealistic — never cartoon/3D/illustration. All animals identical across panels.

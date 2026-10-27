@@ -1,0 +1,98 @@
+id: case-evolink-poster-352
+version: 1
+kind: case
+media: image
+title: Animated Character Design Sheet
+summary: Create a highly detailed full-color character design sheet in 16:9 horizontal format for an original [CHARACTER TYPE / HERO / CREATURE / VILLAIN].
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@0kncn'
+  url: https://x.com/0kncn/status/2063734037928452120
+content: |-
+  Create a highly detailed full-color character design sheet in 16:9 horizontal format for an original [CHARACTER TYPE / HERO / CREATURE / VILLAIN].
+
+  STYLE:
+  stylized cinematic character design,
+  high-quality animated feature look,
+  clean readable shapes,
+  strong silhouette,
+  premium concept art presentation,
+  bold graphic color palette,
+  comic-book inspired energy,
+  polished but production-ready design,
+  clear anatomy and costume readability.
+  CHARACTER IDENTITY:
+  [CHARACTER NAME / ROLE]
+  [AGE / SPECIES / BODY TYPE]
+  [PERSONALITY ARCHETYPE]
+  [POWER / SKILL / SPECIAL EQUIPMENT]
+  MAIN DESIGN:
+  The character should have a distinctive, memorable silhouette.
+  Use a clear costume language with recognizable shapes, strong color blocking, and functional details.
+  The design must feel original, not based on any existing franchise character.
+  No copyrighted logos, no recognizable existing superhero symbols, no direct imitation of known characters.
+  OUTFIT / ARMOR:
+  [DESCRIBE COSTUME OR ARMOR]
+  Include practical design details:
+  gloves / wrist devices
+  boots / shoes
+  belt gear
+  armor plates
+  fabric folds
+  glowing elements if needed
+
+  utility tools or weapons if needed
+  COLOR PALETTE:
+  [MAIN COLOR]
+  [SECONDARY COLOR]
+  [ACCENT COLOR]
+  Use a bold cinematic palette with strong contrast.
+  The colors should be clear enough for animation and video generation consistency.
+  CHARACTER SHEET LAYOUT:
+  Show the same character in multiple views on one clean sheet:
+  front view full body
+  side view full body
+
+  back view full body
+  three-quarter action pose
+  close-up face / mask expression
+  hand / glove / equipment detail
+  special ability or weapon detail
+
+  POSES:
+  Use confident readable poses.
+  The action pose should show the character’s main movement style:
+  [RUNNING / JUMPING / FLYING / SWINGING / FIGHTING / CASTING POWER / USING EQUIPMENT]
+  EQUIPMENT / POWER DETAIL:
+  Show how the character’s signature equipment or power works.
+  Example:
+  magnetic grappling cables,
+  energy gauntlets,
+  kinetic boots,
+  utility belt,
+  glowing power core,
+  mechanical wings,
+  elemental weapon,
+  or custom ability system.
+  BACKGROUND:
+  clean light neutral background,
+  minimal graphic design,
+  no complex environment,
+  no text-heavy poster design,
+  small visual notes allowed only if clean and readable.
+
+  QUALITY:
+  high detail,
+  sharp clean rendering,
+  consistent proportions across all views,
+  same face and body structure in every pose,
+  clear costume continuity,
+  production-ready character sheet,
+  suitable as a reference image for storyboard and AI video generation.

@@ -1,0 +1,18 @@
+id: case-evolink-portrait-190
+version: 1
+kind: case
+media: image
+title: 3D Designer-Toy Portrait
+summary: 'Stylized 3D designer-toy portrait, centered symmetrical close-up composition, maintain the exact face, hairstyle, and facial proportions of the character in the reference image, [GLASSES: e.g.'
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamsofiaijaz'
+  url: https://x.com/iamsofiaijaz/status/2056569264262517002
+content: 'Stylized 3D designer-toy portrait, centered symmetrical close-up composition, maintain the exact face, hairstyle, and facial proportions of the character in the reference image, [GLASSES: e.g. oversized translucent cat-eye glasses / no glasses / chunky black frames], [EYES: e.g. sharp green eyes / dark brown eyes], [FACE DETAILS: e.g. freckles,, silver ear piercings], soft neutral facial expression with cool detached attitude,  streetwear-inspired badges / no hat], [OUTFIT: e.g. chunky neon-gree'

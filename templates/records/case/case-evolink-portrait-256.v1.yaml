@@ -1,0 +1,18 @@
+id: case-evolink-portrait-256
+version: 1
+kind: case
+media: image
+title: Disco Mirror Transformation
+summary: Transform the uploaded image into a glamorous disco-ball version of itself while preserving the original silhouette, composition, key recognizable features, and subtle tonal colors.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@MrDasOnX'
+  url: https://x.com/MrDasOnX/status/2058588737043677648
+content: Transform the uploaded image into a glamorous disco-ball version of itself while preserving the original silhouette, composition, key recognizable features, and subtle tonal colors. Style it as if the subject is made from tiny mirrored square tiles, like a 1970s disco ball chrome, silver, reflective glass, beveled edges and subtle grout lines between tiles. Add bright white sparkle flares and small iridescent highlights across the mirrored surface. Use dramatic studio lighting on a pure black background, with high contrast, glossy reflections and a luxurious nightclub feel. Keep the object centered and iconic, with a polished 3D look.

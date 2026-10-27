@@ -88,7 +88,7 @@ def test_nearest_ratio(ratio, supported, expected):
 
 @pytest.mark.parametrize(
     "raw",
-    [["adaptive"], ["16:9", "adaptive"], ["5:4"], [], "16:9"],
+    [["adaptive"], ["16:9", "adaptive"], ["2:1"], [], "16:9"],  # 2:1 is an image-only ratio
 )
 def test_malformed_declarations_are_rejected(raw):
     with pytest.raises(ValueError, match="aspect_ratios"):
@@ -106,3 +106,52 @@ def test_the_billed_path_now_refuses_what_used_to_be_squared_or_passed_on(model)
     registry.load()
     ok, reason = registry.get(model).supports(GenerateImageInput(prompt="x", aspect_ratio="9:21"))
     assert not ok and "9:21" in reason
+
+
+_RATIO_KEYS = ("ratio", "aspect_ratio", "size")
+
+
+def _sent_ratio_fields(payload) -> dict:
+    """Every ratio-bearing scalar in a payload, wherever the envelope nests it."""
+    found: dict = {}
+
+    def walk(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key in _RATIO_KEYS and isinstance(value, str):
+                    found[key] = value
+                walk(value)
+
+    walk(payload)
+    return found
+
+
+@pytest.mark.parametrize(
+    "adapter", [a for a in _ADAPTERS if a.task_type == "video"], ids=lambda a: a.adapter_id
+)
+def test_adaptive_is_sent_as_is_left_out_or_pinned_by_the_preflight(adapter):
+    """A model with no upstream ``adaptive`` must not swap in a ratio behind the card.
+
+    ``adaptive`` promises a frame that follows the input. Sent verbatim (Seedance,
+    MiniMax-H3 reference) or left out (the input decides: 万相 i2v, videoedit) keeps that
+    promise; any other value is a substitution — Kling and Grok used to send 16:9 with
+    an empty ``corrected_args``, so an approved portrait edit came back landscape.
+    """
+    from cfgpu_mcp.task_manager import validate_request
+
+    probed = 0
+    for material in _VIDEO_MATERIAL:
+        req = GenerateVideoInput(**{"prompt": "a cat", **material, "aspect_ratio": "adaptive"})
+        if not adapter.supports(req)[0]:
+            continue
+        probed += 1
+        result = validate_request(adapter, req)
+        sent = _sent_ratio_fields(result["payload"])
+        if not sent or "adaptive" in sent.values():
+            continue
+        pinned = result["corrected_args"].get("aspect_ratio")
+        assert pinned not in (None, "adaptive"), f"{adapter.model_name} {material}: sent {sent} unpinned"
+        for key in ("ratio", "aspect_ratio"):
+            if key in sent:
+                assert sent[key] == pinned, f"{adapter.model_name} {material}: pinned {pinned}, sent {sent}"
+    assert probed, f"{adapter.adapter_id} accepts no probe request"

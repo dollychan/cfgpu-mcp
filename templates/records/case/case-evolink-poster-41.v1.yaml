@@ -1,0 +1,20 @@
+id: case-evolink-poster-41
+version: 1
+kind: case
+media: image
+title: Product Ad Redesign
+summary: この商品広告をプロのデザイナー目線でリデザインして。
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@genel_ai'
+  url: https://x.com/genel_ai/status/2046498264774791514
+content: |-
+  この商品広告をプロのデザイナー目線でリデザインして。
+  今のトレンド、ターゲットに合わせた洗練されたデザインで。

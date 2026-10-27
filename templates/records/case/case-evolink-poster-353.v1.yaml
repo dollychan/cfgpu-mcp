@@ -1,0 +1,21 @@
+id: case-evolink-poster-353
+version: 1
+kind: case
+media: image
+title: Nordic Literary Editorial Illustration
+summary: 'prompt: A minimalist modern editorial illustration.'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2063670695020868046
+content: |-
+  prompt:
+
+  A minimalist modern editorial illustration. Style: Nordic lifestyle magazine meets Korean literary book cover meets indie architectural sketch. Natural eye-level composition, everyday setting. Color palette: creamy white, ivory, gray-beige, sage green, deep olive, ink black, tiny touches of grayish-pink. Thin black ink outlines, slightly hand-drawn feel. Highly abstracted shapes, elongated quiet silhouettes. Background textures: aged paper grain, scratches, ink spots, print noise. Shadows rendered as solid blocks of pure black or dark green, no gradients, no realistic lighting, no 3D rendering. Quiet, cool, literary, restrained aesthetic. High-end editorial and independent publication finish. No text, no watermark, no high-saturation colors, no photographic feel.

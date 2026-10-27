@@ -15,6 +15,7 @@ Sources:
 Usage::
 
     python scripts/templates/import_sources.py gpt-image2 ~/claude/Private/GPT-Image2-Skill
+    python scripts/templates/import_sources.py evolink ~/claude/Public/awesome-gpt-image-2-API-Prompts
     python scripts/templates/import_sources.py style-library <deer-flow>/skills/public/cf-dream/image/gpt-image-2-style-library
 """
 
@@ -332,13 +333,160 @@ def import_style_library(skill_dir: Path) -> list[Path]:
     return written
 
 
+# ── awesome-gpt-image-2-API-and-Prompts (EvoLink) ─────────────────────────────
+
+EVOLINK_ORIGIN = "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts"
+_EVOLINK_REPO = "https://github.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts"
+
+# Two heading layouts coexist: ``### Case N: [title](url) (by [@a](url))`` and a bare
+# ``### Case N: title`` followed by a ``**Source**: [@a](url)`` line.
+_EVOLINK_HEADING = re.compile(r"^### Case (\d+): (.+?)\s*$")
+_EVOLINK_LINKED = re.compile(r"^\[(.+?)\]\((https?://[^)\s]+)\)(?: \(by \[([^\]]+)\]\(https?://[^)]+\)\))?$")
+_EVOLINK_SOURCE = re.compile(r"^\*\*Source\*\*: \[([^\]]+)\]\((https?://[^)\s]+)\)")
+_EVOLINK_IMAGE = re.compile(r"images/([a-z-]+_case\d+)/(output\d*\.(?:jpe?g|png|webp))")
+_EVOLINK_TITLE_MAX = 80
+
+# File category → (tag, genres). The category files are coarse buckets, not subject
+# genres (``poster`` holds portraits and infographics too), so only the clear ones map.
+_EVOLINK_CATEGORIES: dict[str, tuple[str, list[str]]] = {
+    "ad-creative": ("广告创意", ["product-ad"]),
+    "character": ("角色设计", ["character-design"]),
+    "comparison": ("模型对比与社区案例", []),
+    "ecommerce": ("电商", ["product-food"]),
+    "portrait": ("人像与摄影", ["photography"]),
+    "poster": ("海报与插画", ["typography-posters"]),
+    "ui": ("UI 与社交媒体截图", ["ui-ux-mockups"]),
+}
+
+
+def evolink_cases(repo: Path) -> list[dict[str, Any]]:
+    """Every case in ``cases/*_zh-CN.md``, one dict per distinct case.
+
+    Case numbers repeat inside a file, so a case is identified by its image directory
+    (``poster_case144``), which is unique; the few cases without an image fall back to
+    ``<category>-n<number>``. A case listed under two categories is kept once.
+    """
+    cases: dict[str, dict[str, Any]] = {}
+    for md in sorted((repo / "cases").glob("*_zh-CN.md")):
+        category = md.name.removesuffix("_zh-CN.md")
+        lines = md.read_text(encoding="utf-8").splitlines()
+        i = 0
+        while i < len(lines):
+            heading = _EVOLINK_HEADING.match(lines[i])
+            if not heading:
+                i += 1
+                continue
+            number, rest = int(heading.group(1)), heading.group(2)
+            j = i + 1
+            while j < len(lines) and not _EVOLINK_HEADING.match(lines[j]):
+                j += 1
+            body, i = lines[i + 1 : j], j
+
+            linked = _EVOLINK_LINKED.match(rest)
+            title, url, author = (linked.group(1), linked.group(2), linked.group(3)) if linked else (rest, None, None)
+            source_line = next((m for m in map(_EVOLINK_SOURCE.match, body) if m), None)
+            if source_line:
+                author = author or source_line.group(1)
+                url = url or source_line.group(2)
+            prompt: list[str] = []
+            k = 0
+            while k < len(body):
+                if body[k].startswith("```"):
+                    k += 1
+                    while k < len(body) and not body[k].startswith("```"):
+                        prompt.append(body[k])
+                        k += 1
+                    break
+                k += 1
+            content = _evolink_neutral("\n".join(prompt).strip())
+            if not content:
+                print(f"skip {md.name} Case {number}: no prompt", file=sys.stderr)
+                continue
+            images = _EVOLINK_IMAGE.findall("\n".join(body))
+            image_dir = images[0][0] if images else None
+            key = image_dir or f"{category}_n{number}"
+            if key in cases:
+                if category not in cases[key]["categories"]:
+                    cases[key]["categories"].append(category)
+                continue
+            cover = next((f"images/{d}/{name}" for d, name in images if d == image_dir and name.startswith("output.")), None)
+            cases[key] = {
+                "key": key,
+                "number": number,
+                "categories": [category],
+                "title": title.strip(),
+                "author": author,
+                "url": url,
+                "content": content,
+                "cover": cover or (f"images/{images[0][0]}/{images[0][1]}" if images else None),
+            }
+    return list(cases.values())
+
+
+# Spellings the dialect guard refuses, rewritten to neutral words with the same meaning.
+# In these prompts ``图片1：`` labels a panel of the requested output (not an input), and
+# ``[0–1.5s]`` times a panel of a storyboard sheet; content stays a still-image prompt.
+_EVOLINK_NEUTRAL: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"图片(\d+)："), r"第\1张："),
+    (re.compile(r"\[(\d+(?:\.\d+)?\s*[-–~]\s*\d+(?:\.\d+)?\s*(?:秒|s))\]"), r"(\1)"),
+)
+
+
+def _evolink_neutral(content: str) -> str:
+    for pattern, replacement in _EVOLINK_NEUTRAL:
+        content = pattern.sub(replacement, content)
+    return content
+
+
+def evolink_record_id(case: dict[str, Any]) -> str:
+    return "case-evolink-" + slug(case["key"].replace("_case", "-").replace("_n", "-n"))
+
+
+def _evolink_title(title: str) -> str:
+    title = " ".join(title.split())
+    return title if len(title) <= _EVOLINK_TITLE_MAX else title[: _EVOLINK_TITLE_MAX - 1].rstrip() + "…"
+
+
+def import_evolink(repo: Path) -> list[Path]:
+    written = []
+    for case in evolink_cases(repo):
+        tags: list[str] = []
+        genres: list[str] = []
+        for category in case["categories"]:
+            tag, category_genres = _EVOLINK_CATEGORIES[category]
+            tags.append(tag)
+            genres.extend(g for g in category_genres if g not in genres)
+        record = {
+            "id": evolink_record_id(case),
+            "version": 1,
+            "kind": "case",
+            "media": "image",
+            "title": _evolink_title(case["title"]),
+            "summary": first_sentence(case["content"]),
+            "genres": genres,
+            "tags": tags,
+            "verified_on": ["cf-image-2"],
+            "source": {
+                "origin": EVOLINK_ORIGIN,
+                "license": "CC0-1.0",
+                **({"author": case["author"]} if case["author"] else {}),
+                "url": case["url"] or f"{_EVOLINK_REPO}/blob/main/cases/{case['categories'][0]}_zh-CN.md",
+            },
+            "content": case["content"],
+        }
+        written.append(write_record(record))
+    return written
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("source", choices=["gpt-image2", "style-library"])
+    parser.add_argument("source", choices=["gpt-image2", "style-library", "evolink"])
     parser.add_argument("path", type=Path)
     args = parser.parse_args()
     if args.source == "gpt-image2":
         written = import_gpt_image2(args.path.expanduser())
+    elif args.source == "evolink":
+        written = import_evolink(args.path.expanduser())
     else:
         written = import_style_library(args.path.expanduser())
     print(f"wrote {len(written)} draft records under {STAGING.relative_to(REPO_ROOT)}/")

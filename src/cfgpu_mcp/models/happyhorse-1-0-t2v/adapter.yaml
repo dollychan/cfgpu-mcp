@@ -28,3 +28,7 @@ poll_config:
   max_interval: 20
   backoff_factor: 1.3
   default_timeout: 3000
+
+# reference: parameters.ratio enum (t2v / r2v). Inherited by i2v / video-edit, which
+# send no ratio at all (the frame follows the input).
+aspect_ratios: ["16:9", "9:16", "1:1", "4:3", "3:4", "4:5", "5:4", "9:21", "21:9"]

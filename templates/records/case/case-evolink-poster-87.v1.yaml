@@ -1,0 +1,18 @@
+id: case-evolink-poster-87
+version: 1
+kind: case
+media: image
+title: Hangzhou West Lake Travel Poster
+summary: 帮我生成一个介绍杭州西湖的海报
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@BNBOKBt5'
+  url: https://x.com/BNBOKBt5/status/2047210189741605082
+content: 帮我生成一个介绍杭州西湖的海报

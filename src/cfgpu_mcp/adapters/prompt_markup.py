@@ -27,7 +27,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 from cfgpu_mcp.adapters.regions import _PLACEHOLDER
 
@@ -191,6 +191,46 @@ def parse(prompt: str) -> list[Node]:
     if cursor < len(prompt):
         nodes.append(Text(prompt[cursor:]))
     return nodes
+
+
+def degrade(prompt: str, keep: Callable[[Node], bool]) -> str:
+    """The lenient counterpart of :func:`parse`, for a real (``validate_only=false``) call.
+
+    Every ``[[...]]`` that :func:`parse` or ``keep`` would refuse is written out as its own
+    text — the brackets dropped, the inside kept verbatim — instead of failing the call.
+    That is the whole of the lenient contract, applied the same way at every layer: never
+    *guess* what an unusable placeholder meant (a guess that picks the wrong material is
+    billed and looks right), never refuse either.
+
+    Refused here: a keyword marker that does not parse, and a shot that overlaps the
+    previous *kept* one. ``keep`` judges every node that did parse — a ``Ref`` by its
+    token, a structural node by whatever the caller's layer knows (handles, duration, a
+    dialect). A dropped shot does not count towards the numbering of the ones after it.
+    """
+    shots = 0
+    previous: Optional[Shot] = None
+
+    def substitute(match: re.Match[str]) -> str:
+        nonlocal shots, previous
+        token = match.group(1).strip()
+        head = _HEAD.match(token)
+        keyword = head.group(1).lower() if head else ""
+        if keyword not in KEYWORDS:
+            return match.group(0) if keep(Ref(token)) else token
+        try:
+            node = _structural(token, keyword, shots)
+        except MarkupError:
+            return token
+        if isinstance(node, Shot) and previous is not None and node.start < previous.end:
+            return token
+        if not keep(node):
+            return token
+        if isinstance(node, Shot):
+            shots += 1
+            previous = node
+        return match.group(0)
+
+    return _PLACEHOLDER.sub(substitute, prompt)
 
 
 def _fmt(value: Decimal) -> str:

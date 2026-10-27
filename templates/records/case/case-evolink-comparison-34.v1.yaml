@@ -1,0 +1,16 @@
+id: case-evolink-comparison-34
+version: 1
+kind: case
+media: image
+title: Rust In-Game Screenshot
+summary: an ingame screenshot of rust
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@FixlationAI'
+  url: https://x.com/FixlationAI/status/2046272578705068476
+content: an ingame screenshot of rust

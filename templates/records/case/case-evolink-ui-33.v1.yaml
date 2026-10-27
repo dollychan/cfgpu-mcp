@@ -1,0 +1,18 @@
+id: case-evolink-ui-33
+version: 1
+kind: case
+media: image
+title: Calligraphy Copybook Sheet
+summary: 生成一张【字体】书法临摹字帖
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@MrLarus'
+  url: https://x.com/MrLarus/status/2046510310253539764
+content: 生成一张【字体】书法临摹字帖

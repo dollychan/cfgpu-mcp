@@ -1,0 +1,43 @@
+id: case-evolink-poster-370
+version: 1
+kind: case
+media: image
+title: Anime Character Concept Showcase
+summary: 'Create a high-end, asymmetric editorial CHARACTER CONCEPT SHOWCASE from these inputs: [STYLE]: highly polished stylized 3D CGI anime style, modern cinematic 3D magical girl aesthetic with clean soft-shading, vibrant mag…'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@itsPixieVerse'
+  url: https://x.com/itsPixieVerse/status/2064496721431024075
+content: |-
+  Create a high-end, asymmetric editorial CHARACTER CONCEPT SHOWCASE from these inputs:
+
+  [STYLE]: highly polished stylized 3D CGI anime style, modern cinematic 3D magical girl aesthetic with clean soft-shading, vibrant magical reflections, and shimmering particle effects
+
+  [SUBJECT_DESCRIPTION]: A beautiful celestial magical girl with cosmic powers. She wears an elegant, asymmetric mid-length dress made of deep midnight-blue fabric that subtly mimics a night sky filled with drifting constellations. The dress is detailed with intricate gold filigree along the hem, a single flowing white sleeve, and a delicate silver corset woven with stellar patterns. Softly glowing, semi-translucent ribbons of pure light gently wrap around her arms. She has long, shimmering pastel-pink hair styled in soft waves, expressive golden-amber eyes, and a graceful crown of small star crystals. Her design is highly elegant and unique, radiating a gentle but immense stellar power without traditional sailor motifs.
+
+  Create the layout in a clean 16:9 widescreen format on a neutral studio gray or warm off-white background with a minimal technical border. The design must look like a premium production visual bible, using clean typography, no clutter, no watermarks, and no logos. Apply [STYLE] only to the character and visual elements, keeping the presentation layout clean, structured, and minimal.
+
+  Infer all missing details from the subject description, including name, role, brief background specs, and a cohesive color palette.
+
+  Use this tri-fold layout:
+
+  1. HERO SPOTLIGHT (Left 40% of the board)
+
+  - Show one large, highly detailed full-body dynamic action pose of the subject.
+
+  - This pose should showcase the character's primary personality, attitude, and silhouette.
+
+  2. TECHNICAL TURNAROUND (Center 35% of the board)
+
+  - Show exactly two clean full-body views: Front View and Back View.
+
+  - The subject should be in a relaxed, neutral stance.
+
+  - Place these views over very subtle vertical and horizontal

@@ -1,0 +1,18 @@
+id: case-evolink-poster-261
+version: 1
+kind: case
+media: image
+title: Playlist Mood Album Cover
+summary: 'Create an album cover inspired by this playlist: [playlist], translating its mood into colors, textures, objects, and cinematic composition, with no artist names.'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@getimg_ai'
+  url: https://x.com/getimg_ai/status/2054654412547629350
+content: 'Create an album cover inspired by this playlist: [playlist], translating its mood into colors, textures, objects, and cinematic composition, with no artist names. https://t.co/t1efbQ9sgP'

@@ -1,0 +1,20 @@
+id: case-evolink-case-113
+version: 1
+kind: case
+media: image
+title: Polaroid Frame Breakout Scene
+summary: ポラロイド写真の中に人が写っていて、その人がフレームから外に飛び出している画像。日本語が書いてある画像生成して ←下の画像 GPT Image-2で生成したやつ→
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@MajaDesignJP'
+  url: https://x.com/MajaDesignJP/status/2047235632934928765
+content: |-
+  ポラロイド写真の中に人が写っていて、その人がフレームから外に飛び出している画像。日本語が書いてある画像生成して
+
+  ←下の画像
+  GPT Image-2で生成したやつ→

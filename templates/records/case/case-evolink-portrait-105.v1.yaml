@@ -1,0 +1,18 @@
+id: case-evolink-portrait-105
+version: 1
+kind: case
+media: image
+title: Black-and-red streetwear campaign portrait
+summary: Create a bold, high-contrast black and white portrait of a confident young man wearing a black leather jacket, facing slightly sideways with an intense expression.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@harboriis'
+  url: https://x.com/harboriis/status/2049450257604550872
+content: Create a bold, high-contrast black and white portrait of a confident young man wearing a black leather jacket, facing slightly sideways with an intense expression. Use dramatic studio lighting with sharp shadows and detailed skin texture. Add strong red graphic elements over the image, including a horizontal red bar across the eyes, geometric shapes, thin lines, and framing boxes. Incorporate large bold typography, repeated faded text, and a motivational headline in bright red. The design should feel like a premium sports or streetwear campaign poster with a minimal textured grey background and black/white/grey/red palette only.

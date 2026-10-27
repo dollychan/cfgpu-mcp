@@ -1,0 +1,18 @@
+id: case-evolink-ui-150
+version: 1
+kind: case
+media: image
+title: Illustrated 2027 Desktop Calendar
+summary: use this reference photo to create a desktop calendar for January-December 2027.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Mind_Boticni'
+  url: https://x.com/Mind_Boticni/status/2055663029195575396
+content: 'use this reference photo to create a desktop calendar for January-December 2027. Format: A4 vertical. Features: Korean illustration style, distinct character features, natural expressions, full-body composition, dynamic poses, exquisite clothing details, hand-drawn doodle style, splatter brushstrokes, free lines, a mix of pastels and ink, comic sketch texture, simple white background, symbolic elements around the edges, strong atmosphere, high detail, high quality.'

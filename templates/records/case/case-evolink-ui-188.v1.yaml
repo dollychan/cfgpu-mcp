@@ -1,0 +1,18 @@
+id: case-evolink-ui-188
+version: 1
+kind: case
+media: image
+title: 抖音直播截图
+summary: Vertical 9:16 aspect ratio.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2068123767994523857
+content: 'Vertical 9:16 aspect ratio. Create a realistic Douyin (TikTok China) live broadcast screenshot. The scene shows Liu Yifei hosting a live stream, holding up a sign that reads: "Streaming live tonight, join the chat with Yifei!" Capture the authentic look of a Chinese mobile livestreaming interface.'

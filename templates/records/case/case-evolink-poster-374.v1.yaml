@@ -1,0 +1,72 @@
+id: case-evolink-poster-374
+version: 1
+kind: case
+media: image
+title: Japanese Ad Banner 2x2 Grid
+summary: '://t.co/9AyRJEG6VB { "type": "2x2 grid of Japanese-style digital advertisement banners", "layout": { "structure": "4 equal quadrants", "quadrants": [ { "position": "top-left", "theme": "Travel", "subject": "A couple hol…'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2064440310479176084
+content: |-
+  ://t.co/9AyRJEG6VB
+
+  {
+    "type": "2x2 grid of Japanese-style digital advertisement banners",
+    "layout": {
+      "structure": "4 equal quadrants",
+      "quadrants": [
+        {
+          "position": "top-left",
+          "theme": "Travel",
+          "subject": "A couple holding hands walking along a white sandy beach, gazing at crystal-clear turquoise water beneath a vivid blue sky.",
+          "elements": ["red hibiscus flower in the lower-left corner"],
+          "text_labels": [
+            "This year, break free.",
+            "{argument name=\"travel destination\" default=\"Okinawa Trip\"}",
+            "3-day relaxation getaway",
+            "Flights + Hotel",
+            "Starting from ¥39,800",
+            "Views, food, and experiences — all covered!"
+          ],
+          "icons": {
+            "count": 3,
+            "descriptions": ["airplane", "hotel building", "car"]
+          }
+        },
+        {
+          "position": "top-right",
+          "theme": "Skincare",
+          "subject": "Close-up of a young woman with radiant, dewy skin, eyes gently closed, lightly pressing both hands to her cheeks.",
+          "elements": [
+            "soft pink gradient background",
+            "dynamic water splash effects",
+            "pink cosmetic jar labeled '{argument name=\"skincare product name\" default=\"LUMIÈRE\"} Brightening Gel'"
+          ],
+          "text_labels": [
+            "Bye bye pores and dullness!",
+            "Radiance overflowing",
+            "Achieve glass-like dewy skin",
+            "Next-level skincare sensation",
+            "First order 78% OFF",
+            "{argument name=\"discount price\" default=\"¥1,980\"}"
+          ],
+          "badges": {
+            "count": 3,
+            "style": "gold circular",
+            "labels": ["Pore care", "Deep hydration", "Firmness & luminosity"]
+          }
+        },
+        {
+          "position": "bottom-left",
+          "theme": "Gourmet Food",
+          "subject": "Thick medium-rare steak slices sizzling on a dark cast-iron grill plate.",
+          "elements": [
+            "crispy g

@@ -1,0 +1,18 @@
+id: case-evolink-ui-166
+version: 1
+kind: case
+media: image
+title: Technical Food Annotation Infographic
+summary: Generate an infographic image of any food item, combining a realistic photograph or photoreal render with technical annotation overlays placed directly on top.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2062264967722934629
+content: 'Generate an infographic image of any food item, combining a realistic photograph or photoreal render with technical annotation overlays placed directly on top. Use black ink-style line drawings and text (technical pen / architectural sketch look) on a pure white studio background. Include: key component labels, internal cutaway or exploded-view outlines, measurements and scale markers, material callouts and quantities, arrows indicating function or flow, simple schematic or sectional diagrams where relevant. Place the food name as a title inside a hand-drawn annotation box in one corner. The real object should remain clearly visible beneath the annotations. Annotations should feel sketched, technical, and architectural. Clean composition with balanced negative space, educational museum-exhibit / engineering-manual vibe. White background, black annotation lines and text only, no colors. Output: 1080x1080, ultra-crisp, no watermark.'

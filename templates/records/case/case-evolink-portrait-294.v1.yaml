@@ -1,0 +1,28 @@
+id: case-evolink-portrait-294
+version: 1
+kind: case
+media: image
+title: Non-Existent 1870s Vintage Photograph
+summary: Non Existence Vintage Photographs with GPT Image 2 📸 - Prompt 👇 a photographic image in the style of 1870, [SCENE DESCRIPTION], with [CHARACTERS described in period accurate clothing], [Describe the interaction].
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Arminn_Ai'
+  url: https://x.com/Arminn_Ai/status/2065104900590109130
+content: |-
+  Non Existence Vintage Photographs with GPT Image 2 📸
+
+  - Prompt 👇
+  a photographic image in the style of 1870, [SCENE DESCRIPTION], with [CHARACTERS described in period accurate clothing], [Describe the interaction].
+
+  The photo has an aged and worn appearance, as it was taken in 1870. It features prominent time-induced chemical stains, heavy grain, sepia toning, and deep scratches.
+
+  Significantly reduce the sharpness so that the details of the [SUBJECT] are not crisp, making the [SUBJECT] blurry and low-fidelity.
+
+  Greatly increase the wear of the photo, including small tears, missing corners, water damage, and small wormholes caused by insect damage. Add a prominent, jagged diagonal cut across the photo, mended clumsily with old, discolored tape.

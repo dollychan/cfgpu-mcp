@@ -1,0 +1,26 @@
+id: case-evolink-character-5
+version: 1
+kind: case
+media: image
+title: Official Character Sheet (JP)
+summary: このキャラクターと背景を元に、 公式設定資料のようなキャラクターシートを作成してください。
+genres:
+- character-design
+tags:
+- 角色设计
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Toshi_nyaruo_AI'
+  url: https://x.com/Toshi_nyaruo_AI/status/2045025277538107420
+content: |-
+  このキャラクターと背景を元に、 公式設定資料のようなキャラクターシートを作成してください。
+  ・正面、側面、背面の3面図を含める ・キャラクターの表情バリエーションを追加
+  ・衣装や装備の詳細パーツを分解して表示 ・カラーパレットを追加 ・世界観の簡単な説明を入れる
+  ・全体は整理されたレイアウト
+  （白背景、図解風）
+  ・アスペクト比16：9
+
+  高解像度、プロのコンセプトアートスタイル

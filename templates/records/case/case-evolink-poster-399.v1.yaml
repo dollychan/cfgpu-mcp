@@ -1,0 +1,22 @@
+id: case-evolink-poster-399
+version: 1
+kind: case
+media: image
+title: 方形专业广告海报
+summary: Generate a 1:1 square poster with a professional advertising design aesthetic, suitable for promoting a book, course, or event.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@iamaiistudio'
+  url: https://x.com/iamaiistudio/status/2066024623637188813
+content: |-
+  Generate a 1:1 square poster with a professional advertising design aesthetic, suitable for promoting a book, course, or event. Include the following text verbatim:
+
+  Ad Creative Production
+  As soon as you think of it, you can play with it. AI x browser game-making is genuinely fun. Sounds hard, but it is actually easy to start. Even if you don't know code, you can build your first one.

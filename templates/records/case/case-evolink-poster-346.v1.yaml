@@ -1,0 +1,41 @@
+id: case-evolink-poster-346
+version: 1
+kind: case
+media: image
+title: Love Bites Cyberpunk Manga Cover
+summary: Generate a vintage vinyl album cover with a cyberpunk and manga aesthetic, grainy and worn.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@her19845'
+  url: https://x.com/her19845/status/2063310953475678229
+content: |-
+  Generate a vintage vinyl album cover with a cyberpunk and manga aesthetic, grainy and worn. The background is dark and textured, with scratches and dust. At the top, the title "LOVE BITES" appears in large white and gray capital letters, with two red lines crossed out. To the left of the title is a red six-pointed star symbol with a central asterisk. Below the title is the text: "BEAUTY IS POWER, SILENCE IS WAR."
+
+  In the center is a monochrome manga-style illustration of the attached image. Behind it is a monochrome illustration of a 1990s JDM sports car.
+
+  Includes multiple graphic details and logos:
+
+  Top left: logos for "STEREOPHONIC HIGH FIDELITY RECORDING," "33 ⅓ RPM," and "LP."
+
+  Top right: a red circle that reads "VOL. 01."
+
+  On the left: the text "HER19845", a barcode, and a tracklist with 6 numbered songs (e.g., "01. SILENT GAZE", "02. LOVE BITES", "03. NIGHT DRIVE", "04. EMPTY PROMISES", "05. FAKE SMILE", "06. BLEED QUIET").
+
+  On the right: a red square with a globe logo, the text "YOU CAN WATCH BUT YOU WON'T UNDERSTAND", asterisks, and "@IMAGE_5".
+
+  Bottom left: the Japanese text "美しさは力である" and a barcode "0025".
+
+  Bottom right: a silver "PARENTAL ADVISORY EXPLICIT CONTENT" label and red graffiti "DON'T FALL IN LOVE" with a crossed-out heart.
+
+  Copyright text "ALL RIGHTS RESERVED" at the bottom edge.
+
+  The overall aesthetic should be nostalgic, underground, and raw, with the grain and texture of a real vinyl record. The color scheme is monochromatic with red accents.
+
+  Use a 3:4 aspect ratio.

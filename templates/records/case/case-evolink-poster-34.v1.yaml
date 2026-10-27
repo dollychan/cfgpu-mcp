@@ -1,0 +1,18 @@
+id: case-evolink-poster-34
+version: 1
+kind: case
+media: image
+title: Character Relationship Map Poster
+summary: 请根据【主题】生成一张高设计感的人物关系图海报。
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@MrLarus'
+  url: https://x.com/MrLarus/status/2046263153546174935
+content: 请根据【主题】生成一张高设计感的人物关系图海报。

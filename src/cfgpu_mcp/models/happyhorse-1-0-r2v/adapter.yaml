@@ -19,6 +19,7 @@ prompt_dialect: happyhorse-r2v
 # both the code gates and the agent-facing profile catalog.
 tasks:
   - reference_to_video
+  - framed_reference_video
 
 resolutions: [480p, 720p, 1080p]
 default_resolution: 1080p

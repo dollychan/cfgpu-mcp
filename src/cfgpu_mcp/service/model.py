@@ -225,13 +225,37 @@ async def list_model_profiles(
         if requested_tasks
         else {profile_task for model in models for profile_task in model["tasks"]}
     )
-    return {
+    catalog: dict[str, Any] = {
         "catalog_version": catalog_version,
         "task_catalog": {
             canonical_task: task_catalog[canonical_task]
             for canonical_task in sorted(visible_task_ids)
         },
         "models": models,
+    }
+    input_roles = _visible_input_roles(models)
+    if input_roles:
+        catalog["input_roles"] = input_roles
+    return catalog
+
+
+def _visible_input_roles(models: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
+    """The meaning of every slot ``role`` the listed rows carry, like ``task_catalog``.
+
+    Written once here rather than on each row: the vocabulary is closed and identical
+    for every model, so per-row prose would repeat a dozen times and be skimmed past.
+    """
+    from cfgpu_mcp.adapters.inputs import ROLE_DESCRIPTIONS
+
+    seen: dict[str, set[str]] = {}
+    for model in models:
+        for slot, spec in model.get("inputs", {}).items():
+            if "role" in spec:
+                seen.setdefault(slot, set()).add(spec["role"])
+    return {
+        slot: {role: text for role, text in ROLE_DESCRIPTIONS[slot].items() if role in seen[slot]}
+        for slot in ROLE_DESCRIPTIONS
+        if slot in seen
     }
 
 

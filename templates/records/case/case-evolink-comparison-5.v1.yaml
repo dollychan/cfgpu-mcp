@@ -1,0 +1,16 @@
+id: case-evolink-comparison-5
+version: 1
+kind: case
+media: image
+title: Wooden Bookshelf Prompt Test
+summary: 'A wooden bookshelf consisting of three shelves: On the top shelf, there should be one book, on the second shelf, there should be three books, and on the bottom shelf, there should be seven books.'
+tags:
+- 模型对比与社区案例
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@chetaslua'
+  url: https://x.com/chetaslua/status/2044331451077013749
+content: 'A wooden bookshelf consisting of three shelves: On the top shelf, there should be one book, on the second shelf, there should be three books, and on the bottom shelf, there should be seven books.'

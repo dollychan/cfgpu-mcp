@@ -1,0 +1,36 @@
+id: case-evolink-poster-358
+version: 1
+kind: case
+media: image
+title: Origami Food Poster
+summary: 'INPUT: [layered dish] SYSTEM: Render the input as a master-folded origami and paper-craft architectural sculpture.'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Gdgtify'
+  url: https://x.com/Gdgtify/status/2064020126937039318
+content: |-
+  INPUT: [layered dish]
+
+  SYSTEM: Render the input as a master-folded origami and paper-craft architectural sculpture. Do not hardcode paper types unless inevitable. Infer the fold-geometry logic, structural load-bearing creases, layer-separation mechanics, color-blocking strategy, and the tactile grain direction of the materials.
+
+  SEMANTIC SOLVE: ORIGAMI_FOOD_AUTOPSY =
+    (INFER(fold_geometry FROM mountain_valley_ratio + structural_crease_load + interlocking_tabs + negative_space_utilization) ::5) +
+    (INFER(material_logic FROM paper_grain_direction + GSM_weight + surface_coating + edge_burnishing + adhesive_visibility) ::4) +
+    (INFER(color_blocking FROM ingredient_color_mapping + contrast_hierarchy + gradient_paper_layering + visual_weight_distribution) ::4) +
+    (INFER(hidden_craft FROM fold_sequence_complexity + tolerance_margins + tool_marks + humidity_warping_prevention) ::3) -
+    (messy torn paper + realistic food textures + digital 3D paper shaders + cluttered craft desk + childish simple folds) ::-4
+
+  COMPOSITION: One central food item completely reconstructed as an intricate, multi-layered paper-craft sculpture. The "ingredients" are represented by distinct, beautifully colored paper layers, cut and folded with razor-sharp precision. Show the "exploded" floating layers hovering above the base, revealing the internal fold structure and interlocking tabs.
+
+  STYLE DNA: Intricate paper cutting art ::0.35 high-end origami photography ::0.25 flat-shaded C4D stylization ::0.20 crisp vector-like edges ::0.15 soft directional macro lighting ::0.05
+
+  OUTPUT: Soft off-white or pastel background, elegant minimalist typography, razor-sharp crisp edges, flawless flat-shaded colors with subtle paper grain textures, premium negative space.
+
+  NEGATIVE: no holograms, no bioluminescent glows, no VR/AR elements, no realistic food photography, no messy torn paper edges, no visible digital 3D artifacts, no cluttered backgrounds, no watermark.

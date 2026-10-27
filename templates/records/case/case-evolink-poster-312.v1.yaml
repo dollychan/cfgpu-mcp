@@ -1,0 +1,31 @@
+id: case-evolink-poster-312
+version: 1
+kind: case
+media: image
+title: 3D Travel Typography Poster
+summary: Create a 3:2 premium 3D typography-based travel poster for [New York], using luxury editorial destination advertising fused with realistic sculptural letterform architecture.
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Sheldon056'
+  url: https://x.com/Sheldon056/status/2058564258007539770
+content: |-
+  Create a 3:2 premium 3D typography-based travel poster for [New York], using luxury editorial destination advertising fused with realistic sculptural letterform architecture.
+
+  The city name “[New York]” must be the dominant subject, occupying most of the canvas. Build the letters as large, realistic, three-dimensional sculptural forms made from glossy painted material, polished ceramic, soft plaster, carved stone, sunlit architectural surfaces, or city-adaptive materials. Each letter should physically transform into the city’s identity: landmarks, skyline silhouettes, arches, towers, domes, bridges, windows, balconies, cultural patterns, coastal forms, or street details must grow directly out of the letterforms.
+
+  Landmarks should feel architecturally integrated, not pasted behind or around the word. A tower may rise from a vertical stem, a bridge may connect two letters, a dome may form the curve of a rounded letter, rooftops may shape the top edges, and windows or ornamental details may be embedded into the letter faces.
+
+  Use a low-angle three-quarter camera view so the typography feels monumental, cinematic, premium, and friendly. Place the 3D city-name sculpture slightly low in the frame, filling the central and lower portions of the poster, with generous negative space above.
+
+  At the top header, add a refined horizontal row of faded landmark symbols related to the city: tiny vector icons, or translucent architectural glyphs. Keep them very soft, elegant, and secondary, like premium magazine header details.  Add each landmark name below its icon. Keep all faded and premium.
+
+  Remove any visible sun from the top-left corner. Use bright natural daylight with a soft key light from the upper-left, gentle fill light, clean highlights, subtle ambient occlusion, and soft contact shadows beneath the letters. The lighting should feel cheerful, fresh, and editorial, not dark or overly cinematic.
+
+  Use a bright city-adaptive palette based on [New York]: coastal cities use aqu

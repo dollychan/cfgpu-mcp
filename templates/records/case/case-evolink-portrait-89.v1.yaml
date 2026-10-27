@@ -1,0 +1,18 @@
+id: case-evolink-portrait-89
+version: 1
+kind: case
+media: image
+title: Luxury Studio Outfit Transformation
+summary: Using REFERENCE_0 as the subject base, transform the casual desert snapshot into a full-body luxury fashion studio portrait.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Abdullah__Ai7'
+  url: https://x.com/Abdullah__Ai7/status/2048083022315159595
+content: Using REFERENCE_0 as the subject base, transform the casual desert snapshot into a full-body luxury fashion studio portrait. Replace the denim jacket, tank top, and shorts with a fitted strapless mini cocktail dress in {argument name="dress color" default="powder blue"} with ornate silver floral embroidery and exactly 2 geometric cutouts at the chest and upper waist. Change the setting to a clean seamless light-gray studio background with polished high-end editorial styling. Add 1 silver clutch with a thin chain strap in the subject's right hand and 1 pair of pointed silver high heels. Refine the pose into an elegant standing fashion pose with one hand near the face, keep the same person and hair identity, and apply soft cinematic luxury lighting with crisp 8K fashion-photography detail.

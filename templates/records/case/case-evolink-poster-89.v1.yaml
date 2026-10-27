@@ -1,0 +1,21 @@
+id: case-evolink-poster-89
+version: 1
+kind: case
+media: image
+title: Dongfang Bubai Wuxia Character Poster
+summary: 第1张：电影角色海报，东方不败红衣饮酒，悬崖落日，武侠意境 第2张：东方不败绣花针如飞，红衣长发立于悬崖，黑木崖夕阳如血
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@songguoxiansen'
+  url: https://x.com/songguoxiansen/status/2047204566559756707
+content: |-
+  第1张：电影角色海报，东方不败红衣饮酒，悬崖落日，武侠意境
+
+  第2张：东方不败绣花针如飞，红衣长发立于悬崖，黑木崖夕阳如血

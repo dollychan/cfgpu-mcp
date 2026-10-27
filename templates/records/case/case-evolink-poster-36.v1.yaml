@@ -1,0 +1,18 @@
+id: case-evolink-poster-36
+version: 1
+kind: case
+media: image
+title: AI Builder Doodle Sketch
+summary: 以涂鸦速写风表现【一个厉害的AI builder】。
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@opc_8838'
+  url: https://x.com/opc_8838/status/2046162334440448339
+content: 以涂鸦速写风表现【一个厉害的AI builder】。

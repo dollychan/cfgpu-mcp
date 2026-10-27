@@ -1,0 +1,18 @@
+id: case-evolink-ui-3
+version: 1
+kind: case
+media: image
+title: Handwritten Notebook Photo
+summary: Amateur photo of an open notebook lying flat, filled with handwritten notes in black ballpoint pen.
+genres:
+- ui-ux-mockups
+tags:
+- UI 与社交媒体截图
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@patrickassale'
+  url: https://x.com/patrickassale/status/2044569086013718958
+content: Amateur photo of an open notebook lying flat, filled with handwritten notes in black ballpoint pen. The handwriting is casual and slightly messy, like personnal notes, natural imperfections, crossed out words, underlined headings. Shot from slightly above, natural daylight from a window, no flash. Casual desk setting, shot on iPhone

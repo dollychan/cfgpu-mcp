@@ -1,0 +1,29 @@
+id: case-evolink-poster-339
+version: 1
+kind: case
+media: image
+title: Sketch Portrait Breaking Paper
+summary: '{ "prompt": "A hyper-realistic top-down photograph of a white sketch paper lying on a rustic wooden table.'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Fujimoto_hina'
+  url: https://x.com/Fujimoto_hina/status/2062869471203844457
+content: |-
+  {
+    "prompt": "A hyper-realistic top-down photograph of a white sketch paper lying on a rustic wooden table. On the paper is an incredibly detailed graphite pencil sketch of a handsome young man with the exact facial features, hairstyle, glasses, smile, proportions, and expression from the uploaded reference image. The portrait is rendered in realistic graphite pencil shading with exceptional detail. He is wearing a modern black American-style jacket and shirt, with only the clothing rendered in full color while the face remains a pencil sketch. The man is holding a real photorealistic 3D black coffee mug labeled 'AEGON' that appears to break through the boundaries of the paper and extend into the real world. The coffee mug is rendered in full color with realistic reflections and texture. His hand holding the mug is also fully photorealistic and colored, seamlessly blending with the sketch to create an impressive trompe-l'oeil illusion. Realistic steam rises from the hot coffee and partially covers the lower part of his face. The white sketch paper rests on a rustic wooden tabletop surrounded by scattered coffee beans, two sharpened black pencils, subtle sketching tools, and warm natural sunlight creating soft shadows. Cozy coffee shop atmosphere, shallow depth of field, cinematic lighting, premium composition. Photorealistic mixed-media artwork, pencil drawing combined with 3D realism, illusion art, trompe-l'oeil effect, ultra-detailed textures, realistic steam, professional studio-quality lighting, highly detailed graphite shading, 8K resolution, masterpiece quality. In the bottom-left corner of the paper, add a small minimalist triangle containing a stylized letter 'A' with the text 'A.E.G.O.N' elegantly written beneath it as an artist signature. Preserve the reference face exactly.",
+    "size": "1024x1792",
+    "style": "photorealistic",
+    "quality": "ultra",
+    "aspect_ratio": "9:16",
+    "lighting": "warm natural sunlight",
+    "camera_angle": "top-down",
+    "detail_level": "8K",
+    "negative_prompt": "blurry, low resolution, distorted face, extra fingers, duplicate hands, bad anatomy, cartoon, anime, painting, watercolor, oversaturated colors, low detail, text artifacts, cropped face, unrealistic steam, deformed mug, unrealistic proportions"
+  }

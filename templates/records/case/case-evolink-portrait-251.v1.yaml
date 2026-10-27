@@ -1,0 +1,18 @@
+id: case-evolink-portrait-251
+version: 1
+kind: case
+media: image
+title: Papercut Diorama Style Transfer
+summary: Convert this image into a soft, handcrafted paper-cut layered illustration style, inspired by papercraft diorama aesthetics.
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@Ciri_ai'
+  url: https://x.com/Ciri_ai/status/2058596304851513605
+content: Convert this image into a soft, handcrafted paper-cut layered illustration style, inspired by papercraft diorama aesthetics. Use smooth rounded shapes, simplified cute character proportions, and minimal facial details (dot eyes, blush cheeks) to create a warm, charming look. Apply stacked paper layers with visible depth, subtle shadows between layers, and clean cut edges that resemble laser-cut cardstock.

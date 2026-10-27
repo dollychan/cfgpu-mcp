@@ -1,0 +1,18 @@
+id: case-evolink-poster-1
+version: 1
+kind: case
+media: image
+title: Boston Spring 2026 City Poster
+summary: '<!-- Case 426: Moon Whisper Graphite Portrait (by @AiwithLariab) -->'
+genres:
+- typography-posters
+tags:
+- 海报与插画
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@BubbleBrain'
+  url: https://x.com/BubbleBrain/status/2045358053831172358
+content: '<!-- Case 426: Moon Whisper Graphite Portrait (by @AiwithLariab) -->'

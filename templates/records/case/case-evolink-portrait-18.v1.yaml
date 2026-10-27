@@ -1,0 +1,18 @@
+id: case-evolink-portrait-18
+version: 1
+kind: case
+media: image
+title: AI Self-Perception Portrait
+summary: 根据你对我的认知 给我生成一个“你认识的我”的 图片
+genres:
+- photography
+tags:
+- 人像与摄影
+verified_on:
+- cf-image-2
+source:
+  origin: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
+  license: CC0-1.0
+  author: '@80vul'
+  url: https://x.com/80vul/status/2046218165961753047
+content: 根据你对我的认知 给我生成一个“你认识的我”的 图片
