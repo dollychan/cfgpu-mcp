@@ -44,6 +44,11 @@ class WanVideoAdapter(ModelAdapter):
     def _uses_ratio(self) -> bool:
         return self.adapter_id not in self._RATIOLESS_ADAPTERS
 
+    def effective_aspect_ratio(self, req: "GenerateVideoInput") -> str:
+        # i2v sends no ratio at all: the output follows the first frame / source clip.
+        # Not ``_uses_ratio()``: videoedit is False there yet still sends an explicit one.
+        return "adaptive" if self.adapter_id in self._RATIOLESS_ADAPTERS else req.aspect_ratio
+
     @staticmethod
     def resolve_prompt_extend(req: "GenerateVideoInput") -> bool:
         """The ``prompt_extend`` to send: the caller's, else this API's default (on).

@@ -310,7 +310,12 @@ def test_edit_template_passes_the_preflight_unchanged(model_id):
 
     result = validate_request(adapter, req)
 
-    assert not set(result["corrected_args"]) & set(contract["call_template"])
+    # Pins (aspect_ratio, resolution) may echo a template field; none may change one.
+    assert all(
+        result["corrected_args"][k] == v
+        for k, v in contract["call_template"].items()
+        if k in result["corrected_args"]
+    )
     assert "[[" not in str(result["payload"])
     if model_id == "doubao-seedance-2-5":
         # adaptive + -1 + a reference video leaves the edit sub-task open to upstream.

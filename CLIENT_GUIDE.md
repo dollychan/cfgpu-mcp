@@ -865,8 +865,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `corrected_args` 里给出**不高于请求值的最近一档**（`768p` → `720p`，`2k` → `1080p`，
 > `doubao-seedance-2-0-fast` 这种没有 1080p 的则 `2k` → `720p`），直接
 > `{**原参数, **corrected_args}` 覆盖后重发即可。反过来，向 `MiniMax-H3` 传它没有的档
-> （720p/1080p）会回退到不高于请求值的最近一档（分别为 `480p` / `768p`）。**不传 `resolution` 时 `corrected_args` 里不会出现它**
-> —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
+> （720p/1080p）会回退到不高于请求值的最近一档（分别为 `480p` / `768p`）。**不传 `resolution` 时，`corrected_args` 也会给出该模型实际使用的默认档**
+> （2026-11-02 起，例如 MiniMax-H3 为 `768p`，多数模型为 `720p`），见下文「输出规格总是钉死」。
 >
 > **画幅比例按模型限制（2026-10-09 起）。** `list_models` / `list_model_profiles` 对有限制的模型返回 `aspect_ratios`；
 > 没有这个字段表示接受全部比例，视频模型总是接受 `adaptive`。正式调用向不支持的模型传比例会在发请求前被拒，
@@ -1176,7 +1176,15 @@ done
 >
 > **`corrected_args`：正式提交前要改的参数。** 用**工具参数名**表达，调用方直接 `{**原参数, **corrected_args}` 覆盖即可，不需要自己掌握任何 per-model 知识（`payload` 承担不了这个用途：它说的是上游方言 `cfgpu_model_id` / `video_length` / `resolution_name`，得反向翻译）。
 >
-> 当前它**只在模型选择被委托出去时**含 `model` 一键——即 `model="auto"` 或 `model=["a","b"]`（候选列表本质是"在这个子集里 auto"）。此时路由结果必须钉死：审批卡片上写 `auto` 等于没写，用户无从判断费用与时长；钉死也保证了正式提交跑的就是预检验过的那个模型。**显式指定的 model 一律不改写**，连规范化成 `model_name` 都不做——`adapter_id` / `cfgpu_model_id` / `display_name` 本就能解析到同一个 adapter，改写只会让卡片显示一个调用方没写过的名字。`model_used` 负责**报告**，`corrected_args` 负责**指令**，两个字段各司其职。
+> **输出规格总是钉死（2026-11-02 起）。** `generate_image` / `generate_video` 的预检结果里，`corrected_args` **总是**含
+> `aspect_ratio` 与 `resolution`，值就是正式调用实际会用的那一个——无论调用方传没传。缺省视频分辨率给出该模型的默认档；
+> `adaptive` 原样下发的模型给 `adaptive`，上游没有自适应取值的模型给实际替换成的比例（如可灵 `16:9`）；不发比例的模型
+> （万相 2.6 / 2.7 i2v、HappyHorse i2v / video-edit，画幅跟随输入素材）**一律给 `adaptive`**，即使调用方写了别的比例——
+> 那个比例上游根本收不到。这两项只是把实际值写明，`{**原参数, **corrected_args}` 合并后发出的 payload 与预检完全相同，
+> 所以审批卡可以直接显示画幅与分辨率两行。注意：卡片上若在预检后改了模型，带过去的是旧模型的档位，新模型不支持时会明确报错，
+> 改模型后请重新预检。
+>
+> `model` 一键**只在模型选择被委托出去时**出现——即 `model="auto"` 或 `model=["a","b"]`（候选列表本质是"在这个子集里 auto"）。此时路由结果必须钉死：审批卡片上写 `auto` 等于没写，用户无从判断费用与时长；钉死也保证了正式提交跑的就是预检验过的那个模型。**显式指定的 model 一律不改写**，连规范化成 `model_name` 都不做——`adapter_id` / `cfgpu_model_id` / `display_name` 本就能解析到同一个 adapter，改写只会让卡片显示一个调用方没写过的名字。`model_used` 负责**报告**，`corrected_args` 负责**指令**，两个字段各司其职。
 >
 > 代价要知道：钉死 `model` 换掉了 `auto` 的 failover——预检与提交之间该模型若不可用，原本会自动路由到下一个候选，现在直接硬失败。这是有意的取舍：审批只有在它指名了真正会跑的东西时才有意义，而这种失败是显式且可重试的。
 >

@@ -195,13 +195,20 @@ def test_validate_only_corrects_a_tier_the_model_does_not_offer(
     assert result["validated"] is True
 
 
-def test_validate_only_reports_no_correction_for_an_omitted_resolution(registry):
-    """None is already every model's own tier; pinning it would be a choice nobody made."""
-    for model in ("MiniMax-H3", "doubao-seedance-2-0-fast", "wan-video"):
-        req = GenerateVideoInput(prompt="x", model=model, aspect_ratio="16:9")
-        adapter = ModelRouter(registry).resolve(req, for_validation=True)
+@pytest.mark.parametrize(
+    "model,tier",
+    [("MiniMax-H3", "768p"), ("doubao-seedance-2-0-fast", "720p"), ("wan-video", "720p")],
+)
+def test_validate_only_pins_the_model_default_for_an_omitted_resolution(registry, model, tier):
+    """An omitted tier is pinned to the model's own default, so the approval card
+    shows the tier that runs — and the round trip sends the identical payload."""
+    req = GenerateVideoInput(prompt="x", model=model, aspect_ratio="16:9")
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+    result = validate_request(adapter, req)
 
-        assert "resolution" not in validate_request(adapter, req)["corrected_args"]
+    assert result["corrected_args"]["resolution"] == tier
+    again = GenerateVideoInput(**{**req.model_dump(exclude_unset=True), **result["corrected_args"]})
+    assert validate_request(adapter, again)["payload"] == result["payload"]
 
 
 # ── Tier spelling: case is folded, not rejected ─────────────────────────────
