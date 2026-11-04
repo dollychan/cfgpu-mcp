@@ -488,6 +488,7 @@ def _validate_video_refs(req: Any) -> None:
 
     frame_values = _frames_beside_references(req)
     deferred: list[str] = []
+    unresolved: list[str] = []
     owner: dict[str, str] = {}
     for slot, kind in SLOT_KIND.items():
         refs_name = REFS_FIELD[kind]
@@ -568,6 +569,20 @@ def _validate_video_refs(req: Any) -> None:
             if token not in deferred:
                 deferred.append(token)
             continue
+        frame = next((slot for slot in _FRAME_SLOTS if getattr(req, slot, None) == token), None)
+        if frame:
+            raise ValueError(frame_placeholder_message(token, frame))
+        if token not in unresolved:
+            unresolved.append(token)
+    if unresolved:
+        # Every unresolved placeholder at once, as ``regions.render_prompt`` does: one
+        # per round trip makes the caller pay a turn for each.
+        listed = ", ".join(f"[[{t}]]" for t in unresolved)
+        subject = (
+            f"prompt placeholder {listed} names no handle"
+            if len(unresolved) == 1
+            else f"prompt placeholders {listed} name no handle"
+        )
         available = ", ".join(f"[[{h}]]" for h in owner)
         hint = (
             f"available here: {available}."
@@ -576,13 +591,11 @@ def _validate_video_refs(req: Any) -> None:
             "resolve; give each reference a handle in the list that pairs with its slot "
             "(same order, same length) and write [[<handle>]]."
         )
-        frame = next((slot for slot in _FRAME_SLOTS if getattr(req, slot, None) == token), None)
-        if frame:
-            raise ValueError(frame_placeholder_message(token, frame))
         raise ValueError(
-            f"prompt placeholder [[{token}]] names no handle in image_refs / video_refs / "
-            f"audio_refs — {hint} If [[{token}]] is a material, also pass it in the "
-            f"reference_* list for its kind. An unresolved [[...]] would reach the model "
+            f"{subject} in image_refs / video_refs / audio_refs — {hint} A material a "
+            f"placeholder names must also be passed in the reference_images / "
+            f"reference_videos / reference_audios list for its kind: naming it in the "
+            f"prompt alone does not pass it. An unresolved [[...]] would reach the model "
             f"as literal text, so nothing was sent."
         )
     if deferred:
@@ -608,7 +621,9 @@ def media_refs_field(slot: str, kind: str = "image") -> Any:
         f"any error. Use an empty string for an item you will not refer to. A `[[...]]` "
         f"that matches no handle is an error on a `validate_only` run; on a real call it "
         f"is sent as plain text with the brackets removed, so the {kind} it meant is not "
-        f"referenced at all — only ever write handles that exist. Passed through untouched "
+        f"referenced at all — only ever write handles that exist. A handle names only an "
+        f"item passed in `{slot}` in this call: writing `[[<handle>]]` in `prompt` does not "
+        f"pass the {kind}. Passed through untouched "
         f"— never fetched, never sent upstream.",
     )
 
