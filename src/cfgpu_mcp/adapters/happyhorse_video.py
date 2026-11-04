@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from cfgpu_mcp.adapters.base import (
     ModelAdapter,
     _default_expires_at,
+    enabled_model_name,
     frames_vs_references_reason,
     register_python_adapter,
 )
@@ -19,6 +20,15 @@ class HappyHorseVideoAdapter(ModelAdapter):
     adapter_id = "happyhorse-1-0-t2v"
 
     _RATIOS = frozenset({"16:9", "9:16", "1:1", "4:3", "3:4", "4:5", "5:4", "9:21", "21:9"})
+
+    def _sibling(self, adapter_id: str, task: str) -> str | None:
+        """Route switch for frames_vs_references_reason: the HappyHorse model for that
+        scenario when it is enabled; otherwise the task, so a disabled model is never
+        the advice. ``None`` (this model takes the route itself) when it is this one."""
+        if adapter_id == self.adapter_id:
+            return None
+        name = enabled_model_name(adapter_id)
+        return f"model={name}" if name else f"tasks 含 {task} 的模型"
 
     def _uses_ratio(self) -> bool:
         # I2V follows the source image's ratio and does not accept this parameter.
@@ -131,8 +141,8 @@ class HappyHorseVideoAdapter(ModelAdapter):
             return False, frames_vs_references_reason(
                 self.model_name,
                 req,
-                reference_model="model=happyhorse-1.0-r2v",
-                frame_model="model=happyhorse-1.0-i2v",
+                reference_model=self._sibling("happyhorse-1-0-r2v", "reference_to_video"),
+                frame_model=self._sibling("happyhorse-1-0-i2v", "image_to_video"),
             )
         if self.adapter_id == "happyhorse-1-0-t2v":
             if req.first_frame or req.reference_images:

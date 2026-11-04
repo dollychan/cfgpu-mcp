@@ -767,7 +767,7 @@ CFGPUError.from_http_response(status, body)
     status = 429 → error_type = "rate_limit"
 ```
 
-`retryable` 字段默认由 `_RETRYABLE` 集合决定（`rate_limit`、`model_unavailable`、`unknown`），调用方可据此决定是否重试。目前系统内部没有自动重试，该字段供外部调用方使用。它在调用方那一侧只有一个含义：**重发这个请求安全吗**。
+`retryable` 字段默认由 `_RETRYABLE` 集合决定（`rate_limit`、`model_unavailable`、`unknown`），调用方可据此决定是否重试。目前系统内部没有自动重试，该字段供外部调用方使用。它在调用方那一侧只有一个含义：**重发这个请求安全吗**。`model="auto"` 找不到能按当前参数执行的模型时报 `invalid_params`、`retryable=False`（附路由首选候选的 `supports()` 原因），而不是 `model_unavailable`：同样的请求重发永远不会成功；`model_unavailable` 只留给「该 task_type 没有任何启用的模型」。
 
 ### HTTP 超时：三种处境，三种答案
 

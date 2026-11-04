@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from cfgpu_mcp.adapters.base import (
     ModelAdapter,
     _default_expires_at,
+    enabled_model_name,
     frames_vs_references_reason,
     models_with_task,
     register_python_adapter,
@@ -342,9 +343,11 @@ class SeedanceVideoAdapter(ModelAdapter):
             and is_t2v
             and self.resolve_resolution(req) == "1080p"
         ):
+            full = enabled_model_name("wan-2-0")
+            switch = f", or switch to model={full} for 1080p" if full else ""
             return False, (
-                "wan-2-0-fast does not support 1080p for text-to-video "
-                "(use 480p or 720p, or switch to wan-2-0 for 1080p)"
+                f"{self.model_name} does not support 1080p for text-to-video "
+                f"(use 480p or 720p{switch})"
             )
         # Per-model duration ceilings (1.5 Pro 12s, 2.5 30s, the rest 15s) come from
         # each adapter.yaml's max_duration_seconds and are enforced by super().supports().

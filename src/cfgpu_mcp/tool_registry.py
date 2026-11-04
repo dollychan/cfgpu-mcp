@@ -219,21 +219,22 @@ class RegionSpec(BaseModel):
     @field_validator("box")
     @classmethod
     def _validate_box(cls, v: list[float]) -> list[float]:
+        # The numbers are never echoed and no arithmetic is suggested: a host that
+        # produces coordinates itself keeps them out of its model's context, and a
+        # refusal repeating them ("divide by the width") is an invitation to start
+        # computing boxes by hand.
         if len(v) != 4:
-            raise ValueError(
-                f"box must have exactly 4 values [x1, y1, x2, y2], got {len(v)}: {v}"
-            )
+            raise ValueError(f"box must have exactly 4 values [x1, y1, x2, y2], got {len(v)}")
         if any(not (0.0 <= c <= 1.0) for c in v):
             raise ValueError(
-                f"box {v} is out of range: coordinates are normalised to [0, 1] of the "
-                f"image's width/height, not pixels. Divide by the image's width (x) and "
-                f"height (y)."
+                "box is out of range: every coordinate is a fraction in [0, 1] of the "
+                "image's width (x) / height (y), never pixels."
             )
         x1, y1, x2, y2 = v
         if x1 >= x2 or y1 >= y2:
             raise ValueError(
-                f"box {v} is empty or inverted: it must satisfy x1<x2 and y1<y2 "
-                f"(x first, origin top-left)."
+                "box is empty or inverted: it must satisfy x1<x2 and y1<y2 "
+                "(x first, origin top-left)."
             )
         return [round(c, COORD_DECIMALS) for c in v]
 
@@ -346,8 +347,9 @@ def frame_placeholder_message(token: str, frame: str) -> str:
         f"with [[...]] — it is the video's literal "
         f"{'opening' if frame == 'first_frame' else 'closing'} picture, not a "
         f"reference. Either drop the placeholder and keep {frame}, or move the "
-        f"image into reference_images (with a handle in image_refs) and write in "
-        f"the prompt that [[<handle>]] is the {frame.replace('_', ' ')}. Nothing was sent."
+        f"image into reference_images and write in the prompt that [[<handle>]] — "
+        f"that image's handle, its entry in image_refs — is the "
+        f"{frame.replace('_', ' ')}. Nothing was sent."
     )
 
 

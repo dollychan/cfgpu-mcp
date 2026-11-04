@@ -474,8 +474,8 @@ def check_prompt_refs(adapter: "ModelAdapter", req: Any) -> tuple[bool, str]:
             return False, (
                 f"{adapter.model_name} 只使用 prompt 里点名的参考素材，没点名的会被静默忽略、照常计费。"
                 f"以下参考素材没有在 prompt 中被引用：{'、'.join(missing)}。请在 prompt 里用 "
-                f"[[<句柄>]] 写出每个素材在画面里扮演什么（句柄放在与素材列表同序同长的 image_refs / "
-                f"video_refs / audio_refs 里），本次请求未发送。"
+                f"[[<句柄>]] 写出每个素材在画面里扮演什么（句柄即该素材在同序的 image_refs / "
+                f"video_refs / audio_refs 中的对应项），本次请求未发送。"
             )
 
     over = _over_limit(adapter, rendered.prompt) if has_markup else None
@@ -558,8 +558,8 @@ _STRUCTURE_RULES = frozenset({
 })
 
 PROMPT_NOTE = (
-    "prompt 里出现了手写的素材序号写法。请改用 [[<句柄>]] 指代素材（句柄放在与素材列表同序同长的 "
-    "*_refs 里）：同一个素材在不同模型、不同素材顺序下的写法和序号都不同，手写的序号可能指向别的素材。"
+    "prompt 里出现了手写的素材序号写法。请改用 [[<句柄>]] 指代素材（句柄即该素材在同序的 "
+    "*_refs 中的对应项）：同一个素材在不同模型、不同素材顺序下的写法和序号都不同，手写的序号可能指向别的素材。"
 )
 
 STRUCTURE_NOTE = (

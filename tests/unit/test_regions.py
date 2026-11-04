@@ -560,7 +560,7 @@ def test_image_refs_must_be_one_per_image():
     "box, match",
     [
         ([0.1, 0.2, 0.3], "exactly 4"),
-        ([0.1, 0.2, 300.0, 400.0], "normalised"),   # pixels mistaken for normalised
+        ([0.1, 0.2, 300.0, 400.0], "never pixels"),   # pixels mistaken for normalised
         ([0.5, 0.2, 0.3, 0.4], "inverted"),
         ([0.3, 0.2, 0.3, 0.4], "empty or inverted"),
     ],
