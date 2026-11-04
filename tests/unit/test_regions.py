@@ -216,6 +216,24 @@ def test_an_unmatched_placeholder_fails_closed_listing_what_would_resolve():
     assert "[[标记1]]" in exc.value.user_message
 
 
+def test_every_unresolved_placeholder_is_reported_at_once():
+    """Reporting only the first one costs the caller a round trip per placeholder."""
+    with pytest.raises(CFGPUError) as exc:
+        render_prompt("[[m_a1]] 与 [[标记1]] 对比 [[m_b2]]", None, None, include_names=False)
+    message = exc.value.user_message
+    assert "[[m_a1]]" in message and "[[标记1]]" in message and "[[m_b2]]" in message
+    assert exc.value.original["placeholders"] == ["m_a1", "标记1", "m_b2"]
+
+
+def test_with_nothing_passed_the_hint_says_the_images_and_regions_are_missing():
+    """The production call carried no images and ``regions=[]``; "pass image_refs" alone
+    sent the caller after the wrong field."""
+    with pytest.raises(CFGPUError) as exc:
+        render_prompt("[[m_a1]] 里的 [[标记1]]", None, None, include_names=False)
+    message = exc.value.user_message
+    assert "图片参数" in message and "regions" in message and "只写在 prompt 里不算传入" in message
+
+
 def test_a_qualified_placeholder_with_an_unknown_handle_fails_closed():
     with pytest.raises(CFGPUError, match=r"\[\[m_zz#标记1\]\]"):
         render_prompt(

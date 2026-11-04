@@ -466,6 +466,11 @@ D-DL10（带 `[[...]]` 且调用方未设置时，万相 2.7 的 `prompt_extend`
 测试：`tests/unit/test_regions.py`（`test_every_image_model_resolves_handles_without_regions`
 逐个模型断言 payload 中不再含 `[[`）。
 
+一次请求里所有未解析的占位符**一起报**（`original.placeholders`），不在第一个就返回——只报第一个，调用方每改一个
+占位符就多一轮。一个可解析的都没有时，提示同时点出两条解析途径：图片参数 + 同序等长的 `image_refs`，以及带
+`label` 的 `regions`，并说明「只写在 prompt 里不算传入」。只说「请传 image_refs」会把一个连图片都没传的调用方
+引到错误的字段上（2026-11 现网：`understand_vision` 不带 `images`、`regions=[]`）。
+
 ### 单例资源（`config.py`）
 
 `get_settings()` / `get_registry()` / `get_client()` / `get_task_repository()` 均为模块级单例，首次调用时初始化，后续调用直接返回已有实例。这避免了每次请求重新建立 HTTP 连接、重新解析 YAML 或重开数据库。
@@ -809,6 +814,13 @@ CFGPUError.from_http_response(status, body)
 FastMCP 捕获异常后设置 `isError: true`，但 MCP 客户端是否将其内容暴露给 LLM 取决于具体实现，行为不一致。主动返回 error dict 可确保错误消息始终出现在 tool result 内容中，LLM 一定能看到并推理。
 
 `tool_error_dict(e)` 定义在 `errors.py`，`tools/` 层和 `dispatcher.py` 均通过 import 共用它。
+
+**pydantic 校验错误只留「字段路径: 原因」**（`errors.format_validation_error`）。`str(ValidationError)` 会给每条附上
+`[type=…, input_value=…, input_type=…]` 和 `For further information visit https://errors.pydantic.dev/…`：调用方通常是 LLM，
+链接它打不开，`input_value` 则把它刚写的参数（有时是几 KB 的 prompt）原样回显，两者都只会被当成建议去「处理」。两处出口：
+工具体内抛出的走 `tool_error_dict`（`error_type=invalid_params`）；FastMCP 在进入工具体**之前**做的入参校验（如 `RegionSpec`
+的 validator）不经过它，由 `server._CfdreamMCP.call_tool` 改写 `ToolError` 文案——仍是 `ToolError`、前缀不变，`isError` 语义不变。
+`validate_only` 预检与真实调用走同一条路径。测试：`tests/unit/test_validation_error_message.py`。
 
 ### 工具结果的 artifact 标记
 

@@ -3,9 +3,14 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from typing import Any
+
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
+from pydantic import ValidationError
 
 from cfgpu_mcp import config
+from cfgpu_mcp.errors import format_validation_error
 from cfgpu_mcp.tool_registry import apply_media_annotations, apply_model_enum, get_field_descriptions
 from cfgpu_mcp.tools import generate, models, tasks, templates, understand
 
@@ -31,7 +36,29 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
             await config.close()
 
 
-mcp = FastMCP("cfdream", lifespan=_lifespan)
+class _CfdreamMCP(FastMCP):
+    """FastMCP whose argument-validation errors read as plain field messages.
+
+    FastMCP validates the arguments against the signature *before* the tool body runs
+    and raises ``ToolError(f"Error executing tool {name}: {exc}")`` — so a validator's
+    ``ValueError`` (e.g. ``RegionSpec``'s) reaches the caller with pydantic's
+    ``[type=…, input_value=…]`` tail and an errors.pydantic.dev link, on a
+    ``validate_only`` preflight as much as on a real call. The tool bodies' own
+    ``tool_error_dict`` never sees these. Only the message text changes: it is still a
+    ``ToolError`` with the same prefix, so the MCP result stays ``isError``.
+    """
+
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+        try:
+            return await super().call_tool(name, arguments)
+        except ToolError as exc:
+            cause = exc.__cause__
+            if isinstance(cause, ValidationError):
+                raise ToolError(f"Error executing tool {name}: {format_validation_error(cause)}") from cause
+            raise
+
+
+mcp = _CfdreamMCP("cfdream", lifespan=_lifespan)
 
 generate.register(mcp)
 understand.register(mcp)
