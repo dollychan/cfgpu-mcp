@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal, Optional
 
 from mcp.types import CallToolResult, TextContent
-from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, PrivateAttr, field_validator, model_validator
 
 
 # ── Media (material) slot annotations ───────────────────────────────────────
@@ -336,6 +336,98 @@ def _usable_handles(pairs: list[tuple[Optional[list[str]], int]]) -> list[Option
     return [None if refs is None else [h if counts[h] == 1 else "" for h in refs] for refs in fixed]
 
 
+_FRAME_SLOTS = ("first_frame", "last_frame")
+
+
+def frame_placeholder_message(token: str, frame: str) -> str:
+    """Why ``[[<frame value>]]`` cannot resolve, and the two ways out."""
+    return (
+        f"prompt placeholder [[{token}]] names {frame}, and a frame cannot be named "
+        f"with [[...]] — it is the video's literal "
+        f"{'opening' if frame == 'first_frame' else 'closing'} picture, not a "
+        f"reference. Either drop the placeholder and keep {frame}, or move the "
+        f"image into reference_images (with a handle in image_refs) and write in "
+        f"the prompt that [[<handle>]] is the {frame.replace('_', ' ')}. Nothing was sent."
+    )
+
+
+def _frames_beside_references(req: Any) -> dict[str, str]:
+    """``{frame value: slot}`` when first/last frames ride beside ``reference_*`` media.
+
+    That combination is a per-model parameter rule (``frames_vs_references_reason``),
+    judged in ``supports()`` after routing. A handle mistake that only exists *because*
+    of it — the frame named as ``[[...]]``, or listed in ``image_refs`` as if it were a
+    reference image — disappears once the caller follows that refusal, so the strict
+    check defers it (``_deferred_frame_refs``) and the conflict is reported first.
+    """
+    if not (req.reference_images or req.reference_videos or req.reference_audios):
+        return {}
+    return {getattr(req, slot): slot for slot in _FRAME_SLOTS if getattr(req, slot)}
+
+
+def _fold_named_frames(req: Any) -> dict[str, Any]:
+    """Move first/last frames the prompt names as ``[[...]]`` into ``reference_images``.
+
+    A frame has no handle list — it is the literal opening/closing picture, not a
+    reference the prompt casts — so ``[[<first_frame value>]]`` can never resolve. A
+    caller who writes it *beside other reference media* is already using the reference
+    route: it names the picture in the prompt ("首帧参考 [[m_1]]") exactly as route ③ of
+    ``frames_vs_references_reason`` instructs, and only the slot is wrong (production,
+    2026-10-27: MiniMax-H3 with first_frame + two portraits + two voice samples). As sent,
+    the request fails on every model — the placeholder at the schema, the frame/reference
+    conflict at most models' ``supports()`` — so the move is the one repair with a single
+    reading, not a substitution. Applied on the preflight and the real call alike, and
+    reported in ``corrected_args`` (via ``_schema_corrections``) so an approval card
+    shows what runs.
+
+    Folds only when **every** frame present is named, at least one other ``reference_*``
+    item exists, no frame value already names a reference, and ``image_refs`` (if given)
+    lines up either with the old ``reference_images`` or with frames + old references.
+    Anything else is left alone, and the placeholder check explains it. Frames go first,
+    first before last, so "the opening picture" is also the first image.
+
+    A model that takes frames beside references natively (Kling, ``wan2.7-r2v``) loses
+    the exact pin this way; it would have refused the unresolvable placeholder anyway.
+    """
+    from cfgpu_mcp.adapters import prompt_markup as markup
+
+    frames = [(slot, getattr(req, slot)) for slot in _FRAME_SLOTS if getattr(req, slot)]
+    if not frames or not req.prompt:
+        return {}
+    if not (req.reference_images or req.reference_videos or req.reference_audios):
+        return {}
+    try:
+        tokens = {node.token for node in markup.parse(req.prompt) if isinstance(node, markup.Ref)}
+    except markup.MarkupError:
+        return {}
+    values = [value for _, value in frames]
+    if any(value not in tokens for value in values) or len(set(values)) != len(values):
+        return {}
+    if any(_HANDLE_FORBIDDEN & set(v) or v != v.strip() or markup.is_reserved(v) for v in values):
+        return {}
+    handles = {h for refs in (req.image_refs, req.video_refs, req.audio_refs) if refs for h in refs if h}
+    old_images = list(req.reference_images or [])
+    image_refs = req.image_refs
+    if image_refs is None:
+        new_refs = values + [""] * len(old_images)
+    elif len(image_refs) == len(old_images) and not set(values) & handles:
+        new_refs = values + list(image_refs)
+    elif len(image_refs) == len(old_images) + len(values) and all(image_refs.count(v) == 1 for v in values):
+        rest = [h for h in image_refs if h not in values]
+        if set(values) & {h for refs in (req.video_refs, req.audio_refs) if refs for h in refs if h}:
+            return {}
+        new_refs = values + rest
+    else:
+        return {}
+
+    corrections: dict[str, Any] = {slot: None for slot, _ in frames}
+    corrections["reference_images"] = values + old_images
+    corrections["image_refs"] = new_refs
+    for key, value in corrections.items():
+        setattr(req, key, value)
+    return corrections
+
+
 def _lenient_video_refs(req: Any) -> None:
     """``validate_only=false``: repair what :func:`_validate_video_refs` would refuse.
 
@@ -394,6 +486,8 @@ def _validate_video_refs(req: Any) -> None:
     from cfgpu_mcp.adapters import prompt_markup as markup
     from cfgpu_mcp.adapters.dialect import REFS_FIELD, SLOT_KIND
 
+    frame_values = _frames_beside_references(req)
+    deferred: list[str] = []
     owner: dict[str, str] = {}
     for slot, kind in SLOT_KIND.items():
         refs_name = REFS_FIELD[kind]
@@ -401,6 +495,17 @@ def _validate_video_refs(req: Any) -> None:
         if refs is None:
             continue
         items = getattr(req, slot) or []
+        extra = [h for h in refs if h in frame_values]
+        if (
+            slot == "reference_images"
+            and extra
+            and len(refs) == len(items) + len(extra)
+            and len(set(extra)) == len(extra)
+        ):
+            # The frames were listed as if they were reference images: a consequence of
+            # the frames/references conflict, reported after it (see above).
+            deferred.extend(extra)
+            refs = [h for h in refs if h not in frame_values]
         if len(refs) != len(items):
             raise ValueError(
                 f"{refs_name} has {len(refs)} entry/entries but {slot} has {len(items)} — "
@@ -459,6 +564,10 @@ def _validate_video_refs(req: Any) -> None:
             )
         if token in owner:
             continue
+        if token in frame_values:
+            if token not in deferred:
+                deferred.append(token)
+            continue
         available = ", ".join(f"[[{h}]]" for h in owner)
         hint = (
             f"available here: {available}."
@@ -467,12 +576,17 @@ def _validate_video_refs(req: Any) -> None:
             "resolve; give each reference a handle in the list that pairs with its slot "
             "(same order, same length) and write [[<handle>]]."
         )
+        frame = next((slot for slot in _FRAME_SLOTS if getattr(req, slot, None) == token), None)
+        if frame:
+            raise ValueError(frame_placeholder_message(token, frame))
         raise ValueError(
             f"prompt placeholder [[{token}]] names no handle in image_refs / video_refs / "
             f"audio_refs — {hint} If [[{token}]] is a material, also pass it in the "
             f"reference_* list for its kind. An unresolved [[...]] would reach the model "
             f"as literal text, so nothing was sent."
         )
+    if deferred:
+        req._deferred_frame_refs = deferred
 
 
 def media_refs_field(slot: str, kind: str = "image") -> Any:
@@ -870,7 +984,9 @@ class GenerateVideoInput(BaseModel):
     first_frame: Optional[str] = media_field(
         slot="The image to use as the video's first frame (image-to-video). Some models "
         "refuse it beside reference_* media; there, keep the frame by putting the image in "
-        "reference_images and naming it in the prompt as the first frame.",
+        "reference_images and naming it in the prompt as the first frame. A frame has no "
+        "handle: if the prompt names it as [[<this value>]] beside other reference media, "
+        "it is moved into reference_images for you and corrected_args says so.",
         role="image",
         arity="one",
         accepts=["https_url", "asset_url"],
@@ -1000,8 +1116,19 @@ class GenerateVideoInput(BaseModel):
     label: LabelStr = label_field()
     validate_only: bool = validate_only_field()
 
+    #: Argument rewrites the schema itself applied (``_fold_named_frames``), in tool
+    #: parameter names; ``validate_request`` merges them into ``corrected_args``.
+    _schema_corrections: dict[str, Any] = PrivateAttr(default_factory=dict)
+    #: Frame values the strict check found named as ``[[...]]`` or listed in
+    #: ``image_refs`` beside reference media; ``validate_request`` reports them only
+    #: after ``supports()``, so the frames/references conflict is what a caller sees first.
+    _deferred_frame_refs: list[str] = PrivateAttr(default_factory=list)
+
     @model_validator(mode="after")
     def _validate_reference_handles(self) -> "GenerateVideoInput":
+        folded = _fold_named_frames(self)
+        if folded:
+            self._schema_corrections = folded
         _validate_video_refs(self)
         return self
 

@@ -104,12 +104,20 @@ class ImageGPTAdapter(_AsyncImageBase):
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         result = super().parse_response(resp)
-        # The GPT Image task record reports no top-level `usage`: the token count
-        # rides data.result.tokenUsage ({textInputTokens, imageInputTokens,
-        # imageOutputTokens, totalTokens}), passed through as-is like every other
-        # adapter's usage. Nano Banana's record carries no usage at all.
+        # GPT Image task records report no top-level `usage`.  The token data has
+        # appeared in three shapes; prefer the direct tokenUsage record when it is
+        # present, then the two billing-settlement estimates.  All carry the same
+        # token object and are passed through as-is.  Nano Banana reports none.
         if result.usage is None:
-            result.usage = ((resp.get("data") or {}).get("result") or {}).get("tokenUsage")
+            data = resp.get("data") or {}
+            task_result = data.get("result") or {}
+            billing = task_result.get("tokenBillingSettlement") or {}
+            top_level_billing = data.get("token_billing_settlement") or {}
+            result.usage = task_result.get("tokenUsage")
+            if result.usage is None:
+                result.usage = billing.get("estimateTokens")
+            if result.usage is None:
+                result.usage = top_level_billing.get("estimate_tokens")
         return result
 
     def build_payload(self, req: "GenerateImageInput | GenerateVideoInput") -> dict:

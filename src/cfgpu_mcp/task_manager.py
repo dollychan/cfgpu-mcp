@@ -589,10 +589,47 @@ def _corrected_args(
     candidate. That is the intended trade — an approval only means something if it
     names what runs — and the failure is loud and retryable.
     """
-    corrected = dict(adapter_corrections or {})
+    # Rewrites the schema made before any model was chosen (frames the prompt names,
+    # moved into reference_images) come first; per-model fallbacks may refine them.
+    corrected = {**(getattr(req, "_schema_corrections", None) or {}), **(adapter_corrections or {})}
     if isinstance(req.model, list) or req.model == "auto":
         corrected["model"] = adapter.model_name
+    corrected.update(_spec_pins(adapter, req, corrected))
     return corrected
+
+
+def _spec_pins(adapter: "ModelAdapter", req: Any, corrected: dict[str, Any]) -> dict[str, Any]:
+    """The output shape the billed call will use, always spelled out.
+
+    ``aspect_ratio`` and ``resolution`` are pinned for image and video requests
+    whether or not the caller supplied them, so an approval card built from
+    ``{**args, **corrected_args}`` always shows the shape that runs. Without this an
+    omitted video ``resolution`` (``None`` = the model's own tier) left the tier in
+    ``payload`` alone — structuredContent, which the agent never sees.
+
+    Pinned from the *effective* request (after adapter corrections), and only where
+    no correction already names the field. A model that sends no ratio reports
+    ``adaptive`` (``ModelAdapter.effective_aspect_ratio``), since the output follows
+    its input whatever ratio the caller wrote. Lives here rather than in
+    ``validation_corrections`` because the router reads that method to decide
+    whether a candidate "needs a correction"; a pin that changes nothing must not
+    demote a model that accepts the request as written.
+
+    The resolved video tier is the selected model's own default, so pinning it
+    changes nothing on the billed call — under a delegated model, ``model`` is
+    pinned beside it, so the two cannot drift apart.
+    """
+    from cfgpu_mcp.tool_registry import GenerateImageInput, GenerateVideoInput
+
+    if not isinstance(req, (GenerateImageInput, GenerateVideoInput)):
+        return {}
+    effective = req.model_copy(update=corrected) if corrected else req
+    pins: dict[str, Any] = {"aspect_ratio": adapter.effective_aspect_ratio(effective)}
+    if isinstance(req, GenerateVideoInput):
+        pins["resolution"] = adapter.resolve_resolution(effective)
+    else:
+        pins["resolution"] = effective.resolution
+    return {k: v for k, v in pins.items() if k not in corrected}
 
 
 def validate_request(
@@ -623,6 +660,20 @@ def validate_request(
         raise CFGPUError(
             error_type="invalid_params",
             user_message=reason,
+            original={"model": req.model},
+            model_id=adapter.model_name,
+        )
+    # Handle mistakes caused by frames riding beside references, held back by the schema
+    # so a model refusing that combination reports the conflict first. A model that
+    # accepts it (Kling, wan2.7-r2v) still cannot resolve a frame named as [[...]].
+    deferred = getattr(req, "_deferred_frame_refs", None)
+    if deferred:
+        from cfgpu_mcp.tool_registry import frame_placeholder_message
+
+        frame = next(s for s in ("first_frame", "last_frame") if getattr(req, s) == deferred[0])
+        raise CFGPUError(
+            error_type="invalid_params",
+            user_message=frame_placeholder_message(deferred[0], frame),
             original={"model": req.model},
             model_id=adapter.model_name,
         )

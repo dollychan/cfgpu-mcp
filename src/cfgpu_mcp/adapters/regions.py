@@ -201,12 +201,15 @@ def regions_missing_size(regions: list["RegionSpec"]) -> list[int]:
     return sorted({r.image_index for r in regions if r.image_size is None})
 
 
-def _unresolved(token: str, refs: list[str], regions: list["RegionSpec"]) -> CFGPUError:
-    """A ``[[...]]`` that names nothing in this call — refused rather than sent verbatim.
+def _unresolved(tokens: list[str], refs: list[str], regions: list["RegionSpec"]) -> CFGPUError:
+    """``[[...]]`` placeholders that name nothing in this call — refused rather than sent verbatim.
 
-    The message lists every placeholder that *would* resolve, so the fix is a lookup,
-    not a guess. With no ``image_refs`` at all it says so: the likeliest cause is a
-    handle written into the prompt without the list that gives it a meaning.
+    Every unresolved placeholder is listed at once: reporting only the first costs the
+    caller one round trip per placeholder. The message also lists every placeholder that
+    *would* resolve, so the fix is a lookup, not a guess. With nothing resolvable at all
+    it names both channels a placeholder can resolve through — the image parameters
+    with their ``image_refs``, and labelled ``regions`` — since "pass image_refs" alone
+    sends a caller that passed no images after the wrong field.
     """
     valid = [f"[[{ref}]]" for ref in refs if ref]
     labels: dict[str, int] = {}
@@ -225,16 +228,19 @@ def _unresolved(token: str, refs: list[str], regions: list["RegionSpec"]) -> CFG
         hint = f"本次可用的占位符：{', '.join(valid)}。"
     else:
         hint = (
-            "本次请求没有 image_refs，也没有带名字的 regions，因此没有任何占位符可解析；"
-            "要按名字指代整张图，请传 image_refs（与图片列表等长、同序）。"
+            "本次请求没有 image_refs，也没有带 label 的 regions，因此没有任何占位符可解析。"
+            "[[句柄]] 只能指代本次实际传入的图片：把图片放进图片参数（如 images / reference_images），"
+            "并用与之等长、同序的 image_refs 给出句柄；[[标记名]] 只能指代 regions 里带 label 的区域。"
+            "只写在 prompt 里不算传入。"
         )
+    named = "、".join(f"[[{token}]]" for token in tokens)
     return CFGPUError(
         error_type="invalid_params",
         user_message=(
-            f"prompt 里的占位符 [[{token}]] 不对应任何图片句柄或标记名。{hint}"
+            f"prompt 里的占位符 {named} 不对应任何图片句柄或标记名。{hint}"
             f"未解析的 [[...]] 会被当作字面文字发给模型，本次请求未发送。"
         ),
-        original={"placeholder": token, "candidates": valid},
+        original={"placeholder": tokens[0], "placeholders": tokens, "candidates": valid},
         # Same reason as _ambiguous: the message already lists the exact alternatives.
         card_hint=False,
     )
@@ -343,6 +349,13 @@ def render_prompt(
         return f"[[{head}#{r.label}]]"
 
     used: set[int] = set()
+    unresolved: list[str] = []
+
+    def refuse(token: str) -> str:
+        """Note a placeholder that resolves to nothing; all of them are reported together."""
+        if token not in unresolved:
+            unresolved.append(token)
+        return token
 
     def render_one(i: int) -> str:
         if structured:
@@ -367,7 +380,7 @@ def render_prompt(
             if len(hits) != 1:
                 if lenient:
                     return token
-                raise _unresolved(token, refs, regions)
+                return refuse(token)
             used.add(hits[0])
             return render_one(hits[0])
 
@@ -392,9 +405,11 @@ def render_prompt(
             return _ordinal(ref_index[token])
         if lenient:
             return token
-        raise _unresolved(token, refs, regions)
+        return refuse(token)
 
     rendered = _PLACEHOLDER.sub(substitute, prompt)
+    if unresolved:
+        raise _unresolved(unresolved, refs, regions)
 
     leftovers = [] if structured else [i for i in range(len(regions)) if i not in used]
     if leftovers:

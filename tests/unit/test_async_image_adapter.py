@@ -190,9 +190,8 @@ def test_quality_tiers_key_rejects_unknown_tier():
 
 
 def _completed_task(model: str) -> dict:
-    # Shape of GET /images/tasks/{id} for a finished task (verified 2026-10-15 on
-    # gpt-image-2 and gpt-image-2.5-flare): no top-level `usage`, the token count
-    # sits under data.result.tokenUsage.
+    # gpt-image-2's completed task shape: no top-level `usage`; token usage is
+    # reported directly under data.result.tokenUsage.
     return {
         "code": 200,
         "data": {
@@ -225,6 +224,44 @@ def test_usage_is_read_from_result_token_usage(adapter):
         "totalTokens": 3689,
         "imageOutputTokens": 2702,
     }
+
+
+def test_usage_prefers_result_token_usage_over_billing_estimates():
+    resp = _completed_task("gpt-image-2")
+    resp["data"]["result"]["tokenBillingSettlement"]["estimateTokens"] = {"totalTokens": 1}
+    resp["data"]["token_billing_settlement"] = {"estimate_tokens": {"totalTokens": 2}}
+
+    assert _gpt().parse_response(resp).usage["totalTokens"] == 3689
+
+
+@pytest.mark.parametrize("adapter", [_gpt_25()])
+def test_usage_falls_back_to_result_billing_estimate_tokens(adapter):
+    resp = _completed_task(adapter.cfgpu_model_id)
+    del resp["data"]["result"]["tokenUsage"]
+    estimate = {
+        "imageInputTokens": 0,
+        "textInputTokens": 406,
+        "totalTokens": 5717,
+        "imageOutputTokens": 5311,
+    }
+    resp["data"]["result"]["tokenBillingSettlement"]["estimateTokens"] = estimate
+    resp["data"]["token_billing_settlement"] = {"estimate_tokens": {"totalTokens": 2}}
+
+    assert adapter.parse_response(resp).usage == estimate
+
+
+def test_usage_falls_back_to_top_level_billing_estimate_tokens():
+    resp = _completed_task("gpt-image-2.5-flare")
+    del resp["data"]["result"]["tokenUsage"]
+    estimate = {
+        "imageInputTokens": 3678,
+        "textInputTokens": 304,
+        "totalTokens": 4874,
+        "imageOutputTokens": 892,
+    }
+    resp["data"]["token_billing_settlement"] = {"estimate_tokens": estimate}
+
+    assert _gpt_25().parse_response(resp).usage == estimate
 
 
 def test_usage_is_none_when_the_task_reports_none():

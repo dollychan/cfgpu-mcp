@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from pydantic import ValidationError
 
 
 ErrorType = Literal[
@@ -215,6 +218,27 @@ class CFGPUError(Exception):
     # reached for again.
 
 
+def format_validation_error(exc: "ValidationError") -> str:
+    """A pydantic ``ValidationError`` as ``<field path>: <reason>`` lines, nothing else.
+
+    ``str(exc)`` appends ``[type=…, input_value=…, input_type=…]`` and a
+    "For further information visit https://errors.pydantic.dev/…" line to every entry.
+    The caller here is usually an LLM, which reads the whole string as advice: the
+    link is a dead end it cannot open, and ``input_value`` echoes back the argument it
+    just wrote — sometimes kilobytes of prompt. Only the path and the reason say what
+    to change. pydantic's "Value error, " prefix on a validator's own ``ValueError``
+    is dropped for the same reason.
+    """
+    lines: list[str] = []
+    for err in exc.errors(include_url=False, include_input=False, include_context=False):
+        path = ".".join(str(part) for part in err.get("loc", ()))
+        msg = str(err.get("msg", "")).removeprefix("Value error, ")
+        lines.append(f"{path}: {msg}" if path else msg)
+    count = len(lines)
+    head = f"{count} 个参数校验未通过：" if count > 1 else "参数校验未通过："
+    return head + ("\n" + "\n".join(lines) if count > 1 else (lines[0] if lines else ""))
+
+
 def tool_error_dict(e: Exception) -> dict:
     """Convert any exception to a structured dict suitable as a tool result.
 
@@ -223,4 +247,8 @@ def tool_error_dict(e: Exception) -> dict:
     """
     if isinstance(e, CFGPUError):
         return e.to_tool_result_dict()
+    from pydantic import ValidationError
+
+    if isinstance(e, ValidationError):
+        return {"error": True, "error_type": "invalid_params", "message": format_validation_error(e), "retryable": False}
     return {"error": True, "message": str(e)}

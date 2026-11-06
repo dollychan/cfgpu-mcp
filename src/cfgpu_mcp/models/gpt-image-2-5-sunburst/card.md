@@ -52,8 +52,9 @@
 - 响应结构
 ```json
 {"code":200,"data":{"result":{"images":["https://smartmlxxx"],
-"tokenUsage":{"imageInputTokens":0,"textInputTokens":987,"totalTokens":3689,"imageOutputTokens":2702},
 "source_images":["https://smartmlxxx"],
-"tokenBillingSettlement":{"actualPoints":40,"supplementPoints":1,"prechargePoints":39,"channel":"official","refundPoints":0},
+"tokenBillingSettlement":{"actualPoints":40,"supplementPoints":1,"prechargePoints":39,"channel":"official","refundPoints":0,"estimateTokens":{"imageInputTokens":0,"textInputTokens":920,"totalTokens":3622,"imageOutputTokens":2702}},
 "proxy_images":["https://smartml-xxx"]},"updated_at":"2026-10-15T19:07:27.000Z","created_at":"2026-10-15T19:06:47.000Z","token_billing_settlement":{"refund_points":0,"actual_points":40,"channel":"official","estimate_tokens":{"imageInputTokens":0,"textInputTokens":920,"totalTokens":3622,"imageOutputTokens":2702},"supplement_points":1,"prices":{"textInput":2270,"imageInput":3640,"imageOutput":13650,"minPoints":1},"precharge_points":39,"points_refunded":false},"task_id":"21dcc2d0-5a3e-480b-a9d0-3eccb0e95dc7","task_type":"gpt_image_generation","status":"completed"},"model":"gpt-image-2.5-flare","message":"success"}
 ```
+
+2.5 任务当前把 token 用量放在结算对象中：优先读 `data.result.tokenBillingSettlement.estimateTokens`，若该字段缺失则读 `data.token_billing_settlement.estimate_tokens`。工具会原样将其返回为 `usage`；`actualPoints` 等积分结算字段不混入 token 用量。

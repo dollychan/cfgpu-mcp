@@ -249,7 +249,7 @@ async def test_corrected_args_never_rewrites_an_explicit_model():
             prompt="猫", model="doubao-seedream-5-0-lite", validate_only=True
         )
 
-    assert result["corrected_args"] == {}
+    assert "model" not in result["corrected_args"]
     assert result["model_used"] == "doubao-seedream-5-0-lite"
 
 
@@ -515,7 +515,7 @@ async def test_validate_only_corrects_an_unsupported_resolution():
             validate_only=True,
         )
 
-    assert result["corrected_args"] == {"resolution": "720p"}
+    assert result["corrected_args"] == {"resolution": "720p", "aspect_ratio": "adaptive"}
     assert result["payload"]["resolution"] == "720p"
 
 
@@ -532,7 +532,7 @@ async def test_validate_only_corrects_cf_image_2_intermediate_resolution_downwar
         )
 
     assert result["validated"] is True
-    assert result["corrected_args"] == {"resolution": "1K"}
+    assert result["corrected_args"] == {"resolution": "1K", "aspect_ratio": "1:1"}
     assert result["payload"]["resolution"] == "1K"
 
 
@@ -549,7 +549,7 @@ async def test_validate_only_preserves_gpt_image_2_extended_aspect_ratios(aspect
             validate_only=True,
         )
 
-    assert result["corrected_args"] == {}
+    assert result["corrected_args"] == {"aspect_ratio": aspect_ratio, "resolution": "2K"}
     assert result["payload"]["aspect_ratio"] == aspect_ratio
 
 
@@ -574,7 +574,7 @@ async def test_seedance_2_5_validate_only_corrects_frame_ratio_to_adaptive(frame
         )
 
     assert result["validated"] is True
-    assert result["corrected_args"] == {"aspect_ratio": "adaptive"}
+    assert result["corrected_args"] == {"aspect_ratio": "adaptive", "resolution": "720p"}
     assert result["payload"]["ratio"] == "adaptive"
 
 
@@ -600,7 +600,8 @@ async def test_seedance_validate_only_preserves_supported_explicit_ratios(model,
             **media,
         )
 
-    assert "aspect_ratio" not in result["corrected_args"]
+    # Pinned unchanged — the caller's own ratio, not a correction.
+    assert result["corrected_args"]["aspect_ratio"] == "16:9"
     assert result["payload"]["ratio"] == "16:9"
 
 
@@ -630,7 +631,7 @@ async def test_seedance_2_5_preflight_derives_task_type_without_correcting_ratio
             **media,
         )
 
-    assert result["corrected_args"] == {}
+    assert result["corrected_args"] == {"aspect_ratio": ratio, "resolution": "720p"}
     assert result["payload"]["ratio"] == ratio
     assert result["payload"]["omni_reference_task_type"] == expected
 
@@ -653,7 +654,7 @@ async def test_seedance_2_5_preflight_corrects_ratio_for_a_declared_edit():
     with a, b, c:
         result = await video_service.generate_video(**_STALE_EDIT, validate_only=True)
 
-    assert result["corrected_args"] == {"aspect_ratio": "adaptive"}
+    assert result["corrected_args"] == {"aspect_ratio": "adaptive", "resolution": "720p"}
     assert result["payload"]["ratio"] == "adaptive"
     assert result["payload"]["omni_reference_task_type"] == "edit"
 
@@ -751,7 +752,11 @@ def test_every_image_model_reports_safe_enum_fallbacks(model, resolution, aspect
 
     result = validate_request(adapter, req)
 
-    assert result["corrected_args"] == expected
+    # aspect_ratio / resolution are always pinned; a field absent from `expected`
+    # is pinned to the caller's own value.
+    assert result["corrected_args"] == {
+        "resolution": resolution, "aspect_ratio": aspect_ratio, **expected
+    }
 
 
 @pytest.mark.parametrize(
@@ -760,7 +765,7 @@ def test_every_image_model_reports_safe_enum_fallbacks(model, resolution, aspect
         ("wan-video", {}, "1080p"),
         ("wan-video-fast", {}, "720p"),
         ("doubao-seedance-1-5-pro", {}, "1080p"),
-        ("doubao-seedance-2-0", {}, None),
+        ("doubao-seedance-2-0", {}, "4k"),   # supported: pinned unchanged
         ("doubao-seedance-2-0-fast", {}, "720p"),
         ("doubao-seedance-2-0-mini", {}, "720p"),
         ("doubao-seedance-2-5", {}, "1080p"),
@@ -795,10 +800,7 @@ def test_every_video_model_checks_4k_against_its_resolution_set(
 
     result = validate_request(adapter, req)
 
-    if expected_resolution is None:
-        assert "resolution" not in result["corrected_args"]
-    else:
-        assert result["corrected_args"]["resolution"] == expected_resolution
+    assert result["corrected_args"]["resolution"] == expected_resolution
 
 
 @pytest.mark.parametrize(
@@ -848,7 +850,9 @@ def test_wan_i2v_ignores_aspect_ratio_because_api_has_no_ratio_parameter(model):
 
     result = validate_request(adapter, req)
 
-    assert "aspect_ratio" not in result["corrected_args"]
+    # No ratio is sent, so the output follows the first frame: pinned as adaptive,
+    # never as the 21:9 the request carried and the upstream never sees.
+    assert result["corrected_args"]["aspect_ratio"] == "adaptive"
     assert "ratio" not in result["payload"]["parameters"]
 
 
@@ -1223,3 +1227,46 @@ def test_the_description_describes_api_behavior_without_host_orchestration(input
     assert "nothing is billed" in description
     assert "calling host" not in description
     assert "approval" not in description
+
+
+# ── Output shape is always pinned ────────────────────────────────────────────
+
+_VIDEO_MEDIA_TRIES = (
+    {},
+    {"first_frame": "m_image"},
+    {"reference_images": ["m_image"]},
+    {"reference_videos": ["m_video"]},
+)
+
+
+def _omitted_spec_requests():
+    """One accepted request per image / video model with aspect_ratio and resolution
+    omitted — the smallest material combination each model takes."""
+    registry = _real_registry()
+    cases = []
+    for adapter in registry.list_all("image"):
+        cases.append((adapter.model_name, GenerateImageInput(prompt="x", model=adapter.model_name)))
+    for adapter in registry.list_all("video"):
+        for media in _VIDEO_MEDIA_TRIES:
+            req = GenerateVideoInput(**tag_references({"prompt": "x", "model": adapter.model_name, **media}, adapter))
+            if adapter.supports(req)[0]:
+                cases.append((adapter.model_name, req))
+                break
+        else:
+            raise AssertionError(f"no probe request is accepted by {adapter.model_name}")
+    return cases
+
+
+@pytest.mark.parametrize("model,req", _omitted_spec_requests(), ids=lambda v: v if isinstance(v, str) else "")
+def test_omitted_aspect_ratio_and_resolution_are_pinned_to_what_runs(model, req):
+    """An approval card built from `{**args, **corrected_args}` always names the output
+    shape, and submitting that merge sends byte-for-byte the payload the preflight
+    validated — the pins change what is shown, never what runs."""
+    registry = _real_registry()
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+    result = validate_request(adapter, req)
+
+    corrected = result["corrected_args"]
+    assert {"aspect_ratio", "resolution"} <= set(corrected)
+    merged = type(req)(**{**req.model_dump(exclude_unset=True), **corrected})
+    assert validate_request(adapter, merged)["payload"] == result["payload"]

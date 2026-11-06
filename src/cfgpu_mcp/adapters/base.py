@@ -682,6 +682,15 @@ class ModelAdapter(ABC):
         corrected["resolution"] = fallback
         return corrected
 
+    def effective_aspect_ratio(self, req: "GenerateImageInput | GenerateVideoInput") -> str:
+        """The ``aspect_ratio`` that actually governs the output, in tool vocabulary.
+
+        Pinned in ``validate_only``'s ``corrected_args``. A model that sends no ratio
+        (the output follows the input) overrides this to ``adaptive``, so a preflight
+        never reports a ratio the upstream request does not carry.
+        """
+        return req.aspect_ratio
+
     def resolve_resolution(self, req: "GenerateVideoInput") -> str:
         """Resolve an omitted unified resolution to this model's own default tier."""
         return req.resolution or self.default_resolution

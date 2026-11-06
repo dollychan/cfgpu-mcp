@@ -96,7 +96,7 @@
 }
 ```
 
-没有顶层 `usage`：token 用量在 `data.result.tokenUsage`，与 [CF Image 2.5](../gpt-image-2-5-sunburst/card.md) 同形，工具结果原样作为 `usage` 返回。积分结算（`tokenBillingSettlement`）不进 `usage`。
+没有顶层 `usage`：工具依次从 `data.result.tokenUsage`、`data.result.tokenBillingSettlement.estimateTokens`、`data.token_billing_settlement.estimate_tokens` 读取 token 用量，并原样作为 `usage` 返回。前者是 GPT Image 2 当前形态；后两者兼容 2.5 的结算响应。积分数值本身（如 `actualPoints`）不进 `usage`。
 
 
 ## 约束与限制

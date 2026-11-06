@@ -24,6 +24,10 @@ class HappyHorseVideoAdapter(ModelAdapter):
         # I2V follows the source image's ratio and does not accept this parameter.
         return self.adapter_id in {"happyhorse-1-0-t2v", "happyhorse-1-0-r2v"}
 
+    def effective_aspect_ratio(self, req: "GenerateVideoInput") -> str:
+        # No ratio is sent: the output follows the source image / video.
+        return req.aspect_ratio if self._uses_ratio() else "adaptive"
+
     def validation_corrections(
         self, req: "GenerateImageInput | GenerateVideoInput"
     ) -> dict[str, Any]:

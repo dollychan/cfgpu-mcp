@@ -865,8 +865,8 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `corrected_args` 里给出**不高于请求值的最近一档**（`768p` → `720p`，`2k` → `1080p`，
 > `doubao-seedance-2-0-fast` 这种没有 1080p 的则 `2k` → `720p`），直接
 > `{**原参数, **corrected_args}` 覆盖后重发即可。反过来，向 `MiniMax-H3` 传它没有的档
-> （720p/1080p）会回退到不高于请求值的最近一档（分别为 `480p` / `768p`）。**不传 `resolution` 时 `corrected_args` 里不会出现它**
-> —— 那本来就是该模型自己的档位，钉住它等于替你做了一个你没做过的选择。
+> （720p/1080p）会回退到不高于请求值的最近一档（分别为 `480p` / `768p`）。**不传 `resolution` 时，`corrected_args` 也会给出该模型实际使用的默认档**
+> （2026-11-02 起，例如 MiniMax-H3 为 `768p`，多数模型为 `720p`），见下文「输出规格总是钉死」。
 >
 > **画幅比例按模型限制（2026-10-09 起）。** `list_models` / `list_model_profiles` 对有限制的模型返回 `aspect_ratios`；
 > 没有这个字段表示接受全部比例，视频模型总是接受 `adaptive`。正式调用向不支持的模型传比例会在发请求前被拒，
@@ -903,6 +903,9 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > `reference_images`、在 `image_refs` 里起名，prompt 写「以 [[名字]] 作为视频首帧」（由提示词还原，接近但不保证逐像素一致）。
 > 当前模型走不了的那条会直接指名要换的模型（如 HappyHorse 的 `happyhorse-1.0-r2v` / `happyhorse-1.0-i2v`）。
 > **不要据此告诉用户「模型不支持」**：用户给了多张参考、又说其中一张作首帧，路线 ③ 就是答案（2026-10-27 起）。
+> **prompt 里用 `[[...]]` 点名首/尾帧、同时又带了参考素材时，服务端会自动矫正**：把帧移到 `reference_images` 最前、帧的值作为
+> `image_refs` 里的名字，`validate_only` 的 `corrected_args` 会给出 `first_frame: null` 与新的 `reference_images` / `image_refs`，
+> 照常合并即可。只有一个首帧、没有其他参考时不会矫正（报错会说明帧不能用 `[[...]]` 点名）。
 > 选模型时用 `list_model_profiles(required_tasks=["framed_reference_video"])`：所有声明 `reference_to_video` 且接受
 > `reference_images` 的模型都声明了这个任务（原生同时接受首帧与参考的模型精确保留首帧，其余靠提示词近似还原）。
 
@@ -1108,7 +1111,7 @@ done
 | `model_used` | `str \| null` | | 实际使用的模型公开标识（`model_name`，与 `list_models()`/`model` 参数同一套 id 空间；从不是内部的 `cfgpu_model_id`）。`model="auto"` 时尤其有用——可据此得知 router 实际选中的模型 |
 | `aspect_ratio` | `str \| null` | | 本次输出的宽高比。**优先取 API 响应实际返回的 `ratio`**（部分模型如 WAN 会回传解析后的真实比例，请求传 `adaptive` 时尤其有用）；API 未回传时兜底为本次请求的 `aspect_ratio`。便于客户端无需保存原始参数即可得知所用宽高比 |
 | `seed` | `int \| null` | | 部分模型返回的种子值 |
-| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null`。**例外：可灵（`kling-video-o1` / `kling-v3-omni`）与 Grok（`cf-imagine-video` / `cf-imagine-video-1.5`）按秒计费但响应里没有 `usage` 对象**，计费数值散落在可灵的顶层 `seconds` / `size`、Grok 的 `data.videoLength` / `data.resolutionName`，故由 adapter 组装为 `{duration, sr, ratio}`（与万相 / HappyHorse 的按秒计费字段同形）；**CF Image 2 / 2.5 Sunburst / 2.5 Flare** 的用量在上游 `data.result.tokenUsage`，原样作为 `usage` 返回（`{textInputTokens, imageInputTokens, imageOutputTokens, totalTokens}`）—— 详见下方说明 |
+| `usage` | `object \| null` | | 原样保留 API 返回的 `usage` 对象。不同 API 的计费方式与结构各异（如 `total_tokens` / `totalTokens` / `completionTokens` 等），故不做归一化；API 未回传时为 `null`。**例外：可灵（`kling-video-o1` / `kling-v3-omni`）与 Grok（`cf-imagine-video` / `cf-imagine-video-1.5`）按秒计费但响应里没有 `usage` 对象**，计费数值散落在可灵的顶层 `seconds` / `size`、Grok 的 `data.videoLength` / `data.resolutionName`，故由 adapter 组装为 `{duration, sr, ratio}`（与万相 / HappyHorse 的按秒计费字段同形）；**CF Image 2 / 2.5 Sunburst / 2.5 Flare** 依次读取 `data.result.tokenUsage`、`data.result.tokenBillingSettlement.estimateTokens`、`data.token_billing_settlement.estimate_tokens`，原样作为 `usage` 返回（`{textInputTokens, imageInputTokens, imageOutputTokens, totalTokens}`）—— 详见下方说明 |
 | `payload` | `object` | ✓ | **真实发送给该模型专属 API 的请求体**（即 `adapter.build_payload(req)` 的产物，而非通用工具入参）。便于 agent 看到底层 API 实际收到的字段（含 `cfgpu_model_id`、各模型私有字段等）。**始终返回，不受 `return_metadata` 影响**。内部用于异步轮询回显的 `_requested_aspect_ratio` 键不会出现在此 |
 
 未标记"默认返回"的字段需加 `return_metadata=True` / `--metadata` 才会出现。
@@ -1173,7 +1176,15 @@ done
 >
 > **`corrected_args`：正式提交前要改的参数。** 用**工具参数名**表达，调用方直接 `{**原参数, **corrected_args}` 覆盖即可，不需要自己掌握任何 per-model 知识（`payload` 承担不了这个用途：它说的是上游方言 `cfgpu_model_id` / `video_length` / `resolution_name`，得反向翻译）。
 >
-> 当前它**只在模型选择被委托出去时**含 `model` 一键——即 `model="auto"` 或 `model=["a","b"]`（候选列表本质是"在这个子集里 auto"）。此时路由结果必须钉死：审批卡片上写 `auto` 等于没写，用户无从判断费用与时长；钉死也保证了正式提交跑的就是预检验过的那个模型。**显式指定的 model 一律不改写**，连规范化成 `model_name` 都不做——`adapter_id` / `cfgpu_model_id` / `display_name` 本就能解析到同一个 adapter，改写只会让卡片显示一个调用方没写过的名字。`model_used` 负责**报告**，`corrected_args` 负责**指令**，两个字段各司其职。
+> **输出规格总是钉死（2026-11-02 起）。** `generate_image` / `generate_video` 的预检结果里，`corrected_args` **总是**含
+> `aspect_ratio` 与 `resolution`，值就是正式调用实际会用的那一个——无论调用方传没传。缺省视频分辨率给出该模型的默认档；
+> `adaptive` 原样下发的模型给 `adaptive`，上游没有自适应取值的模型给实际替换成的比例（如可灵 `16:9`）；不发比例的模型
+> （万相 2.6 / 2.7 i2v、HappyHorse i2v / video-edit，画幅跟随输入素材）**一律给 `adaptive`**，即使调用方写了别的比例——
+> 那个比例上游根本收不到。这两项只是把实际值写明，`{**原参数, **corrected_args}` 合并后发出的 payload 与预检完全相同，
+> 所以审批卡可以直接显示画幅与分辨率两行。注意：卡片上若在预检后改了模型，带过去的是旧模型的档位，新模型不支持时会明确报错，
+> 改模型后请重新预检。
+>
+> `model` 一键**只在模型选择被委托出去时**出现——即 `model="auto"` 或 `model=["a","b"]`（候选列表本质是"在这个子集里 auto"）。此时路由结果必须钉死：审批卡片上写 `auto` 等于没写，用户无从判断费用与时长；钉死也保证了正式提交跑的就是预检验过的那个模型。**显式指定的 model 一律不改写**，连规范化成 `model_name` 都不做——`adapter_id` / `cfgpu_model_id` / `display_name` 本就能解析到同一个 adapter，改写只会让卡片显示一个调用方没写过的名字。`model_used` 负责**报告**，`corrected_args` 负责**指令**，两个字段各司其职。
 >
 > 代价要知道：钉死 `model` 换掉了 `auto` 的 failover——预检与提交之间该模型若不可用，原本会自动路由到下一个候选，现在直接硬失败。这是有意的取舍：审批只有在它指名了真正会跑的东西时才有意义，而这种失败是显式且可重试的。
 >
