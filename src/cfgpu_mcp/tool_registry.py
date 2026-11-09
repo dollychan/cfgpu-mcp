@@ -857,12 +857,16 @@ class GenerateImageInput(BaseModel):
         "a list of model_ids to restrict automatic selection to those candidates "
         "or 'auto' to choose from all available models",
     )
-    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2", ratio=True) = Field(default="1:1")
+    aspect_ratio: Folded("1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9", "9:21", "3:1", "1:3", "2:1", "1:2", ratio=True) = Field(
+        default="1:1",
+        description="Output aspect ratio. If `prompt` explicitly specifies the output aspect ratio, pass the same value here.",
+    )
     resolution: Folded(*_IMAGE_RESOLUTIONS) = Field(
         default="2K",
         description="Output resolution tier. Each model supports a subset of these "
         "tiers; an unsupported explicit value is rejected. When model='auto', a chosen "
-        "tier limits selection to compatible models.",
+        "tier limits selection to compatible models. "
+        "If `prompt` explicitly specifies the output resolution, pass the same value here.",
     )
     reference_images: Optional[list[str]] = media_field(
         slot="Reference images that guide the generation. Also the images that `regions` "
@@ -1076,7 +1080,8 @@ class GenerateVideoInput(BaseModel):
         "16:9", "9:16", "1:1", "4:3", "3:4", "4:5", "5:4", "21:9", "9:21", "adaptive", ratio=True
     ) = Field(
         default="adaptive",
-        description="'adaptive' automatically matches input image ratio",
+        description="'adaptive' automatically matches input image ratio. "
+        "If `prompt` explicitly specifies the output aspect ratio, pass the same value here.",
     )
     resolution: Optional[Folded(*_VIDEO_RESOLUTIONS)] = Field(
         default=None,
@@ -1085,7 +1090,7 @@ class GenerateVideoInput(BaseModel):
         "selection — pass a value only when you actually need that tier. The tiers are a "
         "fleet-wide vocabulary and each model offers a subset. An unsupported explicit "
         "tier is rejected; with model='auto', a chosen tier limits selection to "
-        "compatible models.",
+        "compatible models. If `prompt` explicitly specifies the output resolution, pass the same value here.",
     )
     with_audio: bool = Field(default=True, description="Generate audio synchronized with video")
     quality_tier: QualityTier = Field(default="balanced")
