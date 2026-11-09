@@ -78,16 +78,21 @@ def test_a_model_without_reference_support_points_route_one_elsewhere(registry):
     "model", ["happyhorse-1.0-t2v", "happyhorse-1.0-i2v", "happyhorse-1.0-r2v"]
 )
 def test_happyhorse_names_the_scenario_model_for_each_route(registry, model):
-    """Each HappyHorse scenario is its own model, so both fixes are a model switch —
-    and i2v/r2v used to report only half the conflict ("does not support ...")."""
+    """Each HappyHorse scenario is its own model, so a fix is a model switch unless the
+    route is this model's own — and i2v/r2v used to report only half the conflict
+    ("does not support ..."). Never "switch to" the model being called."""
     ok, reason = registry.get(model).supports(
         _req(first_frame="f", reference_images=["r"], resolution="720p", duration_seconds=5)
     )
 
     assert not ok
     assert "mutually exclusive" in reason
-    assert "改用 model=happyhorse-1.0-r2v" in reason
-    assert "改用 model=happyhorse-1.0-i2v" in reason
+    assert f"改用 model={model}" not in reason
+    for other in ("happyhorse-1.0-r2v", "happyhorse-1.0-i2v"):
+        if other != model:
+            assert f"改用 model={other}" in reason
+    if model == "happyhorse-1.0-i2v":
+        assert "保留 first_frame，删除 reference_images" in reason
 
 
 def _route_three(reason: str) -> str:
@@ -106,7 +111,7 @@ def test_the_refusal_says_the_request_is_still_achievable(registry, model):
     assert "still achievable" in reason
     third = _route_three(reason)
     assert "其余参考也要保留（framed_reference_video）" in third
-    assert "以 [[名字]] 作为视频首帧" in third
+    assert "以 [[<句柄>]] 作为视频首帧" in third
     assert "不保证与原图逐像素一致" in third  # approximate, and says so
 
 
@@ -141,7 +146,7 @@ def test_both_frames_get_their_own_handle(registry):
         _req(first_frame="f", last_frame="l", reference_images=["r"])
     )
 
-    assert "[[首帧名]] 作为视频首帧、[[尾帧名]] 作为尾帧" in _route_three(reason)
+    assert "[[<首帧句柄>]] 作为视频首帧、[[<尾帧句柄>]] 作为尾帧" in _route_three(reason)
 
 
 def test_route_three_on_a_model_without_references_points_elsewhere(registry):

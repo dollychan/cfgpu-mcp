@@ -72,17 +72,34 @@ def _is_chinese(text: str) -> bool:
     return any(unicodedata.category(ch).startswith("Lo") for ch in text[:100])
 
 
+def _task_type(
+    req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput,
+) -> str:
+    if isinstance(req, GenerateImageInput):
+        return "image"
+    if isinstance(req, GenerateVideoInput):
+        return "video"
+    if isinstance(req, UnderstandVisionInput):
+        return "understand"
+    return "audio"
+
+
 class ModelRouter:
     def __init__(self, registry: AdapterRegistry) -> None:
         self._registry = registry
 
-    def get_adapter(self, name: str) -> "ModelAdapter":
+    def get_adapter(self, name: str, task_type: str | None = None) -> "ModelAdapter":
         try:
             return self._registry.get(name)
         except KeyError as e:
+            # Not ``str(e)``: a KeyError's str is its repr (stray quotes), and the
+            # registry's list spans every task type — offering a video model as the
+            # fix for an image request is a remedy that can only fail again.
+            available = [a.model_name for a in self._registry.list_all(task_type=task_type)]
+            kind = f"task_type 为 {task_type} 的" if task_type else ""
             raise CFGPUError(
                 error_type="invalid_params",
-                user_message=str(e),
+                user_message=f"未知 model：{name}。当前可用、{kind} model：{', '.join(available)}。",
                 original={"model": name},
             ) from e
 
@@ -109,7 +126,7 @@ class ModelRouter:
         # capability mismatch as a raw AssertionError from build_payload(). Validate
         # here so the caller gets the friendly supports() reason (and a model-card hint).
         try:
-            adapter = self.get_adapter(model)
+            adapter = self.get_adapter(model, _task_type(req))
         except CFGPUError:
             # An unknown model_id here is almost always a hallucinated / mistyped id.
             # Vision-understanding models are a small, homogeneous, *synchronous* set
@@ -132,11 +149,14 @@ class ModelRouter:
             return adapter
         ok, reason = adapter.supports(req)
         if not ok:
+            # A supports() reason names the parameter and the fix; the generic
+            # "or pick another model" tail would only pull the caller off it.
             raise CFGPUError(
                 error_type="invalid_params",
                 user_message=reason,
                 original={"model": model},
                 model_id=adapter.model_name,
+                card_hint=False,
             )
         return adapter
 
@@ -147,14 +167,7 @@ class ModelRouter:
         *,
         for_validation: bool = False,
     ) -> "ModelAdapter":
-        if isinstance(req, GenerateImageInput):
-            task_type = "image"
-        elif isinstance(req, GenerateVideoInput):
-            task_type = "video"
-        elif isinstance(req, UnderstandVisionInput):
-            task_type = "understand"
-        else:
-            task_type = "audio"
+        task_type = _task_type(req)
         candidates: list["ModelAdapter"] = self._registry.list_all(task_type=task_type)
 
         if allowed:
@@ -202,25 +215,53 @@ class ModelRouter:
             scored = corrected
 
         if not scored:
+            if not candidates:
+                # Nothing enabled for this task type: an environment fact, not the request.
+                raise CFGPUError(
+                    error_type="model_unavailable",
+                    user_message=f"当前没有启用 task_type 为 {task_type} 的模型。",
+                    original={},
+                )
+            # Every candidate refused the request as written, so this is the request's
+            # problem: invalid_params, never retryable (a retryable error reads as "try
+            # the same call later"). The reason is the one the router's own first
+            # choice gives — concrete and self-consistent. All of them would be
+            # kilobytes of advice that mostly contradicts itself.
+            first = self._rank([(self._score(a, req), a) for a in candidates], req)[0]
+            others = len(candidates) - 1
+            tail = f"其余 {others} 个候选模型同样不能执行这组参数。" if others else ""
             raise CFGPUError(
-                error_type="model_unavailable",
-                user_message="没有可用的模型支持当前请求，请检查参数或手动指定 model。",
-                original={},
+                error_type="invalid_params",
+                user_message=(
+                    f"model=auto 没有找到能按当前参数执行的模型。首选候选 {first.model_name} 的原因："
+                    f"{first.supports(req)[1]} {tail}本次请求未发送。"
+                ),
+                original={"model": req.model},
+                retryable=False,
+                card_hint=False,
             )
+        return self._rank(scored, req)[0]
+
+    @staticmethod
+    def _rank(
+        scored: list[tuple[int, "ModelAdapter"]],
+        req: GenerateImageInput | GenerateVideoInput | GenerateAudioInput | UnderstandVisionInput,
+    ) -> list["ModelAdapter"]:
         # A declared default wins outright among compatible candidates. Vision uses
         # its own analysis-depth declarations; generation keeps quality-tier defaults.
         if isinstance(req, UnderstandVisionInput):
             analysis_depth = req.analysis_depth
-            scored.sort(
+            ordered = sorted(
+                scored,
                 key=lambda x: selection_key(
                     x[0], x[1], analysis_depth,
                     declared_defaults=x[1].analysis_depth_default_for,
-                )
+                ),
             )
         else:
             quality_tier = req.quality_tier
-            scored.sort(key=lambda x: selection_key(x[0], x[1], quality_tier))
-        return scored[0][1]
+            ordered = sorted(scored, key=lambda x: selection_key(x[0], x[1], quality_tier))
+        return [adapter for _, adapter in ordered]
 
     def _score(
         self,

@@ -59,6 +59,22 @@ def models_with_task(task: str) -> list[str]:
         return []
 
 
+def enabled_model_name(key: str) -> str | None:
+    """The public ``model_name`` of ``key`` (any spelling ``registry.get`` takes) if it is
+    enabled here, else ``None``.
+
+    For a refusal that suggests one specific model: an ``adapter_id`` is not a name a
+    caller sees in ``list_models``, and a model in ``disabled_models`` is advice that can
+    only fail again. Never raises, like ``models_with_task``.
+    """
+    try:
+        from cfgpu_mcp.config import get_registry
+
+        return get_registry().get(key).model_name
+    except Exception:
+        return None
+
+
 #: Set while ``models_accepting_frames_with_references`` probes other adapters, whose own
 #: refusal would otherwise probe the fleet again from inside the probe.
 _probing_frame_combinations: ContextVar[bool] = ContextVar(
@@ -170,9 +186,9 @@ def frames_vs_references_reason(
         if native else ""
     )
     if len(frames) == 2:
-        naming = "在 image_refs 里给两张图各起名，并在 prompt 里写明「以 [[首帧名]] 作为视频首帧、[[尾帧名]] 作为尾帧」"
+        naming = "并在 prompt 里用两张图各自的句柄写明「以 [[<首帧句柄>]] 作为视频首帧、[[<尾帧句柄>]] 作为尾帧」"
     else:
-        naming = f"在 image_refs 里给它起名，并在 prompt 里写明「以 [[名字]] 作为视频{frame_words}」"
+        naming = f"并在 prompt 里用这张图的句柄写明「以 [[<句柄>]] 作为视频{frame_words}」"
     route_both = (
         f"{native_route}{prompt_switch}把 {frame_list} 的图也放进 reference_images、删除 {frame_list}，"
         f"{naming}（由提示词还原，画面接近但不保证与原图逐像素一致）"

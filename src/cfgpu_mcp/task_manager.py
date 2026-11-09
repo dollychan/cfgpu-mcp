@@ -662,6 +662,9 @@ def validate_request(
             user_message=reason,
             original={"model": req.model},
             model_id=adapter.model_name,
+            # The reason names the parameter and the fix; a generic "or pick another
+            # model" tail would only pull the caller off it (same as router.resolve).
+            card_hint=False,
         )
     # Handle mistakes caused by frames riding beside references, held back by the schema
     # so a model refusing that combination reports the conflict first. A model that
@@ -676,6 +679,7 @@ def validate_request(
             user_message=frame_placeholder_message(deferred[0], frame),
             original={"model": req.model},
             model_id=adapter.model_name,
+            card_hint=False,
         )
     # The same placeholder resolution create() applies, so the preflight's payload is
     # the prompt that would really be sent — and an unresolved [[...]] fails here, free.

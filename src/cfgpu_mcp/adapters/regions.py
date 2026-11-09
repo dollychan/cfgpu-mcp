@@ -228,9 +228,9 @@ def _unresolved(tokens: list[str], refs: list[str], regions: list["RegionSpec"])
         hint = f"本次可用的占位符：{', '.join(valid)}。"
     else:
         hint = (
-            "本次请求没有 image_refs，也没有带 label 的 regions，因此没有任何占位符可解析。"
-            "[[句柄]] 只能指代本次实际传入的图片：把图片放进图片参数（如 images / reference_images），"
-            "并用与之等长、同序的 image_refs 给出句柄；[[标记名]] 只能指代 regions 里带 label 的区域。"
+            "本次请求没有传入带句柄的图片，也没有带 label 的 regions，因此没有任何占位符可解析。"
+            "[[句柄]] 只能指代本次实际传入的图片：先把图片放进图片参数（如 images / reference_images），"
+            "句柄即它在同序的 image_refs 中的对应项；[[标记名]] 只能指代 regions 里带 label 的区域。"
             "只写在 prompt 里不算传入。"
         )
     named = "、".join(f"[[{token}]]" for token in tokens)

@@ -273,6 +273,15 @@ def test_handle_lists_and_placeholders_are_checked_at_the_schema(kw, match):
         GenerateVideoInput(**kw, validate_only=True)
 
 
+def test_every_unresolved_video_placeholder_is_reported_at_once():
+    """Same rule as ``regions.render_prompt``: one round trip, not one per placeholder."""
+    with pytest.raises(ValueError) as info:
+        GenerateVideoInput(prompt="[[m_a]] 走进 [[m_b]]", validate_only=True)
+    message = str(info.value)
+    assert "[[m_a]]" in message and "[[m_b]]" in message
+    assert "reference_images" in message and "prompt alone does not pass" in message
+
+
 def test_an_empty_handle_marks_an_item_nobody_refers_to():
     req = GenerateVideoInput(prompt="[[b]]", reference_images=[IMG.format(1), IMG.format(2)], image_refs=["", "b"])
     assert req.image_refs == ["", "b"]

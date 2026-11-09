@@ -219,21 +219,22 @@ class RegionSpec(BaseModel):
     @field_validator("box")
     @classmethod
     def _validate_box(cls, v: list[float]) -> list[float]:
+        # The numbers are never echoed and no arithmetic is suggested: a host that
+        # produces coordinates itself keeps them out of its model's context, and a
+        # refusal repeating them ("divide by the width") is an invitation to start
+        # computing boxes by hand.
         if len(v) != 4:
-            raise ValueError(
-                f"box must have exactly 4 values [x1, y1, x2, y2], got {len(v)}: {v}"
-            )
+            raise ValueError(f"box must have exactly 4 values [x1, y1, x2, y2], got {len(v)}")
         if any(not (0.0 <= c <= 1.0) for c in v):
             raise ValueError(
-                f"box {v} is out of range: coordinates are normalised to [0, 1] of the "
-                f"image's width/height, not pixels. Divide by the image's width (x) and "
-                f"height (y)."
+                "box is out of range: every coordinate is a fraction in [0, 1] of the "
+                "image's width (x) / height (y), never pixels."
             )
         x1, y1, x2, y2 = v
         if x1 >= x2 or y1 >= y2:
             raise ValueError(
-                f"box {v} is empty or inverted: it must satisfy x1<x2 and y1<y2 "
-                f"(x first, origin top-left)."
+                "box is empty or inverted: it must satisfy x1<x2 and y1<y2 "
+                "(x first, origin top-left)."
             )
         return [round(c, COORD_DECIMALS) for c in v]
 
@@ -346,8 +347,9 @@ def frame_placeholder_message(token: str, frame: str) -> str:
         f"with [[...]] — it is the video's literal "
         f"{'opening' if frame == 'first_frame' else 'closing'} picture, not a "
         f"reference. Either drop the placeholder and keep {frame}, or move the "
-        f"image into reference_images (with a handle in image_refs) and write in "
-        f"the prompt that [[<handle>]] is the {frame.replace('_', ' ')}. Nothing was sent."
+        f"image into reference_images and write in the prompt that [[<handle>]] — "
+        f"that image's handle, its entry in image_refs — is the "
+        f"{frame.replace('_', ' ')}. Nothing was sent."
     )
 
 
@@ -488,6 +490,7 @@ def _validate_video_refs(req: Any) -> None:
 
     frame_values = _frames_beside_references(req)
     deferred: list[str] = []
+    unresolved: list[str] = []
     owner: dict[str, str] = {}
     for slot, kind in SLOT_KIND.items():
         refs_name = REFS_FIELD[kind]
@@ -568,6 +571,20 @@ def _validate_video_refs(req: Any) -> None:
             if token not in deferred:
                 deferred.append(token)
             continue
+        frame = next((slot for slot in _FRAME_SLOTS if getattr(req, slot, None) == token), None)
+        if frame:
+            raise ValueError(frame_placeholder_message(token, frame))
+        if token not in unresolved:
+            unresolved.append(token)
+    if unresolved:
+        # Every unresolved placeholder at once, as ``regions.render_prompt`` does: one
+        # per round trip makes the caller pay a turn for each.
+        listed = ", ".join(f"[[{t}]]" for t in unresolved)
+        subject = (
+            f"prompt placeholder {listed} names no handle"
+            if len(unresolved) == 1
+            else f"prompt placeholders {listed} name no handle"
+        )
         available = ", ".join(f"[[{h}]]" for h in owner)
         hint = (
             f"available here: {available}."
@@ -576,13 +593,11 @@ def _validate_video_refs(req: Any) -> None:
             "resolve; give each reference a handle in the list that pairs with its slot "
             "(same order, same length) and write [[<handle>]]."
         )
-        frame = next((slot for slot in _FRAME_SLOTS if getattr(req, slot, None) == token), None)
-        if frame:
-            raise ValueError(frame_placeholder_message(token, frame))
         raise ValueError(
-            f"prompt placeholder [[{token}]] names no handle in image_refs / video_refs / "
-            f"audio_refs — {hint} If [[{token}]] is a material, also pass it in the "
-            f"reference_* list for its kind. An unresolved [[...]] would reach the model "
+            f"{subject} in image_refs / video_refs / audio_refs — {hint} A material a "
+            f"placeholder names must also be passed in the reference_images / "
+            f"reference_videos / reference_audios list for its kind: naming it in the "
+            f"prompt alone does not pass it. An unresolved [[...]] would reach the model "
             f"as literal text, so nothing was sent."
         )
     if deferred:
@@ -608,7 +623,9 @@ def media_refs_field(slot: str, kind: str = "image") -> Any:
         f"any error. Use an empty string for an item you will not refer to. A `[[...]]` "
         f"that matches no handle is an error on a `validate_only` run; on a real call it "
         f"is sent as plain text with the brackets removed, so the {kind} it meant is not "
-        f"referenced at all — only ever write handles that exist. Passed through untouched "
+        f"referenced at all — only ever write handles that exist. A handle names only an "
+        f"item passed in `{slot}` in this call: writing `[[<handle>]]` in `prompt` does not "
+        f"pass the {kind}. Passed through untouched "
         f"— never fetched, never sent upstream.",
     )
 
