@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
+    from mcp.types import CallToolResult
     from pydantic import ValidationError
 
 
@@ -237,6 +238,32 @@ def format_validation_error(exc: "ValidationError") -> str:
     count = len(lines)
     head = f"{count} 个参数校验未通过：" if count > 1 else "参数校验未通过："
     return head + ("\n" + "\n".join(lines) if count > 1 else (lines[0] if lines else ""))
+
+
+def tool_error_result(e: Exception) -> dict | CallToolResult:
+    """Keep the agent's error intact; attach translations for client display only.
+
+    DeerFlow maps structuredContent to artifact['structured_content'] and merges
+    it into the emitted tool_result event. It never enters the LLM context.
+    Keep isError=False: failures already use content.error, and protocol errors
+    can cause MCP adapters to raise and discard the structured side channel.
+    """
+    import json
+
+    from mcp.types import CallToolResult, TextContent
+    from cfgpu_mcp.error_normalization import normalize_error
+
+    result = tool_error_dict(e)
+    translations = (
+        normalize_error(e.user_message, e.original) if isinstance(e, CFGPUError) else None
+    )
+    if translations is None:
+        return result
+    return CallToolResult(
+        content=[TextContent(type="text", text=json.dumps(result, ensure_ascii=False))],
+        structuredContent={"message_i18n": translations},
+        isError=False,
+    )
 
 
 def tool_error_dict(e: Exception) -> dict:

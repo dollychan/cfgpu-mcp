@@ -4,7 +4,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from cfgpu_mcp.errors import tool_error_dict
+from cfgpu_mcp.errors import tool_error_result
 from cfgpu_mcp.service import task as task_service
 from cfgpu_mcp.tool_registry import annotate_artifact, split_structured
 
@@ -43,7 +43,7 @@ def register(mcp: FastMCP) -> None:
                 structured_keys=("usage", "payload", "inline_media"),
             )
         except Exception as e:
-            return tool_error_dict(e)
+            return tool_error_result(e)
 
     @mcp.tool()
     async def task_wait(request_id: str, timeout: Optional[int] = None) -> dict:
@@ -62,4 +62,4 @@ def register(mcp: FastMCP) -> None:
                 structured_keys=("usage", "payload", "inline_media"),
             )
         except Exception as e:
-            return tool_error_dict(e)
+            return tool_error_result(e)

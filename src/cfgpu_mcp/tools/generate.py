@@ -4,7 +4,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from cfgpu_mcp.errors import tool_error_dict
+from cfgpu_mcp.errors import tool_error_result
 from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
@@ -56,7 +56,7 @@ def register(mcp: FastMCP) -> None:
                 validate_only=validate_only,
             )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
-            return tool_error_dict(e)
+            return tool_error_result(e)
 
     @mcp.tool()
     async def generate_video(
@@ -128,7 +128,7 @@ def register(mcp: FastMCP) -> None:
                 validate_only=validate_only,
             )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
-            return tool_error_dict(e)
+            return tool_error_result(e)
 
     @mcp.tool()
     async def generate_audio(
@@ -183,4 +183,4 @@ def register(mcp: FastMCP) -> None:
                 validate_only=validate_only,
             )), structured_keys=("usage", "payload", "inline_media"))
         except Exception as e:
-            return tool_error_dict(e)
+            return tool_error_result(e)
