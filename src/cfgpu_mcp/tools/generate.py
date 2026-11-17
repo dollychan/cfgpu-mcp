@@ -4,11 +4,11 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from cfgpu_mcp.errors import tool_error_result
+from cfgpu_mcp.errors import split_with_i18n, tool_error_result
 from cfgpu_mcp.service import audio as audio_service
 from cfgpu_mcp.service import image as image_service
 from cfgpu_mcp.service import video as video_service
-from cfgpu_mcp.tool_registry import RegionSpec, annotate_artifact, split_structured
+from cfgpu_mcp.tool_registry import RegionSpec, annotate_artifact
 
 
 def register(mcp: FastMCP) -> None:
@@ -35,7 +35,7 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Generate image from text prompt using CFGPU models."""
         try:
-            return split_structured(annotate_artifact(await image_service.generate_image(
+            return split_with_i18n(annotate_artifact(await image_service.generate_image(
                 prompt=prompt,
                 model=model,
                 aspect_ratio=aspect_ratio,
@@ -99,7 +99,7 @@ def register(mcp: FastMCP) -> None:
         second billed job behind the one already running.
         """
         try:
-            return split_structured(annotate_artifact(await video_service.generate_video(
+            return split_with_i18n(annotate_artifact(await video_service.generate_video(
                 prompt=prompt,
                 model=model,
                 first_frame=first_frame,
@@ -161,7 +161,7 @@ def register(mcp: FastMCP) -> None:
         audio alone, tell the user voice cloning is not available.
         """
         try:
-            return split_structured(annotate_artifact(await audio_service.generate_audio(
+            return split_with_i18n(annotate_artifact(await audio_service.generate_audio(
                 text=text,
                 model=model,
                 voice=voice,

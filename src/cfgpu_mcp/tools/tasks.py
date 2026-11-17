@@ -4,9 +4,9 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from cfgpu_mcp.errors import tool_error_result
+from cfgpu_mcp.errors import split_with_i18n, tool_error_result
 from cfgpu_mcp.service import task as task_service
-from cfgpu_mcp.tool_registry import annotate_artifact, split_structured
+from cfgpu_mcp.tool_registry import annotate_artifact
 
 
 def register(mcp: FastMCP) -> None:
@@ -34,7 +34,7 @@ def register(mcp: FastMCP) -> None:
           do next.
         """
         try:
-            return split_structured(
+            return split_with_i18n(
                 annotate_artifact(await task_service.get_status(request_id)),
                 # inline_media for the same reason generate_audio splits it out: a
                 # sync inline-media task (MiniMax speech) is reachable here via
@@ -53,7 +53,7 @@ def register(mcp: FastMCP) -> None:
         `task_id` it returned when you passed none.
         """
         try:
-            return split_structured(
+            return split_with_i18n(
                 annotate_artifact(await task_service.wait_for_task(request_id, timeout)),
                 # inline_media for the same reason generate_audio splits it out: a
                 # sync inline-media task (MiniMax speech) is reachable here via

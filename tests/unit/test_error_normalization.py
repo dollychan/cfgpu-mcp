@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from cfgpu_mcp.error_normalization import normalize_error
+from cfgpu_mcp.error_normalization import SUBMISSION_LOST_REMEDIES, localize_error, normalize_error
 from cfgpu_mcp.errors import CFGPUError, tool_error_dict, tool_error_result
 from cfgpu_mcp.task_manager import Task, task_failed_error
 
@@ -170,3 +170,167 @@ def test_nonterminal_poll_diagnostic_keeps_original_message():
     assert result["consecutive_failures"] == 2
     assert result["elapsed"] == 7
     assert err.user_message == raw
+
+
+# ── MCP-side messages (task_status / task_wait) ─────────────────────────────
+#
+# Each message is produced by its real raise site, so rewording one without updating
+# MCP_RULES fails here rather than silently dropping its translation.
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("call", ["get_status", "wait_for_task"])
+async def test_task_lookup_errors_are_localized(call):
+    from cfgpu_mcp.service import task as task_service
+    from tests.unit.test_task_service import _db_with_task, _patch_config
+
+    db = await _db_with_task("pending", "test-model")
+    try:
+        p_db, p_client, p_reg = _patch_config(db, MagicMock(), MagicMock())
+        with p_db, p_client, p_reg:
+            with pytest.raises(CFGPUError) as missing:
+                await getattr(task_service, call)("no-such-id")
+            with pytest.raises(CFGPUError) as empty:
+                await getattr(task_service, call)("")
+    finally:
+        await db.close()
+
+    wire = tool_error_result(missing.value)
+    content = json.loads(wire.content[0].text)
+    assert content == tool_error_dict(missing.value)  # the agent's view is untouched
+    assert content["task_id"] == "no-such-id"
+    assert wire.structuredContent == {"message_i18n": {
+        "zh": "未找到 request_id 为 'no-such-id' 的任务。",
+        "en": "No task was found for request_id 'no-such-id'.",
+    }}
+
+    wire = tool_error_result(empty.value)
+    assert json.loads(wire.content[0].text)["message"] == empty.value.user_message
+    assert wire.structuredContent["message_i18n"]["zh"] == empty.value.user_message
+    assert wire.structuredContent["message_i18n"]["en"].startswith("request_id is missing")
+
+
+@pytest.mark.asyncio
+async def test_succeeded_without_artifact_is_localized():
+    from cfgpu_mcp.service import task as task_service
+    from tests.unit.test_task_service import _adapter, _db_with_task, _patch_config
+
+    db = await _db_with_task("succeeded", "test-model", result={"urls": []}, request_id="r-2")
+    try:
+        p_db, p_client, p_reg = _patch_config(db, MagicMock(), _adapter(is_async=False))
+        with p_db, p_client, p_reg:
+            with pytest.raises(CFGPUError) as exc:
+                await task_service.get_status("task-1")
+    finally:
+        await db.close()
+    wire = tool_error_result(exc.value)
+    assert json.loads(wire.content[0].text)["request_id"] == "r-2"
+    assert wire.structuredContent["message_i18n"]["en"] == (
+        "The provider reported success but returned no artifact URL or inline media."
+    )
+
+
+@pytest.mark.parametrize("raw", [
+    "Task failed without error message",
+    "Task failed (upstream reported no error detail)",
+    'Task failed. 上游响应（截断）：{"status": "weird"}',
+])
+def test_failure_rows_without_a_reason_are_localized(raw):
+    task = Task({"id": "t-1", "adapter_id": "test", "status": "failed", "payload": {}, "result": None, "error": raw, "created_at": 0, "updated_at": 0})
+    adapter = MagicMock()
+    adapter.translate_task_failure.return_value = None
+    err = task_failed_error(task, adapter)
+    assert tool_error_dict(err)["message"] == raw
+    assert set(tool_error_result(err).structuredContent["message_i18n"]) == {"zh", "en"}
+
+
+def test_upstream_reason_inside_our_frame_uses_the_upstream_rule():
+    raw = 'Task failed. 上游响应（截断）：{"error_msg": "Invalid video_url."}'
+    assert localize_error(raw, None, "task_failed") == {"zh": "视频 URL 无效。", "en": "The video URL is invalid."}
+
+
+def test_client_messages_are_localized_verbatim_in_zh():
+    import asyncio
+
+    import aiohttp
+
+    from cfgpu_mcp.client.cfgpu_client import CFGPUClient
+
+    client = CFGPUClient(api_token="t", base_url="https://api.example.com")
+    errors = [
+        client._timeout_error(aiohttp.ConnectionTimeoutError(), "https://x", elapsed=10.04, method="GET"),
+        client._timeout_error(asyncio.TimeoutError(), "https://x", elapsed=120.0, method="GET"),
+        client._timeout_error(asyncio.TimeoutError(), "https://x", elapsed=120.0, method="POST"),
+        CFGPUError.from_http_response(401, {"error": {"message": "Unauthorized"}}),
+        CFGPUError.from_http_response(429, {"error": {"message": "slow down"}}),
+        CFGPUError.from_http_response(404, {"error": {"message": "Not Found"}}),
+        CFGPUError("unknown", "网络请求失败：Cannot connect to host"),
+    ]
+    for err in errors:
+        translated = localize_error(err.user_message, err.original, err.error_type)
+        assert translated is not None, err.user_message
+        # The zh side is the message the agent already reads, not a paraphrase of it.
+        assert translated["zh"] == err.user_message
+        assert translated["en"] and translated["en"] != translated["zh"]
+
+
+def test_submission_lost_remedies_mirror_task_manager():
+    from cfgpu_mcp.task_manager import _submission_lost_remedy
+
+    produced = {_submission_lost_remedy(MagicMock(task_type=t)) for t in ("video", "understand")}
+    assert produced == {rule.pattern for rule in SUBMISSION_LOST_REMEDIES}
+
+
+def test_submission_lost_translates_reason_and_remedy_or_nothing():
+    from cfgpu_mcp.task_manager import _submission_lost_remedy
+
+    remedy = _submission_lost_remedy(MagicMock(task_type="video"))
+    known = "Upstream network error: request timed out" + remedy
+    translated = localize_error(known, None, "submission_lost")
+    assert translated["zh"].endswith(remedy)
+    assert translated["en"].startswith("The upstream network request timed out")
+    assert translated["en"].endswith("Submit the request again.")
+    # An untranslatable reason must not be dropped behind a translated remedy.
+    assert localize_error("something new" + remedy, None, "submission_lost") is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name,service", [
+    ("task_status", "cfgpu_mcp.service.task.get_status"),
+    ("task_wait", "cfgpu_mcp.service.task.wait_for_task"),
+])
+async def test_last_error_translation_rides_structured_content(monkeypatch, name, service):
+    from unittest.mock import AsyncMock
+    from mcp.server.fastmcp import FastMCP
+    from cfgpu_mcp.tools import tasks
+
+    last_error = {"error_type": "auth", "message": "API Token 无效或已过期，请检查 CFGPU_API_TOKEN。", "retryable": False}
+    pending = {"request_id": "r-1", "status": "running", "last_error": last_error}
+    monkeypatch.setattr(service, AsyncMock(return_value=copy.deepcopy(pending)))
+    mcp = FastMCP("last-error-i18n-test")
+    tasks.register(mcp)
+    wire = await mcp.call_tool(name, {"request_id": "r-1"})
+    content = json.loads(wire.content[0].text)
+    assert content["last_error"] == last_error  # the model's view is unchanged
+    assert "message_i18n" not in wire.content[0].text
+    assert wire.structuredContent == {"last_error": {**last_error, "message_i18n": {
+        "zh": "API Token 无效或已过期，请检查 CFGPU_API_TOKEN。",
+        "en": "The API token is invalid or expired. Check CFGPU_API_TOKEN.",
+    }}}
+    # A host merging structuredContent over content keeps every original field.
+    merged = {**content, **wire.structuredContent}
+    assert {k: v for k, v in merged["last_error"].items() if k != "message_i18n"} == last_error
+
+
+@pytest.mark.asyncio
+async def test_unknown_last_error_adds_nothing(monkeypatch):
+    from unittest.mock import AsyncMock
+    from mcp.server.fastmcp import FastMCP
+    from cfgpu_mcp.tools import tasks
+
+    pending = {"request_id": "r-1", "status": "running", "last_error": {"error_type": "unknown", "message": "something new", "retryable": True}}
+    monkeypatch.setattr("cfgpu_mcp.service.task.get_status", AsyncMock(return_value=copy.deepcopy(pending)))
+    mcp = FastMCP("last-error-i18n-test")
+    tasks.register(mcp)
+    wire = await mcp.call_tool("task_status", {"request_id": "r-1"})
+    assert not wire.structuredContent

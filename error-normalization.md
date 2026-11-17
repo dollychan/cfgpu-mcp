@@ -3,8 +3,8 @@
 来源：`src/model_generation_tasks_202611131529.csv`，共 230 条记录。
 命中明确原因 213 条；空记录 14 条；未匹配 3 条。
 
-generate_image / generate_video / generate_audio / task_status / task_wait 的 MCP 错误响应保留原有 content.message；命中时仅通过 structuredContent.message_i18n 返回 {zh, en} 两种归一化文案。
-不改 tasks.error、原始响应、error_type、retryable 或关联 ID；非终态轮询 last_error 和非 MCP 调用保持原有文案。未命中时不添加 message_i18n。
+generate_image / generate_video / generate_audio / task_status / task_wait 的 MCP 错误响应保留原有 content.message；命中时仅通过 structuredContent.message_i18n 返回 {zh, en} 两种归一化文案。非终态结果（task_status / task_wait，或 generate_* 未等到终态）携带的 last_error 同样原样保留在 content；命中时 structuredContent.last_error 为该 last_error 的完整副本外加 message_i18n，宿主将 structuredContent 合并进 content 后原字段不丢失。
+不改 tasks.error、原始响应、error_type、retryable 或关联 ID；非 MCP 调用（Mode B / CLI）保持原有文案。未命中时不添加 message_i18n。
 DeerFlow 的 langchain-mcp-adapters 将协议 structuredContent 映射为 ToolMessage.artifact['structured_content']。MessageStreamMiddleware._emit_tool_result 将其合并到客户端事件 content，随后移除临时 side channel；模型读取的 ToolMessage.content 保持原样。
 当前 MessageStreamMiddleware 只合并字段，不选择语言。消费方应按 locale 完整标签、主语言（如 zh-CN → zh）、原始 message 的顺序回退，仅更改展示文案，不改模型消息。
 优先使用结构化错误原因，其次匹配现有错误文案。表中规则按顺序匹配，动态数值按上游填入，不将某个模型的限制推广到其他模型。
@@ -59,5 +59,40 @@ DeerFlow 的 langchain-mcp-adapters 将协议 structuredContent 映射为 ToolMe
 
 未匹配行：[161, 174, 175]。这些记录仅有 failed 状态而无错误原因（部分外层为 200/success）；不能据此推断具体原因，沿用原有失败处理。
 全空行：[218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231]，不构造错误。
+
+## MCP 侧文案
+
+以下为本服务自己产生的错误文案（如 request_id 不存在、缺少 request_id、提交结果丢失、超时与网络失败），先按上表匹配上游原因，未命中再按下表匹配。整句翻译（含本服务给出的处理建议，因为 content.message 中已有）；原文为中文的，中文与 content.message 原文一致；原文为英文的（如「Task … not found.」）给出中文译文；{raw}/{detail} 为上游原文或异常文本，原样填入。
+submission_lost 的文案为「原因 + 补救说明」：两段都能翻译时拼接返回；原因未命中则整体不添加 message_i18n，避免客户端展示的信息少于模型看到的。
+
+| 规则 ID | 匹配模式（正则） | 中文 | English |
+| --- | --- | --- | --- |
+| task_not_found | ^Task (?P<task_id>'[^']*'&#124;\"[^\"]*\") not found\.$ | 未找到 request_id 为 {task_id} 的任务。 | No task was found for request_id {task_id}. |
+| request_id_missing | ^缺少 request_id： | 缺少 request_id：请传入 generate_* 调用时使用的 request_id（未提供 request_id 的调用则传它返回的 task_id）。 | request_id is missing: pass the request_id used in the generate_* call (for a call that supplied none, pass the task_id it returned). |
+| request_id_row_unreadable | ^request_id (?P<task_id>'[^']*'&#124;\"[^\"]*\") 已被占用，但对应的任务行读不回来。 | request_id {task_id} 已被占用，但对应的任务行读不回来。请换一个 request_id 重新提交。 | request_id {task_id} is already in use, but its task record could not be read back. Submit again with a different request_id. |
+| no_artifact | ^Task reported success but returned no artifact URLs or inline media$ | 上游报告任务成功，但没有返回任何产物 URL 或内联媒体。 | The provider reported success but returned no artifact URL or inline media. |
+| sync_no_artifact | ^同步媒体 API 返回成功，但没有返回任何产物 URL 或内联媒体。 | 同步媒体 API 返回成功，但没有返回任何产物 URL 或内联媒体。 | The synchronous media API reported success but returned no artifact URL or inline media. |
+| task_id_unparsed | ^没能从上游响应中解析出 task_id， | 没能从上游响应中解析出 task_id，这次请求的结果无法取回，task_status 也查不到，请直接重新发起。 | No task_id could be parsed from the provider response, so this request's result cannot be retrieved and task_status cannot find it either. Submit the request again. |
+| failed_without_message | ^Task failed without error message$ | 任务失败，没有错误信息。 | The task failed without an error message. |
+| failed_without_detail | ^Task failed \(upstream reported no error detail\)$ | 任务失败，上游没有提供错误详情。 | The task failed; the provider reported no error detail. |
+| failed_unparsed_reason | ^Task failed\. 上游响应（截断）： | 任务失败，没能从上游响应中解析出失败原因。 | The task failed, and no failure reason could be parsed from the provider response. |
+| auth_invalid | ^API Token 无效或已过期，请检查 CFGPU_API_TOKEN。$ | API Token 无效或已过期，请检查 CFGPU_API_TOKEN。 | The API token is invalid or expired. Check CFGPU_API_TOKEN. |
+| auth_missing | ^缺少 CFGPU API Token： | 缺少 CFGPU API Token：请在请求头携带 Authorization，或设置 CFGPU_API_TOKEN。 | The CFGPU API token is missing: send it in the Authorization header, or set CFGPU_API_TOKEN. |
+| auth_provider_missing | ^provider (?P<provider>'[^']*') 缺少凭据：请设置环境变量 (?P<env>[^。]+)。 | provider {provider} 缺少凭据：请设置环境变量 {env}。（该 provider 不使用请求头里的用户 token，也不回退到 CFGPU_API_TOKEN。） | Provider {provider} has no credentials: set the environment variable {env}. (This provider does not use the user token from the request header and does not fall back to CFGPU_API_TOKEN.) |
+| rate_limit | ^请求过于频繁，请稍后重试。$ | 请求过于频繁，请稍后重试。 | Too many requests. Try again later. |
+| quota_exceeded | ^账户配额不足，请检查余额。$ | 账户配额不足，请检查余额。 | The account quota is insufficient. Check the balance. |
+| content_blocked | ^内容被审核拦截，请修改 prompt 后重试。$ | 内容被审核拦截，请修改 prompt 后重试。 | The content was blocked by moderation. Revise the prompt and try again. |
+| model_unavailable_mcp | ^所选模型暂不可用，请尝试其他模型。$ | 所选模型暂不可用，请尝试其他模型。 | The selected model is temporarily unavailable. Try another model. |
+| connect_timeout | ^(?P<elapsed>[\d.]+)s 内没能与 provider (?P<provider>'[^']*') 建立连接（上游还没收到任何请求），通常是服务端到上游的网络不通。可以稍后重试；如果持续失败，请告诉用户服务端网络需要检查。$ | {elapsed}s 内没能与 provider {provider} 建立连接（上游还没收到任何请求），通常是服务端到上游的网络不通。可以稍后重试；如果持续失败，请告诉用户服务端网络需要检查。 | Could not connect to provider {provider} within {elapsed}s (the provider has received nothing yet); usually the server cannot reach the provider over the network. You can retry later; if it keeps failing, tell the user the server's network needs checking. |
+| request_timeout_sent | ^请求超时（已耗时 (?P<elapsed>[\d.]+)s，上限 (?P<budget>[\d.]+)s，provider (?P<provider>'[^']*')）。请求已经发出但没等到回应。$ | 请求超时（已耗时 {elapsed}s，上限 {budget}s，provider {provider}）。请求已经发出但没等到回应。 | The request timed out ({elapsed}s elapsed, limit {budget}s, provider {provider}). It was sent, but no response arrived. |
+| request_timeout | ^请求超时（已耗时 (?P<elapsed>[\d.]+)s，上限 (?P<budget>[\d.]+)s，provider (?P<provider>'[^']*')）。请稍后重试。$ | 请求超时（已耗时 {elapsed}s，上限 {budget}s，provider {provider}）。请稍后重试。 | The request timed out ({elapsed}s elapsed, limit {budget}s, provider {provider}). Try again later. |
+| network_failed | ^网络请求失败：(?P<detail>.+)$ | 网络请求失败：{detail} | Network request failed: {detail} |
+| poll_processing_failed | ^轮询响应处理失败：(?P<detail>.+)$ | 轮询响应处理失败：{detail} | Failed to process the poll response: {detail} |
+| invalid_params_raw | ^请求参数错误：(?P<raw>.+)$ | 请求参数错误：{raw} | Invalid request parameters: {raw} |
+| task_failed_raw | ^任务执行失败：(?P<raw>.+)$ | 任务执行失败：{raw} | Task execution failed: {raw} |
+| submission_lost_raw | ^提交已被上游接受但结果无法取回：(?P<raw>.+)$ | 提交已被上游接受但结果无法取回：{raw} | The provider accepted the submission, but its result cannot be retrieved: {raw} |
+| unknown_http | ^未知错误（HTTP (?P<status>\d+)）：(?P<raw>.+)$ | 未知错误（HTTP {status}）：{raw} | Unknown error (HTTP {status}): {raw} |
+| submission_lost_remedy | 这次请求的结果没能取回，task_status 也查不到，请直接重新发起。 | 这次请求的结果没能取回，task_status 也查不到，请直接重新发起。 | This request's result could not be retrieved, and task_status cannot find it either. Submit the request again. |
+| submission_lost_remedy_understand | 这次请求的回答没能取回，task_status 也查不到，请直接重新调用 understand_vision。如果是耗时过长导致的，可以降低 analysis_depth、缩短视频或收窄问题后再调用。 | 这次请求的回答没能取回，task_status 也查不到，请直接重新调用 understand_vision。如果是耗时过长导致的，可以降低 analysis_depth、缩短视频或收窄问题后再调用。 | This request's answer could not be retrieved, and task_status cannot find it either. Call understand_vision again. If it took too long, lower analysis_depth, shorten the video, or narrow the question before calling again. |
 
 再生成：`python scripts/document_error_normalization.py src/model_generation_tasks_202611131529.csv`。

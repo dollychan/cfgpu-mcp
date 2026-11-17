@@ -5,6 +5,12 @@ retain their existing error contract. Patterns describe observed reasons, never
 generic codes such as InvalidParameter or GENERATION_PROVIDER_REQUEST_FAILED.
 Describe the reported failure only. Advice is permitted only when explicitly
 present in every upstream variant matched by that rule; never infer a remedy.
+
+``MCP_RULES`` is the second table: messages this server writes itself (a missing
+task, a lost submission, transport failures). Those are translated whole, advice
+included, because the advice is ours and already sits in ``content.message`` — the
+translation must say what the agent was told, no more and no less. Upstream wording
+embedded in one of them (``请求参数错误：<raw>``) is carried verbatim, never rewritten.
 """
 from __future__ import annotations
 
@@ -98,3 +104,96 @@ def normalize_error(message: str, original: dict | None = None) -> dict[str, str
             rule, values = matched
             return {"zh": rule.zh.format(**values), "en": rule.en.format(**values)}
     return None
+
+
+# ── MCP-side messages ────────────────────────────────────────────────────────
+#
+# Matched against this server's own wording, anchored at the start, so stored rows
+# written before this table existed translate too. Each pattern mirrors one raise
+# site; ``test_error_normalization.py`` builds them from the real code paths, so a
+# reworded message fails a test instead of silently losing its translation.
+# ``{detail}`` / ``{raw}`` carry text this server did not author (an exception
+# string, the upstream's own message) and are inserted unchanged.
+
+MCP_RULES = (
+    Rule("task_not_found", r"^Task (?P<task_id>'[^']*'|\"[^\"]*\") not found\.$", "未找到 request_id 为 {task_id} 的任务。", "No task was found for request_id {task_id}."),
+    Rule("request_id_missing", r"^缺少 request_id：", "缺少 request_id：请传入 generate_* 调用时使用的 request_id（未提供 request_id 的调用则传它返回的 task_id）。", "request_id is missing: pass the request_id used in the generate_* call (for a call that supplied none, pass the task_id it returned)."),
+    Rule("request_id_row_unreadable", r"^request_id (?P<task_id>'[^']*'|\"[^\"]*\") 已被占用，但对应的任务行读不回来。", "request_id {task_id} 已被占用，但对应的任务行读不回来。请换一个 request_id 重新提交。", "request_id {task_id} is already in use, but its task record could not be read back. Submit again with a different request_id."),
+    Rule("no_artifact", r"^Task reported success but returned no artifact URLs or inline media$", "上游报告任务成功，但没有返回任何产物 URL 或内联媒体。", "The provider reported success but returned no artifact URL or inline media."),
+    Rule("sync_no_artifact", r"^同步媒体 API 返回成功，但没有返回任何产物 URL 或内联媒体。", "同步媒体 API 返回成功，但没有返回任何产物 URL 或内联媒体。", "The synchronous media API reported success but returned no artifact URL or inline media."),
+    Rule("task_id_unparsed", r"^没能从上游响应中解析出 task_id，", "没能从上游响应中解析出 task_id，这次请求的结果无法取回，task_status 也查不到，请直接重新发起。", "No task_id could be parsed from the provider response, so this request's result cannot be retrieved and task_status cannot find it either. Submit the request again."),
+    Rule("failed_without_message", r"^Task failed without error message$", "任务失败，没有错误信息。", "The task failed without an error message."),
+    Rule("failed_without_detail", r"^Task failed \(upstream reported no error detail\)$", "任务失败，上游没有提供错误详情。", "The task failed; the provider reported no error detail."),
+    Rule("failed_unparsed_reason", r"^Task failed\. 上游响应（截断）：", "任务失败，没能从上游响应中解析出失败原因。", "The task failed, and no failure reason could be parsed from the provider response."),
+    Rule("auth_invalid", r"^API Token 无效或已过期，请检查 CFGPU_API_TOKEN。$", "API Token 无效或已过期，请检查 CFGPU_API_TOKEN。", "The API token is invalid or expired. Check CFGPU_API_TOKEN."),
+    Rule("auth_missing", r"^缺少 CFGPU API Token：", "缺少 CFGPU API Token：请在请求头携带 Authorization，或设置 CFGPU_API_TOKEN。", "The CFGPU API token is missing: send it in the Authorization header, or set CFGPU_API_TOKEN."),
+    Rule("auth_provider_missing", r"^provider (?P<provider>'[^']*') 缺少凭据：请设置环境变量 (?P<env>[^。]+)。", "provider {provider} 缺少凭据：请设置环境变量 {env}。（该 provider 不使用请求头里的用户 token，也不回退到 CFGPU_API_TOKEN。）", "Provider {provider} has no credentials: set the environment variable {env}. (This provider does not use the user token from the request header and does not fall back to CFGPU_API_TOKEN.)"),
+    Rule("rate_limit", r"^请求过于频繁，请稍后重试。$", "请求过于频繁，请稍后重试。", "Too many requests. Try again later."),
+    Rule("quota_exceeded", r"^账户配额不足，请检查余额。$", "账户配额不足，请检查余额。", "The account quota is insufficient. Check the balance."),
+    Rule("content_blocked", r"^内容被审核拦截，请修改 prompt 后重试。$", "内容被审核拦截，请修改 prompt 后重试。", "The content was blocked by moderation. Revise the prompt and try again."),
+    Rule("model_unavailable_mcp", r"^所选模型暂不可用，请尝试其他模型。$", "所选模型暂不可用，请尝试其他模型。", "The selected model is temporarily unavailable. Try another model."),
+    Rule("connect_timeout", r"^(?P<elapsed>[\d.]+)s 内没能与 provider (?P<provider>'[^']*') 建立连接（上游还没收到任何请求），通常是服务端到上游的网络不通。可以稍后重试；如果持续失败，请告诉用户服务端网络需要检查。$", "{elapsed}s 内没能与 provider {provider} 建立连接（上游还没收到任何请求），通常是服务端到上游的网络不通。可以稍后重试；如果持续失败，请告诉用户服务端网络需要检查。", "Could not connect to provider {provider} within {elapsed}s (the provider has received nothing yet); usually the server cannot reach the provider over the network. You can retry later; if it keeps failing, tell the user the server's network needs checking."),
+    Rule("request_timeout_sent", r"^请求超时（已耗时 (?P<elapsed>[\d.]+)s，上限 (?P<budget>[\d.]+)s，provider (?P<provider>'[^']*')）。请求已经发出但没等到回应。$", "请求超时（已耗时 {elapsed}s，上限 {budget}s，provider {provider}）。请求已经发出但没等到回应。", "The request timed out ({elapsed}s elapsed, limit {budget}s, provider {provider}). It was sent, but no response arrived."),
+    Rule("request_timeout", r"^请求超时（已耗时 (?P<elapsed>[\d.]+)s，上限 (?P<budget>[\d.]+)s，provider (?P<provider>'[^']*')）。请稍后重试。$", "请求超时（已耗时 {elapsed}s，上限 {budget}s，provider {provider}）。请稍后重试。", "The request timed out ({elapsed}s elapsed, limit {budget}s, provider {provider}). Try again later."),
+    Rule("network_failed", r"^网络请求失败：(?P<detail>.+)$", "网络请求失败：{detail}", "Network request failed: {detail}"),
+    Rule("poll_processing_failed", r"^轮询响应处理失败：(?P<detail>.+)$", "轮询响应处理失败：{detail}", "Failed to process the poll response: {detail}"),
+    Rule("invalid_params_raw", r"^请求参数错误：(?P<raw>.+)$", "请求参数错误：{raw}", "Invalid request parameters: {raw}"),
+    Rule("task_failed_raw", r"^任务执行失败：(?P<raw>.+)$", "任务执行失败：{raw}", "Task execution failed: {raw}"),
+    Rule("submission_lost_raw", r"^提交已被上游接受但结果无法取回：(?P<raw>.+)$", "提交已被上游接受但结果无法取回：{raw}", "The provider accepted the submission, but its result cannot be retrieved: {raw}"),
+    Rule("unknown_http", r"^未知错误（HTTP (?P<status>\d+)）：(?P<raw>.+)$", "未知错误（HTTP {status}）：{raw}", "Unknown error (HTTP {status}): {raw}"),
+)
+
+#: The remedies ``TaskManager._record_submit_failure`` appends to a lost submission's
+#: reason (``task_manager._submission_lost_remedy``). ``pattern`` is a literal suffix
+#: here, not a regex: the reason in front is translated by the tables above and the two
+#: halves are joined.
+SUBMISSION_LOST_REMEDIES = (
+    Rule("submission_lost_remedy", "这次请求的结果没能取回，task_status 也查不到，请直接重新发起。", "这次请求的结果没能取回，task_status 也查不到，请直接重新发起。", "This request's result could not be retrieved, and task_status cannot find it either. Submit the request again."),
+    Rule("submission_lost_remedy_understand", "这次请求的回答没能取回，task_status 也查不到，请直接重新调用 understand_vision。如果是耗时过长导致的，可以降低 analysis_depth、缩短视频或收窄问题后再调用。", "这次请求的回答没能取回，task_status 也查不到，请直接重新调用 understand_vision。如果是耗时过长导致的，可以降低 analysis_depth、缩短视频或收窄问题后再调用。", "This request's answer could not be retrieved, and task_status cannot find it either. Call understand_vision again. If it took too long, lower analysis_depth, shorten the video, or narrow the question before calling again."),
+)
+
+_MCP_COMPILED = tuple((rule, re.compile(rule.pattern, re.S)) for rule in MCP_RULES)
+
+
+def match_mcp_message(message: str) -> tuple[Rule, dict[str, str]] | None:
+    for rule, pattern in _MCP_COMPILED:
+        match = pattern.search(message)
+        if match:
+            return rule, match.groupdict()
+    return None
+
+
+def _translate(message: str, original: dict | None) -> dict[str, str] | None:
+    # Upstream reasons first: an upstream message wrapped in one of our frames
+    # (``任务执行失败：<raw>``) is better described by its own rule than echoed raw.
+    translated = normalize_error(message, original)
+    if translated is not None:
+        return translated
+    matched = match_mcp_message(message)
+    if matched is None:
+        return None
+    rule, values = matched
+    return {"zh": rule.zh.format(**values), "en": rule.en.format(**values)}
+
+
+def localize_error(
+    message: str, original: dict | None = None, error_type: str | None = None
+) -> dict[str, str] | None:
+    """``{zh, en}`` for an error message this server returns, or None if unknown.
+
+    Covers upstream reasons (``RULES``) and this server's own wording (``MCP_RULES``).
+    A ``submission_lost`` message is ``<reason><remedy>``: both halves must be known,
+    since a translation that kept the remedy and dropped an untranslatable reason would
+    tell a client user less than the agent was told.
+    """
+    if error_type == "submission_lost":
+        for remedy in SUBMISSION_LOST_REMEDIES:
+            if message.endswith(remedy.pattern):
+                reason = message[: -len(remedy.pattern)]
+                if not reason:
+                    return {"zh": remedy.zh, "en": remedy.en}
+                head = _translate(reason, original)
+                if head is None:
+                    return None
+                return {"zh": head["zh"] + remedy.zh, "en": f"{head['en']} {remedy.en}"}
+    return _translate(message, original)

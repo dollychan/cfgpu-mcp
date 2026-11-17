@@ -251,11 +251,12 @@ def tool_error_result(e: Exception) -> dict | CallToolResult:
     import json
 
     from mcp.types import CallToolResult, TextContent
-    from cfgpu_mcp.error_normalization import normalize_error
+    from cfgpu_mcp.error_normalization import localize_error
 
     result = tool_error_dict(e)
     translations = (
-        normalize_error(e.user_message, e.original) if isinstance(e, CFGPUError) else None
+        localize_error(e.user_message, e.original, e.error_type)
+        if isinstance(e, CFGPUError) else None
     )
     if translations is None:
         return result
@@ -264,6 +265,38 @@ def tool_error_result(e: Exception) -> dict | CallToolResult:
         structuredContent={"message_i18n": translations},
         isError=False,
     )
+
+
+def split_with_i18n(result: object, *, structured_keys: tuple[str, ...]) -> object:
+    """``split_structured``, plus a client-only translation of ``last_error``.
+
+    A non-terminal result (``task_status`` / ``task_wait``, or ``generate_*`` that ran
+    out of budget) may carry ``last_error`` — the reason we lost sight of the task.
+    It stays in ``content`` verbatim, since the model acts on it. The translated copy
+    rides ``structuredContent.last_error`` as the whole dict plus ``message_i18n``, so a
+    host that merges structuredContent over content (DeerFlow's
+    MessageStreamMiddleware) ends up with every original field and the translation side
+    by side — the same ``message`` / ``message_i18n`` pairing an error result has.
+    """
+    from mcp.types import CallToolResult
+    from cfgpu_mcp.error_normalization import localize_error
+    from cfgpu_mcp.tool_registry import split_structured
+
+    last_error = result.get("last_error") if isinstance(result, dict) else None
+    wire = split_structured(result, structured_keys=structured_keys)
+    if not isinstance(wire, CallToolResult) or not isinstance(last_error, dict):
+        return wire
+    message = last_error.get("message")
+    if not isinstance(message, str):
+        return wire
+    translations = localize_error(message, None, last_error.get("error_type"))
+    if translations is None:
+        return wire
+    wire.structuredContent = {
+        **(wire.structuredContent or {}),
+        "last_error": {**last_error, "message_i18n": translations},
+    }
+    return wire
 
 
 def tool_error_dict(e: Exception) -> dict:
