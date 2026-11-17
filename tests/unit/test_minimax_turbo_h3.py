@@ -47,7 +47,7 @@ def test_only_resolution_differs_from_h3(registry, turbo):
     assert turbo.default_resolution == h3.default_resolution
     for field in ("provider", "endpoint", "poll_endpoint", "tasks", "inputs", "outputs",
                   "aspect_ratios", "min_duration_seconds", "max_duration_seconds",
-                  "prompt_dialect", "prompt_limits"):
+                  "prompt_dialect"):
         assert getattr(turbo, field) == getattr(h3, field), field
 
 

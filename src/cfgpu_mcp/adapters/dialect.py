@@ -328,19 +328,3 @@ def resolve_dialect_id(adapter_id: str, task_type: str, declared: Any) -> Option
             f"{adapter_id}: unknown prompt_dialect {declared!r} (valid: {sorted(load_dialects())})"
         )
     return declared
-
-
-#: Units a ``prompt_limits:`` block may bound (see ``ModelAdapter.prompt_limits``).
-PROMPT_LIMIT_UNITS = frozenset({"chars", "zh_chars", "en_words"})
-
-
-def parse_prompt_limits(adapter_id: str, raw: Any) -> Optional[dict[str, int]]:
-    """Validate an adapter's ``prompt_limits:`` (``None`` / ``{}`` = no limit)."""
-    if not raw:
-        return None
-    if not isinstance(raw, dict) or set(raw) - PROMPT_LIMIT_UNITS:
-        raise ValueError(f"{adapter_id}: prompt_limits keys must be among {sorted(PROMPT_LIMIT_UNITS)}")
-    for unit, value in raw.items():
-        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-            raise ValueError(f"{adapter_id}: prompt_limits.{unit} must be a positive integer")
-    return dict(raw)

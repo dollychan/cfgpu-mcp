@@ -22,8 +22,9 @@ The per-model refusals live in :func:`check_prompt_refs`, called from
 ``ModelAdapter.supports()`` so ``model="auto"`` routes around them instead of failing: a
 placeholder naming a kind the model has no way to name, a marker the dialect cannot
 write, a shot past the duration this model resolves to, a reference a ``required``
-dialect's rendered prompt never names (D-DL3), and a rendered prompt over the model's
-``prompt_limits``. Every message talks about the unified notation only; none names a
+dialect's rendered prompt never names (D-DL3). Prompt length is never refused here:
+the cards' ceilings (Seedance's 500 汉字 and the like) are advice, not hard limits.
+Every message talks about the unified notation only; none names a
 model's own label (I-DL5).
 
 :func:`render_for` also applies two request facts that follow from the markup: D-DL10
@@ -303,22 +304,6 @@ def _parse(prompt: str) -> list[markup.Node]:
         raise CFGPUError(error_type="invalid_params", user_message=f"{exc} 本次请求未发送。", card_hint=False) from None
 
 
-def _over_limit(adapter: "ModelAdapter", prompt: str) -> Optional[str]:
-    limits = getattr(adapter, "prompt_limits", None)
-    if not isinstance(limits, dict):
-        return None
-    measured = {
-        "chars": (len(prompt), "字符"),
-        "zh_chars": (len(re.findall(r"[\u4e00-\u9fff\u3400-\u4dbf]", prompt)), "个汉字"),
-        "en_words": (len(re.findall(r"[A-Za-z]+(?:['’-][A-Za-z]+)*", prompt)), "个英文词"),
-    }
-    for unit, ceiling in limits.items():
-        value, noun = measured[unit]
-        if value > ceiling:
-            return f"{ceiling} {noun}（这次是 {value}）"
-    return None
-
-
 def _lenient_for_model(req: Any) -> bool:
     """A real call naming one concrete model, so the per-model checks repair instead of refuse.
 
@@ -407,8 +392,7 @@ def check_prompt_refs(adapter: "ModelAdapter", req: Any) -> tuple[bool, str]:
     (:func:`_degrade_for`), and the ``required`` dialect's "reference not named" check is
     skipped. A person who edited the prompt on an
     approval card decided what the model is told; the preflight is where a planner's
-    mistakes are reported. Only the prompt length limit still applies — it is not about
-    placeholders, and the upstream would refuse it anyway.
+    mistakes are reported.
     """
     if not _is_video(req):
         return True, ""
@@ -478,12 +462,6 @@ def check_prompt_refs(adapter: "ModelAdapter", req: Any) -> tuple[bool, str]:
                 f"video_refs / audio_refs 中的对应项），本次请求未发送。"
             )
 
-    over = _over_limit(adapter, rendered.prompt) if has_markup else None
-    if over:
-        return False, (
-            f"{adapter.model_name} 的 prompt 上限是 {over}（按替换完 [[...]] 后的最终文本计算）。"
-            f"请精简 prompt，或换一个上限更高的模型。"
-        )
     return True, ""
 
 

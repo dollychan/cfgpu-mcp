@@ -161,16 +161,9 @@ def test_a_shot_past_the_models_own_duration_becomes_text(registry):
 
 
 def test_a_marker_the_dialect_cannot_write_becomes_text():
-    adapter = SimpleNamespace(model_name="m", prompt_dialect="image-ordinal", task_type="video", prompt_limits=None,
+    adapter = SimpleNamespace(model_name="m", prompt_dialect="image-ordinal", task_type="video",
                               resolve_duration_seconds=lambda req: 5)
     assert check_prompt_refs(adapter, _video(model="m", prompt="[[shot 0-3]] 走")) == (True, "")
-
-
-def test_the_length_limit_still_applies(registry):
-    """Not a placeholder question — the upstream would refuse it anyway."""
-    adapter = registry.get("wan-video")
-    ok, reason = adapter.supports(_video(model="wan-video", prompt="[[shot 0-3]] " + "雨" * 500, duration_seconds=5))
-    assert not ok and "500 个汉字" in reason
 
 
 # ── image tools ──────────────────────────────────────────────────────────────

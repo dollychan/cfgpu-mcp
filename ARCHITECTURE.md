@@ -449,8 +449,8 @@ adapter 需要自己记得。带 `regions` 的请求原样放行：`supports()` 
 
 **分镜、台词、画面文字、声景同样走统一写法**（P2，`adapters/prompt_markup.py` 解析成与模型无关的节点）：
 `[[shot 0-3]]` / `[[say S1: 原话]]` / `[[text: 文字]]` / `[[sound: …]]` / `[[music: …]]`。语法错误、镜头时间
-倒序或重叠、镜头超出显式给定的时长属于模型无关的问题，在 schema 层拒绝；没给时长时镜头超出该模型的默认时长、方言写不出某个标记、渲染后超过
-`adapter.yaml` 的 `prompt_limits`（只对用了 `[[...]]` 的 prompt 量）属于 per-model 问题，在 `supports()` 拒绝。
+倒序或重叠、镜头超出显式给定的时长属于模型无关的问题，在 schema 层拒绝；没给时长时镜头超出该模型的默认时长、方言写不出某个标记属于 per-model 问题，在
+`supports()` 拒绝。prompt 字数从不拒绝：模型卡上的上限（如 Seedance 500 汉字）只是建议，不是硬约束。
 方言决定写法：Seedance `[0-3秒]：`，万相 `第1个镜头[0-3秒] `，自然语言兜底 `0–3 秒：`；H3 改用官方字段布局
 （`integrated_multimodal_description` / `overall_soundscape` / `non_diegetic_music`，r2v 用 `detailed_description`），
 `[Shot N] At MM:SS.mmm,` 切镜、`(S1) says: <d>[Chinese] …</d>` 台词，并按首帧/尾帧推出 I2VA / FL2VA / L2VA 模式头。

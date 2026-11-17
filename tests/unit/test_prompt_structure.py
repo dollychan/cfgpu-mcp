@@ -16,7 +16,7 @@ import pytest
 from pydantic import ValidationError
 
 from cfgpu_mcp.adapters import prompt_markup as markup
-from cfgpu_mcp.adapters.dialect import parse_dialects, parse_prompt_limits
+from cfgpu_mcp.adapters.dialect import parse_dialects
 from cfgpu_mcp.adapters.prompt_render import (
     PROMPT_NOTE,
     STRUCTURE_NOTE,
@@ -169,22 +169,6 @@ def test_structural_fields_are_a_closed_set(extra, fragment):
         parse_dialects(_doc(d={"version": 1, "ref": {"image": "x{n}"}, **extra}))
 
 
-def test_prompt_limits_are_validated():
-    assert parse_prompt_limits("a", None) is None
-    assert parse_prompt_limits("a", {}) is None
-    assert parse_prompt_limits("a", {"chars": 7000}) == {"chars": 7000}
-    for bad in ({"tokens": 5}, {"chars": 0}, {"chars": True}, {"chars": "7000"}, [7000]):
-        with pytest.raises(ValueError):
-            parse_prompt_limits("a", bad)
-
-
-def test_limits_follow_the_extends_chain(registry):
-    assert registry.get("wan-video").prompt_limits == {"zh_chars": 500, "en_words": 1000}
-    assert registry.get("doubao-seedance-2-0-fast").prompt_limits == {"zh_chars": 500, "en_words": 1000}
-    assert registry.get("doubao-seedance-2-5").prompt_limits is None  # its card states none
-    assert registry.get("MiniMax-H3").prompt_limits == {"chars": 7000}
-
-
 # ── golden renders, one per layout ───────────────────────────────────────────
 
 
@@ -299,24 +283,20 @@ def test_a_shot_past_an_explicit_duration_is_refused_at_the_schema():
 
 
 def test_a_marker_the_dialect_cannot_write_is_refused():
-    adapter = SimpleNamespace(model_name="m", prompt_dialect="image-ordinal", task_type="video", prompt_limits=None,
+    adapter = SimpleNamespace(model_name="m", prompt_dialect="image-ordinal", task_type="video",
                               resolve_duration_seconds=lambda req: 5)
     ok, reason = check_prompt_refs(adapter, _video(prompt="[[shot 0-3]] 走"))
     assert not ok and "[[shot …]]" in reason
 
 
-def test_the_length_limit_is_measured_after_rendering(registry):
-    """The rendered shot label 「[0-3秒]：」 carries one CJK character of its own, so 500
-    characters as written are 501 as sent — and that is what the card's ceiling bounds."""
-    adapter = registry.get("wan-video")
-    ok, reason = adapter.supports(_video(prompt="[[shot 0-3]] " + "雨" * 500, duration_seconds=5))
-    assert not ok and "500 个汉字" in reason and "501" in reason
-    assert adapter.supports(_video(prompt="[[shot 0-3]] " + "雨" * 499, duration_seconds=5))[0]
-
-
-def test_a_prompt_without_markup_is_not_length_checked(registry):
-    """The server did not touch it, so nothing changes for it (no new refusal)."""
-    assert registry.get("wan-video").supports(_video(prompt="雨" * 800, duration_seconds=5))[0]
+def test_prompt_length_is_never_refused(registry):
+    """The cards' prompt ceilings (Seedance 500 汉字, MiniMax H3 7000 字符) are advice,
+    not hard limits: neither a marked-up nor a plain prompt is refused for its length."""
+    for name in ("wan-video", "doubao-seedance-2-0-fast", "MiniMax-H3"):
+        adapter = registry.get(name)
+        assert adapter.supports(_video(prompt="[[shot 0-3]] " + "雨" * 800, duration_seconds=5))[0], name
+        assert adapter.supports(_video(prompt="雨" * 8000, duration_seconds=5))[0], name
+        assert adapter.supports(_video(prompt="rain " * 1500, duration_seconds=5))[0], name
 
 
 def test_render_for_raises_what_supports_refuses(registry):
@@ -327,9 +307,8 @@ def test_render_for_raises_what_supports_refuses(registry):
 def test_no_refusal_names_a_model_label(registry):
     messages = [
         registry.get("wan-video").supports(_video(prompt="[[shot 0-8]] 走"))[1],
-        registry.get("wan-video").supports(_video(prompt="[[shot 0-3]] " + "雨" * 500, duration_seconds=5))[1],
         check_prompt_refs(SimpleNamespace(model_name="m", prompt_dialect="image-ordinal", task_type="video",
-                                          prompt_limits=None, resolve_duration_seconds=lambda r: 5),
+                                          resolve_duration_seconds=lambda r: 5),
                           _video(prompt="[[shot 0-3]] [[say: hi]]"))[1],
     ]
     for kw in ({"prompt": "[[shot 3-1]]"}, {"prompt": "[[say 你好]]"}, {"prompt": "[[text]]"},
