@@ -542,3 +542,59 @@ async def test_get_status_pending_envelope_carries_elapsed_seconds():
 
     assert result["elapsed_seconds"] >= 47
     await db.close()
+
+
+# ── The task row cannot be read ─────────────────────────────────────────────
+# Reading the row comes before any poll, so a repository failure there (database
+# unreachable, pool exhausted) used to escape as a bare exception — `{error: true}` with
+# no error_type, a terminal verdict for a task nothing was known about. It is answered
+# as "still running" with last_error instead: not observed, poll again. "running" rather
+# than a guess at the stored status, because it is the one that never invites a
+# resubmission (`submitting` would say resending is safe).
+
+
+def _unreadable_repo():
+    repo = MagicMock()
+    repo.get_task = AsyncMock(side_effect=OSError("could not connect to server"))
+    return repo
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("call", ["get_status", "wait_for_task"])
+async def test_an_unreadable_row_is_answered_as_still_running(call):
+    with patch("cfgpu_mcp.config.get_task_repository", AsyncMock(return_value=_unreadable_repo())):
+        result = await getattr(task_service, call)(request_id="r-7")
+
+    assert "error" not in result
+    assert result["status"] == "running"
+    assert result["request_id"] == "r-7"
+    assert result["last_error"]["error_type"] == "unknown"
+    assert result["last_error"]["retryable"] is True
+    assert "could not connect to server" in result["last_error"]["message"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("call", ["get_status", "wait_for_task"])
+async def test_an_unopenable_repository_is_answered_as_still_running(call):
+    with patch(
+        "cfgpu_mcp.config.get_task_repository",
+        AsyncMock(side_effect=OSError("connection refused")),
+    ):
+        result = await getattr(task_service, call)(task_id="row-3")
+
+    assert "error" not in result
+    assert result["status"] == "running"
+    assert result["task_id"] == "row-3"
+    assert result["last_error"]["retryable"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("call", ["get_status", "wait_for_task"])
+async def test_a_missing_row_is_still_an_error(call):
+    """Only an *unreadable* row is "still running": a row that is not there is an answer."""
+    repo = MagicMock()
+    repo.get_task = AsyncMock(return_value=None)
+    with patch("cfgpu_mcp.config.get_task_repository", AsyncMock(return_value=repo)):
+        with pytest.raises(task_service.CFGPUError) as exc:
+            await getattr(task_service, call)(request_id="r-404")
+    assert exc.value.error_type == "invalid_params"

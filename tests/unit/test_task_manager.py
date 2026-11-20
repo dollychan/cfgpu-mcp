@@ -1066,3 +1066,74 @@ async def test_an_explicit_running_status_is_believed_even_beside_a_reason_field
 
     assert task.status == "running"
     await db.close()
+
+
+# ── Failures outside CFGPUError while waiting ───────────────────────────────
+# A poll that blows up outside CFGPUError (the repository write after a good upstream
+# answer, a parse crash) says nothing about the task either. Raising it out of wait()
+# turned a live job into `error: true` — a terminal verdict a host acts on (it stops
+# watching and reports failure) for a task still running upstream.
+
+
+@pytest.mark.asyncio
+async def test_wait_absorbs_a_poll_failure_outside_cfgpu_error():
+    from cfgpu_mcp.tool_registry import NormalizedResult
+
+    tm, db, adapter, req, task = await _waiting_tm(
+        [OSError("connection reset by peer"), {"id": "task-1", "status": "succeeded"}]
+    )
+    adapter.parse_response.return_value = NormalizedResult(
+        urls=["https://cdn/v.mp4"], expires_at=None, task_id="task-1",
+        model_used="wan-video", seed=None, usage=None,
+    )
+
+    outcome = await tm.wait(task, adapter, req)
+
+    assert outcome.task.status == "succeeded"
+    assert outcome.last_error is None
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_wait_hands_back_a_running_task_after_repeated_failures_outside_cfgpu_error():
+    from cfgpu_mcp.task_manager import MAX_CONSECUTIVE_POLL_FAILURES
+
+    tm, db, adapter, req, task = await _waiting_tm(
+        [OSError("connection reset by peer") for _ in range(MAX_CONSECUTIVE_POLL_FAILURES + 3)]
+    )
+
+    outcome = await tm.wait(task, adapter, req)
+
+    assert tm._client_for(None).get.await_count == MAX_CONSECUTIVE_POLL_FAILURES
+    assert outcome.task.id == "task-1"
+    assert outcome.task.status not in ("failed", "succeeded")
+    assert outcome.last_error["error_type"] == "unknown"
+    assert outcome.last_error["retryable"] is True
+    assert "connection reset by peer" in outcome.last_error["message"]
+    assert outcome.last_error["consecutive_failures"] == MAX_CONSECUTIVE_POLL_FAILURES
+    await db.close()
+
+
+@pytest.mark.asyncio
+async def test_wait_absorbs_a_failed_re_read_of_a_row_not_yet_upstream():
+    """`submitting` / `dispatching` advance only through the row, so the re-read is the
+    poll there — and the same rule holds for its failures."""
+    from cfgpu_mcp.task_manager import MAX_CONSECUTIVE_POLL_FAILURES
+
+    tm, db = await _make_tm()
+    adapter = _async_adapter()
+    req = GenerateVideoInput(prompt="x", request_id="task-1")
+    task = Task({
+        "id": "task-1", "adapter_id": "wan-2-0", "status": "dispatching",
+        "payload": {}, "result": None, "error": None,
+        "created_at": 0.0, "updated_at": 0.0, "upstream_task_id": None,
+    })
+    tm._repo.get_task = AsyncMock(side_effect=OSError("database is unreachable"))
+
+    outcome = await tm.wait(task, adapter, req)
+
+    assert tm._repo.get_task.await_count == MAX_CONSECUTIVE_POLL_FAILURES
+    assert outcome.task.status == "dispatching"
+    assert outcome.last_error["error_type"] == "unknown"
+    assert outcome.last_error["retryable"] is True
+    await db.close()

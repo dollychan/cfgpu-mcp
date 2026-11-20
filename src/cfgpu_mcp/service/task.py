@@ -9,6 +9,7 @@ from cfgpu_mcp.task_manager import (
     _LABEL_KEY,
     _REQUEST_ID_KEY,
     _last_error_dict,
+    _unclassified_poll_error,
     task_failed_error,
 )
 from cfgpu_mcp.tool_registry import normalize_image_items_urls, pending_result, stamp_echo
@@ -152,21 +153,54 @@ def _row_key(request_id: str | None, task_id: str | None) -> str:
     return handle
 
 
-async def get_status(request_id: str | None = None, *, task_id: str | None = None) -> dict[str, Any]:
-    from cfgpu_mcp.config import client_for, get_task_repository, get_registry
+async def _read_task(handle: str, request_id: str | None) -> tuple[Any, Any] | dict[str, Any]:
+    """Open the repository and read the task row: ``(TaskManager, Task)``, or the answer.
+
+    A row that is not there is an answer, and an error (``invalid_params``). A row that
+    could not be *read* — the repository unreachable, a pool exhausted, a query that
+    failed — is not: it says nothing about the task, which is upstream either way. It is
+    answered as the non-terminal envelope with ``last_error``, ``status: "running"``,
+    the same shape as a wait that lost sight of the task. Escaping as an exception it
+    became ``{error: true}`` with no ``error_type`` — a terminal verdict, which a host
+    acts on by reporting a failure and stopping, for a task that may be about to finish.
+
+    ``running`` rather than a guess at the stored status, because it is the one that
+    never invites a resubmission: ``submitting`` would tell the caller resending is
+    safe, which nothing here can know.
+    """
+    from cfgpu_mcp.config import client_for, get_task_repository
     from cfgpu_mcp.task_manager import TaskManager
 
-    task_id = _row_key(request_id, task_id)
-    repo = await get_task_repository()
-    tm = TaskManager(client_for, repo)
     try:
-        task = await tm.status(task_id)
+        repo = await get_task_repository()
+        tm = TaskManager(client_for, repo)
+        return tm, await tm.status(handle)
     except KeyError as e:
         raise CFGPUError(
             error_type="invalid_params",
-            user_message=f"Task {task_id!r} not found.",
-            original={"task_id": task_id},
+            user_message=f"Task {handle!r} not found.",
+            original={"task_id": handle},
         ) from e
+    except CFGPUError:
+        raise
+    except Exception as e:  # noqa: BLE001 — see the docstring
+        logger.warning("读取任务记录 %s 失败，按仍在运行返回：%s", handle, e)
+        last_error = _unclassified_poll_error(e)
+        last_error["message"] = f"暂时读不到任务记录：{e}。任务本身不受影响，请稍后再查询。"
+        return stamp_echo(
+            pending_result(handle, "running", last_error), request_id=request_id, row_id=handle
+        )
+
+
+async def get_status(request_id: str | None = None, *, task_id: str | None = None) -> dict[str, Any]:
+    from cfgpu_mcp.config import get_registry
+
+    handle = _row_key(request_id, task_id)
+    read = await _read_task(handle, request_id)
+    if isinstance(read, dict):
+        return read
+    tm, task = read
+    task_id = handle
 
     # Client-driven polling: each task_status call carries the caller's token,
     # so we do ONE live upstream poll to advance the task — this is what lets a
@@ -233,22 +267,14 @@ async def wait_for_task(
     *,
     task_id: str | None = None,
 ) -> dict[str, Any]:
-    from cfgpu_mcp.config import client_for, get_task_repository, get_registry
-    from cfgpu_mcp.task_manager import TaskManager
+    from cfgpu_mcp.config import get_registry
 
-    task_id = _row_key(request_id, task_id)
-    repo = await get_task_repository()
+    handle = _row_key(request_id, task_id)
+    read = await _read_task(handle, request_id)
+    if isinstance(read, dict):
+        return read
+    tm, task = read
     registry = get_registry()
-    tm = TaskManager(client_for, repo)
-
-    try:
-        task = await tm.status(task_id)
-    except KeyError as e:
-        raise CFGPUError(
-            error_type="invalid_params",
-            user_message=f"Task {task_id!r} not found.",
-            original={"task_id": task_id},
-        ) from e
 
     adapter = registry.get(task.adapter_id)
 

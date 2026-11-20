@@ -523,6 +523,30 @@ class WaitOutcome(NamedTuple):
     last_error: dict[str, Any] | None = None
 
 
+def _unclassified_poll_error(
+    e: BaseException, *, consecutive_failures: int = 0, elapsed: int | None = None
+) -> dict[str, Any]:
+    """``last_error`` for a failure that is not a ``CFGPUError`` — a repository that
+    could not be reached, a parse that crashed.
+
+    It carries no classification we can trust, so it is ``unknown`` and ``retryable:
+    True`` — never tell a caller to stop polling a live task — the same shape
+    ``get_status`` gives the same failure. Raising it instead turned a live task into
+    ``error: true``: a terminal verdict a host acts on by reporting a failure that did
+    not happen, while the job ran on upstream.
+    """
+    out: dict[str, Any] = {
+        "error_type": "unknown",
+        "message": f"轮询任务时出错：{e}",
+        "retryable": True,
+    }
+    if elapsed is not None:
+        out["elapsed"] = elapsed
+    if consecutive_failures:
+        out["consecutive_failures"] = consecutive_failures
+    return out
+
+
 def _last_error_dict(
     e: CFGPUError, *, consecutive_failures: int = 0, elapsed: int | None = None
 ) -> dict[str, Any]:
@@ -1126,7 +1150,24 @@ class TaskManager:
                 # row is the only thing that can advance this — the submission may
                 # still be in flight in this process (shielded past our caller's
                 # cancellation) or in another instance — so re-read it instead.
-                row = await self._repo.get_task(task.id)
+                try:
+                    row = await self._repo.get_task(task.id)
+                except Exception as e:  # noqa: BLE001 — see _unclassified_poll_error
+                    consecutive_failures += 1
+                    logger.warning(
+                        "重读任务 %s 失败（连续第 %d/%d 次，已等待 %ds）：%s",
+                        task.id, consecutive_failures, MAX_CONSECUTIVE_POLL_FAILURES, elapsed, e,
+                    )
+                    if consecutive_failures >= MAX_CONSECUTIVE_POLL_FAILURES:
+                        return WaitOutcome(
+                            task,
+                            _unclassified_poll_error(
+                                e, consecutive_failures=consecutive_failures, elapsed=elapsed
+                            ),
+                        )
+                    interval = min(interval * backoff, max_interval)
+                    continue
+                consecutive_failures = 0
                 if row is not None:
                     task = Task(row)
                 interval = min(interval * backoff, max_interval)
@@ -1168,6 +1209,21 @@ class TaskManager:
                             e,
                             consecutive_failures=consecutive_failures,
                             elapsed=elapsed,
+                        ),
+                    )
+                interval = min(interval * backoff, max_interval)
+                continue
+            except Exception as e:  # noqa: BLE001 — see _unclassified_poll_error
+                consecutive_failures += 1
+                logger.warning(
+                    "轮询任务 %s 时出现未分类异常（连续第 %d/%d 次，已等待 %ds）：%s",
+                    task.id, consecutive_failures, MAX_CONSECUTIVE_POLL_FAILURES, elapsed, e,
+                )
+                if consecutive_failures >= MAX_CONSECUTIVE_POLL_FAILURES:
+                    return WaitOutcome(
+                        task,
+                        _unclassified_poll_error(
+                            e, consecutive_failures=consecutive_failures, elapsed=elapsed
                         ),
                     )
                 interval = min(interval * backoff, max_interval)

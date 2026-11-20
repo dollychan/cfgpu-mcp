@@ -1286,7 +1286,7 @@ done
 
 两者都是未终态，形状与 `pending` / `running` 完全一致（`{<句柄>, status, elapsed_seconds}`），所以按未终态处理的客户端不需要改代码——只有想要「该不该重发」这个答案时才需要读它们。
 
-**`error: true` 一定意味着「这条线到此为止」**：任务还活着的情况绝不会走 error 通道。`generate_*(wait=true)` 等待超时、连续轮询失败放弃、轮询中撞上 token 失效——这三种任务都还在上游跑，返回的都是未终态信封而不是错误：
+**`error: true` 一定意味着「这条线到此为止」**：任务还活着的情况绝不会走 error 通道。`generate_*(wait=true)` 等待超时、连续轮询失败放弃、轮询中撞上 token 失效——这三种任务都还在上游跑，返回的都是未终态信封而不是错误。服务端自己的临时故障也一样：读不出任务记录（数据库连不上等）或轮询时出现无法分类的异常，返回 `status: "running"` + `last_error{error_type: "unknown", retryable: true}`，稍后再查即可：
 
 ```json
 {

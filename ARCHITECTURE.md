@@ -736,6 +736,9 @@ while not done:
 | 等待预算耗尽 | 无 | 轮询一路正常，任务就是还没做完 |
 | 连续 `MAX_CONSECUTIVE_POLL_FAILURES` 次失败放弃 | 有 | 上游够不着，任务状态未知 |
 | 遇到不可重试的轮询错误（token 失效等） | 有 | 同上，且不会自愈 |
+| 连续 `MAX_CONSECUTIVE_POLL_FAILURES` 次非 `CFGPUError` 异常（重读任务行时仓储不可达、解析崩溃） | 有（`unknown`，`retryable: true`） | 没有可信的分类，按可重试的轮询失败计数；此前直接抛出，被 MCP 包成无 `error_type` 的 `error: true`，活任务被读成终态 |
+
+在这之前还有一步：`task_status` / `task_wait` 先要读出任务行（`service/task.py::_read_task`）。行**不存在**是答案（`invalid_params`）；行**读不出来**（仓储不可达、连接池耗尽、查询失败）不说明任务任何事，返回 `status: "running"` + `last_error{error_type: "unknown", retryable: true}`。状态填 `running` 而不是猜一个存储值，因为它不会诱导重发（`submitting` 等于告诉调用方重发安全，这里无从得知）。
 
 `task_status` 的单次重查按同一套判据分档（见上文「客户端驱动轮询」），所以「我有一段时间没看见这个任务了」在两个工具里是同一个形状 —— 调用方不必因为换了个工具就换一套读法。
 
