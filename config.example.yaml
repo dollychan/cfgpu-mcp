@@ -19,18 +19,11 @@ http:                          # only used when transport=streamable-http
                                # false freezes one caller's token into the session
                                # (cross-tenant leak) and the server refuses to start.
 
-public_http:                   # public read-only cover service: its own process and port
-  host: 0.0.0.0                #   (cfgpu-mcp-public / python -m cfgpu_mcp.public_http),
-  port: 8090                   #   never the MCP port above. No auth, GET/HEAD only.
-  # public_base_url: https://assets.example.com   # what browsers reach; also read by the MCP
-  #                            #   process to build cover URLs. Unset → tools return no cover.
-  # covers_dir: /srv/cfgpu/covers                 # default: the checkout's templates/covers
-  # cache_max_age: 86400       # short on purpose: a takedown must clear caches within a day
-  # skill_roots:               # DeerFlow skill covers (skill_recommend), served at /covers/<alias>/;
-  #   public: /root/fs/deer-flow-cfgpu/skills/public                    #   read-only mounts.
-  #   public_published: /root/fs/<DEER_FLOW_HOME>/skills/public_published  # Unset → route disabled.
-  #                            #   Never list skills/custom (user-private).
-  # skill_rescan_interval: 60  # seconds between rescans; publish / unpublish shows up within this
+public_http:                   # template cover URLs. Covers (and DeerFlow skill covers) are served
+                               #   by cfdream-file-server under /covers/ — point its template_covers
+                               #   mount at this checkout's templates/covers (+ the bundle json).
+  # public_base_url: https://assets.example.com   # the base whose /covers/ reaches the file server;
+  #                            #   the MCP builds <base>/covers/<id>/<v>.jpg. Unset → tools return no cover.
 
 cfgpu_api:
   base_url: https://www.cfgpu.com/userapi/v1

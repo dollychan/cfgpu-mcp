@@ -36,30 +36,23 @@ class HttpSettings:
 
 @dataclass
 class PublicHttpSettings:
-    """The public, unauthenticated static service for template covers (``public_http``).
+    """Where template covers are publicly reachable (``public_http``).
 
-    A separate process and port from the MCP transport: the MCP port binds the caller's
-    token and belongs on a private network, while this one serves read-only public
-    images to browsers. ``public_base_url`` is also read by the MCP process — it is what
-    turns a record's cover path into a URL; left unset, no cover is returned at all
+    This process no longer serves covers: the public read-only ``/covers/`` service lives in
+    cfdream-file-server (its ``template_covers`` mount points at ``templates/covers``).
+    ``public_base_url`` is all the MCP process needs — it turns a record's cover path
+    (``covers/<id>/<version>.<ext>``) into a URL; left unset, no cover is returned at all
     rather than a link that resolves nowhere.
     """
 
-    host: str = "0.0.0.0"
-    port: int = 8090
-    #: Externally reachable base, e.g. ``https://assets.example.com``; no trailing slash needed.
+    #: Externally reachable base whose ``/covers/`` reaches cfdream-file-server, e.g.
+    #: ``https://assets.example.com``; no trailing slash needed.
     public_base_url: str | None = None
-    #: Directory holding ``<id>/<version>.jpg``; None → the repository's ``templates/covers``.
-    covers_dir: str | None = None
-    #: Seconds browsers / CDNs may cache a cover. Kept short so a takedown takes effect.
-    cache_max_age: int = 86400
-    #: DeerFlow skill cover roots, ``{alias: directory}`` (docs/template-library-and-dialect.md
-    #: §6.8): read-only mounts of DeerFlow's ``skills/public`` and ``skills/public_published``,
-    #: served under ``/covers/<alias>/`` beside template covers. None → not served. Never
-    #: point one at a user-private tree such as ``skills/custom``.
-    skill_roots: dict[str, str] | None = None
-    #: Seconds between rescans of ``skill_roots`` (publish / unpublish lag at most this long).
-    skill_rescan_interval: float = 60
+
+
+#: Keys of the former in-process cover service, now configured in cfdream-file-server.
+#: Accepted and ignored (with a warning) so an existing config.yaml keeps loading.
+_MOVED_PUBLIC_HTTP_KEYS = frozenset({"host", "port", "covers_dir", "cache_max_age", "skill_roots", "skill_rescan_interval"})
 
 
 #: The built-in provider — the CFGPU API itself. Models that declare no
@@ -228,7 +221,12 @@ def load_settings() -> Settings:
             if hasattr(s.http, key):
                 setattr(s.http, key, value)
 
-        public_http = data.get("public_http") or {}
+        public_http = dict(data.get("public_http") or {})
+        moved = sorted(_MOVED_PUBLIC_HTTP_KEYS & set(public_http))
+        if moved:
+            logger.warning("public_http %s ignored: the cover service moved to cfdream-file-server (PUBLIC_MOUNTS_FILE)", moved)
+            for key in moved:
+                del public_http[key]
         unknown = set(public_http) - set(PublicHttpSettings.__dataclass_fields__)
         if unknown:
             raise ValueError(f"public_http has unknown keys: {sorted(unknown)}")

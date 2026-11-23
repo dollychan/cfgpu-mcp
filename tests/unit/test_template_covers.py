@@ -1,8 +1,8 @@
-"""Template covers: credits → bundle, the public cover service, and cover URLs in results.
+"""Template covers: credits → bundle, and cover URLs in results.
 
-Design: docs/template-library-and-dialect.md §6.1 / Q-TL4. The cover service is a separate
-public process (``cfgpu_mcp.public_http``); it serves only the cover paths the bundle
-lists, and the MCP results turn those paths into URLs only when a public base is set.
+Design: docs/template-library-and-dialect.md §6.1 / Q-TL4. The files themselves are served
+under ``/covers/`` by cfdream-file-server (its ``template_covers`` mount); the MCP results
+turn the bundle's cover paths into URLs only when a public base is set.
 """
 
 from __future__ import annotations
@@ -12,11 +12,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from starlette.testclient import TestClient
-
 from cfgpu_mcp import config as cfg_module
 from cfgpu_mcp import template_library
-from cfgpu_mcp.public_http import DEFAULT_COVERS_DIR, build_public_app, cover_files
 from cfgpu_mcp.service import template as template_service
 from cfgpu_mcp.settings import Settings, load_settings
 from cfgpu_mcp.template_library.bundle import BundleError, compile_source, dump_bundle, load_bundle
@@ -103,70 +100,17 @@ def test_bad_cover_declarations_are_refused(tmp_path, credits, files, record_ext
         compile_source(_tree(tmp_path, [_record(**record_extra)], credits, files))
 
 
-# ── the public cover service ──────────────────────────────────────────────────
+# ── the shipped covers ────────────────────────────────────────────────────────
+
+#: ``templates/covers`` in this checkout — what cfdream-file-server's template_covers mount serves.
+COVERS_DIR = Path(__file__).resolve().parents[2] / "templates" / "covers"
 
 
-@pytest.fixture
-def client(tmp_path) -> TestClient:
-    keys = ["case-test-0001/1.jpg", "case-test-0002/1.jpg", "case-test-0004/1.webp", "case-test-0005/1.gif"]
-    root = _tree(
-        tmp_path,
-        [_record(), _record("case-test-0002"), _record("case-test-0003"), _record("case-test-0004"), _record("case-test-0005")],
-        {k: _CREDIT for k in keys},
-        keys,
-    )
-    bundle = compile_source(root)
-    (root / "covers" / "case-test-0002" / "1.jpg").unlink()  # listed, then lost on disk
-    (root / "covers" / "stray.jpg").write_bytes(b"not listed")
-    return TestClient(build_public_app(cover_files(bundle, root / "covers"), cache_max_age=600))
-
-
-def test_serves_a_listed_cover_with_public_headers(client):
-    resp = client.get("/covers/case-test-0001/1.jpg")
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "image/jpeg"
-    assert resp.headers["cache-control"] == "public, max-age=600"
-    assert resp.headers["access-control-allow-origin"] == "*"
-    assert resp.headers["x-content-type-options"] == "nosniff"
-    assert client.head("/covers/case-test-0001/1.jpg").status_code == 200
-
-
-@pytest.mark.parametrize(
-    "path",
-    [
-        "/covers/case-test-0002/1.jpg",  # listed but the file is gone
-        "/covers/case-test-0003/1.jpg",  # record without a cover
-        "/covers/stray.jpg",  # a file nobody listed
-        "/covers/credits.yaml",
-        "/covers/case-test-0001/%2e%2e/%2e%2e/catalog.yaml",
-        "/covers/",
-        "/catalog.yaml",
-    ],
-)
-def test_anything_not_listed_is_404(client, path):
-    assert client.get(path).status_code == 404
-
-
-@pytest.mark.parametrize(
-    ("path", "media_type"),
-    [("/covers/case-test-0004/1.webp", "image/webp"), ("/covers/case-test-0005/1.gif", "image/gif")],
-)
-def test_animated_covers_carry_their_own_type(client, path, media_type):
-    """Video records use animated covers; the type follows the file, not a fixed JPEG."""
-    resp = client.get(path)
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == media_type
-
-
-def test_only_reads_are_allowed(client):
-    assert client.post("/covers/case-test-0001/1.jpg").status_code == 405
-
-
-def test_shipped_covers_are_all_servable():
+def test_shipped_covers_all_exist():
     """Every cover the shipped bundle names exists in the checkout's templates/covers."""
-    bundle = load_bundle()
-    named = {r.cover.path for r in bundle.records if r.cover}
-    assert named and set(cover_files(bundle, DEFAULT_COVERS_DIR)) == named
+    named = {r.cover.path for r in load_bundle().records if r.cover}
+    assert named
+    assert {p for p in named if not (COVERS_DIR / p.removeprefix("covers/")).is_file()} == set()
 
 
 # ── cover URLs in search / get results ────────────────────────────────────────
@@ -212,9 +156,20 @@ def test_no_public_base_means_no_cover(library):
 def test_public_http_settings_load_and_reject_typos(tmp_path, monkeypatch):
     cfg = tmp_path / "config.yaml"
     monkeypatch.setenv("CFGPU_CONFIG", str(cfg))
-    cfg.write_text(yaml.safe_dump({"public_http": {"port": 9000, "public_base_url": "https://a.example"}}))
-    loaded = load_settings().public_http
-    assert (loaded.port, loaded.public_base_url, loaded.cache_max_age) == (9000, "https://a.example", 86400)
+    cfg.write_text(yaml.safe_dump({"public_http": {"public_base_url": "https://a.example"}}))
+    assert load_settings().public_http.public_base_url == "https://a.example"
     cfg.write_text(yaml.safe_dump({"public_http": {"public_url": "https://a.example"}}))
     with pytest.raises(ValueError, match="public_url"):
         load_settings()
+
+
+def test_moved_cover_service_keys_are_ignored_with_a_warning(tmp_path, monkeypatch, caplog):
+    """The cover service moved to cfdream-file-server; an old config.yaml must still load."""
+    cfg = tmp_path / "config.yaml"
+    monkeypatch.setenv("CFGPU_CONFIG", str(cfg))
+    old = {"host": "0.0.0.0", "port": 8090, "covers_dir": "/x", "cache_max_age": 1, "skill_roots": {"public": "/p"}, "skill_rescan_interval": 5}
+    cfg.write_text(yaml.safe_dump({"public_http": {**old, "public_base_url": "https://a.example"}}))
+    with caplog.at_level("WARNING", logger="cfgpu_mcp.settings"):
+        loaded = load_settings().public_http
+    assert loaded.public_base_url == "https://a.example"
+    assert "cfdream-file-server" in caplog.text

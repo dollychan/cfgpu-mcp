@@ -68,7 +68,7 @@ _COVER_PATH = re.compile(r"^covers/[a-z0-9][a-z0-9-]{2,80}/[1-9][0-9]*\.(jpg|web
 
 
 class Cover(BaseModel):
-    """A record's example image (still or animated), served by ``public_http``.
+    """A record's example image (still or animated), served under ``/covers/`` by cfdream-file-server.
 
     Never written in a record file: the bundle builder fills it from
     ``templates/covers/credits.yaml``. Every cover so far is a third-party example kept
