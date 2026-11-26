@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cfgpu_mcp.adapters.base import ModelAdapter, _default_expires_at, register_python_adapter
+from cfgpu_mcp.adapters.base import (
+    ModelAdapter,
+    _default_expires_at,
+    models_with_task,
+    register_python_adapter,
+)
 from cfgpu_mcp.tool_registry import GenerateImageInput, NormalizedResult
 
 if TYPE_CHECKING:
@@ -14,6 +19,9 @@ if TYPE_CHECKING:
 # a second near-synonymous parameter. Same shape as Kling's _MODE_MAP.
 # The image-only extra tiers (xhigh / max / auto) are the API's own words and go
 # up verbatim; base.supports() admits them only on models declaring quality_tiers.
+#: The canonical task ``model_specific.background = "transparent"`` asks for.
+_TRANSPARENT_TASK = "transparent_output"
+
 _QUALITY_MAP = {"fast": "low", "balanced": "medium", "best": "high", "xhigh": "xhigh", "max": "max", "auto": "auto"}
 
 
@@ -91,6 +99,11 @@ class ImageGPTAdapter(_AsyncImageBase):
     adapter.yaml keys for the 2.5 variants: ``sends_n: false`` (no output-count
     parameter upstream) and ``default_background`` (sent as ``background``;
     ``model_specific.background`` overrides it).
+
+    ``background: transparent`` is the ``transparent_output`` task: a model that does
+    not declare it is refused in ``supports()``, so the key is never forwarded to an
+    upstream that would ignore it and return an opaque, billed image, and
+    ``model="auto"`` routes to one that declares it.
     """
 
     adapter_id = "gpt-image-2"
@@ -101,6 +114,22 @@ class ImageGPTAdapter(_AsyncImageBase):
         instance._sends_n = bool(config.get("sends_n", True))
         instance._default_background = config.get("default_background")
         return instance
+
+    def supports(self, req: "GenerateImageInput | GenerateVideoInput") -> tuple[bool, str]:
+        ok, reason = super().supports(req)
+        if not ok:
+            return False, reason
+        assert isinstance(req, GenerateImageInput)
+        if (req.model_specific or {}).get("background") == "transparent" and (
+            _TRANSPARENT_TASK not in self.tasks
+        ):
+            others = [m for m in models_with_task(_TRANSPARENT_TASK) if m != self.model_name]
+            where = f"use {', '.join(others)}" if others else f"use a model whose tasks include {_TRANSPARENT_TASK}"
+            return False, (
+                f"{self.model_name} cannot output a transparent background "
+                f"(model_specific.background=transparent); {where}, or drop the key"
+            )
+        return True, ""
 
     def parse_response(self, resp: dict) -> NormalizedResult:
         result = super().parse_response(resp)

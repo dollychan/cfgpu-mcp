@@ -224,6 +224,59 @@ async def test_layer_decomposition_search_returns_an_executable_call_template(mo
 
 
 @pytest.mark.asyncio
+async def test_transparent_output_search_returns_the_background_switch(_full_registry):
+    """background=transparent rides model_specific, which no profile field shows; the
+    task is how an agent finds it, and the template is how it calls it."""
+    from cfgpu_mcp.service import model as model_service
+
+    catalog = await model_service.list_model_profiles(required_tasks=["transparent_output"])
+    rows = {m["model_id"]: m for m in catalog["models"]}
+    assert set(rows) == {"cf-image-2.5-sunburst", "cf-image-2.5-flare"}
+    for row in rows.values():
+        template = row["task_parameters"]["transparent_output"]["call_template"]
+        assert template["model_specific"] == {"background": "transparent"}
+
+
+@pytest.mark.parametrize("model_id", ["cf-image-2.5-sunburst", "cf-image-2.5-flare"])
+@pytest.mark.parametrize("references", [[], ["https://example.com/cat.png"]])
+def test_transparent_output_template_passes_the_preflight_unchanged(model_id, references):
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.router import ModelRouter
+    from cfgpu_mcp.service import model as model_service
+    from cfgpu_mcp.task_manager import validate_request
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    _, task_catalog = model_service._load_task_catalog()
+    contract = model_service._load_task_parameter_contracts(task_catalog)[model_id]["transparent_output"]
+    req = GenerateImageInput(
+        prompt="一只坐着的橘猫，毛发边缘清晰",
+        model=model_id,
+        reference_images=references or None,
+        **contract["call_template"],
+    )
+    adapter = ModelRouter(registry).resolve(req, for_validation=True)
+
+    result = validate_request(adapter, req)
+
+    assert result["payload"]["background"] == "transparent"
+    assert "model_specific" not in result["corrected_args"]
+
+
+def test_auto_routes_a_transparent_background_request_to_a_model_that_outputs_one():
+    from cfgpu_mcp.adapters.registry import AdapterRegistry
+    from cfgpu_mcp.router import ModelRouter
+    from cfgpu_mcp.tool_registry import GenerateImageInput
+
+    registry = AdapterRegistry(MODELS_DIR)
+    registry.load()
+    req = GenerateImageInput(prompt="a red apple", model_specific={"background": "transparent"})
+    adapter = ModelRouter(registry).resolve(req)
+    assert "transparent_output" in adapter.tasks
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("media_type", ["video", "image", "understand", None])
 async def test_input_roles_define_exactly_the_roles_the_rows_carry(_full_registry, media_type):
     """A bare `role: reference` read without its meaning looked like "not editable"."""

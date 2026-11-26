@@ -15,6 +15,9 @@ tasks:
   - text_to_image
   - image_to_image
   - multi_image_fusion
+  # background: transparent (via model_specific) — gated in ImageGPTAdapter.supports(),
+  # templated in capabilities/task_parameters.yaml.
+  - transparent_output
 
 # The API accepts a URL array and does not document a maximum count.
 inputs:

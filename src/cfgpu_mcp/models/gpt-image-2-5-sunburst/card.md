@@ -8,7 +8,7 @@
 | MCP modelName | `cf-image-2.5-sunburst` |
 | Provider | `cfgpu` |
 | 任务类型 | image（异步） |
-| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion |
+| 任务（tasks） | text_to_image, image_to_image, multi_image_fusion, transparent_output |
 
 `CF Image 2.5 Flare`（`cf-image-2.5-flare`）使用完全相同的接口和参数范围，只是上游模型 ID
 为 `gpt-image-2.5-flare`。
@@ -23,7 +23,7 @@
 | `quality` | 否 | 由 `quality_tier` 控制：`fast` → `low`、`balanced` → `medium`、`best` → `high`，`xhigh` / `max` / `auto` 原样下发（`auto` 按 medium 预估，完成后按实际用量结算）。`xhigh` / `max` / `auto` 只有本系列支持，其它图片模型会拒绝。 |
 | `resolution` | 否 | `1K`、`2K`、`4K`，默认 `1K`。 |
 | `reference_images` | 否 | 参考图片 URL 数组。 |
-| `background` | 否 | 背景模式：`auto`、`opaque`、`transparent`；默认 `auto`，通过 `model_specific.background` 覆盖。 |
+| `background` | 否 | 背景模式：`auto`、`opaque`、`transparent`；默认 `auto`，通过 `model_specific.background` 覆盖。`transparent` 即任务 `transparent_output`（输出透明背景，文生图与参考图生图均可，输入图无需带透明通道）。 |
 
 `n` 未在该接口中提供，cfgpu 因而只接受单图请求（`n=1`）。
 

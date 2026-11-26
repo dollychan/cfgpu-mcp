@@ -43,7 +43,7 @@ def _gpt_25() -> ImageGPTAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": True,
         "poll_endpoint": "/v1/images/tasks/{task_id}",
-        "tasks": ["text_to_image", "image_to_image"],
+        "tasks": ["text_to_image", "image_to_image", "transparent_output"],
         "cost_tier": 3,
         "speed_tier": 3,
         "max_images_per_request": 1,
@@ -167,6 +167,17 @@ def test_gpt_image_25_refuses_more_than_one_image():
     ok, reason = _gpt_25().supports(GenerateImageInput(prompt="x", n=2))
     assert ok is False
     assert "1 to 1" in reason
+
+
+def test_transparent_background_is_refused_without_the_transparent_output_task():
+    """CF Image 2 does not declare it: forwarding the key would bill an opaque image."""
+    req = GenerateImageInput(prompt="x", model_specific={"background": "transparent"})
+    ok, reason = _gpt().supports(req)
+    assert ok is False
+    assert "transparent" in reason and "model_specific.background" in reason
+    assert _gpt_25().supports(req) == (True, "")
+    # Other background values are not the task and are not gated.
+    assert _gpt().supports(GenerateImageInput(prompt="x", model_specific={"background": "auto"}))[0]
 
 
 def test_gpt_image_2_payload_has_no_background():

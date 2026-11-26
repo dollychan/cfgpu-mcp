@@ -139,8 +139,19 @@ tasks:
   transparent_background:
     media_type: image
     name: Transparent-background edit
-    description: Edit one transparent source image while preserving its alpha channel in PNG output.
+    description: >-
+      Edit one transparent source image while preserving its alpha channel in PNG output.
+      To make a new image's background transparent, see transparent_output.
     prompt_guidance: Provide one transparent PNG source image and describe the edit to make.
+  transparent_output:
+    media_type: image
+    name: Transparent-background output
+    description: >-
+      Generate an image whose background is transparent (alpha channel), from text alone
+      or from supplied references; the source images need no alpha channel.
+    prompt_guidance: >-
+      Describe only the foreground subject and its edges; do not describe a background,
+      backdrop or scene behind it.
 
   text_to_speech:
     media_type: audio

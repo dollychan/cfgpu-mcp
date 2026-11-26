@@ -54,6 +54,26 @@ models:
           description: "Ordered output URLs: base image first, followed by independently editable transparent layers."
           layer_limit: 16
 
+  # Transparent-background output (2026-11-26). The switch is model_specific.background,
+  # which no typed parameter carries, so without a template an agent filtering by task
+  # found the model and still had to guess the API field from card prose. Contract
+  # source: gpt-image-2-5-sunburst card.md (background: auto / opaque / transparent).
+  cf-image-2.5-sunburst: &cf_image_25_transparent
+    transparent_output:
+      call_template:
+        n: 1
+        model_specific:
+          background: transparent
+      requirements:
+        reference_images:
+          required: false
+        prompt:
+          required: true
+          guidance: "Describe the foreground subject and its edges only; a described backdrop or scene is painted, not left transparent."
+      notes:
+        - "Works from text alone or with reference_images; the references need no alpha channel."
+  cf-image-2.5-flare: *cf_image_25_transparent
+
   # Seedance-family video edit (2026-10-21). These models take the clip to edit on the
   # same reference_videos slot that reference generation uses (inputs role: reference),
   # so whether a call edits is decided by the prompt and, on 2.5, by ratio/duration.
