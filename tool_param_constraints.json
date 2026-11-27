@@ -1,5 +1,5 @@
 {
-  "_comment": "Per-model parameter constraints for Human-in-the-Loop tool-call editing. Keyed by tool name, then by model. 'modelId' is the cfgpu-internal model id and stays the operational key (model_tool_configs.model_id); 'modelName' is the cfgpu MCP's public model identifier — the value the MCP's 'model' tool parameter now accepts (its enum lists model_name only; adapterId / cfgpu_model_id are never exposed). The two differ for the dated/renamed models (e.g. modelId doubao-seedance-2-0-260128 -> modelName doubao-seedance-2-0, nano-pro -> cf-banana-pro), so a caller building a generate_* tool call must send modelName, not modelId. The per-entry args.model options/value carry modelName values accordingly — that field is what actually goes on the wire, so it must match the MCP enum, whereas modelId is only a DB key. 'args' maps the unified (generic) arg names from tool_registry.py to the REAL value range/type of the underlying model (extracted from each model's card.md/adapter.yaml). Params a model does NOT support are omitted from that model's entry. quality_tier drives model='auto' routing, so it is listed on the 'auto' entry; it ALSO appears on the per-model entries whose adapter maps it into the payload (kling-video-o1 / kling-v3-omni -> mode, gpt-image-2 -> quality), where it stays meaningful after the model is fixed. Models whose entry omits it ignore it once selected. writable=false means the field is fixed/control-only and should not be exposed for editing. An enum's 'options' carries two shapes: usually a list of bare wire values, but where the wire value is not what a human should be shown it is a list of {label, value} objects instead (currently quality_tier, whose fast/balanced/best read as speed rather than the 低/中/高 quality they actually select). A consumer must handle both; 'value' is always what goes on the wire, and 'default' is always a wire value, never a label. model_specific is a free-form passthrough dict (passthrough=true): its 'fields' map lists the documented per-model sub-keys with their ranges; users may still pass additional undocumented keys.",
+  "_comment": "Per-model parameter constraints for Human-in-the-Loop tool-call editing. Keyed by tool name, then by model. 'modelId' is the cfgpu-internal model id and stays the operational key (model_tool_configs.model_id); 'modelName' is the cfgpu MCP's public model identifier — the value the MCP's 'model' tool parameter now accepts (its enum lists model_name only; adapterId / cfgpu_model_id are never exposed). The two differ for the dated/renamed models (e.g. modelId doubao-seedance-2-0-260128 -> modelName doubao-seedance-2-0, nano-pro -> cf-banana-pro), so a caller building a generate_* tool call must send modelName, not modelId. The per-entry args.model options/value carry modelName values accordingly — that field is what actually goes on the wire, so it must match the MCP enum, whereas modelId is only a DB key. 'args' maps the unified (generic) arg names from tool_registry.py to the REAL value range/type of the underlying model (extracted from each model's card.md/adapter.yaml). Params a model does NOT support are omitted from that model's entry. quality_tier drives model='auto' routing, so it is listed on the 'auto' entry; it ALSO appears on the per-model entries whose adapter maps it into the payload (kling-video-o1 / kling-v3-omni -> mode, gpt-image-2 -> quality), where it stays meaningful after the model is fixed. Models whose entry omits it ignore it once selected. writable=false means the field is fixed/control-only and should not be exposed for editing. An enum's 'options' carries two shapes: usually a list of bare wire values, but where the wire value is not what a human should be shown it is a list of {label, value} objects instead (currently quality_tier, whose fast/balanced/best read as speed rather than the 低/中/高 quality they actually select). A consumer must handle both; 'value' is always what goes on the wire, and 'default' is always a wire value, never a label. model_specific is a free-form passthrough dict and is laid out exactly like the tool argument: each documented per-model sub-key sits directly under model_specific with its range, and a nested object (e.g. parameters, input) nests the same way it does in the call. A spec carries 'type'; a nesting level does not, and its optional 'note' describes that level rather than a sub-key. Users may still pass additional undocumented keys.",
   "generate_video": [
     {
       "adapterId": "auto",
@@ -30,7 +30,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "documented sub-fields depend on the resolved model; see that model's entry" }
+        "model_specific": { "note": "documented sub-fields depend on the resolved model; see that model's entry" }
       }
     },
     {
@@ -58,13 +58,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "fields": {
-            "seed": { "type": "integer", "note": "generation seed" },
-            "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" }
-          }
-        }
+        "model_specific": { "seed": { "type": "integer", "note": "generation seed" }, "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" } }
       }
     },
     {
@@ -92,13 +86,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "fields": {
-            "seed": { "type": "integer", "note": "generation seed" },
-            "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" }
-          }
-        }
+        "model_specific": { "seed": { "type": "integer", "note": "generation seed" }, "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" } }
       }
     },
     {
@@ -120,12 +108,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "fields": {
-            "sample_mode": { "type": "boolean", "default": false, "note": "low-quality fast preview mode" }
-          }
-        }
+        "model_specific": { "sample_mode": { "type": "boolean", "default": false, "note": "low-quality fast preview mode" } }
       }
     },
     {
@@ -146,11 +129,8 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "note": "parameters is deep-merged with typed parameters, and a key set here overrides the typed one — set the ratio with aspect_ratio (which covers 4:5 / 5:4 / 9:21), never parameters.ratio",
-          "fields": {
-            "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "min": 0, "max": 2147483647 } } }
-          }
+          "parameters": { "seed": { "type": "integer", "min": 0, "max": 2147483647 } },
+          "note": "parameters is deep-merged with typed parameters, and a key set here overrides the typed one — set the ratio with aspect_ratio (which covers 4:5 / 5:4 / 9:21), never parameters.ratio"
         }
       }
     },
@@ -173,7 +153,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
+        "model_specific": { "parameters": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 } }, "note": "parameters is deep-merged with typed Wan parameters" }
       }
     },
     {
@@ -200,7 +180,10 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647, "note": "mapped to parameters.seed; same seed produces similar, not identical, output" } } } }, "note": "parameters is deep-merged with the typed Wan parameters; other top-level keys are passed through" }
+        "model_specific": {
+          "parameters": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647, "note": "mapped to parameters.seed; same seed produces similar, not identical, output" } },
+          "note": "parameters is deep-merged with the typed Wan parameters; other top-level keys are passed through"
+        }
       }
     },
     {
@@ -229,7 +212,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
+        "model_specific": { "parameters": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 } }, "note": "parameters is deep-merged with typed Wan parameters" }
       }
     },
     {
@@ -255,7 +238,10 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 }, "audio_setting": { "type": "enum", "options": ["auto", "origin"] } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
+        "model_specific": {
+          "parameters": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 }, "audio_setting": { "type": "enum", "options": ["auto", "origin"] } },
+          "note": "parameters is deep-merged with typed Wan parameters"
+        }
       }
     },
     {
@@ -279,7 +265,10 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 }, "shot_type": { "type": "enum", "options": ["single", "multi"] } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
+        "model_specific": {
+          "parameters": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647 }, "shot_type": { "type": "enum", "options": ["single", "multi"] } },
+          "note": "parameters is deep-merged with typed Wan parameters"
+        }
       }
     },
     {
@@ -303,7 +292,13 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647, "note": "mapped to parameters.seed; same seed produces similar, not identical, output" }, "shot_type": { "type": "enum", "options": ["single", "multi"], "note": "mapped to parameters.shot_type; only effective when prompt_extend=true" } } } }, "note": "parameters is deep-merged with the typed Wan parameters; other top-level keys are passed through" }
+        "model_specific": {
+          "parameters": {
+            "seed": { "type": "integer", "minimum": 0, "maximum": 2147483647, "note": "mapped to parameters.seed; same seed produces similar, not identical, output" },
+            "shot_type": { "type": "enum", "options": ["single", "multi"], "note": "mapped to parameters.shot_type; only effective when prompt_extend=true" }
+          },
+          "note": "parameters is deep-merged with the typed Wan parameters; other top-level keys are passed through"
+        }
       }
     },
     {
@@ -327,7 +322,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "parameters": { "type": "object", "fields": { "shot_type": { "type": "enum", "options": ["single", "multi"] } } } }, "note": "parameters is deep-merged with typed Wan parameters" }
+        "model_specific": { "parameters": { "shot_type": { "type": "enum", "options": ["single", "multi"] } }, "note": "parameters is deep-merged with typed Wan parameters" }
       }
     },
     {
@@ -356,13 +351,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "fields": {
-            "seed": { "type": "integer", "note": "generation seed" },
-            "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" }
-          }
-        }
+        "model_specific": { "seed": { "type": "integer", "note": "generation seed" }, "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" } }
       }
     },
     {
@@ -391,13 +380,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "fields": {
-            "seed": { "type": "integer", "note": "generation seed" },
-            "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" }
-          }
-        }
+        "model_specific": { "seed": { "type": "integer", "note": "generation seed" }, "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" } }
       }
     },
     {
@@ -426,13 +409,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "fields": {
-            "seed": { "type": "integer", "note": "generation seed" },
-            "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" }
-          }
-        }
+        "model_specific": { "seed": { "type": "integer", "note": "generation seed" }, "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" } }
       }
     },
      {
@@ -461,13 +438,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "fields": {
-            "seed": { "type": "integer", "note": "generation seed" },
-            "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" }
-          }
-        }
+        "model_specific": { "seed": { "type": "integer", "note": "generation seed" }, "tools": { "type": "array", "note": "web search, text-to-video only: [{\"type\": \"web_search\"}]" } }
       }
     },
     {
@@ -487,13 +458,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "note": "parameters is deep-merged with typed parameters",
-          "fields": {
-            "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "min": 0, "max": 2147483647 } } }
-          }
-        }
+        "model_specific": { "parameters": { "seed": { "type": "integer", "min": 0, "max": 2147483647 } }, "note": "parameters is deep-merged with typed parameters" }
       }
     },
     {
@@ -515,13 +480,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": {
-          "type": "object",
-          "note": "parameters is deep-merged with typed parameters",
-          "fields": {
-            "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "min": 0, "max": 2147483647 } } }
-          }
-        }
+        "model_specific": { "parameters": { "seed": { "type": "integer", "min": 0, "max": 2147483647 } }, "note": "parameters is deep-merged with typed parameters" }
       }
     },
     {
@@ -544,11 +503,8 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "note": "parameters is deep-merged with typed parameters",
-          "fields": {
-            "parameters": { "type": "object", "fields": { "seed": { "type": "integer", "min": 0, "max": 2147483647 }, "audio_setting": { "type": "enum", "options": ["auto", "origin"] } } }
-          }
+          "parameters": { "seed": { "type": "integer", "min": 0, "max": 2147483647 }, "audio_setting": { "type": "enum", "options": ["auto", "origin"] } },
+          "note": "parameters is deep-merged with typed parameters"
         }
       }
     },
@@ -578,7 +534,11 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "refer_type": { "type": "enum", "options": ["feature", "base"], "default": "feature", "writable": "true", "note": "applied to every video_list entry built from reference_videos: feature = reference its motion/style, base = it is the clip being edited (exactly one reference video; output length follows the source, seconds not sent)" }, "keep_original_sound": { "type": "enum", "options": ["yes", "no"], "writable": "true", "note": "applied to every video_list entry: keep the reference video's own audio; omitted = upstream default. Requires reference_videos" } }, "note": "refer_type / keep_original_sound are consumed by the adapter (never sent top-level) and cannot be combined with a model_specific.video_list override; every other key is merged at top level (can override size/mode/seconds/sound)" }
+        "model_specific": {
+          "refer_type": { "type": "enum", "options": ["feature", "base"], "default": "feature", "writable": "true", "note": "applied to every video_list entry built from reference_videos: feature = reference its motion/style, base = it is the clip being edited (exactly one reference video; output length follows the source, seconds not sent)" },
+          "keep_original_sound": { "type": "enum", "options": ["yes", "no"], "writable": "true", "note": "applied to every video_list entry: keep the reference video's own audio; omitted = upstream default. Requires reference_videos" },
+          "note": "refer_type / keep_original_sound are consumed by the adapter (never sent top-level) and cannot be combined with a model_specific.video_list override; every other key is merged at top level (can override size/mode/seconds/sound)"
+        }
       }
     },
     {
@@ -607,7 +567,11 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "refer_type": { "type": "enum", "options": ["feature", "base"], "default": "feature", "writable": "true", "note": "applied to every video_list entry built from reference_videos: feature = reference its motion/style, base = it is the clip being edited (exactly one reference video; output length follows the source, seconds not sent)" }, "keep_original_sound": { "type": "enum", "options": ["yes", "no"], "writable": "true", "note": "applied to every video_list entry: keep the reference video's own audio; omitted = upstream default. Requires reference_videos" } }, "note": "refer_type / keep_original_sound are consumed by the adapter (never sent top-level) and cannot be combined with a model_specific.video_list override; every other key is merged at top level (can override size/mode/seconds/sound)" }
+        "model_specific": {
+          "refer_type": { "type": "enum", "options": ["feature", "base"], "default": "feature", "writable": "true", "note": "applied to every video_list entry built from reference_videos: feature = reference its motion/style, base = it is the clip being edited (exactly one reference video; output length follows the source, seconds not sent)" },
+          "keep_original_sound": { "type": "enum", "options": ["yes", "no"], "writable": "true", "note": "applied to every video_list entry: keep the reference video's own audio; omitted = upstream default. Requires reference_videos" },
+          "note": "refer_type / keep_original_sound are consumed by the adapter (never sent top-level) and cannot be combined with a model_specific.video_list override; every other key is merged at top level (can override size/mode/seconds/sound)"
+        }
       }
     },
     {
@@ -630,7 +594,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level (can override aspect_ratio/video_length/resolution_name); no documented sub-fields" }
+        "model_specific": { "note": "free-form passthrough merged at top level (can override aspect_ratio/video_length/resolution_name); no documented sub-fields" }
       }
     },
     {
@@ -653,7 +617,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged at top level (can override aspect_ratio/video_length/resolution_name); no documented sub-fields" }
+        "model_specific": { "note": "free-form passthrough merged at top level (can override aspect_ratio/video_length/resolution_name); no documented sub-fields" }
       }
     },
     {
@@ -676,13 +640,10 @@
         "timeout": { "type": "integer", "writable": "false", "note": "adapter default polling timeout is 900 seconds" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "note": "free-form passthrough merged into the gateway's top-level payload",
-          "fields": {
-            "seed": { "type": "integer", "note": "generation seed; omitted means randomized. The actual seed is returned in result metadata" },
-            "steps": { "type": "integer", "default": 20, "note": "sampling steps" },
-            "scheduler": { "type": "string", "default": "simple", "note": "sampling scheduler; the official workflow uses simple" }
-          }
+          "seed": { "type": "integer", "note": "generation seed; omitted means randomized. The actual seed is returned in result metadata" },
+          "steps": { "type": "integer", "default": 20, "note": "sampling steps" },
+          "scheduler": { "type": "string", "default": "simple", "note": "sampling scheduler; the official workflow uses simple" },
+          "note": "free-form passthrough merged into the gateway's top-level payload"
         }
       }
     },
@@ -710,14 +671,11 @@
         "timeout": { "type": "integer", "writable": "false", "note": "adapter default polling timeout is 900 seconds" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "note": "free-form passthrough merged into the gateway's top-level payload",
-          "fields": {
-            "seed": { "type": "integer", "note": "generation seed; omitted means randomized. The actual seed is returned in result metadata" },
-            "ref_image_size": { "type": "enum", "options": ["match", "max"], "default": "match", "note": "max improves identity fidelity but may be several times slower" },
-            "steps": { "type": "integer", "default": 20, "note": "sampling steps" },
-            "scheduler": { "type": "string", "default": "simple", "note": "sampling scheduler; the official workflow uses simple" }
-          }
+          "seed": { "type": "integer", "note": "generation seed; omitted means randomized. The actual seed is returned in result metadata" },
+          "ref_image_size": { "type": "enum", "options": ["match", "max"], "default": "match", "note": "max improves identity fidelity but may be several times slower" },
+          "steps": { "type": "integer", "default": 20, "note": "sampling steps" },
+          "scheduler": { "type": "string", "default": "simple", "note": "sampling scheduler; the official workflow uses simple" },
+          "note": "free-form passthrough merged into the gateway's top-level payload"
         }
       }
     },
@@ -746,7 +704,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false", "note": "adapter default polling timeout is 900 seconds" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged into the MiniMax request payload; no documented sub-fields beyond the typed args above (callback_url and the middle-frame image role are upstream features this layer does not expose)" }
+        "model_specific": { "note": "free-form passthrough merged into the MiniMax request payload; no documented sub-fields beyond the typed args above (callback_url and the middle-frame image role are upstream features this layer does not expose)" }
       }
     },
     {
@@ -774,7 +732,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false", "note": "adapter default polling timeout is 900 seconds" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough merged into the MiniMax request payload; no documented sub-fields beyond the typed args above (callback_url and the middle-frame image role are upstream features this layer does not expose)" }
+        "model_specific": { "note": "free-form passthrough merged into the MiniMax request payload; no documented sub-fields beyond the typed args above (callback_url and the middle-frame image role are upstream features this layer does not expose)" }
       }
     }
   ],
@@ -800,7 +758,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "documented sub-fields depend on the resolved model; see that model's entry" }
+        "model_specific": { "note": "documented sub-fields depend on the resolved model; see that model's entry" }
       }
     },
     {
@@ -825,12 +783,11 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "fields": {
-            "parameters.seed": { "type": "integer", "min": 0, "max": 2147483647, "note": "same seed gives a similar, not identical, result" },
-            "parameters.size": { "type": "string", "note": "overrides the computed pixel pair; 1K / 2K hands framing to the model, which then follows the last input image's ratio" },
-            "parameters.color_palette": { "type": "array", "minItems": 3, "maxItems": 10, "note": "custom colour theme [{hex, ratio}], ratios summing to 100.00%; 8 colours recommended. Unavailable in image-set mode (n>1)" },
-            "parameters.thinking_mode": { "type": "boolean", "default": true, "note": "overrides the quality_tier mapping; ignored by upstream unless the request is plain text-to-image" }
+          "parameters": {
+            "seed": { "type": "integer", "min": 0, "max": 2147483647, "note": "same seed gives a similar, not identical, result" },
+            "size": { "type": "string", "note": "overrides the computed pixel pair; 1K / 2K hands framing to the model, which then follows the last input image's ratio" },
+            "color_palette": { "type": "array", "minItems": 3, "maxItems": 10, "note": "custom colour theme [{hex, ratio}], ratios summing to 100.00%; 8 colours recommended. Unavailable in image-set mode (n>1)" },
+            "thinking_mode": { "type": "boolean", "default": true, "note": "overrides the quality_tier mapping; ignored by upstream unless the request is plain text-to-image" }
           },
           "note": "merged one level deep on this model: a model_specific.parameters object is merged INTO parameters rather than replacing it, so overriding one key does not drop the computed size or watermark. Other keys merge at the top level"
         }
@@ -855,14 +812,11 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "fields": {
-            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
-            "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
-            "stream": { "type": "boolean", "default": false },
-            "tools": { "type": "array", "note": "web search: [{\"type\": \"web_search\"}]" },
-            "optimize_prompt_options.mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" }
-          }
+          "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
+          "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
+          "stream": { "type": "boolean", "default": false },
+          "tools": { "type": "array", "note": "web search: [{\"type\": \"web_search\"}]" },
+          "optimize_prompt_options": { "mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" } }
         }
       }
     },
@@ -887,14 +841,11 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "fields": {
-            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
-            "output_format": { "type": "enum", "options": ["png", "jpeg"], "default": "jpeg" },
-            "background": { "type": "enum", "options": ["opaque", "transparent"], "default": "opaque", "note": "transparent requires exactly one transparent PNG input image; jpeg output is rejected" },
-            "layer_decomposition": { "type": "boolean", "default": false, "note": "requires exactly one reference_images item and no n>1; prompt may be empty. Returns a base image plus up to 16 transparent PNG layers, with z_index and bounding_box in image_items" },
-            "optimize_prompt_options.mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" }
-          },
+          "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
+          "output_format": { "type": "enum", "options": ["png", "jpeg"], "default": "jpeg" },
+          "background": { "type": "enum", "options": ["opaque", "transparent"], "default": "opaque", "note": "transparent requires exactly one transparent PNG input image; jpeg output is rejected" },
+          "layer_decomposition": { "type": "boolean", "default": false, "note": "requires exactly one reference_images item and no n>1; prompt may be empty. Returns a base image plus up to 16 transparent PNG layers, with z_index and bounding_box in image_items" },
+          "optimize_prompt_options": { "mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" } },
           "note": "pro does NOT support stream or tools (web_search); model-specific fields are passed through at the payload top level"
         }
       }
@@ -920,14 +871,11 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "fields": {
-            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
-            "output_format": { "type": "enum", "options": ["png", "jpeg"], "default": "jpeg" },
-            "background": { "type": "enum", "options": ["opaque", "transparent"], "default": "opaque", "note": "transparent requires one transparent PNG input image and PNG output" },
-            "layer_decomposition": { "type": "boolean", "default": false, "note": "requires one reference_images item and no n>1; splits it into one base image and up to 16 transparent PNG layers. The response's image_items retains each layer's z_index and bounding_box" },
-            "optimize_prompt_options.mode": { "type": "enum", "options": ["standard"], "default": "standard", "note": "Flash supports standard prompt optimization only" }
-          }
+          "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
+          "output_format": { "type": "enum", "options": ["png", "jpeg"], "default": "jpeg" },
+          "background": { "type": "enum", "options": ["opaque", "transparent"], "default": "opaque", "note": "transparent requires one transparent PNG input image and PNG output" },
+          "layer_decomposition": { "type": "boolean", "default": false, "note": "requires one reference_images item and no n>1; splits it into one base image and up to 16 transparent PNG layers. The response's image_items retains each layer's z_index and bounding_box" },
+          "optimize_prompt_options": { "mode": { "type": "enum", "options": ["standard"], "default": "standard", "note": "Flash supports standard prompt optimization only" } }
         }
       }
     },
@@ -950,14 +898,11 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "fields": {
-            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
-            "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
-            "stream": { "type": "boolean", "default": false },
-            "tools": { "type": "array", "note": "web search: [{\"type\": \"web_search\"}]" },
-            "optimize_prompt_options.mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" }
-          }
+          "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
+          "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
+          "stream": { "type": "boolean", "default": false },
+          "tools": { "type": "array", "note": "web search: [{\"type\": \"web_search\"}]" },
+          "optimize_prompt_options": { "mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" } }
         }
       }
     },
@@ -980,14 +925,11 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "fields": {
-            "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
-            "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
-            "stream": { "type": "boolean", "default": false },
-            "tools": { "type": "array", "note": "web search: [{\"type\": \"web_search\"}]" },
-            "optimize_prompt_options.mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" }
-          }
+          "response_format": { "type": "enum", "options": ["url", "b64_json"], "default": "url" },
+          "output_format": { "type": "enum", "options": ["jpeg", "png"], "default": "jpeg" },
+          "stream": { "type": "boolean", "default": false },
+          "tools": { "type": "array", "note": "web search: [{\"type\": \"web_search\"}]" },
+          "optimize_prompt_options": { "mode": { "type": "enum", "options": ["standard", "fast"], "default": "standard" } }
         }
       }
     },
@@ -1009,7 +951,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough to the API; no documented sub-fields" }
+        "model_specific": { "note": "free-form passthrough to the API; no documented sub-fields" }
       }
     },
     {
@@ -1030,7 +972,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "background": { "type": "enum", "options": ["auto", "opaque", "transparent"], "default": "auto" } }, "note": "free-form passthrough to the API; these fields override the typed defaults" }
+        "model_specific": { "background": { "type": "enum", "options": ["auto", "opaque", "transparent"], "default": "auto" }, "note": "free-form passthrough to the API; these fields override the typed defaults" }
       }
     },
     {
@@ -1051,7 +993,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": { "background": { "type": "enum", "options": ["auto", "opaque", "transparent"], "default": "auto" } }, "note": "free-form passthrough to the API; these fields override the typed defaults" }
+        "model_specific": { "background": { "type": "enum", "options": ["auto", "opaque", "transparent"], "default": "auto" }, "note": "free-form passthrough to the API; these fields override the typed defaults" }
       }
     },
     {
@@ -1070,7 +1012,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough to the API; no documented sub-fields" }
+        "model_specific": { "note": "free-form passthrough to the API; no documented sub-fields" }
       }
     },
     {
@@ -1089,7 +1031,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough to the API; no documented sub-fields" }
+        "model_specific": { "note": "free-form passthrough to the API; no documented sub-fields" }
       }
     },
     {
@@ -1108,7 +1050,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough to the API; no documented sub-fields" }
+        "model_specific": { "note": "free-form passthrough to the API; no documented sub-fields" }
       }
     },
     {
@@ -1127,7 +1069,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "free-form passthrough to the API; no documented sub-fields" }
+        "model_specific": { "note": "free-form passthrough to the API; no documented sub-fields" }
       }
     }
   ],
@@ -1153,7 +1095,7 @@
         "wait": { "type": "boolean", "default": true, "writable": "false" },
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
-        "model_specific": { "type": "object", "fields": {}, "note": "documented sub-fields depend on the resolved model; see that model's entry" }
+        "model_specific": { "note": "documented sub-fields depend on the resolved model; see that model's entry" }
       }
     },
     {
@@ -1177,31 +1119,22 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "note": "shaped like the payload: input is merged key by key, and input.voice_setting / audio_setting / voice_modify one level further, so only the changed fields need writing",
-          "fields": {
-            "input": {
-              "type": "object",
-              "fields": {
-                "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"处理/(chu3)(li3)\", \"危险/dangerous\"]}; Chinese tones as digits 1–5 (5 = neutral)" },
-                "language_boost": { "type": "enum", "options": ["auto", "Chinese", "Chinese,Yue", "English", "Arabic", "Russian", "Spanish", "French", "Portuguese", "German", "Turkish", "Dutch", "Ukrainian", "Vietnamese", "Indonesian", "Japanese", "Italian", "Korean", "Thai", "Polish", "Romanian", "Greek", "Czech", "Finnish", "Hindi", "Bulgarian", "Danish", "Hebrew", "Malay", "Persian", "Slovak", "Swedish", "Croatian", "Filipino", "Hungarian", "Norwegian", "Slovenian", "Catalan", "Nynorsk", "Tamil", "Afrikaans"], "note": "boost recognition of minority languages / dialects; null = off" },
-                "voice_setting": { "type": "object", "fields": { "english_normalization": { "type": "boolean", "default": false, "note": "normalize English numbers; slight latency" } } },
-                "audio_setting": { "type": "object", "fields": { "channel": { "type": "enum", "options": [1, 2], "default": 1, "note": "this server sends mono (1); upstream's own default is 2" } } },
-                "voice_modify": {
-                  "type": "object",
-                  "note": "voice effects; mp3 / wav / flac only — refused upstream for pcm and opus",
-                  "fields": {
-                    "pitch": { "type": "integer", "min": -100, "max": 100, "note": "deeper (-100) ↔ brighter (100)" },
-                    "intensity": { "type": "integer", "min": -100, "max": 100, "note": "forceful (-100) ↔ soft (100)" },
-                    "timbre": { "type": "integer", "min": -100, "max": 100, "note": "full (-100) ↔ crisp (100)" },
-                    "sound_effects": { "type": "enum", "options": ["spacious_echo", "auditorium_echo", "lofi_telephone", "robotic"] }
-                  }
-                },
-                "aigc_watermark": { "type": "boolean", "default": false, "note": "append an AIGC rhythm marker to the end of the audio" },
-                "subtitle_enable": { "type": "boolean", "default": false, "note": "return subtitle timing" }
-              }
-            }
-          }
+          "input": {
+            "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"处理/(chu3)(li3)\", \"危险/dangerous\"]}; Chinese tones as digits 1–5 (5 = neutral)" },
+            "language_boost": { "type": "enum", "options": ["auto", "Chinese", "Chinese,Yue", "English", "Arabic", "Russian", "Spanish", "French", "Portuguese", "German", "Turkish", "Dutch", "Ukrainian", "Vietnamese", "Indonesian", "Japanese", "Italian", "Korean", "Thai", "Polish", "Romanian", "Greek", "Czech", "Finnish", "Hindi", "Bulgarian", "Danish", "Hebrew", "Malay", "Persian", "Slovak", "Swedish", "Croatian", "Filipino", "Hungarian", "Norwegian", "Slovenian", "Catalan", "Nynorsk", "Tamil", "Afrikaans"], "note": "boost recognition of minority languages / dialects; null = off" },
+            "voice_setting": { "english_normalization": { "type": "boolean", "default": false, "note": "normalize English numbers; slight latency" } },
+            "audio_setting": { "channel": { "type": "enum", "options": [1, 2], "default": 1, "note": "this server sends mono (1); upstream's own default is 2" } },
+            "voice_modify": {
+              "pitch": { "type": "integer", "min": -100, "max": 100, "note": "deeper (-100) ↔ brighter (100)" },
+              "intensity": { "type": "integer", "min": -100, "max": 100, "note": "forceful (-100) ↔ soft (100)" },
+              "timbre": { "type": "integer", "min": -100, "max": 100, "note": "full (-100) ↔ crisp (100)" },
+              "sound_effects": { "type": "enum", "options": ["spacious_echo", "auditorium_echo", "lofi_telephone", "robotic"] },
+              "note": "voice effects; mp3 / wav / flac only — refused upstream for pcm and opus"
+            },
+            "aigc_watermark": { "type": "boolean", "default": false, "note": "append an AIGC rhythm marker to the end of the audio" },
+            "subtitle_enable": { "type": "boolean", "default": false, "note": "return subtitle timing" }
+          },
+          "note": "shaped like the payload: input is merged key by key, and input.voice_setting / audio_setting / voice_modify one level further, so only the changed fields need writing"
         }
       }
     },
@@ -1226,31 +1159,22 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "note": "shaped like the payload: input is merged key by key, and input.voice_setting / audio_setting / voice_modify one level further, so only the changed fields need writing",
-          "fields": {
-            "input": {
-              "type": "object",
-              "fields": {
-                "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"处理/(chu3)(li3)\", \"危险/dangerous\"]}; Chinese tones as digits 1–5 (5 = neutral)" },
-                "language_boost": { "type": "enum", "options": ["auto", "Chinese", "Chinese,Yue", "English", "Arabic", "Russian", "Spanish", "French", "Portuguese", "German", "Turkish", "Dutch", "Ukrainian", "Vietnamese", "Indonesian", "Japanese", "Italian", "Korean", "Thai", "Polish", "Romanian", "Greek", "Czech", "Finnish", "Hindi", "Bulgarian", "Danish", "Hebrew", "Malay", "Persian", "Slovak", "Swedish", "Croatian", "Filipino", "Hungarian", "Norwegian", "Slovenian", "Catalan", "Nynorsk", "Tamil", "Afrikaans"], "note": "boost recognition of minority languages / dialects; null = off" },
-                "voice_setting": { "type": "object", "fields": { "english_normalization": { "type": "boolean", "default": false, "note": "normalize English numbers; slight latency" } } },
-                "audio_setting": { "type": "object", "fields": { "channel": { "type": "enum", "options": [1, 2], "default": 1, "note": "this server sends mono (1); upstream's own default is 2" } } },
-                "voice_modify": {
-                  "type": "object",
-                  "note": "voice effects; mp3 / wav / flac only — refused upstream for pcm and opus",
-                  "fields": {
-                    "pitch": { "type": "integer", "min": -100, "max": 100, "note": "deeper (-100) ↔ brighter (100)" },
-                    "intensity": { "type": "integer", "min": -100, "max": 100, "note": "forceful (-100) ↔ soft (100)" },
-                    "timbre": { "type": "integer", "min": -100, "max": 100, "note": "full (-100) ↔ crisp (100)" },
-                    "sound_effects": { "type": "enum", "options": ["spacious_echo", "auditorium_echo", "lofi_telephone", "robotic"] }
-                  }
-                },
-                "aigc_watermark": { "type": "boolean", "default": false, "note": "append an AIGC rhythm marker to the end of the audio" },
-                "subtitle_enable": { "type": "boolean", "default": false, "note": "return subtitle timing" }
-              }
-            }
-          }
+          "input": {
+            "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"处理/(chu3)(li3)\", \"危险/dangerous\"]}; Chinese tones as digits 1–5 (5 = neutral)" },
+            "language_boost": { "type": "enum", "options": ["auto", "Chinese", "Chinese,Yue", "English", "Arabic", "Russian", "Spanish", "French", "Portuguese", "German", "Turkish", "Dutch", "Ukrainian", "Vietnamese", "Indonesian", "Japanese", "Italian", "Korean", "Thai", "Polish", "Romanian", "Greek", "Czech", "Finnish", "Hindi", "Bulgarian", "Danish", "Hebrew", "Malay", "Persian", "Slovak", "Swedish", "Croatian", "Filipino", "Hungarian", "Norwegian", "Slovenian", "Catalan", "Nynorsk", "Tamil", "Afrikaans"], "note": "boost recognition of minority languages / dialects; null = off" },
+            "voice_setting": { "english_normalization": { "type": "boolean", "default": false, "note": "normalize English numbers; slight latency" } },
+            "audio_setting": { "channel": { "type": "enum", "options": [1, 2], "default": 1, "note": "this server sends mono (1); upstream's own default is 2" } },
+            "voice_modify": {
+              "pitch": { "type": "integer", "min": -100, "max": 100, "note": "deeper (-100) ↔ brighter (100)" },
+              "intensity": { "type": "integer", "min": -100, "max": 100, "note": "forceful (-100) ↔ soft (100)" },
+              "timbre": { "type": "integer", "min": -100, "max": 100, "note": "full (-100) ↔ crisp (100)" },
+              "sound_effects": { "type": "enum", "options": ["spacious_echo", "auditorium_echo", "lofi_telephone", "robotic"] },
+              "note": "voice effects; mp3 / wav / flac only — refused upstream for pcm and opus"
+            },
+            "aigc_watermark": { "type": "boolean", "default": false, "note": "append an AIGC rhythm marker to the end of the audio" },
+            "subtitle_enable": { "type": "boolean", "default": false, "note": "return subtitle timing" }
+          },
+          "note": "shaped like the payload: input is merged key by key, and input.voice_setting / audio_setting / voice_modify one level further, so only the changed fields need writing"
         }
       }
     },
@@ -1274,32 +1198,23 @@
         "timeout": { "type": "integer", "writable": "false" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false" },
         "model_specific": {
-          "type": "object",
-          "note": "shaped like the payload and merged level by level: req_params -> audio_params / additions. additions may be an object or a JSON string; it is serialized to the JSON string upstream requires and merged with the post_process the pitch arg produces",
-          "fields": {
-            "req_params": {
-              "type": "object",
-              "fields": {
-                "callback_url": { "type": "string", "note": "async completion callback URL" },
-                "ssml": { "type": "text", "note": "SSML text; zh/en voices only; requires additions.disable_markdown_filter=false" },
-                "audio_params": { "type": "object", "fields": { "enable_timestamp": { "type": "boolean", "default": false, "note": "return word-level timestamps" } } },
-                "additions": {
-                  "type": "object",
-                  "fields": {
-                    "explicit_language": { "type": "enum", "options": ["zh-cn", "en", "es-mx", "id", "pt-br"], "note": "read only this language; the text must contain it" },
-                    "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"北京/(bei3)(jing1)\", \"omg/oh my god\"]}; up to 5000 entries, each source word ≤ 9 chars; do not combine with SSML" },
-                    "silence_duration": { "type": "integer", "min": 0, "max": 30000, "default": 0, "note": "trailing silence in ms" },
-                    "disable_markdown_filter": { "type": "boolean", "default": false },
-                    "disable_emoji_filter": { "type": "boolean", "default": false },
-                    "latex_parser": { "type": "enum", "options": ["v2"], "note": "requires disable_markdown_filter=true; adds latency" },
-                    "max_length_to_filter_parenthesis": { "type": "integer", "min": 0, "max": 100, "default": 0, "note": "skip parenthesised text up to this length; 0 = off" },
-                    "aigc_watermark": { "type": "boolean", "default": false },
-                    "disable_default_bit_rate": { "type": "boolean", "default": false, "note": "true also allows bit_rate 16000/32000 (set via req_params.audio_params.bit_rate)" }
-                  }
-                }
-              }
+          "req_params": {
+            "callback_url": { "type": "string", "note": "async completion callback URL" },
+            "ssml": { "type": "text", "note": "SSML text; zh/en voices only; requires additions.disable_markdown_filter=false" },
+            "audio_params": { "enable_timestamp": { "type": "boolean", "default": false, "note": "return word-level timestamps" } },
+            "additions": {
+              "explicit_language": { "type": "enum", "options": ["zh-cn", "en", "es-mx", "id", "pt-br"], "note": "read only this language; the text must contain it" },
+              "pronunciation_dict": { "type": "object", "note": "{\"tone\": [\"北京/(bei3)(jing1)\", \"omg/oh my god\"]}; up to 5000 entries, each source word ≤ 9 chars; do not combine with SSML" },
+              "silence_duration": { "type": "integer", "min": 0, "max": 30000, "default": 0, "note": "trailing silence in ms" },
+              "disable_markdown_filter": { "type": "boolean", "default": false },
+              "disable_emoji_filter": { "type": "boolean", "default": false },
+              "latex_parser": { "type": "enum", "options": ["v2"], "note": "requires disable_markdown_filter=true; adds latency" },
+              "max_length_to_filter_parenthesis": { "type": "integer", "min": 0, "max": 100, "default": 0, "note": "skip parenthesised text up to this length; 0 = off" },
+              "aigc_watermark": { "type": "boolean", "default": false },
+              "disable_default_bit_rate": { "type": "boolean", "default": false, "note": "true also allows bit_rate 16000/32000 (set via req_params.audio_params.bit_rate)" }
             }
-          }
+          },
+          "note": "shaped like the payload and merged level by level: req_params -> audio_params / additions. additions may be an object or a JSON string; it is serialized to the JSON string upstream requires and merged with the post_process the pitch arg produces"
         }
       }
     }
@@ -1322,7 +1237,7 @@
         "max_tokens": { "type": "integer", "writable": "true", "note": "max output tokens; null = model default" },
         "temperature": { "type": "number", "writable": "true", "note": "sampling temperature; null = model default" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false", "note": "include token usage; the answer is always returned (reasoning_content only on Thinking models, which the current catalog has none of)" },
-        "model_specific": { "type": "object", "fields": {}, "note": "documented sub-fields depend on the resolved model; see that model's entry" }
+        "model_specific": { "note": "documented sub-fields depend on the resolved model; see that model's entry" }
       }
     },
     {
@@ -1343,12 +1258,9 @@
         "temperature": { "type": "number", "writable": "true", "note": "maps to temperature; null = model default" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false", "note": "include token usage; choices[0].message.content (the answer) is always returned" },
         "model_specific": {
-          "type": "object",
-          "note": "merged at the top level of the chat/completions request",
-          "fields": {
-            "top_p": { "type": "number", "note": "nucleus sampling" },
-            "tools": { "type": "array", "note": "tool/function-calling definitions" }
-          }
+          "top_p": { "type": "number", "note": "nucleus sampling" },
+          "tools": { "type": "array", "note": "tool/function-calling definitions" },
+          "note": "merged at the top level of the chat/completions request"
         }
       }
     },
@@ -1370,12 +1282,9 @@
         "temperature": { "type": "number", "writable": "true", "note": "maps to temperature; null = model default" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false", "note": "include token usage; choices[0].message.content (the answer) is always returned" },
         "model_specific": {
-          "type": "object",
-          "note": "merged at the top level of the chat/completions request",
-          "fields": {
-            "top_p": { "type": "number", "note": "nucleus sampling" },
-            "tools": { "type": "array", "note": "tool/function-calling definitions" }
-          }
+          "top_p": { "type": "number", "note": "nucleus sampling" },
+          "tools": { "type": "array", "note": "tool/function-calling definitions" },
+          "note": "merged at the top level of the chat/completions request"
         }
       }
     },
@@ -1397,12 +1306,9 @@
         "temperature": { "type": "number", "writable": "true", "note": "maps to temperature; null = model default" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false", "note": "include token usage; choices[0].message.content (the answer) is always returned" },
         "model_specific": {
-          "type": "object",
-          "note": "merged at the top level of the chat/completions request",
-          "fields": {
-            "top_p": { "type": "number", "note": "nucleus sampling" },
-            "tools": { "type": "array", "note": "tool/function-calling definitions" }
-          }
+          "top_p": { "type": "number", "note": "nucleus sampling" },
+          "tools": { "type": "array", "note": "tool/function-calling definitions" },
+          "note": "merged at the top level of the chat/completions request"
         }
       }
     },
@@ -1424,12 +1330,9 @@
         "temperature": { "type": "number", "writable": "true", "note": "maps to temperature; null = model default" },
         "return_metadata": { "type": "boolean", "default": true, "writable": "false", "note": "include token usage; choices[0].message.content (the answer) is always returned" },
         "model_specific": {
-          "type": "object",
-          "note": "merged at the top level of the chat/completions request",
-          "fields": {
-            "top_p": { "type": "number", "note": "nucleus sampling" },
-            "tools": { "type": "array", "note": "tool/function-calling definitions" }
-          }
+          "top_p": { "type": "number", "note": "nucleus sampling" },
+          "tools": { "type": "array", "note": "tool/function-calling definitions" },
+          "note": "merged at the top level of the chat/completions request"
         }
       }
     }
