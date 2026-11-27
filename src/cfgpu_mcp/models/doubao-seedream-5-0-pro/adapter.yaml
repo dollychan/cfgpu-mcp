@@ -17,7 +17,7 @@ tasks:
   - multi_image_fusion
   - region_edit
   - layer_decomposition
-  - transparent_background
+  - transparent_source_edit
 
 # Pro takes fewer references than lite and reads regions; Flash inherits both. No
 # documented ceiling on how many regions one image may carry, so none is enforced

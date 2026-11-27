@@ -92,10 +92,31 @@ def test_tasks_no_call_can_trigger_are_not_in_the_vocabulary(task):
     from cfgpu_mcp.task_catalog import load_task_catalog, parse_tasks
 
     version, catalog = load_task_catalog()
-    assert version == 2
+    assert version >= 2
     assert task not in catalog
     with pytest.raises(ValueError, match="unknown canonical tasks"):
         parse_tasks("m", "video", [task])
+
+
+def test_transparent_background_was_renamed_and_fails_loudly():
+    """catalog_version 3: the old ID read as "a transparent background", which is what a
+    user asking for a new transparent image says — agents filtered on it and landed on an
+    edit mode that needs a source already carrying alpha. A cached filter must error,
+    not silently match the renamed task."""
+    from cfgpu_mcp.task_catalog import load_task_catalog, parse_tasks
+    from cfgpu_mcp.tool_registry import ListModelProfilesInput
+
+    version, catalog = load_task_catalog()
+    assert version == 3
+    assert "transparent_background" not in catalog
+    assert {"transparent_source_edit", "transparent_output"} <= set(catalog)
+    with pytest.raises(ValueError, match="unknown canonical tasks"):
+        parse_tasks("m", "image", ["transparent_background"])
+    with pytest.raises(ValueError):
+        ListModelProfilesInput(required_tasks=["transparent_background"])
+    assert {"doubao-seedream-5-0-pro", "doubao-seedream-5-0-flash"} == {
+        a.model_name for a in _registry().list_all() if "transparent_source_edit" in a.tasks
+    }
 
 
 def test_seedance_reference_and_edit_are_distinct_agent_tasks():
@@ -150,7 +171,7 @@ async def test_profile_catalog_exposes_only_agent_facing_metadata(monkeypatch):
     monkeypatch.setattr("cfgpu_mcp.config.get_registry", lambda: registry)
 
     catalog = await model_service.list_model_profiles(required_tasks=["video_edit"])
-    assert catalog["catalog_version"] == 2
+    assert catalog["catalog_version"] == 3
     assert set(catalog) == {"catalog_version", "task_catalog", "models", "input_roles"}
     assert set(catalog["task_catalog"]) == {"video_edit"}
     assert all("video_edit" in model["tasks"] for model in catalog["models"])
@@ -692,6 +713,7 @@ _RETIRED = re.compile(
     r"multi_modal_reference|audio_generate|\*\*web_search\*\*|region_understand\b|能力标签"
     r"|web_grounded_generation|tool_calling|visual_agent"
     r"|image_reasoning|long_context|long_video_understanding|long_document_understanding"
+    r"|\btransparent_background\b"
 )
 
 

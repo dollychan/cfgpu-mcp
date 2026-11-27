@@ -217,6 +217,12 @@ agent 选模型用 `list_model_profiles`（任务过滤 + 参数模板）。`tes
 
 任务 id 没有改名，`catalog_version` 不变。按音频用途拆出新任务仍是后续一步。
 
+**`catalog_version: 3`：`transparent_background` 改名为 `transparent_source_edit`（2026-11-27）。** 旧 id 描述的是结果
+属性（透明背景）而不是操作（编辑一张已带透明通道的原图），而「透明背景」正是用户要一张新的透明底图时的说法——agent 选
+`required_tasks` 时只看得到 id，于是先筛到它、落在 Seedream 上。新生成透明底图是 `transparent_output`。没有把旧名让给
+`transparent_output`：同名改义时缓存的筛选条件不会报错，只会静默换一批模型，这正是 `catalog_version` 要防的；改名让旧 id
+按未知值报错。Seedream 与 CF Image 2 的透明背景拒绝理由都指向 `transparent_output` 任务而不写模型名，模型增减或下架都不会让它过时。卡片词表测试把旧 id 列入退役词。
+
 **`catalog_version: 2`：删除没有调用开关的任务（2026-10-09）。** `web_grounded_generation`（Seedance 全族、Seedream
 4.0/4.5/5.0 lite）与 `tool_calling` / `visual_agent`（qwen 全族）从词表删除。三者都没有任何工具参数能触发 —— agent
 按它们筛出模型，却无法在调用里要求这件事；qwen 四个模型声明完全相同，也没有区分度。agent 选模型看的是这次调用能做

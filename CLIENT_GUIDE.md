@@ -976,6 +976,11 @@ cfgpu generate audio "处理危险" --model minimax-speech-2-8-hd \
 > （如编辑模型，声音跟随源视频）。`synced_audio_output` 与它严格一致，因此可灵、cfdream H3、Grok、万相 2.6/2.7
 > 的 t2v/i2v/r2v 新增了这个任务。需要无声成片时，应选 `switchable` 或 `never` 的模型。
 >
+> **`list_model_profiles` 的 `catalog_version` 升为 3**：`transparent_background` 改名为 `transparent_source_edit`
+> （Seedream 5.0 Pro / Flash，编辑一张**本身已带透明通道**的图并保留透明）。旧 id 字面上就是「透明背景」，agent 拿它去找
+> 「生成一张透明底的图」，落到了需要透明原图的编辑模式上；新生成透明底图是 `transparent_output`（CF Image 2.5 Sunburst /
+> Flare）。仍以 `required_tasks` 传 `transparent_background` 会得到参数错误；缓存了旧 id 的筛选条件请改成两者之一。
+>
 > **`list_model_profiles` 的 `catalog_version` 升为 2**：删除了 `web_grounded_generation`、`tool_calling`、`visual_agent`
 > 三个任务（没有任何工具参数能触发，按它们筛出模型也无法在调用里用上），以及 `image_reasoning`、`long_context`、
 > `long_video_understanding`、`long_document_understanding` 四个只描述模型素质的理解类任务（所有视觉模型声明相同，

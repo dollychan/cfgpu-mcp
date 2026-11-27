@@ -175,6 +175,8 @@ def test_transparent_background_is_refused_without_the_transparent_output_task()
     ok, reason = _gpt().supports(req)
     assert ok is False
     assert "transparent" in reason and "model_specific.background" in reason
+    # The remedy names the task, never a model, so it survives fleet changes.
+    assert "transparent_output" in reason and "cf-image-2.5" not in reason
     assert _gpt_25().supports(req) == (True, "")
     # Other background values are not the task and are not gated.
     assert _gpt().supports(GenerateImageInput(prompt="x", model_specific={"background": "auto"}))[0]

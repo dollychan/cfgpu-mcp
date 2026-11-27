@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 from cfgpu_mcp.adapters.base import (
     ModelAdapter,
     _default_expires_at,
-    models_with_task,
     register_python_adapter,
 )
 from cfgpu_mcp.tool_registry import GenerateImageInput, NormalizedResult
@@ -123,11 +122,11 @@ class ImageGPTAdapter(_AsyncImageBase):
         if (req.model_specific or {}).get("background") == "transparent" and (
             _TRANSPARENT_TASK not in self.tasks
         ):
-            others = [m for m in models_with_task(_TRANSPARENT_TASK) if m != self.model_name]
-            where = f"use {', '.join(others)}" if others else f"use a model whose tasks include {_TRANSPARENT_TASK}"
+            # Names the task, not models, so the advice survives fleet changes.
             return False, (
                 f"{self.model_name} cannot output a transparent background "
-                f"(model_specific.background=transparent); {where}, or drop the key"
+                "(model_specific.background=transparent); use a model whose tasks "
+                f"include {_TRANSPARENT_TASK}, or drop the key"
             )
         return True, ""
 

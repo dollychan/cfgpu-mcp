@@ -30,7 +30,7 @@ def _make_pro_adapter() -> SeedreamAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"],
+        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_source_edit"],
         "cost_tier": 2,
         "speed_tier": 3,
     }
@@ -46,7 +46,7 @@ def _make_flash_adapter() -> SeedreamAdapter:
         "endpoint": "/v1/images/generations",
         "is_async": False,
         "poll_endpoint": None,
-        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_background"],
+        "tasks": ["text_to_image", "image_to_image", "multi_image_fusion", "region_edit", "layer_decomposition", "transparent_source_edit"],
         "cost_tier": 1,
         "speed_tier": 5,
     }
@@ -328,7 +328,19 @@ def test_pro_allows_documented_explicit_size_for_normal_generation():
     assert payload["size"] == "2048x1024"
 
 
-def test_transparent_background_requires_one_input_and_png_output():
+@pytest.mark.parametrize("references", [None, ["https://a.png", "https://b.png"]])
+def test_transparent_refusal_points_to_the_transparent_output_task(references):
+    """Asking Seedream for a *new* transparent image is the wrong model; the refusal
+    names the task that does it, never a model, so it survives fleet changes."""
+    req = GenerateImageInput(
+        prompt="a panda", reference_images=references, model_specific={"background": "transparent"}
+    )
+    ok, reason = _make_flash_adapter().supports(req)
+    assert ok is False
+    assert "transparent_output" in reason and "cf-image" not in reason
+
+
+def test_transparent_source_edit_requires_one_input_and_png_output():
     adapter = _make_flash_adapter()
     req = GenerateImageInput(
         prompt="edit",

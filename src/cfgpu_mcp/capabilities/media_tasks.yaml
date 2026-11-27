@@ -6,7 +6,11 @@ schema_version: 1
 # long_video_understanding / long_document_understanding (they describe the model, not
 # a request: no argument asks for them, and every vision model declared them alike).
 # An agent picks a model by what the call can do.
-catalog_version: 2
+# 3: transparent_background renamed transparent_source_edit (2026-11-27). The old ID
+# read as "a transparent background" — what users ask for when they want a new
+# transparent image (transparent_output) — so agents filtered on it and landed on an
+# edit mode that needs a source already carrying alpha.
+catalog_version: 3
 
 # Agent-facing media task vocabulary.  IDs are stable semantic contracts, not
 # adapter capability names and not provider/API parameter names.
@@ -136,12 +140,13 @@ tasks:
     name: Layer decomposition
     description: Split one source image into a base image and independently editable transparent layers.
     prompt_guidance: Provide one source image and optionally name the elements or regions to separate.
-  transparent_background:
+  transparent_source_edit:
     media_type: image
-    name: Transparent-background edit
+    name: Transparent-source edit
     description: >-
-      Edit one transparent source image while preserving its alpha channel in PNG output.
-      To make a new image's background transparent, see transparent_output.
+      Edit one source image that already has a transparent background, preserving its
+      alpha channel in PNG output. Not for producing a transparent image from text or
+      from an opaque picture: that is transparent_output.
     prompt_guidance: Provide one transparent PNG source image and describe the edit to make.
   transparent_output:
     media_type: image

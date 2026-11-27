@@ -1406,7 +1406,7 @@ CanonicalTaskId = Literal[
     "multi_image_group",
     "region_edit",
     "layer_decomposition",
-    "transparent_background",
+    "transparent_source_edit",
     "transparent_output",
     "text_to_speech",
     "expressive_speech",

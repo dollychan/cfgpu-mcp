@@ -155,6 +155,18 @@ _SEEDREAM_5_MIN_RATIO = 1 / 16
 _SEEDREAM_5_MAX_RATIO = 16
 
 
+def _transparent_output_route() -> str:
+    """Where a new transparent image (from text or an opaque picture) is made instead.
+
+    Names the task, not models: the caller finds the current ones by filtering on it,
+    so the advice holds as models are added, disabled or retired.
+    """
+    return (
+        "to generate a new transparent-background image, use a model whose tasks "
+        "include transparent_output"
+    )
+
+
 @register_python_adapter
 class SeedreamAdapter(ModelAdapter):
     """Python Adapter for Doubao Seedream (synchronous image models).
@@ -300,12 +312,19 @@ class SeedreamAdapter(ModelAdapter):
         # Whether a source URL actually has an alpha channel cannot be established
         # locally; enforce the deterministic portions and let upstream inspect it.
         if (req.model_specific or {}).get("background") == "transparent":
-            if "transparent_background" not in self.tasks:
-                return False, f"{self.model_name} does not support transparent backgrounds"
+            # Here background=transparent means transparent_source_edit: keep the alpha
+            # of a source that already has one. A caller who wanted a new transparent
+            # image is on the wrong model, so both refusals name where that is done.
+            if "transparent_source_edit" not in self.tasks:
+                return False, (
+                    f"{self.model_name} does not support transparent backgrounds; "
+                    f"{_transparent_output_route()}"
+                )
             if reference_count != 1:
                 return False, (
-                    f"{self.model_name} transparent background requires exactly one "
-                    "reference_images item"
+                    f"{self.model_name} transparent background edits exactly one "
+                    "reference_images item that already has a transparent background; "
+                    f"{_transparent_output_route()}"
                 )
             if (req.model_specific or {}).get("output_format") == "jpeg":
                 return False, "transparent background requires PNG output, not jpeg"
